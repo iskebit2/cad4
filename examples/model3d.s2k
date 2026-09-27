@@ -1,0 +1,2047 @@
+File D:\Projects\deneme\model3.$2k was saved on m/d/yy at h:mm:ss
+ 
+TABLE:  "ACTIVE DEGREES OF FREEDOM"
+   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+ 
+TABLE:  "ANALYSIS OPTIONS"
+   Solver=Advanced   SolverProc=Auto   Force32Bit=No   StiffCase=None   GeomMod=None   HingeOpt="In Elements"   NumAThreads=0   MaxFileSize=0   NumDThreads=0   NumRThreads=0   UseMMFiles="Program Determined"   AllowDiff=No
+ 
+TABLE:  "AREA SECTION ASSIGNMENTS"
+   Area=9   Section=CATI   MatProp=Default
+   Area=11   Section=CATI   MatProp=Default
+   Area=16   Section=CATI   MatProp=Default
+   Area=26   Section=CATI   MatProp=Default
+   Area=30   Section=CATI   MatProp=Default
+   Area=32   Section=CATI   MatProp=Default
+   Area=36   Section=LOAD_TRANSFER   MatProp=Default
+   Area=37   Section=LOAD_TRANSFER   MatProp=Default
+   Area=38   Section=LOAD_TRANSFER   MatProp=Default
+   Area=42   Section=LOAD_TRANSFER   MatProp=Default
+   Area=43   Section=LOAD_TRANSFER   MatProp=Default
+   Area=44   Section=LOAD_TRANSFER   MatProp=Default
+   Area=48   Section=LOAD_TRANSFER   MatProp=Default
+   Area=49   Section=LOAD_TRANSFER   MatProp=Default
+   Area=50   Section=LOAD_TRANSFER   MatProp=Default
+   Area=51   Section=LOAD_TRANSFER   MatProp=Default
+   Area=52   Section=LOAD_TRANSFER   MatProp=Default
+   Area=53   Section=LOAD_TRANSFER   MatProp=Default
+   Area=54   Section=LOAD_TRANSFER   MatProp=Default
+   Area=55   Section=LOAD_TRANSFER   MatProp=Default
+   Area=56   Section=LOAD_TRANSFER   MatProp=Default
+   Area=57   Section=AHSAP_PANEL   MatProp=Default
+   Area=58   Section=AHSAP_PANEL   MatProp=Default
+   Area=66   Section=LOAD_TRANSFER   MatProp=Default
+   Area=67   Section=LOAD_TRANSFER   MatProp=Default
+   Area=68   Section=LOAD_TRANSFER   MatProp=Default
+   Area=69   Section=CATI   MatProp=Default
+   Area=71   Section=CATI   MatProp=Default
+   Area=72   Section=CATI   MatProp=Default
+   Area=73   Section=AHSAP_PANEL   MatProp=Default
+   Area=74   Section=AHSAP_PANEL   MatProp=Default
+   Area=75   Section=AHSAP_PANEL   MatProp=Default
+   Area=76   Section=AHSAP_PANEL   MatProp=Default
+   Area=77   Section=AHSAP_PANEL   MatProp=Default
+   Area=78   Section=AHSAP_PANEL   MatProp=Default
+   Area=79   Section=AHSAP_PANEL   MatProp=Default
+   Area=80   Section=AHSAP_PANEL   MatProp=Default
+   Area=81   Section=AHSAP_PANEL   MatProp=Default
+   Area=82   Section=AHSAP_PANEL   MatProp=Default
+   Area=83   Section=AHSAP_PANEL   MatProp=Default
+   Area=84   Section=AHSAP_PANEL   MatProp=Default
+   Area=85   Section=CATI   MatProp=Default
+   Area=87   Section=CATI   MatProp=Default
+   Area=88   Section=CATI   MatProp=Default
+   Area=89   Section=CATI   MatProp=Default
+   Area=90   Section=CATI   MatProp=Default
+   Area=91   Section=AHSAP_PANEL   MatProp=Default
+   Area=92   Section=CATI   MatProp=Default
+   Area=93   Section=CATI   MatProp=Default
+   Area=94   Section=CATI   MatProp=Default
+   Area=95   Section=AHSAP_PANEL   MatProp=Default
+   Area=96   Section=AHSAP_PANEL   MatProp=Default
+   Area=97   Section=AHSAP_PANEL   MatProp=Default
+   Area=98   Section=AHSAP_PANEL   MatProp=Default
+   Area=99   Section=AHSAP_PANEL   MatProp=Default
+   Area=100   Section=AHSAP_PANEL   MatProp=Default
+   Area=101   Section=CATI   MatProp=Default
+   Area=102   Section=CATI   MatProp=Default
+   Area=103   Section=CATI   MatProp=Default
+   Area=104   Section=CATI   MatProp=Default
+   Area=105   Section=CATI   MatProp=Default
+   Area=106   Section=CATI   MatProp=Default
+   Area=107   Section=CATI   MatProp=Default
+   Area=108   Section=CATI   MatProp=Default
+   Area=109   Section=CATI   MatProp=Default
+   Area=110   Section=CATI   MatProp=Default
+   Area=111   Section=CATI   MatProp=Default
+   Area=112   Section=CATI   MatProp=Default
+   Area=113   Section=CATI   MatProp=Default
+   Area=114   Section=CATI   MatProp=Default
+   Area=115   Section=CATI   MatProp=Default
+   Area=116   Section=CATI   MatProp=Default
+   Area=117   Section=CATI   MatProp=Default
+   Area=118   Section=CATI   MatProp=Default
+   Area=119   Section=CATI   MatProp=Default
+   Area=120   Section=CATI   MatProp=Default
+   Area=121   Section=CATI   MatProp=Default
+   Area=122   Section=CATI   MatProp=Default
+   Area=123   Section=CATI   MatProp=Default
+   Area=124   Section=CATI   MatProp=Default
+   Area=125   Section=CATI   MatProp=Default
+   Area=126   Section=CATI   MatProp=Default
+   Area=127   Section=CATI   MatProp=Default
+   Area=128   Section=CATI   MatProp=Default
+   Area=129   Section=CATI   MatProp=Default
+   Area=130   Section=CATI   MatProp=Default
+   Area=131   Section=CATI   MatProp=Default
+   Area=132   Section=CATI   MatProp=Default
+   Area=133   Section=CATI   MatProp=Default
+   Area=134   Section=CATI   MatProp=Default
+   Area=135   Section=CATI   MatProp=Default
+   Area=136   Section=CATI   MatProp=Default
+   Area=137   Section=CATI   MatProp=Default
+   Area=138   Section=CATI   MatProp=Default
+   Area=139   Section=CATI   MatProp=Default
+   Area=140   Section=CATI   MatProp=Default
+   Area=141   Section=CATI   MatProp=Default
+   Area=142   Section=CATI   MatProp=Default
+   Area=143   Section=CATI   MatProp=Default
+   Area=144   Section=CATI   MatProp=Default
+   Area=145   Section=CATI   MatProp=Default
+   Area=146   Section=CATI   MatProp=Default
+   Area=147   Section=CATI   MatProp=Default
+   Area=148   Section=CATI   MatProp=Default
+   Area=149   Section=CATI   MatProp=Default
+   Area=233   Section=AHSAP_PANEL   MatProp=Default
+   Area=234   Section=AHSAP_PANEL   MatProp=Default
+   Area=235   Section=AHSAP_PANEL   MatProp=Default
+   Area=236   Section=AHSAP_PANEL   MatProp=Default
+   Area=237   Section=AHSAP_PANEL   MatProp=Default
+   Area=238   Section=AHSAP_PANEL   MatProp=Default
+   Area=239   Section=AHSAP_PANEL   MatProp=Default
+   Area=240   Section=AHSAP_PANEL   MatProp=Default
+   Area=241   Section=AHSAP_PANEL   MatProp=Default
+   Area=242   Section=AHSAP_PANEL   MatProp=Default
+   Area=243   Section=AHSAP_PANEL   MatProp=Default
+   Area=244   Section=AHSAP_PANEL   MatProp=Default
+   Area=245   Section=AHSAP_PANEL   MatProp=Default
+   Area=246   Section=AHSAP_PANEL   MatProp=Default
+   Area=247   Section=AHSAP_PANEL   MatProp=Default
+   Area=248   Section=AHSAP_PANEL   MatProp=Default
+   Area=249   Section=AHSAP_PANEL   MatProp=Default
+   Area=250   Section=AHSAP_PANEL   MatProp=Default
+   Area=251   Section=AHSAP_PANEL   MatProp=Default
+   Area=252   Section=AHSAP_PANEL   MatProp=Default
+   Area=253   Section=AHSAP_PANEL   MatProp=Default
+   Area=254   Section=AHSAP_PANEL   MatProp=Default
+   Area=255   Section=AHSAP_PANEL   MatProp=Default
+   Area=256   Section=AHSAP_PANEL   MatProp=Default
+   Area=258   Section=AHSAP_PANEL   MatProp=Default
+   Area=259   Section=AHSAP_PANEL   MatProp=Default
+   Area=260   Section=AHSAP_PANEL   MatProp=Default
+   Area=261   Section=AHSAP_PANEL   MatProp=Default
+   Area=262   Section=AHSAP_PANEL   MatProp=Default
+   Area=263   Section=AHSAP_PANEL   MatProp=Default
+   Area=264   Section=AHSAP_PANEL   MatProp=Default
+ 
+TABLE:  "AREA SECTION PROPERTIES"
+   Section=AHSAP_PANEL   Material=PANEL   MatAngle=0   AreaType=Shell   Type=Shell-Thin   DrillDOF=Yes   Thickness=20   BendThick=20   Color=Gray8Dark   F11Mod=1   F22Mod=1   F12Mod=1   M11Mod=1   M22Mod=1   M12Mod=1   V13Mod=1   V23Mod=1 _
+        MMod=1   WMod=1   GUID=935a95e3-7f9c-421e-b539-349fbabc0211
+   Section=CATI   Material=C24   MatAngle=0   AreaType=Shell   Type=Membrane   DrillDOF=Yes   Thickness=0   BendThick=0   Color=12615935   F11Mod=1   F22Mod=1   F12Mod=1   M11Mod=1   M22Mod=1   M12Mod=1   V13Mod=1   V23Mod=1   MMod=0 _
+        WMod=0   GUID=61061fa4-790b-4081-aebd-0e6ea46761f7   Notes="Added 14.01.2026 01:02:45"
+   Section=LOAD_TRANSFER   Material=C24   MatAngle=0   AreaType=Shell   Type=Membrane   DrillDOF=Yes   Thickness=0   BendThick=0   Color=16744448   F11Mod=1   F22Mod=1   F12Mod=1   M11Mod=1   M22Mod=1   M12Mod=1   V13Mod=1   V23Mod=1 _
+        MMod=0   WMod=0   GUID=d11bb1eb-89a6-4f63-906b-6c1e83f3ff27
+   Section=TASDUVAR80   Material=TASDUVAR   MatAngle=0   AreaType=Shell   Type=Shell-Thin   DrillDOF=Yes   Thickness=800   BendThick=800   Color=Gray8Dark   F11Mod=1   F22Mod=1   F12Mod=1   M11Mod=1   M22Mod=1   M12Mod=1   V13Mod=1 _
+        V23Mod=1   MMod=1   WMod=1   GUID=b16718e3-1d5f-49b8-be33-3f4794d561d9
+ 
+TABLE:  "AREA SECTION PROPERTY DESIGN PARAMETERS"
+   Section=AHSAP_PANEL   RebarMat=None   RebarOpt=Default
+   Section=CATI   RebarMat=None   RebarOpt=Default
+   Section=LOAD_TRANSFER   RebarMat=None   RebarOpt=Default
+   Section=TASDUVAR80   RebarMat=None   RebarOpt=Default
+ 
+TABLE:  "AREA SECTION PROPERTY - TIME DEPENDENT"
+   Section=AHSAP_PANEL   TypeSize=Auto   AutoSFSize=1
+   Section=CATI   TypeSize=Auto   AutoSFSize=1
+   Section=LOAD_TRANSFER   TypeSize=Auto   AutoSFSize=1
+   Section=TASDUVAR80   TypeSize=Auto   AutoSFSize=1
+ 
+TABLE:  "AUTO SEISMIC - TSC-2018"
+   LoadPat=QUAKEX   Dir=X   PercentEcc=0.05   PeriodCalc="Prog Calc"   CtAndX="0.10m, 0.75"   UserZ=No   R=4   D=2   I=1   Ss=0.626   S1=0.187   TL=8   SiteClass=ZC   Fs=1.2496   F1=1.5
+   LoadPat=QUAKEY   Dir=Y   PercentEcc=0.05   PeriodCalc="Prog Calc"   CtAndX="0.10m, 0.75"   UserZ=No   R=4   D=2   I=1   Ss=0.626   S1=0.187   TL=8   SiteClass=ZC   Fs=1.2496   F1=1.5
+ 
+TABLE:  "CASE - MODAL 1 - GENERAL"
+   Case=MODAL   ModeType=Eigen   MaxNumModes=24   MinNumModes=1   EigenShift=0   EigenCutoff=0   EigenTol=1E-09   AutoShift=Yes
+ 
+TABLE:  "CASE - RESPONSE SPECTRUM 1 - GENERAL"
+   Case=EQX   ModalCombo=CQC   GMCf1=1   GMCf2=0   PerRigid=SRSS   DirCombo=SRSS   ConstDamp=0.05   EccenRatio=0
+   Case=EQY   ModalCombo=CQC   GMCf1=1   GMCf2=0   PerRigid=SRSS   DirCombo=SRSS   ConstDamp=0.05   EccenRatio=0
+ 
+TABLE:  "CASE - RESPONSE SPECTRUM 2 - LOAD ASSIGNMENTS"
+   Case=EQX   LoadName=U1   CoordSys=GLOBAL   Function=TSC2018DD2   Angle=0   TransAccSF=9810
+   Case=EQY   LoadName=U2   CoordSys=GLOBAL   Function=TSC2018DD2   Angle=0   TransAccSF=9810
+ 
+TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"
+   Case=DEAD   LoadType="Load pattern"   LoadName=DEAD   LoadSF=1
+   Case=LIVE   LoadType="Load pattern"   LoadName=LIVE   LoadSF=1
+   Case=SNOW_FULL   LoadType="Load pattern"   LoadName=SNOW_FULL   LoadSF=1
+   Case=SNOW_HX   LoadType="Load pattern"   LoadName=SNOW_HX   LoadSF=1
+   Case=SNOW_HY   LoadType="Load pattern"   LoadName=SNOW_HY   LoadSF=1
+   Case=QUAKEX   LoadType="Load pattern"   LoadName=QUAKEX   LoadSF=1
+   Case=QUAKEY   LoadType="Load pattern"   LoadName=QUAKEY   LoadSF=1
+   Case=WindXP+cpi   LoadType="Load pattern"   LoadName=WindXP+cpi   LoadSF=1
+   Case=WindXE+cpi   LoadType="Load pattern"   LoadName=WindXE+cpi   LoadSF=1
+   Case=WindYP+cpi   LoadType="Load pattern"   LoadName=WindYP+cpi   LoadSF=1
+   Case=WindYE+cpi   LoadType="Load pattern"   LoadName=WindYE+cpi   LoadSF=1
+   Case=WindXP-cpi   LoadType="Load pattern"   LoadName=WindXP-cpi   LoadSF=1
+   Case=WindXE-cpi   LoadType="Load pattern"   LoadName=WindXE-cpi   LoadSF=1
+   Case=WindYP-cpi   LoadType="Load pattern"   LoadName=WindYP-cpi   LoadSF=1
+   Case=WindYE-cpi   LoadType="Load pattern"   LoadName=WindYE-cpi   LoadSF=1
+ 
+TABLE:  "COMBINATION DEFINITIONS"
+   ComboName=ULS01   ComboType="Linear Add"   AutoDesign=No   CaseName=DEAD   ScaleFactor=1.35   SteelDesign=None   ConcDesign=None   AlumDesign=None   ColdDesign=None   GUID=008d94f7-f6ea-449a-a7f0-b366e38f43f8
+   ComboName=ULS01   CaseName=LIVE   ScaleFactor=1.5
+   ComboName=ULS02   ComboType="Linear Add"   AutoDesign=No   CaseName=DEAD   ScaleFactor=1.35   SteelDesign=None   ConcDesign=None   AlumDesign=None   ColdDesign=None   GUID=c315ee57-e835-4c4e-8be6-e771054ea370
+   ComboName=ULS02   CaseName=LIVE   ScaleFactor=1.5
+   ComboName=ULS02   CaseName=SNOW_FULL   ScaleFactor=1.05
+   ComboName=ULS02   CaseName=WindXP+cpi   ScaleFactor=1.05
+ 
+TABLE:  "CONNECTIVITY - AREA"
+   Area=9   Joint1=289   Joint2=291   Joint3=58   Joint4=57   GUID=7d93d51c-c1bf-4c60-afe0-a7e3185b9606
+   Area=11   Joint1=291   Joint2=3   Joint3=59   GUID=8bca5c6c-18f7-4ec7-9fc8-dea4aa77fc5f
+   Area=16   Joint1=791   Joint2=59   Joint3=3   Joint4=792   GUID=5974787d-894c-4a5b-98a5-b65a2e21f50a
+   Area=26   Joint1=65   Joint2=4   Joint3=297   GUID=55cd4503-1149-483e-bbe9-9b64dcabd7fc
+   Area=30   Joint1=65   Joint2=791   Joint3=792   Joint4=4   GUID=04f97ef0-6fb6-45f1-841b-99b4a1268fa7
+   Area=32   Joint1=64   Joint2=297   Joint3=72   Joint4=803   GUID=e04505bd-4d50-4e18-9dc3-9efc5d99e4e4
+   Area=36   Joint1=294   Joint2=293   Joint3=80   Joint4=78   GUID=b6c5c1d5-35ab-4f80-a992-8914a62c5668
+   Area=37   Joint1=183   Joint2=185   Joint3=77   Joint4=79   GUID=09844030-253a-4284-8b16-a8b1168699a1
+   Area=38   Joint1=79   Joint2=77   Joint3=78   Joint4=80   GUID=a512c4b3-1cbc-4151-90ff-4db22d09688d
+   Area=42   Joint1=277   Joint2=278   Joint3=86   Joint4=76   GUID=2ef82a97-1065-46ec-9678-71bfd06a25d6
+   Area=43   Joint1=37   Joint2=35   Joint3=75   Joint4=85   GUID=17281e1d-81fc-4e13-828c-e0ba963c658d
+   Area=44   Joint1=85   Joint2=75   Joint3=76   Joint4=86   GUID=51926a60-b259-46ec-98d0-0cb450af8ab6
+   Area=48   Joint1=320   Joint2=318   Joint3=101   Joint4=84   GUID=ba9e473c-1900-4804-82eb-6681f5c478da
+   Area=49   Joint1=251   Joint2=33   Joint3=83   Joint4=102   GUID=f3ee2d00-3678-4fd3-902a-541a3927824e
+   Area=50   Joint1=102   Joint2=83   Joint3=84   Joint4=101   GUID=00664bf9-25a2-4faa-ab64-2bfd3c378110
+   Area=51   Joint1=316   Joint2=315   Joint3=88   Joint4=103   GUID=00fffec2-e08c-4e46-9dd0-510dd78bc2c5
+   Area=52   Joint1=47   Joint2=253   Joint3=104   Joint4=87   GUID=7531be18-ff00-45b4-90e3-fad54142fa4d
+   Area=53   Joint1=87   Joint2=104   Joint3=103   Joint4=88   GUID=91513ac8-2ef8-4529-8822-a3049d7e2f1f
+   Area=54   Joint1=318   Joint2=316   Joint3=103   Joint4=101   GUID=ab524772-8ad8-4c6c-83b8-b93f470edeec
+   Area=55   Joint1=253   Joint2=251   Joint3=102   Joint4=104   GUID=bc0074c4-3f0f-4baa-ad52-ae70b1fc7783
+   Area=56   Joint1=101   Joint2=103   Joint3=104   Joint4=102   GUID=092c14dc-5bf8-416d-bedb-480a91827371
+   Area=57   Joint1=364   Joint2=191   Joint3=110   Joint4=111   GUID=fb2443da-9de8-4bf9-bda9-08da45c0ab8d
+   Area=58   Joint1=49   Joint2=366   Joint3=111   Joint4=110   GUID=c39e1305-6d2a-43a4-b3b5-50657044fb54
+   Area=66   Joint1=304   Joint2=303   Joint3=74   Joint4=99   GUID=7baae9c3-820a-4870-b162-6695dce78829
+   Area=67   Joint1=125   Joint2=127   Joint3=100   Joint4=73   GUID=59cac3b9-fff0-4ee7-ba91-371da12ab2d4
+   Area=68   Joint1=99   Joint2=74   Joint3=73   Joint4=100   GUID=3ecaaead-9d49-4ea5-95ef-81a10d0f571b
+   Area=69   Joint1=660   Joint2=654   Joint3=57   Joint4=117   GUID=7baea47d-2ba3-4aa9-967e-2dbe353d74bc
+   Area=71   Joint1=117   Joint2=57   Joint3=58   Joint4=118   GUID=c4eff46a-cd79-4c47-bc1e-7d31cca9d191
+   Area=72   Joint1=791   Joint2=794   Joint3=129   Joint4=59   GUID=bca83b6b-1acb-4b73-ae91-739904e56ebc
+   Area=73   Joint1=30   Joint2=28   Joint3=27   Joint4=29
+   Area=74   Joint1=32   Joint2=30   Joint3=29   Joint4=31
+   Area=75   Joint1=8   Joint2=122   Joint3=121   Joint4=7
+   Area=76   Joint1=10   Joint2=8   Joint3=7   Joint4=9
+   Area=77   Joint1=124   Joint2=10   Joint3=9   Joint4=123
+   Area=78   Joint1=826   Joint2=44   Joint3=43   Joint4=825
+   Area=79   Joint1=46   Joint2=826   Joint3=825   Joint4=45
+   Area=80   Joint1=285   Joint2=286   Joint3=278   Joint4=277
+   Area=81   Joint1=36   Joint2=38   Joint3=286   Joint4=285
+   Area=82   Joint1=312   Joint2=311   Joint3=293   Joint4=294
+   Area=83   Joint1=186   Joint2=184   Joint3=311   Joint4=312
+   Area=84   Joint1=314   Joint2=313   Joint3=303   Joint4=304
+   Area=85   Joint1=58   Joint2=291   Joint3=59   Joint4=129   GUID=e85ce721-4207-4859-8a47-e43c3d5f9538
+   Area=87   Joint1=803   Joint2=804   Joint3=130   Joint4=64   GUID=96646b93-05dd-44ff-8cd3-2c9b67d2030a
+   Area=88   Joint1=794   Joint2=791   Joint3=65   Joint4=131   GUID=eca10fae-2464-4dcf-92a4-57f190bc934a
+   Area=89   Joint1=297   Joint2=64   Joint3=131   Joint4=65   GUID=84bf58da-78cc-40cf-b3c6-9c333c28830b
+   Area=90   Joint1=794   Joint2=795   Joint3=132   Joint4=129   GUID=cced32d3-d96d-4921-a171-44b181c91935
+   Area=91   Joint1=126   Joint2=313   Joint3=314   Joint4=128
+   Area=92   Joint1=118   Joint2=58   Joint3=129   Joint4=132   GUID=6cb97a8b-105f-4173-bb27-8088742e458b
+   Area=93   Joint1=795   Joint2=794   Joint3=131   Joint4=133   GUID=1ef0c43e-20cf-4ea8-bc0b-8b0c09b3ddf7
+   Area=94   Joint1=64   Joint2=130   Joint3=133   Joint4=131   GUID=5f82db29-b968-41ac-b660-41d4a48e2409
+   Area=95   Joint1=34   Joint2=252   Joint3=324   Joint4=326
+   Area=96   Joint1=326   Joint2=324   Joint3=318   Joint4=320
+   Area=97   Joint1=252   Joint2=254   Joint3=322   Joint4=324
+   Area=98   Joint1=324   Joint2=322   Joint3=316   Joint4=318
+   Area=99   Joint1=254   Joint2=48   Joint3=321   Joint4=322
+   Area=100   Joint1=322   Joint2=321   Joint3=315   Joint4=316
+   Area=101   Joint1=666   Joint2=660   Joint3=117   Joint4=134   GUID=4397670b-c0c8-46bb-9246-683ae07b3191
+   Area=102   Joint1=795   Joint2=796   Joint3=135   Joint4=132   GUID=2b0d0fc4-a559-4ba3-b883-a35dbab92031
+   Area=103   Joint1=134   Joint2=117   Joint3=118   Joint4=136   GUID=0f59d5ea-12df-47e9-9381-85ead9edc9f1
+   Area=104   Joint1=136   Joint2=118   Joint3=132   Joint4=135   GUID=345c45b9-676c-403d-9feb-bf1a4364bf37
+   Area=105   Joint1=796   Joint2=795   Joint3=133   Joint4=137   GUID=6638d3b9-708b-4362-8f07-f087b4d4c883
+   Area=106   Joint1=804   Joint2=805   Joint3=138   Joint4=130   GUID=30bcc72f-1502-432c-9f7e-4707dd58bbd7
+   Area=107   Joint1=130   Joint2=138   Joint3=137   Joint4=133   GUID=e8493f42-18a9-44e5-ab5d-6425526b16b2
+   Area=108   Joint1=672   Joint2=666   Joint3=134   Joint4=139   GUID=a70497ce-0087-4a0f-b242-77fdf1300dd6
+   Area=109   Joint1=796   Joint2=797   Joint3=140   Joint4=135   GUID=8c24c3d9-8243-4f68-895c-d60ce125639d
+   Area=110   Joint1=139   Joint2=134   Joint3=136   Joint4=141   GUID=6afd14ca-86f7-4792-8999-f163806d5e52
+   Area=111   Joint1=135   Joint2=140   Joint3=141   Joint4=136   GUID=cfd32dec-c34f-4fa0-8abf-1f70c28e1fc6
+   Area=112   Joint1=797   Joint2=796   Joint3=137   Joint4=142   GUID=73e0ead9-5660-4907-a680-e56e50460b74
+   Area=113   Joint1=805   Joint2=806   Joint3=143   Joint4=138   GUID=0a61eb47-bb19-430d-806b-006a94090f49
+   Area=114   Joint1=142   Joint2=137   Joint3=138   Joint4=143   GUID=b501a588-205d-4049-8176-aa88bf7ca1b7
+   Area=115   Joint1=678   Joint2=672   Joint3=139   Joint4=144   GUID=9eb0d8e6-67d0-4c54-abd1-de6806e42d61
+   Area=116   Joint1=797   Joint2=798   Joint3=145   Joint4=140   GUID=3526fe88-508f-48a7-9400-564af7060afe
+   Area=117   Joint1=144   Joint2=139   Joint3=141   Joint4=146   GUID=06531f48-284f-41d4-88ac-3b967f2a64cb
+   Area=118   Joint1=140   Joint2=145   Joint3=146   Joint4=141   GUID=baa9547f-a7d1-4ecd-bf94-149ed6df69d7
+   Area=119   Joint1=798   Joint2=797   Joint3=142   Joint4=147   GUID=e4d416e0-8209-4e79-a498-ddd1fe15e443
+   Area=120   Joint1=806   Joint2=807   Joint3=148   Joint4=143   GUID=70b0a7f3-ac3d-4dbf-8106-d8921919f203
+   Area=121   Joint1=147   Joint2=142   Joint3=143   Joint4=148   GUID=1e09b2ba-ce88-41cf-aa32-8432fde93b61
+   Area=122   Joint1=684   Joint2=678   Joint3=144   Joint4=149   GUID=9f081cc5-45b0-4a6f-8109-430aa2c13641
+   Area=123   Joint1=798   Joint2=799   Joint3=150   Joint4=145   GUID=d5ecab43-8635-4838-a776-248b2f4a4c52
+   Area=124   Joint1=149   Joint2=144   Joint3=146   Joint4=151   GUID=2cb619b8-bc54-4c22-9c56-6d0e00eae398
+   Area=125   Joint1=145   Joint2=150   Joint3=151   Joint4=146   GUID=ab5e5b04-1f8d-436a-93ee-65c29564a67c
+   Area=126   Joint1=690   Joint2=684   Joint3=149   Joint4=152   GUID=b24ccae8-e029-40be-8b98-de5a71ef9be5
+   Area=127   Joint1=799   Joint2=800   Joint3=153   Joint4=150   GUID=9574ce94-7803-474f-a9ac-6c855340aa3d
+   Area=128   Joint1=152   Joint2=149   Joint3=151   Joint4=154   GUID=dc44d403-c382-4942-b9a6-fc4c114aa929
+   Area=129   Joint1=150   Joint2=153   Joint3=154   Joint4=151   GUID=6a67152a-478a-4625-a2a7-f065e681ccad
+   Area=130   Joint1=696   Joint2=690   Joint3=152   Joint4=155   GUID=3bd117ff-6060-4e77-b6ab-2f5399b18197
+   Area=131   Joint1=800   Joint2=801   Joint3=156   Joint4=153   GUID=81076ef9-d6a6-4367-8145-40c91213d43b
+   Area=132   Joint1=155   Joint2=152   Joint3=154   Joint4=157   GUID=f7822c67-bc58-4785-8a38-e7fc5fd9b216
+   Area=133   Joint1=153   Joint2=156   Joint3=157   Joint4=154   GUID=7aef9b26-535f-465e-88f7-6d147563fb76
+   Area=134   Joint1=368   Joint2=696   Joint3=155   Joint4=158   GUID=6e26d4a6-8ac0-4be0-920c-c985d63deac5
+   Area=135   Joint1=801   Joint2=793   Joint3=159   Joint4=156   GUID=f78a3108-25b9-4ab0-9ad2-f8f08f7c3e88
+   Area=136   Joint1=158   Joint2=155   Joint3=157   Joint4=160   GUID=3af4ad6f-93cc-4178-8c62-b814c5177d7b
+   Area=137   Joint1=156   Joint2=159   Joint3=160   Joint4=157   GUID=dcc2b70c-556b-4853-a5aa-dccd09aef340
+   Area=138   Joint1=799   Joint2=798   Joint3=147   Joint4=161   GUID=62ebce1e-b5b4-4fce-a719-1440dd1d69c5
+   Area=139   Joint1=807   Joint2=808   Joint3=162   Joint4=148   GUID=cf6d5517-2e23-4444-ad7c-a00332c675a7
+   Area=140   Joint1=161   Joint2=147   Joint3=148   Joint4=162   GUID=8526d505-e8aa-46a0-ba3f-0b5f13b620f3
+   Area=141   Joint1=800   Joint2=799   Joint3=161   Joint4=163   GUID=53367335-5e3b-4ecb-80b2-d847dedfd0a6
+   Area=142   Joint1=808   Joint2=809   Joint3=164   Joint4=162   GUID=b978a88c-aabe-435b-aa4a-1125e8baaa1c
+   Area=143   Joint1=163   Joint2=161   Joint3=162   Joint4=164   GUID=00ea5985-463d-455f-aa8c-1e243b6d8027
+   Area=144   Joint1=801   Joint2=800   Joint3=163   Joint4=165   GUID=51c9172b-1fbb-4b80-b9f5-2f3dfdf8956f
+   Area=145   Joint1=809   Joint2=810   Joint3=166   Joint4=164   GUID=02efb13f-4451-4771-94fb-665719b9dae7
+   Area=146   Joint1=165   Joint2=163   Joint3=164   Joint4=166   GUID=b7f5e2b7-fd44-4f1a-81a0-34a4b248d16e
+   Area=147   Joint1=793   Joint2=801   Joint3=165   Joint4=167   GUID=b77ad4da-9ff5-4dd8-ab8b-0d965beaab43
+   Area=148   Joint1=810   Joint2=802   Joint3=168   Joint4=166   GUID=c09d199f-0f74-497c-8931-4732e5a5af2a
+   Area=149   Joint1=167   Joint2=165   Joint3=166   Joint4=168   GUID=615fab54-bad0-4cfc-a07f-20c32435e634
+   Area=233   Joint1=51   Joint2=201   Joint3=354   Joint4=353
+   Area=234   Joint1=202   Joint2=52   Joint3=327   Joint4=328
+   Area=235   Joint1=328   Joint2=327   Joint3=339   Joint4=340
+   Area=236   Joint1=340   Joint2=339   Joint3=353   Joint4=354
+   Area=237   Joint1=192   Joint2=194   Joint3=336   Joint4=338
+   Area=238   Joint1=193   Joint2=191   Joint3=364   Joint4=362
+   Area=239   Joint1=338   Joint2=336   Joint3=348   Joint4=350
+   Area=240   Joint1=350   Joint2=348   Joint3=362   Joint4=364
+   Area=241   Joint1=194   Joint2=196   Joint3=334   Joint4=336
+   Area=242   Joint1=195   Joint2=193   Joint3=362   Joint4=360
+   Area=243   Joint1=336   Joint2=334   Joint3=346   Joint4=348
+   Area=244   Joint1=348   Joint2=346   Joint3=360   Joint4=362
+   Area=245   Joint1=196   Joint2=198   Joint3=332   Joint4=334
+   Area=246   Joint1=197   Joint2=195   Joint3=360   Joint4=358
+   Area=247   Joint1=334   Joint2=332   Joint3=344   Joint4=346
+   Area=248   Joint1=346   Joint2=344   Joint3=358   Joint4=360
+   Area=249   Joint1=198   Joint2=200   Joint3=330   Joint4=332
+   Area=250   Joint1=199   Joint2=197   Joint3=358   Joint4=356
+   Area=251   Joint1=332   Joint2=330   Joint3=342   Joint4=344
+   Area=252   Joint1=344   Joint2=342   Joint3=356   Joint4=358
+   Area=253   Joint1=200   Joint2=202   Joint3=328   Joint4=330
+   Area=254   Joint1=201   Joint2=199   Joint3=356   Joint4=354
+   Area=255   Joint1=330   Joint2=328   Joint3=340   Joint4=342
+   Area=256   Joint1=342   Joint2=340   Joint3=354   Joint4=356
+   Area=258   Joint1=12   Joint2=11   Joint3=13   Joint4=14
+   Area=259   Joint1=25   Joint2=26   Joint3=24   Joint4=23
+   Area=260   Joint1=14   Joint2=13   Joint3=15   Joint4=16
+   Area=261   Joint1=16   Joint2=15   Joint3=17   Joint4=18
+   Area=262   Joint1=18   Joint2=17   Joint3=19   Joint4=20
+   Area=263   Joint1=20   Joint2=19   Joint3=21   Joint4=22
+   Area=264   Joint1=22   Joint2=21   Joint3=23   Joint4=24
+ 
+TABLE:  "CONNECTIVITY - FRAME"
+   Frame=1   JointI=27   JointJ=41   IsCurved=No   GUID=7538e34a-2d0a-40cb-9144-a91b280ea166
+   Frame=2   JointI=41   JointJ=28   IsCurved=No   GUID=8b4c6c42-3730-40a8-8158-152cdf682085
+   Frame=4   JointI=31   JointJ=42   IsCurved=No   GUID=3f95abb0-1d39-4120-87f1-5df40f629fc8
+   Frame=5   JointI=9   JointJ=10   IsCurved=No   GUID=ba63f29d-ef54-4735-8be0-5374cfd4ee5b
+   Frame=6   JointI=11   JointJ=12   IsCurved=No   GUID=410f9aef-220a-4328-a612-11dcb6f5778f
+   Frame=7   JointI=13   JointJ=14   IsCurved=No   GUID=1f4750de-505d-4b94-9c31-ae4d19e27b0f
+   Frame=8   JointI=15   JointJ=16   IsCurved=No   GUID=6be9cafb-4484-434d-964c-f19e7cb46715
+   Frame=9   JointI=17   JointJ=18   IsCurved=No   GUID=a13bee72-6868-433e-a0f7-31fa2a594cf7
+   Frame=10   JointI=19   JointJ=20   IsCurved=No   GUID=f1629dd2-43cb-4517-ac5d-d5d9b4ade2b8
+   Frame=11   JointI=21   JointJ=22   IsCurved=No   GUID=54a2184d-3cd5-4a4e-8001-82b0bdca6496
+   Frame=12   JointI=23   JointJ=24   IsCurved=No   GUID=8426f2fc-8901-4013-a13e-4c7334c4ba0d
+   Frame=13   JointI=25   JointJ=26   IsCurved=No   GUID=34da6f07-c4b4-46a6-ab41-88926bda9669
+   Frame=14   JointI=42   JointJ=32   IsCurved=No   GUID=8bc8caca-e0e9-48db-af98-1f0802600ce8
+   Frame=16   JointI=369   JointJ=3   IsCurved=No   GUID=c9a91b74-dca8-404f-9f91-5c52eb447d71
+   Frame=17   JointI=3   JointJ=290   IsCurved=No   GUID=8e549c19-1faa-4729-a22a-aa2b7c8cb5be
+   Frame=18   JointI=792   JointJ=3   IsCurved=No   GUID=38807582-3a6b-49d4-91c8-f702d32da217
+   Frame=20   JointI=367   JointJ=4   IsCurved=No   GUID=fb3fd4d8-4d26-40f4-a808-cdcecdcdbbdb
+   Frame=21   JointI=4   JointJ=42   IsCurved=No   GUID=3514a6ad-5b2f-4cee-ae09-916aae405b15
+   Frame=22   JointI=792   JointJ=4   IsCurved=No   GUID=7d6867f1-8bcb-4870-80b3-b8319f8eb901
+   Frame=27   JointI=53   JointJ=54   IsCurved=No   GUID=a1b67cb7-48d9-479d-8acc-29a1dc3e8213
+   Frame=28   JointI=41   JointJ=72   IsCurved=No   GUID=0020c9ba-5180-4852-9567-56fbb9bd150b
+   Frame=29   JointI=72   JointJ=297   IsCurved=No   GUID=a3386ffe-5d93-4232-acac-c168d73f2113
+   Frame=32   JointI=125   JointJ=73   IsCurved=No   GUID=427b19a4-8c07-416b-ad37-d1559c0c659d
+   Frame=33   JointI=73   JointJ=74   IsCurved=No   GUID=c4f08b66-13a5-45b9-97ac-d91666db599d
+   Frame=34   JointI=74   JointJ=303   IsCurved=No   GUID=23959213-3545-4798-941a-1f74b19dd57f
+   Frame=35   JointI=35   JointJ=75   IsCurved=No   GUID=f3df3da2-dad5-4f5c-b661-d9033d0ad36b
+   Frame=36   JointI=75   JointJ=76   IsCurved=No   GUID=992ff9d8-53eb-4cfa-b606-0e3bb9410bf8
+   Frame=37   JointI=76   JointJ=277   IsCurved=No   GUID=c682edd8-f355-4a36-91a2-ecafd688902d
+   Frame=38   JointI=33   JointJ=83   IsCurved=No   GUID=b71d5067-4f43-4bfd-b420-22ffc6bb2b44
+   Frame=39   JointI=83   JointJ=84   IsCurved=No   GUID=fe62f8de-083e-4d91-9fe9-5d622bcbdaa0
+   Frame=40   JointI=84   JointJ=320   IsCurved=No   GUID=f8c7579a-2fa6-469c-afdd-9cfb2db94732
+   Frame=41   JointI=37   JointJ=85   IsCurved=No   GUID=b154ff77-7166-4b5c-a04d-a3319437d90a
+   Frame=42   JointI=85   JointJ=86   IsCurved=No   GUID=8c2d7e34-667d-4799-825d-08166ff980ac
+   Frame=43   JointI=86   JointJ=278   IsCurved=No   GUID=f44b7d44-9b65-4058-b569-7a51b79021ef
+   Frame=44   JointI=47   JointJ=87   IsCurved=No   GUID=ccfd91ba-94f1-4d6c-8288-3032cf0a7450
+   Frame=45   JointI=87   JointJ=88   IsCurved=No   GUID=428578aa-9f90-4d05-b73a-dc2a77b20b15
+   Frame=46   JointI=88   JointJ=315   IsCurved=No   GUID=f019ab86-5d1a-43a5-910e-39db9db39668
+   Frame=47   JointI=791   JointJ=59   IsCurved=No   GUID=b7c26e0b-10ad-486d-8f76-ce88df3fb9b4
+   Frame=48   JointI=59   JointJ=291   IsCurved=No   GUID=0f30662f-41a7-48a2-9b96-b24b0d14ef93
+   Frame=49   JointI=791   JointJ=65   IsCurved=No   GUID=e5b94fcf-ad1e-423d-b353-f640ddb1284b
+   Frame=50   JointI=65   JointJ=297   IsCurved=No   GUID=7c684200-7687-46e3-952a-92f566f30608
+   Frame=51   JointI=39   JointJ=89   IsCurved=No   GUID=3cce2f95-a852-4c04-a7f3-bc096e5555c9
+   Frame=52   JointI=89   JointJ=90   IsCurved=No   GUID=3a45d54d-4fd3-491e-b0db-d01e33f377ac
+   Frame=53   JointI=90   JointJ=274   IsCurved=No   GUID=3e539f49-70a2-43a7-8586-54e28759fc43
+   Frame=54   JointI=366   JointJ=81   IsCurved=No   GUID=031bb810-4707-4ea4-b5e9-1bfb013911e6
+   Frame=55   JointI=81   JointJ=82   IsCurved=No   GUID=29c04da3-dca5-41f9-bae7-e8560df5f133
+   Frame=56   JointI=82   JointJ=50   IsCurved=No   GUID=df1dec41-b2aa-4a10-b8a9-9b9e817aedcd
+   Frame=57   JointI=55   JointJ=91   IsCurved=No   GUID=ba0f2df7-a632-477d-9981-ecf8bce1e224
+   Frame=58   JointI=91   JointJ=92   IsCurved=No   GUID=9c37e766-c31b-454b-b4a4-97a7e524014a
+   Frame=59   JointI=92   JointJ=279   IsCurved=No   GUID=7bf77bbc-761d-49fb-af51-f3e05de91128
+   Frame=60   JointI=183   JointJ=79   IsCurved=No   GUID=4a9ad203-16bc-4e93-b7e3-41e8f909a794
+   Frame=61   JointI=121   JointJ=122   IsCurved=No   GUID=67158e35-3ab9-4324-9ddd-547e97cdf362
+   Frame=62   JointI=123   JointJ=124   IsCurved=No   GUID=52ed78db-6eff-491e-8d2d-dcd561c4fb88
+   Frame=63   JointI=79   JointJ=80   IsCurved=No   GUID=5226e774-b84e-4b1e-a6c1-8bc15ed304d2
+   Frame=64   JointI=80   JointJ=293   IsCurved=No   GUID=8165d76a-cbc1-4dec-92a0-63f77741b463
+   Frame=65   JointI=185   JointJ=77   IsCurved=No   GUID=f6de360c-c0c5-45e5-9731-74f907249c69
+   Frame=66   JointI=77   JointJ=78   IsCurved=No   GUID=328394c3-4f68-4f1b-9f07-df56ded382d3
+   Frame=67   JointI=78   JointJ=294   IsCurved=No   GUID=baa5e9f5-fb45-443a-b4ce-99ffd79a3628
+   Frame=69   JointI=64   JointJ=803   IsCurved=No   GUID=c3320ce5-c89a-4b36-80b6-f6463c251e0d
+   Frame=70   JointI=815   JointJ=93   IsCurved=No   GUID=87716384-973f-4376-a253-aa98aa22b6b1
+   Frame=71   JointI=93   JointJ=94   IsCurved=No   GUID=37390cf6-073b-4a30-a707-8c32a1725190
+   Frame=72   JointI=94   JointJ=54   IsCurved=No   GUID=15f97368-fdea-46f1-99d5-35a0fb35fe08
+   Frame=73   JointI=54   JointJ=95   IsCurved=No   GUID=31ef02c6-6ac0-4319-a7c9-36324a6f4f32
+   Frame=74   JointI=95   JointJ=96   IsCurved=No   GUID=788340cf-7f7e-4adf-ac78-ba53e3c07db9
+   Frame=75   JointI=96   JointJ=816   IsCurved=No   GUID=eff2b701-ae3e-41c9-8cdd-eaeb50cae7b5
+   Frame=78   JointI=654   JointJ=660   IsCurved=No   GUID=d5860246-f708-4eed-8821-d0eb1a16680e
+   Frame=79   JointI=660   JointJ=666   IsCurved=No   GUID=5635955d-6639-44c8-ad6b-f310d2228c18
+   Frame=80   JointI=666   JointJ=672   IsCurved=No   GUID=2d465f1f-d181-4f31-b6e1-4535d9d58c3a
+   Frame=81   JointI=672   JointJ=678   IsCurved=No   GUID=b9b75516-2a0a-4679-8aa2-54c3f8b64f0e
+   Frame=82   JointI=678   JointJ=684   IsCurved=No   GUID=2048b189-ca1b-4836-b2dc-c5356d5d2e1c
+   Frame=83   JointI=684   JointJ=690   IsCurved=No   GUID=fd088dec-f1e5-4eb1-9ed0-6829dead1ad7
+   Frame=84   JointI=690   JointJ=696   IsCurved=No   GUID=a6992c06-c68c-4277-8acc-36df58d8abfb
+   Frame=85   JointI=696   JointJ=368   IsCurved=No   GUID=9e57e045-8897-4c23-83db-93c6afc94945
+   Frame=87   JointI=58   JointJ=57   IsCurved=No   GUID=e90751c7-6f53-454b-a1e7-17c7653b5645
+   Frame=88   JointI=57   JointJ=679   IsCurved=No   GUID=f2d5d14f-10a4-4a29-b4df-a258026ec0af
+   Frame=89   JointI=127   JointJ=100   IsCurved=No   GUID=aa288012-a305-442d-9f96-ac98ad2e3e02
+   Frame=90   JointI=100   JointJ=99   IsCurved=No   GUID=0df6f62d-b45d-4b74-903e-231ce5ea3bd4
+   Frame=91   JointI=99   JointJ=304   IsCurved=No   GUID=ee5b1e45-87f8-4ef3-9c37-0a5c489de95e
+   Frame=92   JointI=329   JointJ=105   IsCurved=No   GUID=7780c2e4-58e6-4409-b619-a68c96a22305
+   Frame=93   JointI=105   JointJ=272   IsCurved=No   GUID=520289ff-098e-4307-9d12-257cbf48941e
+   Frame=94   JointI=251   JointJ=102   IsCurved=No   GUID=24764cc8-f6a0-4fc3-b39d-509a7347b1f8
+   Frame=95   JointI=102   JointJ=101   IsCurved=No   GUID=ea4bbadc-1501-4b18-8e4c-e792fe4d4499
+   Frame=96   JointI=101   JointJ=318   IsCurved=No   GUID=a52b2355-5b31-4194-b290-f37b36bb0492
+   Frame=97   JointI=253   JointJ=104   IsCurved=No   GUID=553ff3b0-948e-46be-87cd-039529f29c9e
+   Frame=98   JointI=104   JointJ=103   IsCurved=No   GUID=ae60ee16-aff1-45c5-8e41-f47fa315934c
+   Frame=99   JointI=103   JointJ=316   IsCurved=No   GUID=33b5a7f1-8b71-4319-b299-8847eded18e9
+   Frame=100   JointI=110   JointJ=111   IsCurved=No   GUID=9c6386bd-d699-4cfa-883a-0dc7603a4375
+   Frame=101   JointI=35   JointJ=109   IsCurved=No   GUID=f3917eaa-d2ed-40af-bb1e-3ebde49b5da4
+   Frame=102   JointI=109   JointJ=37   IsCurved=No   GUID=b5a192e8-6022-4740-adf8-eabc082215fa
+   Frame=103   JointI=183   JointJ=107   IsCurved=No   GUID=dff901d2-a1b2-40dc-a9f6-e770ea40f148
+   Frame=104   JointI=107   JointJ=108   IsCurved=No   GUID=260bf96e-357a-447c-b613-16d5a403e4c4
+   Frame=105   JointI=108   JointJ=185   IsCurved=No   GUID=f0be24c2-8903-4f0b-ba1d-a60af4a9b301
+   Frame=106   JointI=125   JointJ=106   IsCurved=No   GUID=3c38aa6b-cbbf-4a5c-941e-e4da7c824c08
+   Frame=107   JointI=106   JointJ=127   IsCurved=No   GUID=577d861a-4680-4a79-bc41-fefd30407430
+   Frame=108   JointI=364   JointJ=111   IsCurved=No   GUID=7f8ee38f-3c51-4654-9be4-829f46f3f914
+   Frame=109   JointI=111   JointJ=366   IsCurved=No   GUID=35607533-58b8-4763-97ba-40b3c4cac148
+   Frame=110   JointI=793   JointJ=167   IsCurved=No   GUID=ed7b5004-43a2-4776-be08-47f3c15f8d74
+   Frame=111   JointI=167   JointJ=168   IsCurved=No   GUID=b2ea82e1-286f-40f3-acdf-f613e6ea283b
+   Frame=112   JointI=168   JointJ=802   IsCurved=No   GUID=f5998c6a-d44c-48bc-93e4-901f8632fad4
+   Frame=113   JointI=795   JointJ=133   IsCurved=No   GUID=709ab299-4716-4645-81ed-cb6eedd6da24
+   Frame=114   JointI=133   JointJ=130   IsCurved=No   GUID=188c1953-5ea5-4551-aa34-fb1deaf4419f
+   Frame=115   JointI=130   JointJ=804   IsCurved=No   GUID=281b7980-3674-47ea-b7df-3355ae7faf8b
+   Frame=116   JointI=796   JointJ=137   IsCurved=No   GUID=6c89d70d-498f-4b0e-949b-9fc4758f3476
+   Frame=117   JointI=137   JointJ=138   IsCurved=No   GUID=c955a607-dceb-42a2-af1c-555e99f8037f
+   Frame=118   JointI=138   JointJ=805   IsCurved=No   GUID=ba2156a3-9888-40ac-a4a7-3a2f58f54c16
+   Frame=119   JointI=797   JointJ=142   IsCurved=No   GUID=5917ce29-472c-409e-abad-e4ba352cd62e
+   Frame=120   JointI=142   JointJ=143   IsCurved=No   GUID=e8c5d58a-1581-4049-9179-518633924c92
+   Frame=121   JointI=143   JointJ=806   IsCurved=No   GUID=1ccb4bbf-134d-4942-9e71-423382914011
+   Frame=122   JointI=798   JointJ=147   IsCurved=No   GUID=8b20ca94-23eb-4c8c-9824-77cb5aa2b493
+   Frame=123   JointI=147   JointJ=148   IsCurved=No   GUID=b28887a7-b05f-4a55-a423-df15fda596ce
+   Frame=124   JointI=148   JointJ=807   IsCurved=No   GUID=51f91f05-483c-4546-af47-94b301c604d5
+   Frame=125   JointI=799   JointJ=161   IsCurved=No   GUID=0026cbe1-11fc-4c4e-92a4-aa2180af9046
+   Frame=126   JointI=161   JointJ=162   IsCurved=No   GUID=3222e581-a186-444a-a9b4-a21ebdefa403
+   Frame=127   JointI=162   JointJ=808   IsCurved=No   GUID=83d64677-d2c5-47d3-aa23-81ad5024dd20
+   Frame=128   JointI=800   JointJ=163   IsCurved=No   GUID=76b2b66c-823d-4b9b-8faf-dfec7bf144a5
+   Frame=129   JointI=163   JointJ=164   IsCurved=No   GUID=72aa3224-6a6d-4a62-bb0d-9328165449e1
+   Frame=130   JointI=164   JointJ=809   IsCurved=No   GUID=8ae302a4-2934-482a-b97c-67745b0966a6
+   Frame=131   JointI=801   JointJ=165   IsCurved=No   GUID=f7b2c42a-b1ba-4f9e-a6f5-202a8f8bb904
+   Frame=132   JointI=165   JointJ=166   IsCurved=No   GUID=4e5c1f5c-be6c-41b2-86f1-d92a0284939f
+   Frame=133   JointI=166   JointJ=810   IsCurved=No   GUID=b099e34d-4ce4-40f0-9959-975b3406c289
+   Frame=134   JointI=191   JointJ=110   IsCurved=No   GUID=86cfd542-8dc8-4ac7-a186-f9295cfd2b83
+   Frame=135   JointI=110   JointJ=49   IsCurved=No   GUID=db78244e-db0e-4235-b7e1-6617af3c5605
+   Frame=136   JointI=793   JointJ=159   IsCurved=No   GUID=5dbf403d-b0c8-4a0b-9233-193eee45e486
+   Frame=137   JointI=159   JointJ=160   IsCurved=No   GUID=2000aee5-5055-413a-b073-26d2182b85e1
+   Frame=138   JointI=160   JointJ=158   IsCurved=No   GUID=87f687e8-e43a-4d0d-89b7-638e4cb8c23e
+   Frame=139   JointI=277   JointJ=278   IsCurved=No   GUID=0568a9e0-fddf-45bd-af5b-4f5bcdb10763
+   Frame=140   JointI=158   JointJ=319   IsCurved=No   GUID=5e494902-5da4-431c-bd77-5d1b96ff28c4
+   Frame=141   JointI=795   JointJ=132   IsCurved=No   GUID=a67f652f-5c81-4f2d-889b-f11fc57739ae
+   Frame=142   JointI=132   JointJ=118   IsCurved=No   GUID=42df65ae-2e53-44ce-b81a-04fc47929d96
+   Frame=143   JointI=285   JointJ=286   IsCurved=No   GUID=4e7bf87b-26ec-4487-ae61-2a728d2d4d5e
+   Frame=144   JointI=289   JointJ=291   IsCurved=No   GUID=1d5f4565-ec62-4719-bead-a6807ba2ece1
+   Frame=145   JointI=118   JointJ=117   IsCurved=No   GUID=a0616849-6e8f-4e51-9cd0-f94d8c424eb5
+   Frame=146   JointI=36   JointJ=38   IsCurved=No   GUID=c65ce0ea-095d-47b7-b685-ed0604b74340
+   Frame=147   JointI=293   JointJ=294   IsCurved=No   GUID=bb36f1b0-990e-40e0-bf6e-b3e6c7fd9359
+   Frame=148   JointI=117   JointJ=681   IsCurved=No   GUID=12a45cca-229b-4ffd-ab1c-72f802ee970b
+   Frame=149   JointI=796   JointJ=135   IsCurved=No   GUID=f57250d2-ae50-4a08-845f-73e26717b17e
+   Frame=150   JointI=135   JointJ=136   IsCurved=No   GUID=b3a0a918-9565-4e0c-a9d7-4c03b4507ea6
+   Frame=151   JointI=136   JointJ=134   IsCurved=No   GUID=d061ffc6-92e0-4637-bcde-83ddc814aa38
+   Frame=152   JointI=303   JointJ=304   IsCurved=No   GUID=5ef8106c-9737-47bb-bcdd-d77a997e4ae9
+   Frame=153   JointI=134   JointJ=685   IsCurved=No   GUID=6aff6081-1d66-4ac6-8894-9c28317ad1b5
+   Frame=154   JointI=797   JointJ=140   IsCurved=No   GUID=5cbdbb90-6fd6-4674-9653-09bbbcfdf977
+   Frame=155   JointI=140   JointJ=141   IsCurved=No   GUID=0a888a08-3cf1-463a-a997-57196959557a
+   Frame=156   JointI=311   JointJ=312   IsCurved=No   GUID=cd369f6e-6a93-4123-b6d7-abf157e1195a
+   Frame=157   JointI=313   JointJ=314   IsCurved=No   GUID=26b5d292-bff0-4fcd-8e7e-c1875efce550
+   Frame=158   JointI=315   JointJ=316   IsCurved=No   GUID=4e80bb4f-1f2a-464a-bf57-07c9a555ac17
+   Frame=159   JointI=316   JointJ=318   IsCurved=No   GUID=331036de-215f-4392-ab94-0dfdbf94c0b8
+   Frame=160   JointI=318   JointJ=320   IsCurved=No   GUID=6f114125-0057-4cd3-aad3-68538fddfb66
+   Frame=161   JointI=321   JointJ=322   IsCurved=No   GUID=e5bbcbcb-687a-4506-84e9-3e3d5a217dbf
+   Frame=162   JointI=322   JointJ=324   IsCurved=No   GUID=46f92f8f-8eb8-4fbf-bec6-3d493a658918
+   Frame=163   JointI=324   JointJ=326   IsCurved=No   GUID=08f8d59d-8777-44f9-ad7f-3d1cdf9b2ef1
+   Frame=164   JointI=327   JointJ=328   IsCurved=No   GUID=3bda497f-9fee-4b37-8dcd-0830b18ba0fe
+   Frame=165   JointI=328   JointJ=330   IsCurved=No   GUID=c82d18c5-26a1-4723-bfb9-d93a5db94fdd
+   Frame=166   JointI=330   JointJ=332   IsCurved=No   GUID=1048b535-cfe5-45ae-9f44-cf4601aa9059
+   Frame=167   JointI=332   JointJ=334   IsCurved=No   GUID=66ad01a3-578c-4583-ab9e-2a51b8d7acec
+   Frame=168   JointI=334   JointJ=336   IsCurved=No   GUID=2545362c-31a1-4f3b-815d-b0aa8c0e9550
+   Frame=169   JointI=336   JointJ=338   IsCurved=No   GUID=da431a28-ae92-4b9a-b5ee-409c83869618
+   Frame=170   JointI=339   JointJ=340   IsCurved=No   GUID=fafa1e20-069d-4495-af63-73033414f407
+   Frame=171   JointI=340   JointJ=342   IsCurved=No   GUID=95ea7cbb-6f71-4d06-be91-d62498fa2500
+   Frame=172   JointI=342   JointJ=344   IsCurved=No   GUID=dbcdd939-ecdb-4997-87c5-cdb430d8d928
+   Frame=173   JointI=344   JointJ=346   IsCurved=No   GUID=3ba22a0c-fa85-46d8-bccc-20bd6233a735
+   Frame=174   JointI=346   JointJ=348   IsCurved=No   GUID=3c885955-1c0a-4ea5-95cd-e15a022360d5
+   Frame=175   JointI=348   JointJ=350   IsCurved=No   GUID=f09bf09e-2538-43a4-9e0a-0f3b9e179d50
+   Frame=176   JointI=141   JointJ=139   IsCurved=No   GUID=e2a36bbd-5c99-421e-be76-c08a64709f62
+   Frame=177   JointI=353   JointJ=354   IsCurved=No   GUID=ca7440e4-cbe8-4321-af0f-c3c8a1e0cc9c
+   Frame=178   JointI=354   JointJ=356   IsCurved=No   GUID=db1c84e4-9218-48d5-80ec-f441008a1c3b
+   Frame=179   JointI=356   JointJ=358   IsCurved=No   GUID=c0306651-2e0e-4f9e-ae3c-4ee2bd610819
+   Frame=180   JointI=358   JointJ=360   IsCurved=No   GUID=7129044b-0e04-4b47-93ab-cc0c86401fba
+   Frame=181   JointI=360   JointJ=362   IsCurved=No   GUID=72e987fc-dd50-4afd-b48e-24c7820984bc
+   Frame=182   JointI=362   JointJ=364   IsCurved=No   GUID=01fba68f-5f89-4b56-bb12-9f614704fee3
+   Frame=183   JointI=139   JointJ=687   IsCurved=No   GUID=176ed376-9c50-4fa8-8056-e1ad12f4aafb
+   Frame=184   JointI=798   JointJ=145   IsCurved=No   GUID=303e8e28-c9bc-4c86-8acf-bbd058b6085e
+   Frame=185   JointI=145   JointJ=146   IsCurved=No   GUID=0622aa40-b47a-4f61-9751-b1b67c974af0
+   Frame=186   JointI=146   JointJ=144   IsCurved=No   GUID=bc2858f9-59d9-40b1-923f-af6787e25570
+   Frame=187   JointI=144   JointJ=691   IsCurved=No   GUID=f4cde6fd-4fb6-47ee-aa7b-e3e793b2ed29
+   Frame=188   JointI=799   JointJ=150   IsCurved=No   GUID=82e5b272-8291-4cdd-8bff-4f7d18469965
+   Frame=189   JointI=150   JointJ=151   IsCurved=No   GUID=de381404-0615-40f8-925d-593d2c180579
+   Frame=190   JointI=151   JointJ=149   IsCurved=No   GUID=82b7a9bc-38e8-4ab3-bf02-32ed440df3b8
+   Frame=191   JointI=149   JointJ=693   IsCurved=No   GUID=24ca66c7-08ff-4bcf-948b-57275292817e
+   Frame=192   JointI=800   JointJ=153   IsCurved=No   GUID=9aac8411-93db-4a4b-9878-ddc9ffec7fda
+   Frame=193   JointI=153   JointJ=154   IsCurved=No   GUID=72191424-da90-47ce-aba7-50e2a0e48ff8
+   Frame=194   JointI=154   JointJ=152   IsCurved=No   GUID=ef7ecf8e-dd05-4409-9893-16090807e74b
+   Frame=195   JointI=152   JointJ=697   IsCurved=No   GUID=d63b07f8-2c3e-423c-987d-3a584b906613
+   Frame=196   JointI=801   JointJ=156   IsCurved=No   GUID=493fca3c-ab20-4b49-bdf7-53c714c672d5
+   Frame=197   JointI=156   JointJ=157   IsCurved=No   GUID=93ab9fd9-ccfe-408c-b233-3d53bb5dd173
+   Frame=198   JointI=157   JointJ=155   IsCurved=No   GUID=f689af78-6ff3-43e0-b210-70d5b7df4aba
+   Frame=199   JointI=155   JointJ=699   IsCurved=No   GUID=63852fe2-b54e-46f1-86a5-57844abaffca
+   Frame=200   JointI=794   JointJ=131   IsCurved=No   GUID=46fe3260-8b3a-4361-801f-e34f107c71ba
+   Frame=201   JointI=131   JointJ=64   IsCurved=No   GUID=abc07250-0dcf-4df8-a01a-d3a8f8bab30c
+   Frame=202   JointI=794   JointJ=129   IsCurved=No   GUID=28964613-bb6b-406c-916a-5b7464f316ce
+   Frame=203   JointI=129   JointJ=58   IsCurved=No   GUID=f28bb7d8-f040-4aa3-883b-4cc1c279edc3
+   Frame=308   JointI=815   JointJ=365   IsCurved=No   GUID=a892db7d-3e38-4e1a-b262-e27e7ec85f90
+   Frame=320   JointI=816   JointJ=323   IsCurved=No   GUID=3302bd39-a7c5-4372-8f0b-a43c84882c7f
+   Frame=321   JointI=29   JointJ=367   IsCurved=No   GUID=0b3f50e6-7bb2-4007-b4da-969c1f259135
+   Frame=322   JointI=367   JointJ=30   IsCurved=No   GUID=8f0b8103-c130-41bd-a238-20710e0978b7
+   Frame=328   JointI=320   JointJ=326   IsCurved=No   GUID=ab19d10b-8ef7-4ecb-9f5b-93c34847aefc
+   Frame=329   JointI=326   JointJ=34   IsCurved=No   GUID=882d6ae9-341c-4429-8b28-031afff8bd42
+   Frame=331   JointI=277   JointJ=285   IsCurved=No   GUID=e12621c5-7707-4635-a2d6-4d59f47321e8
+   Frame=332   JointI=285   JointJ=36   IsCurved=No   GUID=404f85eb-428f-4b65-9eb5-edb8fb126170
+   Frame=334   JointI=278   JointJ=286   IsCurved=No   GUID=a9213b70-6b0d-46ca-af8d-03c6a8abfad3
+   Frame=335   JointI=286   JointJ=38   IsCurved=No   GUID=9beabac4-1c69-44d8-acb2-aafc2c568c8f
+   Frame=337   JointI=274   JointJ=275   IsCurved=No   GUID=a9e5028c-eeec-48df-a7f6-301ecd1bcf89
+   Frame=339   JointI=275   JointJ=40   IsCurved=No   GUID=ffbda678-465a-4cf5-b51c-104a720bfcaa
+   Frame=340   JointI=825   JointJ=369   IsCurved=No   GUID=ef6c9686-3796-4064-84f4-daf6cc3a2196
+   Frame=341   JointI=369   JointJ=826   IsCurved=No   GUID=c7171c4b-3c45-4594-bd21-8b195e7f33e0
+   Frame=343   JointI=315   JointJ=321   IsCurved=No   GUID=62fa126c-622d-4ec7-90b5-67bd79f91986
+   Frame=344   JointI=321   JointJ=48   IsCurved=No   GUID=5d948699-419c-47a8-bf13-b737e92de038
+   Frame=345   JointI=49   JointJ=366   IsCurved=No   GUID=3953b47c-db37-4a71-8263-bae45ac44698
+   Frame=347   JointI=51   JointJ=353   IsCurved=No   GUID=cb41d2bf-edcf-4bab-95c9-b2deb111fd0e
+   Frame=348   JointI=353   JointJ=339   IsCurved=No   GUID=8ccc5475-aa7a-40e3-b94b-a9c35729069b
+   Frame=349   JointI=339   JointJ=327   IsCurved=No   GUID=83adc70b-6f8f-45de-b0e3-06d870c5e807
+   Frame=350   JointI=327   JointJ=52   IsCurved=No   GUID=d701ba65-0c9a-478e-b8d0-5e46ff127fdd
+   Frame=352   JointI=279   JointJ=280   IsCurved=No   GUID=abc3ca1c-568a-4f6c-976c-87b9145f67f7
+   Frame=353   JointI=280   JointJ=56   IsCurved=No   GUID=681a9ff9-8a60-4aab-a313-d7303ad01acb
+   Frame=354   JointI=119   JointJ=370   IsCurved=No   GUID=0577c369-eed7-456a-b3c9-0801c48e3320
+   Frame=355   JointI=370   JointJ=120   IsCurved=No   GUID=aed4cebc-d2e0-4abb-8e05-c0e869770cce
+   Frame=357   JointI=303   JointJ=313   IsCurved=No   GUID=97388ce0-2fec-45fe-b559-32c53b3c1b64
+   Frame=358   JointI=313   JointJ=126   IsCurved=No   GUID=da4f18fc-2978-411c-b677-bc34e3c8be62
+   Frame=360   JointI=304   JointJ=314   IsCurved=No   GUID=b3e20c6f-d3c3-4029-8ea0-7e0295b03a99
+   Frame=361   JointI=314   JointJ=128   IsCurved=No   GUID=6594abda-136f-4506-adae-ed2eb215df59
+   Frame=363   JointI=293   JointJ=311   IsCurved=No   GUID=3043e1e7-41f1-4a59-a952-73cc7965f56e
+   Frame=364   JointI=311   JointJ=184   IsCurved=No   GUID=7985321b-6566-4802-9177-03afb8583e88
+   Frame=366   JointI=294   JointJ=312   IsCurved=No   GUID=4ebcaa41-1901-4004-b446-8e485d6f2d98
+   Frame=367   JointI=312   JointJ=186   IsCurved=No   GUID=7e055386-4ba6-4658-83d5-55b5e2767b3d
+   Frame=368   JointI=189   JointJ=329   IsCurved=No   GUID=eca42054-7bca-4e3e-ae80-f7f6cfa52363
+   Frame=370   JointI=272   JointJ=273   IsCurved=No   GUID=9bfcdf50-f52b-4e7c-8e1b-3ac8c9f48991
+   Frame=371   JointI=273   JointJ=190   IsCurved=No   GUID=a19603a6-a6c1-4db7-92b6-70b0212dcba8
+   Frame=372   JointI=191   JointJ=364   IsCurved=No   GUID=a1799303-d05b-47c1-9a2c-30c0851cfd25
+   Frame=379   JointI=184   JointJ=186   IsCurved=No   GUID=7f3cd1e1-dd5b-4a99-8b48-1538deca2172
+   Frame=380   JointI=126   JointJ=128   IsCurved=No   GUID=1f589431-68d0-4e71-a425-66c2a5237b16
+   Frame=396   JointI=364   JointJ=350   IsCurved=No   GUID=3c9700b2-9a22-43cb-8086-fa22dc48bc03
+   Frame=397   JointI=350   JointJ=338   IsCurved=No   GUID=eaf85941-d9ae-460e-a013-0a8207361004
+   Frame=398   JointI=338   JointJ=192   IsCurved=No   GUID=63c65f54-194d-4577-9364-01d5bc8df507
+   Frame=399   JointI=193   JointJ=362   IsCurved=No   GUID=8a278db9-d7fb-466d-b117-1235f8274699
+   Frame=400   JointI=362   JointJ=348   IsCurved=No   GUID=408781f7-f89e-42d0-bb63-6c3822e6e02b
+   Frame=401   JointI=348   JointJ=336   IsCurved=No   GUID=1a1bb749-69f7-4b5a-910c-9658b3d20d88
+   Frame=402   JointI=336   JointJ=194   IsCurved=No   GUID=834244ad-301c-4c90-8686-01986915bbf6
+   Frame=403   JointI=195   JointJ=360   IsCurved=No   GUID=0ab04b7c-ebea-43eb-ae7f-3a7096204072
+   Frame=404   JointI=360   JointJ=346   IsCurved=No   GUID=dcf82630-8121-420f-9d0e-ae60809b7b92
+   Frame=406   JointI=346   JointJ=334   IsCurved=No   GUID=d16267b5-0a66-4edb-bf86-2be5ab7f22e3
+   Frame=407   JointI=334   JointJ=196   IsCurved=No   GUID=e79d8f2c-70fc-428d-97e3-f5474df6820d
+   Frame=408   JointI=197   JointJ=358   IsCurved=No   GUID=ce1ca79f-abdb-4f45-a1ea-dffde48402a6
+   Frame=410   JointI=358   JointJ=344   IsCurved=No   GUID=6be2d538-a76d-43e7-9f21-f9fb6a261ebe
+   Frame=411   JointI=344   JointJ=332   IsCurved=No   GUID=fdff86c4-4929-4068-ab0c-eb95c07fd0b1
+   Frame=412   JointI=332   JointJ=198   IsCurved=No   GUID=07c5e23b-e578-469f-9ebe-3cd63f57881a
+   Frame=414   JointI=199   JointJ=356   IsCurved=No   GUID=578b270d-d9a8-4f66-a807-b15b457b11bd
+   Frame=415   JointI=356   JointJ=342   IsCurved=No   GUID=cf7de593-b3b0-448c-b2ba-cda0a7590195
+   Frame=416   JointI=342   JointJ=330   IsCurved=No   GUID=36cb3ef3-c963-4ddc-8d98-807a86621d95
+   Frame=418   JointI=330   JointJ=200   IsCurved=No   GUID=5c88e9cd-898d-4d5a-826d-57d0bc428d9e
+   Frame=419   JointI=201   JointJ=354   IsCurved=No   GUID=186fe9b9-3a96-4174-ae23-aa230ace4ba0
+   Frame=420   JointI=354   JointJ=340   IsCurved=No   GUID=e3f7aa37-6f03-491b-8a60-6355e2e611d5
+   Frame=422   JointI=340   JointJ=328   IsCurved=No   GUID=ee948063-84c7-4c60-84a4-540cdae06e78
+   Frame=423   JointI=328   JointJ=202   IsCurved=No   GUID=f561adc3-2a38-4629-842c-fc64acfba8f8
+   Frame=426   JointI=318   JointJ=324   IsCurved=No   GUID=747b0357-af3e-4b7d-9400-52c3ec1315ab
+   Frame=427   JointI=324   JointJ=252   IsCurved=No   GUID=bbad6b7d-86dd-4d44-a57d-ed7cee913098
+   Frame=430   JointI=316   JointJ=322   IsCurved=No   GUID=c6e86991-cdab-4da8-b39c-db2dea4f0ebe
+   Frame=431   JointI=322   JointJ=254   IsCurved=No   GUID=d0a2f8cd-321f-4973-9420-3cfe3b24d0fd
+   Frame=432   JointI=257   JointJ=301   IsCurved=No   GUID=814d5f24-0213-42f2-915d-98dbde4eb6b1
+   Frame=434   JointI=301   JointJ=300   IsCurved=No   GUID=404fb996-9bf6-4d7a-9c11-06356b48297b
+   Frame=435   JointI=300   JointJ=299   IsCurved=No   GUID=a822c8c6-ef32-40d9-b228-9ef619b825e0
+   Frame=436   JointI=299   JointJ=258   IsCurved=No   GUID=228f8964-e1b9-410b-b532-b711843b3ba5
+   Frame=438   JointI=12   JointJ=14   IsCurved=No   GUID=13df8e81-4a37-4b2d-9e9b-159731697c9e
+   Frame=439   JointI=14   JointJ=16   IsCurved=No   GUID=6575f888-127a-4b35-a86f-d2cf1f2c7922
+   Frame=440   JointI=16   JointJ=18   IsCurved=No   GUID=1e107392-8882-4c47-adc5-10ecade7769e
+   Frame=442   JointI=18   JointJ=20   IsCurved=No   GUID=9cbfb667-7be0-484f-a271-0fbbef645e9f
+   Frame=444   JointI=20   JointJ=22   IsCurved=No   GUID=6a97b566-742d-4586-95ba-02c75179b70d
+   Frame=446   JointI=22   JointJ=24   IsCurved=No   GUID=bc32c76a-d8fd-4245-8c6c-c65cb144676c
+   Frame=448   JointI=24   JointJ=26   IsCurved=No   GUID=58330641-78f7-40f4-91ed-4971634f7074
+   Frame=450   JointI=32   JointJ=30   IsCurved=No   GUID=5ab0d869-5ec5-40c1-b88c-a21f2b6161d0
+   Frame=452   JointI=30   JointJ=28   IsCurved=No   GUID=bf3c3635-40d2-48b0-ba48-529ee671e3c3
+   Frame=454   JointI=31   JointJ=29   IsCurved=No   GUID=be5d94a2-c2f2-4a15-b755-346f7b2928a6
+   Frame=456   JointI=29   JointJ=27   IsCurved=No   GUID=15654faa-42b7-410c-a3df-f902f9f6665f
+   Frame=459   JointI=122   JointJ=8   IsCurved=No   GUID=cef20804-22fe-4284-9015-d62898dfd748
+   Frame=461   JointI=8   JointJ=370   IsCurved=No   GUID=fe41c72a-619b-45bd-81b7-2fd0a22b1615
+   Frame=463   JointI=370   JointJ=10   IsCurved=No   GUID=eca51d3e-33dd-4276-9c48-f88fa76f3423
+   Frame=465   JointI=10   JointJ=124   IsCurved=No   GUID=5f819d42-aea5-40c2-8db3-f86b5a86c22d
+   Frame=467   JointI=44   JointJ=826   IsCurved=No   GUID=c39add2d-eade-4a17-9204-8fa3bfa15a1a
+   Frame=469   JointI=826   JointJ=46   IsCurved=No   GUID=da5ebaec-c006-45c4-a2b3-dcf69f4c440a
+   Frame=471   JointI=51   JointJ=201   IsCurved=No   GUID=bbb872fd-93dd-4102-9567-cc964514f320
+   Frame=473   JointI=201   JointJ=199   IsCurved=No   GUID=28204e43-8705-4089-9a7e-3582da496b93
+   Frame=475   JointI=199   JointJ=197   IsCurved=No   GUID=97d21062-f44d-4504-85c7-0faa46173a29
+   Frame=476   JointI=197   JointJ=195   IsCurved=No   GUID=8f57e61f-285d-4ee5-a8ae-606e886422e0
+   Frame=478   JointI=195   JointJ=193   IsCurved=No   GUID=cac1b05d-fdae-41fe-9986-6f33bce25aee
+   Frame=479   JointI=193   JointJ=191   IsCurved=No   GUID=83f127ce-dc67-4d62-8787-7d62cf9d451d
+   Frame=482   JointI=47   JointJ=253   IsCurved=No   GUID=c8256464-8711-4229-87fb-693a14481910
+   Frame=484   JointI=253   JointJ=251   IsCurved=No   GUID=e8535ea8-943b-473c-8139-93516403f745
+   Frame=485   JointI=251   JointJ=33   IsCurved=No   GUID=25ab139c-ab16-49fc-9424-a646943ee3c7
+   Frame=486   JointI=121   JointJ=7   IsCurved=No   GUID=856088c7-4060-4d1a-91b8-acfceea88950
+   Frame=487   JointI=7   JointJ=9   IsCurved=No   GUID=9028123b-66fb-464c-a2a2-12238f438aa4
+   Frame=488   JointI=9   JointJ=123   IsCurved=No   GUID=5f18dee1-340c-4244-8d6d-93c44d614c4a
+   Frame=489   JointI=43   JointJ=825   IsCurved=No   GUID=582686f5-cd03-426b-9cec-658e09e8d980
+   Frame=491   JointI=825   JointJ=45   IsCurved=No   GUID=b463b371-8108-44a6-b67b-8ac7d8dd557b
+   Frame=492   JointI=11   JointJ=13   IsCurved=No   GUID=a7ed0b6b-5cb4-4480-bf96-4e312456c654
+   Frame=494   JointI=13   JointJ=15   IsCurved=No   GUID=a8a78569-7b93-4e09-80cd-8799aca0090f
+   Frame=498   JointI=15   JointJ=17   IsCurved=No   GUID=180ef010-fae7-4238-9438-89d00b119587
+   Frame=499   JointI=17   JointJ=19   IsCurved=No   GUID=1274e3c9-0eee-487a-8295-78d64377dc74
+   Frame=501   JointI=19   JointJ=21   IsCurved=No   GUID=2d82c92f-ca77-47cb-8d05-99704d1af956
+   Frame=503   JointI=21   JointJ=23   IsCurved=No   GUID=1dbbbc69-8dfe-44b8-8376-fab05b6c705f
+   Frame=505   JointI=23   JointJ=25   IsCurved=No   GUID=e27fe094-21e9-456b-835a-949045863cee
+   Frame=509   JointI=665   JointJ=53   IsCurved=No   GUID=f6359e1b-d025-4810-9059-605119b56dc4
+   Frame=511   JointI=53   JointJ=677   IsCurved=No   GUID=dd411f23-924f-4efd-a319-e7ea32a03783
+   Frame=513   JointI=677   JointJ=675   IsCurved=No   GUID=d3e6fde5-34f6-41c5-b839-11028239a270
+   Frame=515   JointI=675   JointJ=674   IsCurved=No   GUID=441d0f28-6d29-428a-b22a-1bb67b3b40be
+   Frame=517   JointI=674   JointJ=673   IsCurved=No   GUID=1d79a6a1-931d-4548-baed-2208c490b3a7
+   Frame=518   JointI=673   JointJ=671   IsCurved=No   GUID=3ea6d6f2-327a-49e0-98b7-a666b9a7ba8d
+   Frame=519   JointI=671   JointJ=669   IsCurved=No   GUID=a62b01f9-2d47-42bb-b4d3-5e684e8202a7
+   Frame=521   JointI=669   JointJ=668   IsCurved=No   GUID=a7d0bb96-93fb-414b-a1e4-9877326a2568
+   Frame=523   JointI=668   JointJ=667   IsCurved=No   GUID=b0eaabd9-89b3-416a-9df5-3814f413fe28
+   Frame=525   JointI=667   JointJ=662   IsCurved=No   GUID=01bcedf3-1af2-4b47-81a5-019d6c508c1a
+   Frame=527   JointI=662   JointJ=663   IsCurved=No   GUID=d83a3033-229b-4647-9fee-4cb6b7bd55e9
+   Frame=529   JointI=663   JointJ=119   IsCurved=No   GUID=ee13b3d7-bf2f-45e3-b6b3-05f3389fad86
+   Frame=533   JointI=48   JointJ=254   IsCurved=No   GUID=c4386463-74a7-4035-ab74-d761db2b1589
+   Frame=535   JointI=254   JointJ=252   IsCurved=No   GUID=37ef8c35-f532-4298-82cb-d873d2dea0c2
+   Frame=537   JointI=252   JointJ=34   IsCurved=No   GUID=43ab7aa2-2f72-4016-bb9a-5a433239a4a5
+   Frame=539   JointI=52   JointJ=202   IsCurved=No   GUID=575ea4bd-f368-4f90-b52f-0ce3ca94703d
+   Frame=541   JointI=202   JointJ=200   IsCurved=No   GUID=6b3675a8-837a-4985-b2c3-11467f7a1d28
+   Frame=544   JointI=200   JointJ=198   IsCurved=No   GUID=3a03b48f-9f77-456f-b9a6-a3e1add65c31
+   Frame=545   JointI=198   JointJ=196   IsCurved=No   GUID=dddf07cb-4929-491a-bf29-fc70e0de9996
+   Frame=546   JointI=196   JointJ=194   IsCurved=No   GUID=5329c6c4-c8c3-4d5b-a2e4-3416454b4932
+   Frame=547   JointI=194   JointJ=192   IsCurved=No   GUID=187b7412-8822-4575-b79f-3597b47b52f4
+   Frame=548   JointI=192   JointJ=50   IsCurved=No   GUID=1fcc66e9-ae9c-4e15-a94e-55ba278dfebb
+   Frame=550   JointI=319   JointJ=368   IsCurved=No   GUID=922d74aa-1b08-471d-92da-1b33b87b6a1c
+   Frame=552   JointI=679   JointJ=654   IsCurved=No   GUID=5eaafca0-7827-4f94-9670-bfa534f65e0f
+   Frame=554   JointI=681   JointJ=660   IsCurved=No   GUID=2967c80e-9da6-4e51-907f-cf3a5fb2dbe3
+   Frame=556   JointI=685   JointJ=666   IsCurved=No   GUID=87c222af-2005-4db2-a397-fc56a099299c
+   Frame=558   JointI=687   JointJ=672   IsCurved=No   GUID=9202a601-bef2-4c64-8090-87728c1ec61f
+   Frame=560   JointI=691   JointJ=678   IsCurved=No   GUID=b5b7378c-b0b0-46af-98de-1d6b735f7f16
+   Frame=562   JointI=693   JointJ=684   IsCurved=No   GUID=edbda876-3244-4935-a5b4-3f787810a3a3
+   Frame=564   JointI=697   JointJ=690   IsCurved=No   GUID=84b89946-1451-48d9-8b47-0e503a535934
+   Frame=566   JointI=699   JointJ=696   IsCurved=No   GUID=7681dc8c-ee09-4a06-9e3b-03d40dffef76
+   Frame=567   JointI=802   JointJ=363   IsCurved=No   GUID=105b414c-f6b2-4033-a9bc-59862834ac34
+   Frame=568   JointI=363   JointJ=372   IsCurved=No   GUID=cb72dff8-6481-4d13-9377-9f4b40fb1087
+   Frame=569   JointI=803   JointJ=703   IsCurved=No   GUID=a9560ff8-011c-405d-9bd8-93b2fef45060
+   Frame=570   JointI=703   JointJ=658   IsCurved=No   GUID=0423b2ad-09fc-492b-8afd-d520553a53f4
+   Frame=571   JointI=804   JointJ=707   IsCurved=No   GUID=b759fd3e-ab59-4f0d-9c84-a5639a34f387
+   Frame=572   JointI=707   JointJ=664   IsCurved=No   GUID=a8ce615b-d861-4d63-bca4-a3a2b2a7de8f
+   Frame=573   JointI=805   JointJ=711   IsCurved=No   GUID=497450eb-570c-4cfa-8769-21c3fceba358
+   Frame=574   JointI=711   JointJ=670   IsCurved=No   GUID=f9332708-fa7c-4cb1-b270-9eaf0c40f738
+   Frame=575   JointI=806   JointJ=715   IsCurved=No   GUID=e8a7b9be-a526-479b-ab35-3b18cff77a76
+   Frame=576   JointI=715   JointJ=676   IsCurved=No   GUID=da2babbc-8b76-4c4a-b3e7-cff89369be51
+   Frame=577   JointI=807   JointJ=719   IsCurved=No   GUID=40fc1da4-b43c-425d-b62c-5583632002e7
+   Frame=578   JointI=719   JointJ=682   IsCurved=No   GUID=d2b818dc-19f7-458e-9a47-5e69aeb0377a
+   Frame=579   JointI=808   JointJ=723   IsCurved=No   GUID=a561552b-fcfe-4913-a37a-b3a846ffdad7
+   Frame=580   JointI=723   JointJ=688   IsCurved=No   GUID=b2ac2876-5628-4169-8f49-9f69530131fe
+   Frame=581   JointI=809   JointJ=727   IsCurved=No   GUID=7ccd92f9-d6fb-456c-a69d-677ff5100373
+   Frame=582   JointI=727   JointJ=694   IsCurved=No   GUID=7c867e91-d8c7-4292-b0ee-e4e5afa3946b
+   Frame=583   JointI=810   JointJ=731   IsCurved=No   GUID=51901716-f183-453b-9b49-e43162edde2a
+   Frame=584   JointI=731   JointJ=700   IsCurved=No   GUID=2d6ee049-edea-48a3-9704-a09254523419
+   Frame=585   JointI=341   JointJ=349   IsCurved=No   GUID=36a58df9-2b6c-4089-b31b-43394a3b19ee
+   Frame=586   JointI=349   JointJ=345   IsCurved=No   GUID=007edc6e-24b7-46e7-9b0c-f4aa054db24e
+   Frame=587   JointI=345   JointJ=347   IsCurved=No   GUID=3d083bce-2a38-46e2-a108-45d7a461f840
+   Frame=588   JointI=347   JointJ=812   IsCurved=No   GUID=6431806d-86f5-4993-966d-0d58aeea4aff
+   Frame=590   JointI=341   JointJ=335   IsCurved=No   GUID=7b52d985-c33a-4bac-b611-a1d7a81a6c42
+   Frame=591   JointI=335   JointJ=120   IsCurved=No   GUID=d0f99000-7909-4aa5-9a63-7afd7ff81774
+   Frame=592   JointI=120   JointJ=337   IsCurved=No   GUID=7083738e-dc29-4f3f-abef-74d72955d0eb
+   Frame=593   JointI=337   JointJ=343   IsCurved=No   GUID=2152300e-d1b1-4e4a-bb3e-bf943e191980
+   Frame=595   JointI=343   JointJ=333   IsCurved=No   GUID=f0180a42-ceb5-4fa7-9f19-b8df5ac8bba4
+   Frame=596   JointI=333   JointJ=331   IsCurved=No   GUID=8e565562-757f-4a32-8ea4-700ca5f1b527
+   Frame=597   JointI=331   JointJ=325   IsCurved=No   GUID=46210600-2ef7-4b08-a930-108c2d38a9dd
+   Frame=598   JointI=325   JointJ=814   IsCurved=No   GUID=095058d6-4c2a-4f3b-8173-d0e4fccdd21a
+   Frame=599   JointI=816   JointJ=305   IsCurved=No   GUID=5b2c76f4-e4f9-48ff-a4bd-d2bc7e4e99b9
+   Frame=600   JointI=305   JointJ=701   IsCurved=No   GUID=66a34ab7-5637-438b-9981-35fe8a60f73b
+   Frame=601   JointI=701   JointJ=317   IsCurved=No   GUID=1e55aa39-8af9-4cf3-92f7-ecd6a8e4d78a
+   Frame=602   JointI=317   JointJ=698   IsCurved=No   GUID=ed7c0fc9-a255-4b3e-a3e3-6ace5e410e13
+   Frame=603   JointI=698   JointJ=310   IsCurved=No   GUID=37d7def8-dd86-410a-90f1-a9cec7c596f3
+   Frame=604   JointI=310   JointJ=695   IsCurved=No   GUID=509962cb-0df9-40f9-a986-51055b168b33
+   Frame=605   JointI=695   JointJ=309   IsCurved=No   GUID=65ab7584-e6db-4030-90ed-9a9389d3a7e8
+   Frame=606   JointI=309   JointJ=692   IsCurved=No   GUID=c65d4291-1e38-44a9-a76f-e3fe04af8ece
+   Frame=607   JointI=692   JointJ=308   IsCurved=No   GUID=10f05dbc-bb56-423a-b4f4-dd6cb7fb39fc
+   Frame=608   JointI=308   JointJ=689   IsCurved=No   GUID=80c08794-2405-455c-b734-68d7aa2513ad
+   Frame=609   JointI=689   JointJ=307   IsCurved=No   GUID=1f8c0805-ebb6-4da0-bd96-10b3c6cb01b6
+   Frame=610   JointI=307   JointJ=306   IsCurved=No   GUID=54708c2d-a015-402a-8278-3ffc812e136f
+   Frame=611   JointI=306   JointJ=686   IsCurved=No   GUID=99a4dd95-e796-4a90-a0d6-293c1ff0c621
+   Frame=612   JointI=686   JointJ=683   IsCurved=No   GUID=64b01381-dc3b-44f0-87ee-18bf5844b223
+   Frame=613   JointI=683   JointJ=680   IsCurved=No   GUID=691a7084-492e-47fa-b0a2-759dcf77af72
+   Frame=614   JointI=680   JointJ=302   IsCurved=No   GUID=815d66d4-c0bd-419d-be13-9ed76177f1f1
+   Frame=615   JointI=302   JointJ=814   IsCurved=No   GUID=c9d72ae5-58d6-4548-8bd3-f304fdf3cf75
+   Frame=616   JointI=815   JointJ=283   IsCurved=No   GUID=8fa84a95-dba4-4261-a069-94a41651dea6
+   Frame=617   JointI=283   JointJ=733   IsCurved=No   GUID=106510f4-62a5-45f9-938b-cda784695d5f
+   Frame=618   JointI=733   JointJ=351   IsCurved=No   GUID=93eab100-97d8-48ff-8320-41c9e9219b1a
+   Frame=619   JointI=351   JointJ=729   IsCurved=No   GUID=893e1f63-618d-477d-8072-93e776205449
+   Frame=620   JointI=729   JointJ=352   IsCurved=No   GUID=1cdb150e-b65f-436c-944d-51dceaf054ed
+   Frame=621   JointI=352   JointJ=725   IsCurved=No   GUID=9ed69c62-e336-4462-8863-2ec092d65893
+   Frame=622   JointI=725   JointJ=288   IsCurved=No   GUID=f976f0f0-bd4f-424d-8f75-197cb9759a6a
+   Frame=623   JointI=288   JointJ=355   IsCurved=No   GUID=24bfec66-be84-4e2c-96d2-af4bcb9d381b
+   Frame=624   JointI=355   JointJ=721   IsCurved=No   GUID=703abf1e-255d-4a33-84ef-b30d9c9791df
+   Frame=625   JointI=721   JointJ=357   IsCurved=No   GUID=6e88015c-50f9-43d6-9a82-eb5cd8adbcb0
+   Frame=626   JointI=357   JointJ=717   IsCurved=No   GUID=5b0f194f-92ec-4d52-8c9b-b7cd8846c573
+   Frame=627   JointI=717   JointJ=287   IsCurved=No   GUID=8dec4f95-631b-4fb6-bbc9-5f10aba40b81
+   Frame=628   JointI=287   JointJ=359   IsCurved=No   GUID=5a6f9d66-9125-4c38-8d1b-bf94984528e6
+   Frame=630   JointI=359   JointJ=709   IsCurved=No   GUID=e6dba814-73fd-40e2-9cc6-3b94fd34cae5
+   Frame=631   JointI=709   JointJ=361   IsCurved=No   GUID=67949049-92f0-456b-9ae4-6b3fde7f9c40
+   Frame=632   JointI=361   JointJ=705   IsCurved=No   GUID=8c92bea5-d25e-4de6-a992-d3de970e8847
+   Frame=633   JointI=705   JointJ=281   IsCurved=No   GUID=581d4c0e-a6e4-4662-9be6-b462d8000319
+   Frame=634   JointI=281   JointJ=812   IsCurved=No   GUID=558ff250-72e5-46c0-b6c5-1bd5cfae2055
+   Frame=635   JointI=43   JointJ=290   IsCurved=No   GUID=c27c56ff-a4f7-411f-bb74-9ebe2d51564b
+   Frame=636   JointI=290   JointJ=44   IsCurved=No   GUID=37922a9c-2d43-4021-9873-5e48b51c2622
+   Frame=637   JointI=45   JointJ=289   IsCurved=No   GUID=247952e7-f8d6-4853-aaab-14cf81cdaa87
+   Frame=638   JointI=289   JointJ=46   IsCurved=No   GUID=8931356c-f8fc-4b95-b3cb-e4978ccee711
+   Frame=639   JointI=291   JointJ=369   IsCurved=No   GUID=ce650022-670e-4c13-b39c-37d4e2874a1a
+   Frame=641   JointI=297   JointJ=367   IsCurved=No   GUID=b71145f4-e4b7-4729-96de-885156c6d853
+   Frame=645   JointI=658   JointJ=664   IsCurved=No   GUID=45bc4895-c4fb-42e7-b165-a23ee0766c4e
+   Frame=646   JointI=664   JointJ=670   IsCurved=No   GUID=1df51271-d6fa-4fba-9eb7-f46ea7be79ba
+   Frame=647   JointI=670   JointJ=676   IsCurved=No   GUID=c8028d26-ed7b-4a4d-aa7b-82806936212a
+   Frame=648   JointI=676   JointJ=682   IsCurved=No   GUID=8d385304-ac3a-46df-b0d5-a2eec823fcae
+   Frame=649   JointI=682   JointJ=688   IsCurved=No   GUID=6db64ef9-f8d3-4be4-91c3-f557db5efce8
+   Frame=650   JointI=688   JointJ=694   IsCurved=No   GUID=69fc2f7c-14b9-44ca-9a39-46c8b15eb1b1
+   Frame=651   JointI=694   JointJ=700   IsCurved=No   GUID=0ab1e09b-df9c-44f8-8be6-c62697ba8f53
+   Frame=652   JointI=700   JointJ=372   IsCurved=No   GUID=2832fe13-54e4-46c4-9811-3d6bfe062fe5
+   
+ 
+TABLE:  "CONNECTIVITY - LINK"
+   Link=4   JointI=791   JointJ=792   GUID=6000e9a8-e9f4-4224-9a92-7101d861a509
+   Link=9   JointI=73   JointJ=77   GUID=f4a60396-5ef0-4196-8313-b6e42e5550fd
+   Link=10   JointI=74   JointJ=78   GUID=948e16b1-643e-475c-ac50-61cbe7461ac1
+   Link=11   JointI=75   JointJ=79   GUID=88d96c4d-e564-47cf-8f3f-2fc5e2911dca
+   Link=12   JointI=76   JointJ=80   GUID=706f67fb-f452-4f67-90e3-3ed62edd4b29
+   Link=13   JointI=272   JointJ=81   GUID=17a91e48-a061-4d1f-826f-a386145ccfe5
+   Link=14   JointI=273   JointJ=82   GUID=86988d9f-9558-46ad-98c0-b5e5f74661d6
+   Link=15   JointI=83   JointJ=89   GUID=3c31d199-6e8a-420d-8ad7-e802f8e76704
+   Link=16   JointI=84   JointJ=90   GUID=7aa0ac3c-2535-4da3-9606-f3c441f46505
+   Link=17   JointI=85   JointJ=89   GUID=2c3da408-12b6-400b-b6c5-2960cc31d1bb
+   Link=18   JointI=86   JointJ=90   GUID=e84356ff-53b0-4b8c-88c6-c508406fc5fa
+   Link=19   JointI=87   JointJ=91   GUID=f1e37936-52f6-43b6-85ea-98fe2cf373d2
+   Link=20   JointI=88   JointJ=92   GUID=ea7d3c2e-62be-46da-978f-e7818f144a9c
+   Link=21   JointI=99   JointJ=105   GUID=cda946a5-1c36-41fd-9a5b-cfd7fab35607
+   Link=22   JointI=331   JointJ=106   GUID=d5f0423e-f0b1-4f10-95e7-765a5a8f591d
+   Link=23   JointI=335   JointJ=107   GUID=8d7a303b-8246-40a4-9d4c-1b0cc1593fbf
+   Link=24   JointI=337   JointJ=108   GUID=0c98015a-ae82-4959-99d6-b78fefe166e7
+   Link=25   JointI=345   JointJ=109   GUID=38cce295-605e-484d-b718-aca3d212c3cf
+   Link=26   JointI=683   JointJ=110   GUID=cf1df3f7-8b5d-4f60-b0e0-686f01edfdef
+   Link=27   JointI=100   JointJ=329   GUID=88a39928-d5a7-4080-889f-56972fde7ca0
+   Link=40   JointI=272   JointJ=304
+   Link=41   JointI=273   JointJ=314
+   Link=42   JointI=274   JointJ=278
+   Link=43   JointI=275   JointJ=286
+   Link=44   JointI=274   JointJ=320
+   Link=45   JointI=275   JointJ=326
+   Link=46   JointI=279   JointJ=315
+   Link=47   JointI=280   JointJ=321
+   Link=48   JointI=281   JointJ=33
+   Link=49   JointI=283   JointJ=47
+   Link=50   JointI=287   JointJ=251
+   Link=51   JointI=288   JointJ=253
+   Link=52   JointI=55   JointJ=47
+   Link=53   JointI=812   JointJ=39
+   Link=54   JointI=815   JointJ=55
+   Link=55   JointI=39   JointJ=33
+   Link=56   JointI=40   JointJ=34
+   Link=57   JointI=40   JointJ=38
+   Link=58   JointI=39   JointJ=37
+   Link=59   JointI=43   JointJ=123
+   Link=60   JointI=44   JointJ=124
+   Link=108   JointI=662   JointJ=791
+   Link=109   JointI=663   JointJ=792
+   Link=110   JointI=665   JointJ=793
+   Link=111   JointI=667   JointJ=794
+   Link=112   JointI=668   JointJ=795
+   Link=113   JointI=669   JointJ=796
+   Link=114   JointI=671   JointJ=797
+   Link=115   JointI=673   JointJ=798
+   Link=116   JointI=674   JointJ=799
+   Link=117   JointI=675   JointJ=800
+   Link=118   JointI=677   JointJ=801
+   Link=119   JointI=679   JointJ=680
+   Link=120   JointI=681   JointJ=683
+   Link=121   JointI=685   JointJ=686
+   Link=122   JointI=687   JointJ=689
+   Link=123   JointI=691   JointJ=692
+   Link=124   JointI=693   JointJ=695
+   Link=125   JointI=697   JointJ=698
+   Link=126   JointI=699   JointJ=701
+   Link=127   JointI=703   JointJ=705
+   Link=128   JointI=707   JointJ=709
+   Link=129   JointI=711   JointJ=359
+   Link=130   JointI=715   JointJ=717
+   Link=131   JointI=719   JointJ=721
+   Link=132   JointI=723   JointJ=725
+   Link=133   JointI=727   JointJ=729
+   Link=134   JointI=731   JointJ=733
+   Link=135   JointI=125   JointJ=185
+   Link=136   JointI=294   JointJ=303
+   Link=140   JointI=312   JointJ=313
+   Link=141   JointI=126   JointJ=186
+   Link=142   JointI=36   JointJ=184
+   Link=143   JointI=285   JointJ=311
+   Link=144   JointI=277   JointJ=293
+   Link=145   JointI=35   JointJ=183
+   Link=146   JointI=32   JointJ=122
+   Link=147   JointI=31   JointJ=121
+   Link=148   JointI=25   JointJ=27
+   Link=149   JointI=51   JointJ=257
+   Link=150   JointI=48   JointJ=56
+   Link=151   JointI=299   JointJ=327
+   Link=152   JointI=300   JointJ=339
+   Link=153   JointI=301   JointJ=353
+   Link=154   JointI=302   JointJ=49
+   Link=155   JointI=305   JointJ=51
+   Link=156   JointI=814   JointJ=189
+   Link=157   JointI=306   JointJ=191
+   Link=158   JointI=307   JointJ=193
+   Link=159   JointI=308   JointJ=195
+   Link=160   JointI=309   JointJ=197
+   Link=161   JointI=310   JointJ=199
+   Link=162   JointI=317   JointJ=201
+   Link=163   JointI=816   JointJ=257
+   Link=164   JointI=319   JointJ=323
+   Link=165   JointI=127   JointJ=189
+   Link=166   JointI=49   JointJ=189
+   Link=167   JointI=325   JointJ=127
+   Link=168   JointI=329   JointJ=366
+   Link=169   JointI=331   JointJ=826
+   Link=171   JointI=325   JointJ=46
+   Link=172   JointI=335   JointJ=8
+   Link=173   JointI=337   JointJ=10
+   Link=176   JointI=345   JointJ=30
+   Link=177   JointI=347   JointJ=28
+   Link=179   JointI=815   JointJ=12
+   Link=180   JointI=351   JointJ=14
+   Link=181   JointI=352   JointJ=16
+   Link=182   JointI=355   JointJ=18
+   Link=183   JointI=357   JointJ=20
+   Link=184   JointI=359   JointJ=22
+   Link=185   JointI=361   JointJ=24
+   Link=186   JointI=812   JointJ=26
+   Link=187   JointI=363   JointJ=365
+   Link=188   JointI=183   JointJ=341
+   Link=189   JointI=35   JointJ=341
+   Link=190   JointI=125   JointJ=343
+   Link=191   JointI=185   JointJ=343
+   Link=192   JointI=32   JointJ=341
+   Link=193   JointI=122   JointJ=341
+   Link=194   JointI=124   JointJ=343
+   Link=195   JointI=44   JointJ=343
+ 
+TABLE:  "CONSTRAINT DEFINITIONS - DIAPHRAGM"
+   Name=DIAPH1   CoordSys=GLOBAL   Axis=Z   MultiLevel=No
+ 
+TABLE:  "COORDINATE SYSTEMS"
+   Name=GLOBAL   Type=Cartesian   X=0   Y=0   Z=0   AboutZ=0   AboutY=0   AboutX=0  
+ 
+TABLE:  "FRAME SECTION ASSIGNMENTS"
+   Frame=1   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=2   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=4   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=5   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=6   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=7   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=8   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=9   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=10   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=11   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=12   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=13   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=14   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=16   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=17   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=18   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=20   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=21   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=22   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=27   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=28   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=29   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=32   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=33   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=34   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=35   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=36   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=37   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=38   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=39   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=40   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=41   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=42   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=43   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=44   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=45   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=46   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=47   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=48   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=49   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=50   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=51   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=52   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=53   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=54   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=55   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=56   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=57   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=58   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=59   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=60   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=61   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=62   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=63   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=64   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=65   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=66   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=67   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=69   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=70   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=71   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=72   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=73   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=74   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=75   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=78   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=79   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=80   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=81   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=82   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=83   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=84   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=85   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=87   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=88   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=89   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=90   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=91   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=92   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=93   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=94   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=95   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=96   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=97   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=98   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=99   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=100   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=101   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=102   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=103   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=104   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=105   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=106   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=107   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=108   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=109   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=110   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=111   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=112   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=113   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=114   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=115   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=116   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=117   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=118   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=119   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=120   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=121   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=122   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=123   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=124   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=125   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=126   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=127   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=128   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=129   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=130   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=131   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=132   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=133   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=134   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=135   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=136   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=137   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=138   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=139   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=140   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=141   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=142   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=143   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=144   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=145   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=146   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=147   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=148   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=149   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=150   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=151   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=152   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=153   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=154   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=155   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=156   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=157   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=158   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=159   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=160   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=161   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=162   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=163   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=164   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=165   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=166   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=167   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=168   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=169   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=170   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=171   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=172   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=173   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=174   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=175   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=176   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=177   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=178   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=179   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=180   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=181   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=182   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=183   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=184   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=185   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=186   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=187   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=188   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=189   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=190   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=191   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=192   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=193   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=194   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=195   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=196   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=197   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=198   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=199   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=200   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=201   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=202   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=203   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=308   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=320   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=321   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=322   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=328   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=329   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=331   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=332   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=334   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=335   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=337   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=339   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=340   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=341   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=343   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=344   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=345   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=347   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=348   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=349   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=350   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=352   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=353   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=354   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=355   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=357   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=358   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=360   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=361   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=363   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=364   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=366   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=367   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=368   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=370   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=371   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=372   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=379   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=380   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=396   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=397   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=398   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=399   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=400   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=401   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=402   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=403   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=404   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=406   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=407   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=408   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=410   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=411   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=412   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=414   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=415   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=416   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=418   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=419   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=420   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=422   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=423   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=426   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=427   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=430   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=431   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=432   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=434   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=435   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=436   AutoSelect=N.A.   AnalSect=80*80   MatProp=Default
+   Frame=438   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=439   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=440   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=442   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=444   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=446   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=448   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=450   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=452   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=454   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=456   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=459   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=461   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=463   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=465   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=467   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=469   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=471   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=473   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=475   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=476   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=478   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=479   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=482   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=484   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=485   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=486   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=487   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=488   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=489   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=491   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=492   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=494   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=498   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=499   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=501   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=503   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=505   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=509   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=511   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=513   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=515   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=517   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=518   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=519   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=521   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=523   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=525   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=527   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=529   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=533   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=535   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=537   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=539   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=541   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=544   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=545   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=546   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=547   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=548   AutoSelect=N.A.   AnalSect=40*80   MatProp=Default
+   Frame=550   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=552   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=554   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=556   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=558   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=560   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=562   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=564   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=566   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=567   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=568   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=569   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=570   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=571   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=572   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=573   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=574   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=575   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=576   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=577   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=578   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=579   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=580   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=581   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=582   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=583   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=584   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=585   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=586   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=587   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=588   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=590   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=591   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=592   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=593   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=595   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=596   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=597   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=598   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=599   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=600   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=601   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=602   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=603   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=604   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=605   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=606   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=607   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=608   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=609   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=610   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=611   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=612   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=613   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=614   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=615   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=616   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=617   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=618   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=619   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=620   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=621   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=622   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=623   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=624   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=625   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=626   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=627   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=628   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=630   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=631   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=632   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=633   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=634   AutoSelect=N.A.   AnalSect=120*80   MatProp=Default
+   Frame=635   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=636   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=637   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=638   AutoSelect=N.A.   AnalSect=80*40   MatProp=Default
+   Frame=639   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=641   AutoSelect=N.A.   AnalSect=120*40   MatProp=Default
+   Frame=645   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=646   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=647   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=648   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=649   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=650   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=651   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   Frame=652   AutoSelect=N.A.   AnalSect=TAHTA20   MatProp=Default
+   
+ 
+TABLE:  "FRAME SECTION PROPERTIES 01 - GENERAL"
+   SectionName=100*100   Material=C24   Shape=Rectangular   t3=100   t2=100   Area=10000   TorsConst=14083333.3333333   I33=8333333.33333333   I22=8333333.33333333   I23=0   AS2=8333.33333333333   AS3=8333.33333333333 _
+        S33Top=166666.666666667   S33Bot=166666.666666667   S22Left=166666.666666667   S22Right=166666.666666667   Z33=250000   Z22=250000   R33=28.8675134594813   R22=28.8675134594813   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0 _
+        Color=Red   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=c6443efc-bc1f-40ec-a1a6-7f86a1981de1   Notes="Added 11.01.2026 17:22:45"
+   SectionName=100*120   Material=C24   Shape=Rectangular   t3=100   t2=120   Area=12000   TorsConst=19843942.9012346   I33=10000000   I22=14400000   I23=0   AS2=10000   AS3=10000   S33Top=200000   S33Bot=200000   S22Left=240000 _
+        S22Right=240000   Z33=300000   Z22=360000   R33=28.8675134594813   R22=34.6410161513775   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Red   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1 _
+        MMod=1   WMod=1   GUID=b21eed8b-da35-4e58-a6a4-a3d1d7fbb8cf   Notes="Added 11.01.2026 17:22:45"
+   SectionName=100*40   Material=C24   Shape=Rectangular   t3=100   t2=40   Area=4000   TorsConst=1596880.21333333   I33=3333333.33333333   I22=533333.333333333   I23=0   AS2=3333.33333333333   AS3=3333.33333333333   S33Top=66666.6666666667 _
+        S33Bot=66666.6666666667   S22Left=26666.6666666667   S22Right=26666.6666666667   Z33=100000   Z22=40000   R33=28.8675134594813   R22=11.5470053837925   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Yellow _
+        FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=6b1bdbac-1459-48ef-9ca2-621be39c8c54   Notes="Added 11.01.2026 17:22:45"
+   SectionName=100*50   Material=C24   Shape=Rectangular   t3=100   t2=50   Area=5000   TorsConst=2861002.60416667   I33=4166666.66666667   I22=1041666.66666667   I23=0   AS2=4166.66666666667   AS3=4166.66666666667   S33Top=83333.3333333333 _
+        S33Bot=83333.3333333333   S22Left=41666.6666666667   S22Right=41666.6666666667   Z33=125000   Z22=62500   R33=28.8675134594813   R22=14.4337567297406   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Magenta _
+        FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=ae3be805-0bd0-4f08-801c-72bab6251b92   Notes="Added 11.01.2026 17:22:45"
+   SectionName=120*100   Material=C24   Shape=Rectangular   t3=120   t2=100   Area=12000   TorsConst=19843942.9012346   I33=14400000   I22=10000000   I23=0   AS2=10000   AS3=10000   S33Top=240000   S33Bot=240000   S22Left=200000 _
+        S22Right=200000   Z33=360000   Z22=300000   R33=34.6410161513775   R22=28.8675134594813   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=8388863   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1 _
+        MMod=1   WMod=1   GUID=bc79d92e-cb4e-4db2-946b-1cdb5f9fe65b   Notes="Added 11.01.2026 17:22:45"
+   SectionName=120*40   Material=C24   Shape=Rectangular   t3=120   t2=40   Area=4800   TorsConst=2022953.08641975   I33=5760000   I22=640000   I23=0   AS2=4000   AS3=4000   S33Top=96000   S33Bot=96000   S22Left=32000   S22Right=32000 _
+        Z33=144000   Z22=48000   R33=34.6410161513775   R22=11.5470053837925   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=8404992   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1 _
+        GUID=ac209cb2-ac07-49f1-a12f-80de4122498b   Notes="Added 11.01.2026 17:22:45"
+   SectionName=120*80   Material=C24   Shape=Rectangular   t3=120   t2=80   Area=9600   TorsConst=12019990.1234568   I33=11520000   I22=5120000   I23=0   AS2=8000   AS3=8000   S33Top=192000   S33Bot=192000   S22Left=128000   S22Right=128000 _
+        Z33=288000   Z22=192000   R33=34.6410161513775   R22=23.094010767585   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Magenta   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1 _
+        GUID=8764a886-9ee6-47bc-a62f-02f67118b0a8   Notes="Added 11.01.2026 17:22:45"
+   SectionName=40*100   Material=C24   Shape=Rectangular   t3=40   t2=100   Area=4000   TorsConst=1596880.21333333   I33=533333.333333333   I22=3333333.33333333   I23=0   AS2=3333.33333333333   AS3=3333.33333333333   S33Top=26666.6666666667 _
+        S33Bot=26666.6666666667   S22Left=66666.6666666667   S22Right=66666.6666666667   Z33=40000   Z22=100000   R33=11.5470053837925   R22=28.8675134594813   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Red   FromFile=No _
+        AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=65f74c16-33f9-479d-9b78-e27d91e522c8   Notes="Added 11.01.2026 17:22:45"
+   SectionName=40*120   Material=C24   Shape=Rectangular   t3=40   t2=120   Area=4800   TorsConst=2022953.08641975   I33=640000   I22=5760000   I23=0   AS2=4000   AS3=4000   S33Top=32000   S33Bot=32000   S22Left=96000   S22Right=96000 _
+        Z33=48000   Z22=144000   R33=11.5470053837925   R22=34.6410161513775   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Cyan   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1 _
+        GUID=5a3a50f6-31f4-469c-94d0-c8d8933595ef   Notes="Added 11.01.2026 17:22:45"
+   SectionName=40*80   Material=C24   Shape=Rectangular   t3=40   t2=80   Area=3200   TorsConst=1171866.66666667   I33=426666.666666667   I22=1706666.66666667   I23=0   AS2=2666.66666666667   AS3=2666.66666666667   S33Top=21333.3333333333 _
+        S33Bot=21333.3333333333   S22Left=42666.6666666667   S22Right=42666.6666666667   Z33=32000   Z22=64000   R33=11.5470053837925   R22=23.094010767585   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Blue   FromFile=No _
+        AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=7e4e2275-5947-4c9b-8a84-7e1142535afb   Notes="Added 11.01.2026 17:22:45"
+   SectionName=50*100   Material=C24   Shape=Rectangular   t3=50   t2=100   Area=5000   TorsConst=2861002.60416667   I33=1041666.66666667   I22=4166666.66666667   I23=0   AS2=4166.66666666667   AS3=4166.66666666667   S33Top=41666.6666666667 _
+        S33Bot=41666.6666666667   S22Left=83333.3333333333   S22Right=83333.3333333333   Z33=62500   Z22=125000   R33=14.4337567297406   R22=28.8675134594813   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Magenta _
+        FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=f5ed4968-fffd-4fe6-9899-f0dbcc581df8   Notes="Added 11.01.2026 17:22:45"
+   SectionName=80*40   Material=C24   Shape=Rectangular   t3=80   t2=40   Area=3200   TorsConst=1171866.66666667   I33=1706666.66666667   I22=426666.666666667   I23=0   AS2=2666.66666666667   AS3=2666.66666666667   S33Top=42666.6666666667 _
+        S33Bot=42666.6666666667   S22Left=21333.3333333333   S22Right=21333.3333333333   Z33=64000   Z22=32000   R33=23.094010767585   R22=11.5470053837925   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=Blue   FromFile=No _
+        AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=6caadabc-727a-483c-a8a6-612162780e6c   Notes="Added 11.01.2026 17:22:45"
+   SectionName=80*80   Material=C24   Shape=Rectangular   t3=80   t2=80   Area=6400   TorsConst=5768533.33333333   I33=3413333.33333333   I22=3413333.33333333   I23=0   AS2=5333.33333333333   AS3=5333.33333333333   S33Top=85333.3333333333 _
+        S33Bot=85333.3333333333   S22Left=85333.3333333333   S22Right=85333.3333333333   Z33=128000   Z22=128000   R33=23.094010767585   R22=23.094010767585   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0   Color=4227327 _
+        FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=928978ec-0b74-4af3-b447-ba9a69f203bf   Notes="Added 11.01.2026 17:22:45"
+   SectionName=IPE300   Material=S355   Shape="I/Wide Flange"   t3=300   t2=150   tf=10.7   tw=7.1   t2b=150   tfb=10.7   FilletRadius=15   Area=5380   TorsConst=199000   I33=83560000   I22=6040000   I23=1.49011611938477E-08   AS2=2130 _
+        AS3=2675   S33Top=557066.7   S33Bot=557066.7   S22Left=80533.34   S22Right=80533.34   Z33=628000   Z22=125000   R33=124.6258   R22=33.50637   CGOffset3=0   CGOffset2=-8.5265128291212E-14   EccV2=0   EccV3=0   Cw=125934052921.875 _
+        Color=Magenta   FromFile=Yes   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   SectInFile=IPE300   FileName="c:\program files\computers and structures\sap2000 25\property libraries\sections\euro.xml" _
+        GUID=68b9eceb-98d7-4aec-bd3c-c9b1a391cca8   Notes="Imported 8.02.2026 15:41:10 from Euro.xml"
+   SectionName=TAHTA20   Material=C24   Shape=Rectangular   t3=100   t2=20   Area=2000   TorsConst=233071.146666667   I33=1666666.66666667   I22=66666.6666666667   I23=0   AS2=1666.66666666667   AS3=1666.66666666667 _
+        S33Top=33333.3333333333   S33Bot=33333.3333333333   S22Left=6666.66666666667   S22Right=6666.66666666667   Z33=50000   Z22=10000   R33=28.8675134594813   R22=5.77350269189626   CGOffset3=0   CGOffset2=0   EccV2=0   EccV3=0   Cw=0 _
+        Color=Yellow   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1   GUID=6a12cfc8-4207-4cb9-9bfd-5664b2aec63a   Notes="Added 11.01.2026 17:22:45"
+ 
+TABLE:  "FRAME SECTION PROPERTIES 13 - TIME DEPENDENT"
+   SectionName=100*100   TypeSize=Auto   AutoSFSize=1
+   SectionName=100*120   TypeSize=Auto   AutoSFSize=1
+   SectionName=100*40   TypeSize=Auto   AutoSFSize=1
+   SectionName=100*50   TypeSize=Auto   AutoSFSize=1
+   SectionName=120*100   TypeSize=Auto   AutoSFSize=1
+   SectionName=120*40   TypeSize=Auto   AutoSFSize=1
+   SectionName=120*80   TypeSize=Auto   AutoSFSize=1
+   SectionName=40*100   TypeSize=Auto   AutoSFSize=1
+   SectionName=40*120   TypeSize=Auto   AutoSFSize=1
+   SectionName=40*80   TypeSize=Auto   AutoSFSize=1
+   SectionName=50*100   TypeSize=Auto   AutoSFSize=1
+   SectionName=80*40   TypeSize=Auto   AutoSFSize=1
+   SectionName=80*80   TypeSize=Auto   AutoSFSize=1
+   SectionName=IPE300   TypeSize=Auto   AutoSFSize=0
+   SectionName=TAHTA20   TypeSize=Auto   AutoSFSize=1
+ 
+TABLE:  "FUNCTION - PLOT FUNCTIONS"
+   PlotFunc="Input Energy"   Type=Energy   Component=Input   Mode=All
+ 
+TABLE:  "FUNCTION - RESPONSE SPECTRUM - TSC-2018"
+   Name=TSC2018DD2   FuncDamp=0.05   SpecDir=Horizontal   Ss=2.29   S1=0.187   TL=6   SiteClass=ZC   Fs=1.2   F1=1.5   R=4   D=2   I=1
+ 
+TABLE:  "GRID LINES"
+   CoordSys=GLOBAL   AxisDir=X   XRYZCoord=8219   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End   AllVisible=Yes   BubbleSize=1250
+   CoordSys=GLOBAL   AxisDir=X   XRYZCoord=11390   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+   CoordSys=GLOBAL   AxisDir=Y   XRYZCoord=-0.3396   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+   CoordSys=GLOBAL   AxisDir=Y   GridID=1   XRYZCoord=590   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+   CoordSys=GLOBAL   AxisDir=Y   GridID=2   XRYZCoord=3380   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+   CoordSys=GLOBAL   AxisDir=Y   GridID=3   XRYZCoord=3530   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+   CoordSys=GLOBAL   AxisDir=Z   GridID=Z0   XRYZCoord=0   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+   CoordSys=GLOBAL   AxisDir=Z   XRYZCoord=1650   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+   CoordSys=GLOBAL   AxisDir=Z   XRYZCoord=4610   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+   CoordSys=GLOBAL   AxisDir=Z   XRYZCoord=5510   LineType=Primary   LineColor=Gray8Dark   Visible=Yes   BubbleLoc=End
+ 
+TABLE:  "GROUPS 1 - DEFINITIONS"
+   GroupName=All   Selection=Yes   SectionCut=Yes   Steel=Yes   Concrete=Yes   Aluminum=Yes   ColdFormed=Yes   Stage=Yes   Bridge=Yes   AutoSeismic=No   AutoWind=No   SelDesSteel=No   SelDesAlum=No   SelDesCold=No   MassWeight=Yes   Color=Red
+ 
+TABLE:  "JOINT COORDINATES"
+   Joint=3   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.83800466266   Y=59.6577   Z=5063.00484670675   SpecialJt=No   GUID=7277b86a-ba5e-4c26-8fa2-c9f799cb56e1
+   Joint=4   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8764629831   Y=59.6577   Z=5063.30309019172   SpecialJt=No   GUID=cb2f3030-f2e8-44f8-b4fd-9bac50cbae55
+   Joint=7   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9870   Y=-0.3396   Z=5510   SpecialJt=No
+   Joint=8   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9870   Y=-0.3396   Z=4685   SpecialJt=No
+   Joint=9   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9750   Y=-0.3396   Z=5510   SpecialJt=No
+   Joint=10   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9750   Y=-0.3396   Z=4685   SpecialJt=No
+   Joint=11   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=5510   SpecialJt=No
+   Joint=12   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=4810   SpecialJt=No
+   Joint=13   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3014.7871   Z=5510   SpecialJt=No
+   Joint=14   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3014.7871   Z=4810   SpecialJt=No
+   Joint=15   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2614.7871   Z=5510   SpecialJt=No
+   Joint=16   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2614.7871   Z=4810   SpecialJt=No
+   Joint=17   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2214.7871   Z=5510   SpecialJt=No
+   Joint=18   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2214.7871   Z=4810   SpecialJt=No
+   Joint=19   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1814.7871   Z=5510   SpecialJt=No
+   Joint=20   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1814.7871   Z=4810   SpecialJt=No
+   Joint=21   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1414.7871   Z=5510   SpecialJt=No
+   Joint=22   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1414.7871   Z=4810   SpecialJt=No
+   Joint=23   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1014.7871   Z=5510   SpecialJt=No
+   Joint=24   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1014.7871   Z=4810   SpecialJt=No
+   Joint=25   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=5510   SpecialJt=No
+   Joint=26   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=4810   SpecialJt=No
+   Joint=27   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=5510   SpecialJt=No
+   Joint=28   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=4685   SpecialJt=No
+   Joint=29   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10881.0878   Y=293.8207   Z=5510   SpecialJt=No
+   Joint=30   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10881.0878   Y=293.8207   Z=4685   SpecialJt=No
+   Joint=31   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=5510   SpecialJt=No
+   Joint=32   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=4685   SpecialJt=No
+   Joint=33   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=630   Z=4545   SpecialJt=No
+   Joint=34   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=630   Z=1600   SpecialJt=No
+   Joint=35   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=4545   SpecialJt=No
+   Joint=36   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=1600   SpecialJt=No
+   Joint=37   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=4545   SpecialJt=No
+   Joint=38   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=1600   SpecialJt=No
+   Joint=39   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=4545   SpecialJt=No
+   Joint=40   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=1600   SpecialJt=No
+   Joint=41   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=4715.3309   SpecialJt=No
+   Joint=42   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=5099.7803   SpecialJt=No
+   Joint=43   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=5510   SpecialJt=No
+   Joint=44   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=4685   SpecialJt=No
+   Joint=45   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.8463   Y=574.4135   Z=5510   SpecialJt=No
+   Joint=46   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.8463   Y=574.4135   Z=4685   SpecialJt=No
+   Joint=47   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3350   Z=4545   SpecialJt=No
+   Joint=48   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3350   Z=1600   SpecialJt=No
+   Joint=49   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=640   Z=4545   SpecialJt=No
+   Joint=50   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=640   Z=1600   SpecialJt=No
+   Joint=51   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3350   Z=4545   SpecialJt=No
+   Joint=52   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3350   Z=1600   SpecialJt=No
+   Joint=53   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=3390   Z=5215   SpecialJt=No
+   Joint=54   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=3390   Z=4610   SpecialJt=No
+   Joint=55   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=4545   SpecialJt=No
+   Joint=56   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=1600   SpecialJt=No
+   Joint=57   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82446644236   Y=700.7632   Z=4718.12428358498   SpecialJt=Yes   GUID=57a8c19b-7ae1-46f7-96bf-152c61b75615
+   Joint=58   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96912497121   Y=700.7632   Z=4875.38303756665   SpecialJt=Yes   GUID=c0364c6b-ea2b-415a-b1cf-79e73b58977d
+   Joint=59   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86346707715   Y=339.652   Z=5062.94119118107   SpecialJt=Yes   GUID=414b28ef-5a15-4281-aac9-def6d562ea93
+   Joint=64   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=700.7632   Z=4877.07288455604   SpecialJt=Yes   GUID=63b5b9cd-faef-4b09-910c-2ddd7a69cc56
+   Joint=65   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8510044961   Y=339.652   Z=5063.23944447557   SpecialJt=Yes   GUID=b74420b3-691e-4188-bc94-d684189ba12b
+   Joint=72   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=566.713301031126   Z=4726.04811350169   SpecialJt=No   GUID=f3bf4e87-256c-4017-801c-82fcb35bd741
+   Joint=73   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=3930   SpecialJt=No   GUID=882bfab9-26dc-4314-9e0a-f3aa309a3535
+   Joint=74   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=3200   SpecialJt=No   GUID=f2add108-9341-48ee-90f9-5d4b7548b84d
+   Joint=75   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=3930   SpecialJt=No   GUID=6ee7de11-da0d-4952-8570-74eeeef71274
+   Joint=76   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=3200   SpecialJt=No   GUID=07e48750-1701-4018-afa5-63cf1f35fc32
+   Joint=77   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=3930   SpecialJt=Yes   GUID=f3ea767b-75f5-4000-a56b-27b4ab4ac68d
+   Joint=78   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=3200   SpecialJt=Yes   GUID=f8438fb7-403a-4244-bd27-76ead324294f
+   Joint=79   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=3930   SpecialJt=Yes   GUID=edbbca39-43a1-4661-9b54-e36459430431
+   Joint=80   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=3200   SpecialJt=Yes   GUID=56ced5b2-810b-42c5-aece-9ab05b42b936
+   Joint=81   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=640   Z=2600   SpecialJt=Yes   GUID=ffe811a9-f50d-404d-bbf3-9aca37a4a14d
+   Joint=82   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=640   Z=1900   SpecialJt=Yes   GUID=18867c7d-545a-4bf3-9168-db519f6422f4
+   Joint=83   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=630   Z=3930   SpecialJt=No   GUID=9f1f5ad0-02e6-4cc2-afc3-337dde8bc902
+   Joint=84   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=630   Z=3200   SpecialJt=No   GUID=5f6c55cf-cf4f-4beb-8f95-9975678a888d
+   Joint=85   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=3930   SpecialJt=No   GUID=1862796c-14a4-4aa3-9016-dba1e9c12bcb
+   Joint=86   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=3200   SpecialJt=No   GUID=cfb16690-9893-4d24-8b64-304b3307f8d5
+   Joint=87   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3350   Z=3930   SpecialJt=No   GUID=9784490c-a838-42b4-baa1-e0afbf450d79
+   Joint=88   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3350   Z=3200   SpecialJt=No   GUID=436976c1-7333-475e-99f3-3abb6c91a14a
+   Joint=89   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=3930   SpecialJt=Yes   GUID=d984e0f1-8a9b-4af5-9b4e-d223d0e0bfe4
+   Joint=90   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=3200   SpecialJt=Yes   GUID=2acecf97-1991-4791-b8f1-472c3347dae8
+   Joint=91   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=3930   SpecialJt=Yes   GUID=f8d9ee45-f8ce-455b-8ae6-2701253076af
+   Joint=92   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=3200   SpecialJt=Yes   GUID=57d81700-20a0-4639-8bc8-f4ae0b2b5472
+   Joint=93   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10862.7433333333   Y=3390   Z=4610   SpecialJt=No   GUID=9ce20c28-1cac-4f23-a0b0-9dfb1662bf7d
+   Joint=94   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10335.4866666667   Y=3390   Z=4610   SpecialJt=No   GUID=f755bd80-f00c-44f5-88db-7b6f8ef135e9
+   Joint=95   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9278.48666666667   Y=3390   Z=4610   SpecialJt=No   GUID=b2ee5d00-403c-412c-9d2b-c313490ac4fa
+   Joint=96   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8748.74333333333   Y=3390   Z=4610   SpecialJt=No   GUID=8f25dd7c-d818-432b-bb4c-3dbda4f3824c
+   Joint=99   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.84628501111   Y=574.413474900135   Z=3200   SpecialJt=No   GUID=197283ee-9ce2-4d57-aa2c-4d0ce6ad17c0
+   Joint=100   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.84628501111   Y=574.413474900135   Z=3930   SpecialJt=No   GUID=48e00683-543d-4e65-9cdf-2ca9ccf5bde7
+   Joint=101   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1530   Z=3200   SpecialJt=No   GUID=517ec8aa-7451-4c12-b5ee-ef560de5fe27
+   Joint=102   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1530   Z=3930   SpecialJt=No   GUID=a112d865-3ea2-4ace-a38d-b9715faaca20
+   Joint=103   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2460   Z=3200   SpecialJt=No   GUID=6394d8f0-ba86-4198-97b9-27b31187a7d4
+   Joint=104   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2460   Z=3930   SpecialJt=No   GUID=7df2ca1f-628d-4ee3-816e-ce9007246c69
+   Joint=105   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=600   Z=3200   SpecialJt=Yes   GUID=30d68666-b66f-4a9e-9b38-1abe87e6f23f
+   Joint=106   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8734.38239250555   Y=292.228987450067   Z=4545   SpecialJt=Yes   GUID=b23562f7-a0f3-4e67-aea7-1bb1d84a0793
+   Joint=107   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9870   Y=-0.3396   Z=4545   SpecialJt=Yes   GUID=33e1d5b2-b693-4183-859d-b367b3e68158
+   Joint=108   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9750   Y=-0.3396   Z=4545   SpecialJt=Yes   GUID=0f4087ec-2dd3-4b23-9c31-3ecb6f865f07
+   Joint=109   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10881.0877867117   Y=293.82072208702   Z=4545   SpecialJt=Yes   GUID=065188f5-31b6-47d0-afa8-02f133207f92
+   Joint=110   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1061.8743   Z=4545   SpecialJt=Yes   GUID=3e26bf0a-d79a-48fe-8a79-8bc587b215c0
+   Joint=111   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1061.8743   Z=3930   SpecialJt=No   GUID=464e95ac-3905-4e52-baf4-df74b800fa22
+   Joint=117   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82445776465   Y=1061.8743   Z=4718.12430527913   SpecialJt=No   GUID=0101e4c1-8e26-4ca2-9f3d-f2b10231c6ce
+   Joint=118   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96911849965   Y=1061.8743   Z=4875.38305374547   SpecialJt=No   GUID=697ea1e2-a74d-4609-a0b4-df06dfdd16cd
+   Joint=119   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=-0.3396   Z=5215   SpecialJt=No
+   Joint=120   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=-0.3396   Z=4610   SpecialJt=No
+   Joint=121   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=5510   SpecialJt=No
+   Joint=122   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=4685   SpecialJt=No
+   Joint=123   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=5510   SpecialJt=No
+   Joint=124   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=4685   SpecialJt=No
+   Joint=125   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=4545   SpecialJt=No
+   Joint=126   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=1600   SpecialJt=No
+   Joint=127   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.84628501111   Y=574.413474900135   Z=4545   SpecialJt=No
+   Joint=128   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.84628501111   Y=574.413474900135   Z=1600   SpecialJt=No
+   Joint=129   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86337331977   Y=700.7632   Z=5062.94142557266   SpecialJt=No   GUID=2623dcdb-a1f3-4d76-a90f-d49804f7dc3a
+   Joint=130   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=1061.8743   Z=4877.07288455604   SpecialJt=No   GUID=f4e551d3-539d-4a3f-9752-12360dfc5ae9
+   Joint=131   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=700.7632   Z=5063.23991124856   SpecialJt=No   GUID=f9305e3c-b8da-4d50-983a-fdca8d09e703
+   Joint=132   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86324230536   Y=1061.8743   Z=5062.94175310685   SpecialJt=No   GUID=0d8c048e-d896-4291-8bde-a9b7711586ba
+   Joint=133   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=1061.8743   Z=5063.23991124856   SpecialJt=No   GUID=a2a44f8e-2bf4-483a-ac8a-f12aa843760a
+   Joint=134   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82445776465   Y=1422.985   Z=4718.12430527913   SpecialJt=No   GUID=7d8ba79a-ab92-4c53-b306-71971c81081d
+   Joint=135   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86324068747   Y=1422.985   Z=5062.94175715155   SpecialJt=No   GUID=1b386eb8-b309-4052-9a07-162593c71545
+   Joint=136   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96911849965   Y=1422.985   Z=4875.38305374547   SpecialJt=No   GUID=dccf65ef-4dbc-4613-9dae-0b5ff068ee75
+   Joint=137   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=1422.985   Z=5063.23991124856   SpecialJt=No   GUID=ae9a9028-cc5d-4a31-bce8-ed6e5bd51ed7
+   Joint=138   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=1422.985   Z=4877.07288455604   SpecialJt=No   GUID=00e4c8e3-1f81-4081-b47a-f41ffcda331d
+   Joint=139   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82445776465   Y=1784.0962   Z=4718.12430527913   SpecialJt=No   GUID=0e136efa-4e4b-459a-9bb3-818049347d5b
+   Joint=140   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86324068747   Y=1784.0962   Z=5062.94175715155   SpecialJt=No   GUID=0de6efe8-dd89-499f-8bf6-dbfd767507c2
+   Joint=141   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96911849965   Y=1784.0962   Z=4875.38305374547   SpecialJt=No   GUID=aefe11c0-1593-4965-a382-5dbe5d0a431a
+   Joint=142   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=1784.0962   Z=5063.23991124856   SpecialJt=No   GUID=ff8d797f-09f2-45e1-a12f-f40acb0ddcd7
+   Joint=143   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=1784.0962   Z=4877.07288455604   SpecialJt=No   GUID=86414006-e966-4dfd-a60c-05bf40e9fe0f
+   Joint=144   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82445776465   Y=2145.2069   Z=4718.12430527913   SpecialJt=No   GUID=63d72f0a-8555-4696-89a6-3d207f6f0f4c
+   Joint=145   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86324068747   Y=2145.2069   Z=5062.94175715155   SpecialJt=No   GUID=795463b3-9e41-4509-aad9-f9a58b407d59
+   Joint=146   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96911849965   Y=2145.2069   Z=4875.38305374547   SpecialJt=No   GUID=3fbfb18d-6c39-465e-94a0-291464d99009
+   Joint=147   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=2145.2069   Z=5063.23991124856   SpecialJt=No   GUID=69dc262c-5c3b-495b-b47c-70b27f06fa5f
+   Joint=148   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=2145.2069   Z=4877.07288455604   SpecialJt=No   GUID=e2781c72-db19-43f6-a377-624cfbd08385
+   Joint=149   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82445776465   Y=2506.318   Z=4718.12430527913   SpecialJt=No   GUID=30dee2a2-3c5f-4436-bc1e-43553283ec14
+   Joint=150   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86324068747   Y=2506.318   Z=5062.94175715155   SpecialJt=No   GUID=8a9f948a-cb7a-4b4e-a4a7-e2f3b73ecdee
+   Joint=151   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96911849965   Y=2506.318   Z=4875.38305374547   SpecialJt=No   GUID=bbe31b50-b087-4425-823f-fa9af092cd18
+   Joint=152   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82445776465   Y=2867.429   Z=4718.12430527913   SpecialJt=No   GUID=104b44e6-7846-4aa3-9be7-8589142053e8
+   Joint=153   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86324068747   Y=2867.429   Z=5062.94175715155   SpecialJt=No   GUID=a2beab0d-2084-4c8d-884c-e849f3abe022
+   Joint=154   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96911849965   Y=2867.429   Z=4875.38305374547   SpecialJt=No   GUID=5b5bf91e-fa6a-45fa-9b05-523daee68046
+   Joint=155   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82445776465   Y=3228.5399   Z=4718.12430527913   SpecialJt=No   GUID=aad4e326-d9c4-4543-9ea3-5959decfbbf5
+   Joint=156   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86324068747   Y=3228.5399   Z=5062.94175715155   SpecialJt=No   GUID=c92ff958-1cf1-474e-8d7a-a7f34faa8070
+   Joint=157   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96911849965   Y=3228.5399   Z=4875.38305374547   SpecialJt=No   GUID=ff1e88a4-e875-45b3-b0be-14bcd0dfaa38
+   Joint=158   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.82445776465   Y=3411   Z=4718.12430527913   SpecialJt=No   GUID=9133b4dd-79ee-4a2b-8b08-bea25950cd6e
+   Joint=159   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9123.86324068747   Y=3411   Z=5062.94175715155   SpecialJt=No   GUID=efbc236d-7d8a-49cb-a49b-e55dfabd8fec
+   Joint=160   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.96911849965   Y=3411   Z=4875.38305374547   SpecialJt=No   GUID=8757afd7-047d-4d34-9dab-53109309823c
+   Joint=161   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=2506.318   Z=5063.23991124856   SpecialJt=No   GUID=13329dcb-eaff-4b7b-b08c-0289b6aa57d1
+   Joint=162   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=2506.318   Z=4877.07288455604   SpecialJt=No   GUID=d934000a-3633-4e71-bd17-2b9e00cb1bf7
+   Joint=163   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=2867.429   Z=5063.23991124856   SpecialJt=No   GUID=38985d3b-9fc0-4716-ae7d-4e7d0f78a41b
+   Joint=164   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=2867.429   Z=4877.07288455604   SpecialJt=No   GUID=deaeb84f-27bf-48fa-98c5-0df0a74682e7
+   Joint=165   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=3228.5399   Z=5063.23991124856   SpecialJt=No   GUID=194dcd18-19a9-4987-be0a-9dc1628d5495
+   Joint=166   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=3228.5399   Z=4877.07288455604   SpecialJt=No   GUID=c12139a7-bad3-4be6-a2f9-a27ce64d8f8b
+   Joint=167   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10491.8511912068   Y=3411.00000000001   Z=5063.23991124856   SpecialJt=No   GUID=6178a080-f35b-4fc2-a93d-3e3afb9f5185
+   Joint=168   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2660138243   Y=3411   Z=4877.07288455604   SpecialJt=No   GUID=cce54121-1139-43dc-a06a-9f49c75871e7
+   Joint=183   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=4545   SpecialJt=No
+   Joint=184   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=1600   SpecialJt=No
+   Joint=185   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=4545   SpecialJt=No
+   Joint=186   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=1600   SpecialJt=No
+   Joint=189   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=600   Z=4545   SpecialJt=No
+   Joint=190   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=600   Z=1600   SpecialJt=No
+   Joint=191   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1540   Z=4545   SpecialJt=No
+   Joint=192   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1540   Z=1600   SpecialJt=No
+   Joint=193   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1710   Z=4545   SpecialJt=No
+   Joint=194   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1710   Z=1600   SpecialJt=No
+   Joint=195   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2050   Z=4545   SpecialJt=No
+   Joint=196   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2050   Z=1600   SpecialJt=No
+   Joint=197   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2390   Z=4545   SpecialJt=No
+   Joint=198   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2390   Z=1600   SpecialJt=No
+   Joint=199   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2730   Z=4545   SpecialJt=No
+   Joint=200   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2730   Z=1600   SpecialJt=No
+   Joint=201   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3070   Z=4545   SpecialJt=No
+   Joint=202   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3070   Z=1600   SpecialJt=No
+   Joint=251   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1530   Z=4545   SpecialJt=No
+   Joint=252   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1530   Z=1600   SpecialJt=No
+   Joint=253   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2460   Z=4545   SpecialJt=No
+   Joint=254   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2460   Z=1600   SpecialJt=No
+   Joint=257   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3390   Z=4545   SpecialJt=No
+   Joint=258   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3390   Z=1600   SpecialJt=No
+   Joint=272   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=600   Z=2600   SpecialJt=Yes
+   Joint=273   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=600   Z=1900   SpecialJt=Yes
+   Joint=274   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=2600   SpecialJt=Yes
+   Joint=275   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=1900   SpecialJt=Yes
+   Joint=277   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=2600   SpecialJt=No
+   Joint=278   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=2600   SpecialJt=No
+   Joint=279   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=2600   SpecialJt=Yes
+   Joint=280   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=1900   SpecialJt=Yes
+   Joint=281   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=630   Z=4610   SpecialJt=Yes
+   Joint=283   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3350   Z=4610   SpecialJt=Yes
+   Joint=285   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=1900   SpecialJt=No
+   Joint=286   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=1900   SpecialJt=No
+   Joint=287   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1530   Z=4610   SpecialJt=Yes
+   Joint=288   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2460   Z=4610   SpecialJt=Yes
+   Joint=289   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.8463   Y=574.4135   Z=4718.0697   SpecialJt=No
+   Joint=290   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=5096.2504   SpecialJt=No
+   Joint=291   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8654.9695   Y=339.652   Z=4875.3821   SpecialJt=No
+   Joint=293   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=2600   SpecialJt=No
+   Joint=294   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=2600   SpecialJt=No
+   Joint=297   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10957.2657   Y=339.652   Z=4877.0721   SpecialJt=No
+   Joint=299   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3390   Z=2600   SpecialJt=Yes
+   Joint=300   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3390   Z=3200   SpecialJt=Yes
+   Joint=301   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3390   Z=3930   SpecialJt=Yes
+   Joint=302   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=640   Z=4610   SpecialJt=Yes
+   Joint=303   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=2600   SpecialJt=No
+   Joint=304   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.84628501111   Y=574.413474900135   Z=2600   SpecialJt=No
+   Joint=305   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3350   Z=4610   SpecialJt=Yes
+   Joint=306   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1540   Z=4610   SpecialJt=Yes
+   Joint=307   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1710   Z=4610   SpecialJt=Yes
+   Joint=308   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2050   Z=4610   SpecialJt=Yes
+   Joint=309   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2390   Z=4610   SpecialJt=Yes
+   Joint=310   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2730   Z=4610   SpecialJt=Yes
+   Joint=311   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=1900   SpecialJt=No
+   Joint=312   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=1900   SpecialJt=No
+   Joint=313   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=1900   SpecialJt=No
+   Joint=314   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.84628501111   Y=574.413474900135   Z=1900   SpecialJt=No
+   Joint=315   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3350   Z=2600   SpecialJt=No
+   Joint=316   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2460   Z=2600   SpecialJt=No
+   Joint=317   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3070   Z=4610   SpecialJt=Yes
+   Joint=318   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1530   Z=2600   SpecialJt=No
+   Joint=319   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3411   Z=4700.9944   SpecialJt=Yes
+   Joint=320   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=630   Z=2600   SpecialJt=No
+   Joint=321   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3350   Z=1900   SpecialJt=No
+   Joint=322   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2460   Z=1900   SpecialJt=No
+   Joint=323   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3411   Z=4610   SpecialJt=Yes
+   Joint=324   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1530   Z=1900   SpecialJt=No
+   Joint=325   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8261.8463   Y=574.4135   Z=4610   SpecialJt=Yes
+   Joint=326   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=630   Z=1900   SpecialJt=No
+   Joint=327   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3350   Z=2600   SpecialJt=No
+   Joint=328   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3070   Z=2600   SpecialJt=No
+   Joint=329   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=600   Z=3930   SpecialJt=Yes
+   Joint=330   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2730   Z=2600   SpecialJt=No
+   Joint=331   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8734.3824   Y=292.229   Z=4610   SpecialJt=Yes
+   Joint=332   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2390   Z=2600   SpecialJt=No
+   Joint=333   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9206.9185   Y=10.0445   Z=4610   SpecialJt=Yes
+   Joint=334   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2050   Z=2600   SpecialJt=No
+   Joint=335   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9870   Y=-0.3396   Z=4610   SpecialJt=Yes
+   Joint=336   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1710   Z=2600   SpecialJt=No
+   Joint=337   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9750   Y=-0.3396   Z=4610   SpecialJt=Yes
+   Joint=338   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1540   Z=2600   SpecialJt=No
+   Joint=339   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3350   Z=3200   SpecialJt=No
+   Joint=340   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3070   Z=3200   SpecialJt=No
+   Joint=341   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10380   Y=-0.3396   Z=4610   SpecialJt=Yes
+   Joint=342   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2730   Z=3200   SpecialJt=No
+   Joint=343   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9230   Y=-0.3396   Z=4610   SpecialJt=Yes
+   Joint=344   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2390   Z=3200   SpecialJt=No
+   Joint=345   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10881.0878   Y=293.8207   Z=4610   SpecialJt=Yes
+   Joint=346   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2050   Z=3200   SpecialJt=No
+   Joint=347   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11361.4552   Y=582.8264   Z=4610   SpecialJt=Yes
+   Joint=348   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1710   Z=3200   SpecialJt=No
+   Joint=349   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10400.7203   Y=4.815   Z=4610   SpecialJt=Yes
+   Joint=350   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1540   Z=3200   SpecialJt=No
+   Joint=351   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3014.7871   Z=4610   SpecialJt=Yes
+   Joint=352   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2614.7871   Z=4610   SpecialJt=Yes
+   Joint=353   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3350   Z=3930   SpecialJt=No
+   Joint=354   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3070   Z=3930   SpecialJt=No
+   Joint=355   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2214.7871   Z=4610   SpecialJt=Yes
+   Joint=356   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2730   Z=3930   SpecialJt=No
+   Joint=357   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1814.7871   Z=4610   SpecialJt=Yes
+   Joint=358   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2390   Z=3930   SpecialJt=No
+   Joint=359   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1414.7871   Z=4610   SpecialJt=Yes
+   Joint=360   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2050   Z=3930   SpecialJt=No
+   Joint=361   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1014.7871   Z=4610   SpecialJt=Yes
+   Joint=362   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1710   Z=3930   SpecialJt=No
+   Joint=363   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3411   Z=4726.1098   SpecialJt=Yes
+   Joint=364   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1540   Z=3930   SpecialJt=No
+   Joint=365   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3411   Z=4610   SpecialJt=Yes
+   Joint=366   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=640   Z=3930   SpecialJt=No
+   Joint=367   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10881.0878   Y=293.8207   Z=4907.5556   SpecialJt=No
+   Joint=368   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=3411   Z=4682.1658   SpecialJt=No
+   Joint=369   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8734.3824   Y=292.229   Z=4907.16   SpecialJt=No
+   Joint=370   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=-0.3396   Z=4685   SpecialJt=No
+   Joint=372   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=3411   Z=4726.112   SpecialJt=No
+   Joint=654   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=700.7632   Z=4682.1658   SpecialJt=No
+   Joint=658   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=700.7632   Z=4726.112   SpecialJt=No
+   Joint=660   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=1061.8743   Z=4682.1658   SpecialJt=No
+   Joint=662   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=339.652   Z=5215   SpecialJt=Yes
+   Joint=663   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=59.6577   Z=5215   SpecialJt=Yes
+   Joint=664   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=1061.8743   Z=4726.112   SpecialJt=No
+   Joint=665   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=3411   Z=5215   SpecialJt=Yes
+   Joint=666   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=1422.985   Z=4682.1658   SpecialJt=No
+   Joint=667   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=700.7632   Z=5215   SpecialJt=Yes
+   Joint=668   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=1061.8743   Z=5215   SpecialJt=Yes
+   Joint=669   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=1422.985   Z=5215   SpecialJt=Yes
+   Joint=670   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=1422.985   Z=4726.112   SpecialJt=No
+   Joint=671   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=1784.0962   Z=5215   SpecialJt=Yes
+   Joint=672   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=1784.0962   Z=4682.1658   SpecialJt=No
+   Joint=673   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=2145.2069   Z=5215   SpecialJt=Yes
+   Joint=674   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=2506.318   Z=5215   SpecialJt=Yes
+   Joint=675   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=2867.429   Z=5215   SpecialJt=Yes
+   Joint=676   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=1784.0962   Z=4726.112   SpecialJt=No
+   Joint=677   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=3228.5399   Z=5215   SpecialJt=Yes
+   Joint=678   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=2145.2069   Z=4682.1658   SpecialJt=No
+   Joint=679   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=700.7632   Z=4700.9944   SpecialJt=Yes
+   Joint=680   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=700.7632   Z=4610   SpecialJt=Yes
+   Joint=681   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1061.8743   Z=4700.9944   SpecialJt=Yes
+   Joint=682   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=2145.2069   Z=4726.112   SpecialJt=No
+   Joint=683   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1061.8743   Z=4610   SpecialJt=Yes
+   Joint=684   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=2506.318   Z=4682.1658   SpecialJt=No
+   Joint=685   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1422.985   Z=4700.9944   SpecialJt=Yes
+   Joint=686   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1422.985   Z=4610   SpecialJt=Yes
+   Joint=687   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1784.0962   Z=4700.9944   SpecialJt=Yes
+   Joint=688   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=2506.318   Z=4726.112   SpecialJt=No
+   Joint=689   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=1784.0962   Z=4610   SpecialJt=Yes
+   Joint=690   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=2867.429   Z=4682.1658   SpecialJt=No
+   Joint=691   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2145.2069   Z=4700.9944   SpecialJt=Yes
+   Joint=692   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2145.2069   Z=4610   SpecialJt=Yes
+   Joint=693   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2506.318   Z=4700.9944   SpecialJt=Yes
+   Joint=694   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=2867.429   Z=4726.112   SpecialJt=No
+   Joint=695   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2506.318   Z=4610   SpecialJt=Yes
+   Joint=696   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8171.9287   Y=3228.5399   Z=4682.1658   SpecialJt=No
+   Joint=697   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2867.429   Z=4700.9944   SpecialJt=Yes
+   Joint=698   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=2867.429   Z=4610   SpecialJt=Yes
+   Joint=699   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3228.5399   Z=4700.9944   SpecialJt=Yes
+   Joint=700   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11582.44   Y=3228.5399   Z=4726.112   SpecialJt=No
+   Joint=701   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3228.5399   Z=4610   SpecialJt=Yes
+   Joint=703   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=700.7632   Z=4726.1098   SpecialJt=Yes
+   Joint=705   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=700.7632   Z=4610   SpecialJt=Yes
+   Joint=707   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1061.8743   Z=4726.1098   SpecialJt=Yes
+   Joint=709   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1061.8743   Z=4610   SpecialJt=Yes
+   Joint=711   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1422.985   Z=4726.1098   SpecialJt=Yes
+   Joint=715   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1784.0962   Z=4726.1098   SpecialJt=Yes
+   Joint=717   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=1784.0962   Z=4610   SpecialJt=Yes
+   Joint=719   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2145.2069   Z=4726.1098   SpecialJt=Yes
+   Joint=721   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2145.2069   Z=4610   SpecialJt=Yes
+   Joint=723   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2506.318   Z=4726.1098   SpecialJt=Yes
+   Joint=725   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2506.318   Z=4610   SpecialJt=Yes
+   Joint=727   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2867.429   Z=4726.1098   SpecialJt=Yes
+   Joint=729   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=2867.429   Z=4610   SpecialJt=Yes
+   Joint=731   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3228.5399   Z=4726.1098   SpecialJt=Yes
+   Joint=733   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3228.5399   Z=4610   SpecialJt=Yes
+   Joint=791   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=339.652   Z=5336.69   SpecialJt=No
+   Joint=792   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=59.6577   Z=5336.69   SpecialJt=No
+   Joint=793   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=3411   Z=5336.69   SpecialJt=No
+   Joint=794   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=700.7632   Z=5336.69   SpecialJt=No
+   Joint=795   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=1061.8743   Z=5336.69   SpecialJt=No
+   Joint=796   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=1422.985   Z=5336.69   SpecialJt=No
+   Joint=797   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=1784.0962   Z=5336.69   SpecialJt=No
+   Joint=798   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=2145.2069   Z=5336.69   SpecialJt=No
+   Joint=799   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=2506.318   Z=5336.69   SpecialJt=No
+   Joint=800   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=2867.429   Z=5336.69   SpecialJt=No
+   Joint=801   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9808.23   Y=3228.5399   Z=5336.69   SpecialJt=No
+   Joint=802   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=3411   Z=4726.1092   SpecialJt=No
+   Joint=803   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=700.7632   Z=4726.1092   SpecialJt=No
+   Joint=804   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=1061.8743   Z=4726.1092   SpecialJt=No
+   Joint=805   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=1422.985   Z=4726.1092   SpecialJt=No
+   Joint=806   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=1784.0962   Z=4726.1092   SpecialJt=No
+   Joint=807   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=2145.2069   Z=4726.1092   SpecialJt=No
+   Joint=808   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=2506.318   Z=4726.1092   SpecialJt=No
+   Joint=809   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=2867.429   Z=4726.1092   SpecialJt=No
+   Joint=810   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11334.673   Y=3228.5399   Z=4726.1092   SpecialJt=No
+   Joint=812   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=600   Z=4610   SpecialJt=No
+   Joint=814   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=600   Z=4610   SpecialJt=No
+   Joint=815   CoordSys=GLOBAL   CoordType=Cartesian   XorR=11390   Y=3390   Z=4610   SpecialJt=No
+   Joint=816   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8219   Y=3390   Z=4610   SpecialJt=No
+   Joint=825   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8734.3824   Y=292.229   Z=5510   SpecialJt=No
+   Joint=826   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8734.3824   Y=292.229   Z=4685   SpecialJt=No
+ 
+TABLE:  "JOINT PATTERN DEFINITIONS"
+   Pattern=Default
+ 
+TABLE:  "JOINT RESTRAINT ASSIGNMENTS"
+   Joint=34   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=36   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=38   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=40   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=48   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=50   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=52   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=56   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=126   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=128   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=184   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=186   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=192   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=194   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=196   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=198   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=200   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=202   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=252   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=254   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=258   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+ 
+TABLE:  "JOINT SPRING ASSIGNMENTS 1 - UNCOUPLED"
+   Joint=54   CoordSys=GLOBAL   U1=500   U2=500   U3=500   R1=0   R2=0   R3=0
+   Joint=190   CoordSys=GLOBAL   U1=5000   U2=0   U3=0   R1=0   R2=0   R3=0
+   Joint=190   CoordSys=Local   U1=2500   U2=2500   U3=0   R1=0   R2=0   R3=0
+   Joint=336   CoordSys=Local   U1=2500   U2=2500   U3=0   R1=0   R2=0   R3=0
+   Joint=93   CoordSys=GLOBAL   U1=500   U2=500   U3=500   R1=0   R2=0   R3=0
+   Joint=94   CoordSys=GLOBAL   U1=500   U2=500   U3=500   R1=0   R2=0   R3=0
+   Joint=95   CoordSys=GLOBAL   U1=500   U2=500   U3=500   R1=0   R2=0   R3=0
+   Joint=96   CoordSys=GLOBAL   U1=500   U2=500   U3=500   R1=0   R2=0   R3=0
+ 
+TABLE:  "LINK PROPERTY ASSIGNMENTS"
+   Link=4   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=9   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=10   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=11   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=12   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=13   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=14   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=15   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=16   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=17   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=18   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=19   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=20   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=21   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=22   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=23   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=24   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=25   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=26   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=27   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=40   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=41   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=42   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=43   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=44   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=45   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=46   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=47   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=48   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=49   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=50   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=51   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=52   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=53   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=54   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=55   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=56   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=57   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=58   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=59   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=60   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=108   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=109   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=110   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=111   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=112   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=113   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=114   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=115   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=116   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=117   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=118   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=119   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=120   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=121   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=122   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=123   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=124   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=125   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=126   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=127   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=128   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=129   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=130   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=131   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=132   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=133   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=134   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=135   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=136   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=140   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=141   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=142   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=143   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=144   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=145   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=146   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=147   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=148   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=149   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=150   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=151   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=152   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=153   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=154   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=155   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=156   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=157   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=158   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=159   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=160   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=161   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=162   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=163   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=164   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=165   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=166   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=167   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=168   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=169   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=171   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=172   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=173   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=176   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=177   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=179   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=180   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=181   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=182   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=183   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=184   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=185   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=186   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=187   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=188   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=189   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=190   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=191   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=192   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=193   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=194   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+   Link=195   LinkProp=LINK1   LinkFDProp=None   PropMod=1
+ 
+TABLE:  "LINK PROPERTY DEFINITIONS 01 - GENERAL"
+   Link=LINK1   LinkType=Linear   Mass=0   Weight=0   RotInert1=1000000000   RotInert2=1000000000   RotInert3=1000000000   DefLength=1   DefArea=1   PDM2I=0   PDM2J=0   PDM3I=0   PDM3J=0   StiffDFact=1   Color=Green _
+        GUID=8bad7d49-13e6-43df-b190-049cda46cdfe   Notes="Added 7.08.2025 19:17:57"
+ 
+TABLE:  "LINK PROPERTY DEFINITIONS 02 - LINEAR"
+   Link=LINK1   DOF=U1   Fixed=No   TransKE=500   TransCE=0
+   Link=LINK1   DOF=U2   Fixed=No   TransKE=200   TransCE=0   DJ=0
+   Link=LINK1   DOF=U3   Fixed=No   TransKE=200   TransCE=0   DJ=0
+ 
+TABLE:  "LOAD CASE DEFINITIONS"
+   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes   GUID=77579836-5492-452d-a321-10be7293cc2b
+   Case=LIVE   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Live   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=9a9a8651-cdd8-4ff8-b003-7173b8598aa8
+   Case=SNOW_FULL   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Snow   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=12515880-a84b-47b0-ba16-87eb83c29ff7
+   Case=SNOW_HX   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Snow   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=f57a8a09-b04e-4d2f-a7a1-1e08caa5fe86
+   Case=SNOW_HY   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Snow   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=92a05b80-8d46-405e-ae9f-fa48e332fb0f
+   Case=MODAL   Type=LinModal   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Other   DesActOpt="Prog Det"   DesignAct=Other   AutoType=None   RunCase=Yes   GUID=09373112-1802-4f7e-8bbf-e271d4000bb5
+   Case=EQX   Type=LinRespSpec   ModalCase=MODAL   DesTypeOpt="Prog Det"   DesignType=Quake   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=73485e1e-d1d9-4e39-bb67-2b0fd2fbe796
+   Case=EQY   Type=LinRespSpec   ModalCase=MODAL   DesTypeOpt="Prog Det"   DesignType=Quake   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=7141a5e4-0dd4-43f5-baaf-4efb2ae65874
+   Case=QUAKEX   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Quake   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=3262255b-4bf8-48a3-a355-846a856cad15
+   Case=QUAKEY   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Quake   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=7b2581e5-6bf7-4dd0-959e-9ed1497d6064
+   Case=WindXP+cpi   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=8d133bd6-21f8-4ea4-8c91-ee909035a44f
+   Case=WindXE+cpi   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=ba122883-b136-4d0b-b77d-8136bc08b61d
+   Case=WindYP+cpi   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=b4672b49-a8e1-4e15-a345-568c42f1f7ff
+   Case=WindYE+cpi   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=246ab1bc-fe99-4909-a4cb-e2f37cc30f7d
+   Case=WindXP-cpi   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=8ca30c2c-ec50-45e0-ba9a-438890106704
+   Case=WindXE-cpi   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=96544c61-623d-4adb-8263-0b62e326ec97
+   Case=WindYP-cpi   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=d52442f2-d4ce-48bc-8e09-3460ef3b0668
+   Case=WindYE-cpi   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct="Short-Term Composite"   AutoType=None   RunCase=Yes   GUID=324e08a2-d8c8-4507-a6ce-c2a2559e52cb
+ 
+TABLE:  "LOAD PATTERN DEFINITIONS"
+   LoadPat=DEAD   DesignType=Dead   SelfWtMult=1   GUID=2394ae0b-5299-4e4d-bb01-3f868e7432c9
+   LoadPat=WindXP+cpi   DesignType=Wind   SelfWtMult=0   AutoLoad=None   GUID=442cfab0-94c5-4f8a-adc2-986d1c7c4981
+   LoadPat=WindXE+cpi   DesignType=Wind   SelfWtMult=0   AutoLoad=None   GUID=dd66254b-7169-4ea0-8bca-b3fb5c061602
+   LoadPat=WindYP+cpi   DesignType=Wind   SelfWtMult=0   AutoLoad=None   GUID=0427aa42-2418-4bce-8306-782523cd840d
+   LoadPat=WindYE+cpi   DesignType=Wind   SelfWtMult=0   AutoLoad=None   GUID=60261c89-a1a1-4ba1-a8e2-ed348f7ab943
+   LoadPat=WindXP-cpi   DesignType=Wind   SelfWtMult=0   AutoLoad=None   GUID=6b879406-41ad-4899-ac9e-bd01691f0170
+   LoadPat=WindXE-cpi   DesignType=Wind   SelfWtMult=0   AutoLoad=None   GUID=7373a687-6924-499e-92ff-e61fff35ab7e
+   LoadPat=WindYP-cpi   DesignType=Wind   SelfWtMult=0   AutoLoad=None   GUID=9ddc101b-6296-43b0-b6ea-7364f53e1647
+   LoadPat=WindYE-cpi   DesignType=Wind   SelfWtMult=0   AutoLoad=None   GUID=bdbb4355-dbd5-4ed6-9ed0-7e70e6da76aa
+   LoadPat=LIVE   DesignType=Live   SelfWtMult=0   GUID=0d0f439b-c4b3-4924-8361-559ae998afc3
+   LoadPat=SNOW_FULL   DesignType=Snow   SelfWtMult=0   GUID=46b0a4df-3b4b-4ec3-b5b8-6ef84fe6e63a   Notes="Added 9.08.2025 16:16:47"
+   LoadPat=SNOW_HX   DesignType=Snow   SelfWtMult=0   GUID=373132de-b2cf-4c64-a078-2c97ec6a11c3   Notes="Added 9.08.2025 16:22:25"
+   LoadPat=SNOW_HY   DesignType=Snow   SelfWtMult=0   GUID=9ce0d66e-980a-40e4-aeb3-e1b5f29a8722   Notes="Added 9.08.2025 16:22:29"
+   LoadPat=QUAKEX   DesignType=Quake   SelfWtMult=0   AutoLoad=TSC-2018   GUID=2e28083a-5233-4c00-81b3-8b068c49c53c   Notes="Added 15.08.2025 06:09:34"
+   LoadPat=QUAKEY   DesignType=Quake   SelfWtMult=0   AutoLoad=TSC-2018   GUID=5ca57e56-5f1c-4c70-a5bb-546523eeee76   Notes="Added 15.08.2025 06:10:11"
+ 
+TABLE:  "MASS SOURCE"
+   MassSource=MSSSRC1   Elements=No   Masses=No   Loads=Yes   IsDefault=Yes   LoadPat=DEAD   Multiplier=1
+   MassSource=MSSSRC1   LoadPat=LIVE   Multiplier=0.3
+ 
+TABLE:  "MATERIAL PROPERTIES 01 - GENERAL"
+   Material=C24   Type=Other   Grade=Wood   SymType=Anisotropic   TempDepend=No   Color=Yellow   GUID=245ba94f-fd73-4428-83ab-ff3e62a6657f   Notes="MAT added 11.01.2026 17:22:45"
+   Material=C30/37   Type=Concrete   Grade=C30/37   SymType=Isotropic   TempDepend=No   Color=Green   GUID=14e46903-6575-48c9-984b-f592d7888df4   Notes="EN 1992-1-1 per EN 206-1 C30/37 11.01.2026 17:22:45"
+   Material=PANEL   Type=Other   Grade="OSB Structural"   SymType=Isotropic   TempDepend=No   Color=Cyan   GUID=aa7d0c63-88b0-4035-a2a7-db8b9a7fb090   Notes="OSB-3 İzotropik Malzeme Parametreleri"
+   Material=Rebar   Type=Rebar   SymType=Uniaxial   TempDepend=No   Color=Magenta   GUID=d51328bc-34e7-454f-8a9e-001d4ab74e9f   Notes="Rebar added 14.01.2026 02:21:46"
+   Material=S355   Type=Steel   Grade=S355   SymType=Isotropic   TempDepend=No   Color=Cyan   GUID=5f75b434-3200-43e3-8d87-3ba794aa3888   Notes="EN 1993-1-1 per EN 10025-2 S355 13.01.2026 21:21:28"
+   Material=TASDUVAR   Type=Other   SymType=Isotropic   TempDepend=No   Color=Green   GUID=abbf6a69-1b00-4222-8c73-aabae57d5251   Notes="MAT added 11.01.2026 17:22:45"
+   Material=Tendon   Type=Tendon   SymType=Uniaxial   TempDepend=No   Color=Red   GUID=152575a1-fc7e-4447-8d56-0f93b6ee98ed   Notes="Tendon added 14.01.2026 02:21:46"
+ 
+TABLE:  "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES"
+   Material=C24   UnitWeight=3.5E-06   UnitMass=3.5E-09   E1=11000   E2=370   E3=370   G12=690   G13=690   G23=69   U12=0.3   U13=0.3   U23=0.1   U14=0   U24=0   U34=0   U15=0   U25=0   U35=0   U45=0   U16=0   U26=0   U36=0   U46=0   U56=0 _
+        A1=0   A2=0   A3=0   A12=0   A13=0   A23=0
+   Material=C30/37   UnitWeight=2.4993E-05   UnitMass=2.5485E-09   E1=33000   G12=13750   U12=0.2   A1=1E-05
+   Material=PANEL   UnitWeight=6E-06   UnitMass=6.1E-10   E1=2500   G12=961.538461538462   U12=0.3   A1=1.17E-05
+   Material=Rebar   UnitWeight=7.6973E-05   UnitMass=7.849E-09   E1=199947.9788   A1=1.17E-05
+   Material=S355   UnitWeight=7.6973E-05   UnitMass=7.849E-09   E1=210000   G12=80769.2307692308   U12=0.3   A1=1.17E-05
+   Material=TASDUVAR   UnitWeight=2.4E-05   UnitMass=2.4473E-09   E1=450   G12=187.5   U12=0.2   A1=9.9E-06
+   Material=Tendon   UnitWeight=7.6973E-05   UnitMass=7.849E-09   E1=196500.5999   A1=1.17E-05
+ 
+TABLE:  "MATERIAL PROPERTIES 03A - STEEL DATA"
+   Material=S355   Fy=355   Fu=510   EffFy=390.5   EffFu=561   SSCurveOpt=Simple   SSHysType=Kinematic   SHard=0.015   SMax=0.11   SRup=0.17   FinalSlope=-0.1   CoupModType="Von Mises"
+ 
+TABLE:  "MATERIAL PROPERTIES 03B - CONCRETE DATA"
+   Material=C30/37   Fc=30   eFc=30   LtWtConc=No   SSCurveOpt=Mander   SSHysType=Takeda   SFc=0.00181818   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0   CoupModType="Modified Darwin-Pecknold"
+ 
+TABLE:  "MATERIAL PROPERTIES 03E - REBAR DATA"
+   Material=Rebar   Fy=413.685473370947   Fu=620.52821005642   EffFy=455.054020708042   EffFu=682.581031062062   SSCurveOpt=Simple   SSHysType=Kinematic   SHard=0.01   SCap=0.09   FinalSlope=-0.1   UseCTDef=No   CoupModType="Von Mises"
+ 
+TABLE:  "MATERIAL PROPERTIES 03F - TENDON DATA"
+   Material=Tendon   Fy=1689.90515872032   Fu=1861.58463016926   SSCurveOpt="270 ksi"   SSHysType=Kinematic   FinalSlope=-0.1   CoupModType="Von Mises"
+ 
+TABLE:  "MATERIAL PROPERTIES 03G - OTHER DATA"
+   Material=C24   SSHysType=Takeda   FAngle=0   DAngle=0   CoupModType=None
+   Material=PANEL   SSHysType=Takeda   FAngle=0   DAngle=0   CoupModType=None
+   Material=TASDUVAR   SSHysType=Takeda   FAngle=0   DAngle=0   CoupModType=None
+ 
+TABLE:  "MATERIAL PROPERTIES 03J - COUPLED NONLINEAR VON MISES DATA"
+   Material=Rebar   YieldStress=455.054020708042   LinIsoHard=No   LinKinHard=No   NLIsoSaHard=No
+   Material=S355   YieldStress=390.5   LinIsoHard=No   LinKinHard=No   NLIsoSaHard=No
+   Material=Tendon   YieldStress=1689.90515872032   LinIsoHard=No   LinKinHard=No   NLIsoSaHard=No
+ 
+TABLE:  "MATERIAL PROPERTIES 04 - USER STRESS-STRAIN CURVES"
+   Material=C24   Strain=-9.0909E-05   Stress=-1
+   Material=C24   Strain=0   Stress=0   PointID=A
+   Material=C24   Strain=9.0909E-05   Stress=1
+   Material=PANEL   Strain=-0.0004   Stress=-1
+   Material=PANEL   Strain=0   Stress=0   PointID=A
+   Material=PANEL   Strain=0.0004   Stress=1
+   Material=TASDUVAR   Strain=-0.0022   Stress=-1
+   Material=TASDUVAR   Strain=0   Stress=0   PointID=A
+   Material=TASDUVAR   Strain=0.0022   Stress=1
+ 
+TABLE:  "MATERIAL PROPERTIES 06 - DAMPING PARAMETERS"
+   Material=C24   ModalRatio=0   VisMass=0   VisStiff=0   HysMass=0   HysStiff=0
+   Material=C30/37   ModalRatio=0   VisMass=0   VisStiff=0   HysMass=0   HysStiff=0
+   Material=PANEL   ModalRatio=0   VisMass=0   VisStiff=0   HysMass=0   HysStiff=0
+   Material=Rebar   ModalRatio=0   VisMass=0   VisStiff=0   HysMass=0   HysStiff=0
+   Material=S355   ModalRatio=0   VisMass=0   VisStiff=0   HysMass=0   HysStiff=0
+   Material=TASDUVAR   ModalRatio=0   VisMass=0   VisStiff=0   HysMass=0   HysStiff=0
+   Material=Tendon   ModalRatio=0   VisMass=0   VisStiff=0   HysMass=0   HysStiff=0
+ 
+TABLE:  "MATERIAL PROPERTIES 09 - ACCEPTANCE CRITERIA"
+   Material=C24   IOTens=0.01   LSTens=0.02   CPTens=0.05   IOComp=-0.005   LSComp=-0.01   CPComp=-0.02   IgnoreTens=No
+   Material=C30/37   IOTens=0.01   LSTens=0.02   CPTens=0.05   IOComp=-0.003   LSComp=-0.006   CPComp=-0.015   IgnoreTens=Yes
+   Material=PANEL   IOTens=0.01   LSTens=0.02   CPTens=0.05   IOComp=-0.005   LSComp=-0.01   CPComp=-0.02   IgnoreTens=No
+   Material=Rebar   IOTens=0.01   LSTens=0.02   CPTens=0.05   IOComp=-0.005   LSComp=-0.01   CPComp=-0.02
+   Material=S355   IOTens=0.01   LSTens=0.02   CPTens=0.05   IOComp=-0.005   LSComp=-0.01   CPComp=-0.02
+   Material=TASDUVAR   IOTens=0.01   LSTens=0.02   CPTens=0.05   IOComp=-0.005   LSComp=-0.01   CPComp=-0.02   IgnoreTens=No
+   Material=Tendon   IOTens=0.015   LSTens=0.023   CPTens=0.03   IOComp=-0.015   LSComp=-0.023   CPComp=-0.03
+ 
+TABLE:  "PROGRAM CONTROL"
+   ProgramName=SAP2000   Version=25.3.1   CurrUnits="N, mm, C"   SteelCode="AISC 360-16"   ConcCode="ACI 318-19"   AlumCode="AA 2015"   ColdCode=AISI-16   RegenHinge=Yes
+ 
+TABLE:  "PROJECT INFORMATION"
+   Item="Company Name"
+   Item="Client Name"
+   Item="Project Name"
+   Item="Project Number"
+   Item="Model Name"
+   Item="Model Description"
+   Item="Revision Number"
+   Item="Frame Type"
+   Item=Engineer
+   Item=Checker
+   Item=Supervisor
+   Item="Issue Code"
+   Item="Design Code"
+ 
+TABLE:  "SECTION CUTS 1 - GENERAL"
+   CutName=Story0   DefinedBy=Quad   Group=All   ResultType=Analysis   DefaultLoc=Yes   GlobalX=9813.56638699928   GlobalY=1619.84642660911   GlobalZ=4213.06898109307   AngleA=0   AngleB=0   AngleC=0   ElemSide=Positive
+   CutName=Story1   DefinedBy=Quad   Group=All   ResultType=Analysis   DefaultLoc=Yes   GlobalX=9813.56638699928   GlobalY=1619.84642660911   GlobalZ=4213.06898109307   AngleA=0   AngleB=0   AngleC=0   ElemSide=Positive
+ 
+TABLE:  "SECTION CUTS 3 - QUADRILATERAL DEFINITIONS"
+   SectionCut=Story0   X=8200   Y=3500   Z=1600
+   SectionCut=Story0   X=11500   Y=3500   Z=1600
+   SectionCut=Story0   X=11500   Y=-100   Z=1600
+   SectionCut=Story0   X=8200   Y=-100   Z=1600
+   SectionCut=Story1   X=8200   Y=3500   Z=4610
+   SectionCut=Story1   X=11500   Y=3500   Z=4610
+   SectionCut=Story1   X=11500   Y=-100   Z=4610
+   SectionCut=Story1   X=8200   Y=-100   Z=4610
+ 
+END TABLE DATA
