@@ -92,11 +92,37 @@ class Material:
     name: str = "DEFAULT"
     mat_type: MatType = MatType.STEEL
     color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
-    E: float = 2.0e8
-    G: float = 7.7e7
-    nu: float = 0.3
+    
+    # 3 Lokal eksen elastisite modülleri (Ortotropik destekli)
+    E1: float = 2.0e8
+    E2: float = 2.0e8
+    E3: float = 2.0e8
+    
+    # 3 Düzlem kayma modülleri
+    G12: float = 7.7e7
+    G13: float = 7.7e7
+    G23: float = 7.7e7
+    
+    # Poisson oranları (U12, U13, U23)
+    nu12: float = 0.3
+    nu13: float = 0.3
+    nu23: float = 0.3
+    
     density: float = 7850
     guid: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+    # Çubuk eleman analizlerinde (1 ekseni boyunca) geriye dönük uyumluluk için
+    @property
+    def E(self) -> float:
+        return self.E1
+
+    @property
+    def G(self) -> float:
+        return self.G12
+
+    @property
+    def nu(self) -> float:
+        return self.nu12
 
 # ============================================================================
 # SECTION (element.py'deki Section ile uyumlu)

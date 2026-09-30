@@ -287,6 +287,62 @@ class S2KLoader:
         df_f_assign = self.parser.get_table("FRAME SECTION ASSIGNMENTS")
         df_a_assign = self.parser.get_table("AREA SECTION ASSIGNMENTS")
         df_l_assign = self.parser.get_table("LINK PROPERTY ASSIGNMENTS")
+        mat_prop = self.parser.get_table("MATERIAL PROPERTIES 01 - GENERAL")
+        mat_mech = self.parser.get_table("MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES")
+
+        materials_lib: Dict[str, Material] = {}
+
+        if not mat_prop.empty:
+            mech_dict = {}
+            if not mat_mech.empty:
+                mech_dict = mat_mech.set_index('Material').to_dict(orient='index')
+
+            for _, row in mat_prop.iterrows():
+                mat_name = str(row.get('Material', '')).strip()
+                if not mat_name:
+                    continue
+
+                mat_type = map_sap_mat_type(row.get('Type', 'Steel'))
+                color = get_color_from_string(row.get('Color', 'Gray8Dark'))
+                mech = mech_dict.get(mat_name, {})
+
+                def safe_float(key: str, fallback: float) -> float:
+                    val = mech.get(key)
+                    if val is None or str(val).strip() in ("", "None", "nan"):
+                        return fallback
+                    try:
+                        f_val = float(val)
+                        return f_val if f_val > 0 else fallback
+                    except (ValueError, TypeError):
+                        return fallback
+
+                # Ana eksen modülü (E1) ve varsayılan izotropik değerler
+                e1 = safe_float('E1', 2.0e8)
+                e2 = safe_float('E2', e1)  # E2 yoksa E1 al
+                e3 = safe_float('E3', e1)  # E3 yoksa E1 al
+
+                g12 = safe_float('G12', 7.7e7)
+                g13 = safe_float('G13', g12) # G13 yoksa G12 al
+                g23 = safe_float('G23', g12) # G23 yoksa G12 al
+
+                nu12 = safe_float('U12', 0.3)
+                nu13 = safe_float('U13', nu12)
+                nu23 = safe_float('U23', nu12)
+
+                density = safe_float('UnitMass', 7850)
+
+                material = Material(
+                    name=mat_name,
+                    mat_type=mat_type,
+                    color=color,
+                    E1=e1, E2=e2, E3=e3,
+                    G12=g12, G13=g13, G23=g23,
+                    nu12=nu12, nu13=nu13, nu23=nu23,
+                    density=density
+                )
+
+                materials_lib[mat_name] = material
+                self.builder.def_mgr.add_material(material)
         
         if df_j.empty:
             logger.error("JOINT COORDINATES table not found!")
@@ -297,13 +353,17 @@ class S2KLoader:
         if not df_s.empty:
             for _, row in df_s.iterrows():
                 sect_name = row.get('SectionName', row.get('Section', 'DEFAULT'))
+                mat_name = str(row.get('Material', '')).strip()
                 s_type, s_params = map_sap_to_local_params(row)
                 color = get_color_from_string(row.get('Color', 'Gray8Dark'))
+                
+                mat_obj = materials_lib.get(mat_name)
                 
                 section = Section(
                     name=sect_name,
                     profile_type=s_type,
                     profile_params=s_params,
+                    material=mat_obj,
                     color=color
                 )
                 self._sections[sect_name] = section
