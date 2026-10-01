@@ -20,6 +20,8 @@ class MatType(Enum):
     COLDFORMED = 5
     REBAR = 6
     TENDON = 7
+    TIMBER = 8        # Ahşap
+    MASONRY = 9       # Yığma duvar
 
 class SectionType(Enum):
     """FEA çubuk kesit tipleri"""
@@ -127,6 +129,15 @@ class Material:
 # ============================================================================
 # SECTION (element.py'deki Section ile uyumlu)
 # ============================================================================
+# Varsayılan Malzeme Nesnesi
+DEFAULT_MATERIAL = Material(
+    name="DEFAULT_STEEL",
+    mat_type=MatType.STEEL,
+    E1=2.1e8,       # kN/m² veya N/mm² ölçeğine göre
+    G12=8.1e7,
+    nu12=0.3,
+    density=7850
+)
 
 class Section:
     def __init__(self, name: str, profile_type: SectionType,
@@ -136,7 +147,7 @@ class Section:
         self.name = name
         self.profile_type = profile_type
         self.profile_params = profile_params
-        self.material = material
+        self.material = material if material is not None else DEFAULT_MATERIAL
         self.color = color
         self.guid = str(uuid.uuid4())
 

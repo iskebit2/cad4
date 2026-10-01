@@ -182,6 +182,8 @@ class Frame(Element):
         self.node_j = node_j
         self.section = section
         self.rotation_deg = rotation_deg
+        self.release_i = None
+        self.release_j = None
     
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
