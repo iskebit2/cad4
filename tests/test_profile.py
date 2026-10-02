@@ -27,8 +27,8 @@ for st in [SectionType.RECT, SectionType.I, SectionType.L, SectionType.T,
         params = {"b": 100, "h": 200, "t": 10}
     
     profile = pg.get_profile(st, params)
-    logger.debug(f"{st}: {len(profile)} points")
-    logger.debug(f"  Min: ({profile[:,0].min():.1f}, {profile[:,1].min():.1f})")
-    logger.debug(f"  Max: ({profile[:,0].max():.1f}, {profile[:,1].max():.1f})")
-    logger.debug(f"  First: ({profile[0,0]:.1f}, {profile[0,1]:.1f})")
-    logger.debug()
+    # logger.debug(f"{st}: {len(profile)} points")
+    # logger.debug(f"  Min: ({profile[:,0].min():.1f}, {profile[:,1].min():.1f})")
+    # logger.debug(f"  Max: ({profile[:,0].max():.1f}, {profile[:,1].max():.1f})")
+    # logger.debug(f"  First: ({profile[0,0]:.1f}, {profile[0,1]:.1f})")
+    # logger.debug()

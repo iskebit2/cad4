@@ -144,7 +144,7 @@ class S2KParser:
             if data:
                 self.tables[table_name] = pd.DataFrame(data)
                 table_count += 1
-                logger.debug(f"  Loaded table: {table_name} ({len(data)} rows)")
+                # logger.debug(f"  Loaded table: {table_name} ({len(data)} rows)")
         
         logger.info(f"[S2KParser] Loaded {table_count} tables")
     
@@ -261,13 +261,13 @@ def map_sap_to_local_params(sap_row: pd.Series) -> Tuple[SectionType, Dict[str, 
             return SectionType.TUBE, params
 
         else:
-            logger.debug(f"Warning: Unknown section type '{s_type}', using default rectangle")
+            # logger.debug(f"Warning: Unknown section type '{s_type}', using default rectangle")
             params = {"h": 200.0, "b": 100.0}
             params.update(analysis_params)
             return SectionType.RECT, params
 
     except (ValueError, KeyError) as e:
-        logger.debug(f"Error mapping section parameters for type '{s_type}': {e}")
+        # logger.debug(f"Error mapping section parameters for type '{s_type}': {e}")
         params = {"h": 200.0, "b": 100.0}
         params.update(analysis_params)
         return SectionType.RECT, params
@@ -317,7 +317,7 @@ def parse_sap_restraint(restraint_str: str) -> Optional[Dict[str, bool]]:
         part = part.strip().upper()
         if part in dof_map:
             restraint_dict[dof_map[part]] = True
-            logger.debug(f"    Added restraint: {part} -> {dof_map[part]}")
+            # logger.debug(f"    Added restraint: {part} -> {dof_map[part]}")
     
     return restraint_dict if restraint_dict else None
 

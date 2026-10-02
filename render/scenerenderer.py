@@ -119,7 +119,7 @@ class SceneRenderer:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
         
         self.marquee_initialized = True
-        logger.debug("Marquee buffer'ları oluşturuldu")
+        # logger.debug("Marquee buffer'ları oluşturuldu")
     
     def _create_mrt_fbo(self, w, h):
         """MRT FBO'su oluştur"""
@@ -637,12 +637,13 @@ class SceneRenderer:
         
         # Debug: her renderer'ın ne kadar verisi var?
         logger.debug(
-            f"SIMPLE RENDER | "
-            f"frame_vc={self.frame_r.simple_vcount if self.frame_r else 'N/A'}, "
-            f"area_vc={self.area_r.simple_vcount if self.area_r else 'N/A'}, "
-            f"link_vc={self.link_r.simple_vcount if self.link_r else 'N/A'}, "
-            f"node_vc={self.node_r.simple_vcount if self.node_r else 'N/A'}"
-        )
+                        "SIMPLE RENDER | "
+                        "frame_vc=%s, area_vc=%s, link_vc=%s, node_vc=%s",
+                        self.frame_r.simple_vcount if self.frame_r else "N/A",
+                        self.area_r.simple_vcount if self.area_r else "N/A",
+                        self.link_r.simple_vcount if self.link_r else "N/A",
+                        self.node_r.simple_vcount if self.node_r else "N/A",
+                    )
         
         # Nokta boyutu
         glPointSize(8.0)

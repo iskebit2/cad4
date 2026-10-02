@@ -40,7 +40,7 @@ class PickPass:
         # 1x1 FBO oluştur (yedek, asıl picking MRT'den)
         self._create_resources()
         
-        logger.debug("PickPass başlatıldı - MRT picking modu")
+        # logger.debug("PickPass başlatıldı - MRT picking modu")
     
     def _create_resources(self):
         """1x1 FBO ve PBO'ları oluştur (yedek)"""
@@ -133,7 +133,7 @@ class PickPass:
         if self.pending_pick:
             if time.time() - self.pick_start_time > self.pick_timeout:
                 self.pending_pick = False
-                logger.debug("Pick timeout - sıfırlandı")
+                # logger.debug("Pick timeout - sıfırlandı")
             else:
                 return False
 

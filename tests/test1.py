@@ -152,26 +152,13 @@ file_path = "examples/testmodel.s2k"
 app = S2KLoader(file_path)
 
 
-# tests/test1.py içine ekle (yükleme sonrası, kütle hesabından önce)
-# print("\n=== MASS SOURCE ===")
+
 df_mass = app.parser.get_table("MASS SOURCE")
-# print(df_mass)
-
-# print("\n=== LOAD PATTERN DEFINITIONS ===")
 df_lp = app.parser.get_table("LOAD PATTERN DEFINITIONS")
-# print(df_lp)
-
-# print("\n=== FRAME LOADS - DISTRIBUTED (ilk 10) ===")
 df_fl = app.parser.get_table("FRAME LOADS - DISTRIBUTED")
-# print(df_fl.head(10))
-
-# print("\n=== JOINT LOADS - FORCE ===")
 df_jl = app.parser.get_table("JOINT LOADS - FORCE")
-# print(df_jl.head(10) if not df_jl.empty else "BOŞ")
-
-# print("\n=== AREA LOADS - UNIFORM TO FRAME ===")
 df_al = app.parser.get_table("AREA LOADS - UNIFORM TO FRAME")
-# print(df_al.head(10) if not df_al.empty else "BOŞ")
+
 
 def run():
     results = app.load()

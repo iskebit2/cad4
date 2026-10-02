@@ -1,3 +1,8 @@
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 import numpy as np
 from tools.s2kloader import S2KLoader
 from core.analysis import (
@@ -24,8 +29,13 @@ for key, node in scene.nodes.items():
     base = node_map[key] * 6
     node.dof_indices = list(range(base, base + 6))
 
-print(f"Model: {len(scene.nodes)} node, {len(scene.frames)} frame, "
-      f"{len(scene.areas)} area, {len(scene.links)} link")
+logger.info(
+    "Model: %d node, %d frame, %d area, %d link",
+    len(scene.nodes),
+    len(scene.frames),
+    len(scene.areas),
+    len(scene.links),
+)
 
 
 # ============================================================
@@ -36,8 +46,11 @@ mass_source = read_mass_source(app.parser)
 mass_source['frame_loads'] = read_frame_loads(app.parser)
 mass_source['g'] = 9810.0
 
-print(f"\nMass source multipliers: {mass_source['multipliers']}")
-print(f"Self weight mults:      {mass_source['self_weight_mults']}")
+logger.info(
+    "Mass source multipliers: %d Self weight mults: %d",
+    mass_source['multipliers'],
+    mass_source['self_weight_mults'],
+)
 
 
 # ============================================================
@@ -47,13 +60,6 @@ print(f"Self weight mults:      {mass_source['self_weight_mults']}")
 asm = ModelAssembler(scene, node_map, num_dofs)
 K = asm.build_stiffness()
 M, mass_report = asm.build_mass(mass_source)
-
-print(f"\n=== KÜTLE RAPORU ===")
-for pat, m in mass_report['user'].items():
-    print(f"  Kullanıcı {pat}: {m:.4f} ton")
-for pat, m in mass_report['self'].items():
-    print(f"  Self {pat}:      {m:.4f} ton")
-print(f"  TOPLAM:         {sum(mass_report['user'].values()) + sum(mass_report['self'].values()):.4f} ton")
 
 
 # ============================================================
@@ -68,7 +74,15 @@ for key, node in scene.nodes.items():
             if getattr(node.restraint, dof_name, False):
                 fixed_dofs.append(base + i)
 
-print(f"\nKilitli DOF: {len(fixed_dofs)}")
+logger.info(f"\n=== KÜTLE RAPORU ===")
+for pat, m in mass_report['user'].items():
+    logger.info(f"  Kullanıcı {pat}: {m:.4f} ton")
+for pat, m in mass_report['self'].items():
+    logger.info(f"  Self {pat}:      {m:.4f} ton")
+logger.info(f"  TOPLAM:         {sum(mass_report['user'].values()) + sum(mass_report['self'].values()):.4f} ton")
+
+
+logger.info(f"\nKilitli DOF: {len(fixed_dofs)}")
 
 
 # ============================================================
@@ -90,23 +104,23 @@ if top_nodes:
 U_static = solver.static_solve(F)
 if top_nodes:
     top_ux = U_static[node_map[top_nodes[0]] * 6]
-    print(f"\nStatik: Tepe UX = {top_ux:.4f} mm")
+    logger.info(f"\nStatik: Tepe UX = {top_ux:.4f} mm")
 
 
 # ---- 5b. Modal analiz ----
 freqs, periods, modes, modal_dofs = solver.modal_solve(n_modes=10)
 
-print(f"\n=== MODAL ANALİZ ===")
+logger.info(f"\n=== MODAL ANALİZ ===")
 for i in range(min(5, len(periods))):
-    print(f"Mod {i+1}: T = {periods[i]:.4f} s | f = {freqs[i]:.3f} Hz")
+    logger.info(f"Mod {i+1}: T = {periods[i]:.4f} s | f = {freqs[i]:.3f} Hz")
 
 
 # ---- 5c. Spektral analiz ----
 seismic = read_spectrum_from_parser(app.parser)
 spec = TBDYSpectrum(**seismic)
 
-print(f"\n=== TBDY 2018 SPEKTRUM ===")
-print(spec.info())
+logger.info(f"\n=== TBDY 2018 SPEKTRUM ===")
+logger.info(spec.info())
 
 # SRSS birleştirme (basit örnek)
 U_modes = []
@@ -138,4 +152,4 @@ U_srss = np.sqrt(np.sum([u**2 for u in U_modes], axis=0))
 
 if top_nodes:
     top_ux = U_srss[node_map[top_nodes[0]] * 6]
-    print(f"\nSpektral (SRSS): Tepe UX = {top_ux:.2f} mm")
+    logger.info(f"\nSpektral (SRSS): Tepe UX = {top_ux:.2f} mm")

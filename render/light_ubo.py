@@ -29,7 +29,7 @@ class LightUBO:
         self._buf_i = np.zeros(self.BUFFER_SIZE // 4, dtype=np.int32)
         self._buf_f = self._buf_i.view(np.float32)
 
-        logger.debug(f"[LightUBO] oluşturuldu ({self.BUFFER_SIZE} byte)")
+        # logger.debug(f"[LightUBO] oluşturuldu ({self.BUFFER_SIZE} byte)")
 
     def update(self, lighting, camera_pos):
         fi = self._buf_f

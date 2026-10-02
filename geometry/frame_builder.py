@@ -21,6 +21,7 @@ class FrameBuilder:
 
     def __init__(self):
         self.profile_gen = ProfileGenerator()
+        
 
     def _ensure_closed_cw(self, profile):
         if len(profile) < 3:
@@ -304,10 +305,10 @@ class FrameBuilder:
         )
 
         logger.debug(
-            f"FrameBuilder: "
-            f"{len(verts) // 6} vertices, "
-            f"{len(idxs)} triangle indices"
-        )
+                        "XXXXXXXX FRAME TEST %d %d",
+                        len(verts) // 6,
+                        len(idxs),
+                    )
 
         return (
             np.array(verts, dtype=np.float32),

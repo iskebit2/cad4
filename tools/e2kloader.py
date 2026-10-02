@@ -143,7 +143,7 @@ class E2KParser:
                 # Start new section
                 current_section = line[1:].strip()
                 section_data = []
-                logger.debug(f"Found section: {current_section}")
+                # logger.debug(f"Found section: {current_section}")
             else:
                 if current_section and not line.startswith('  END'):
                     section_data.append(line)
@@ -802,32 +802,6 @@ class E2KParser:
         return self.shell_props.get(prop_name, {})
 
 
-# Usage example
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    
-    # Parse the file
-    parser = E2KParser("D:/Projects/deneme/1.$et")
-    
-    
-    # Access parsed data
-    print("\n=== STORIES ===")
-    print(parser.tables.get('STORIES', pd.DataFrame()))
-    
-    print("\n=== POINTS 3D ===")
-    print(parser.tables.get('POINTS_3D', pd.DataFrame()).head())
-    
-    print("\n=== LINES 3D ===")
-    print(parser.tables.get('LINES_3D', pd.DataFrame()).head())
-    
-    print("\n=== AREAS 3D ===")
-    print(parser.tables.get('AREAS_3D', pd.DataFrame()).head())
-    
-    print("\n=== FRAME SECTIONS ===")
-    print(parser.tables.get('FRAME_SECTIONS', pd.DataFrame()))
-    
-    # Get points for a specific story
-    story7_points = parser.get_points_by_story('Story7')
-    print(f"\n=== Points in Story7: {len(story7_points)} points ===")
+
     
     

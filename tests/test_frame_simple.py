@@ -25,17 +25,17 @@ frame = Frame(n1, n2, section, 0, "F1")
 builder = FrameBuilder()
 verts, colors, idxs = builder.build(frame)
 
-logger.debug(f"Vertex count: {len(verts)//6}")
-logger.debug(f"Index count: {len(idxs)}")
-logger.debug(f"First 12 indices: {idxs[:12] if len(idxs) >= 12 else idxs}")
+# logger.debug(f"Vertex count: {len(verts)//6}")
+# logger.debug(f"Index count: {len(idxs)}")
+# logger.debug(f"First 12 indices: {idxs[:12] if len(idxs) >= 12 else idxs}")
 
 # Vertex'leri kontrol et
 if len(verts) > 0:
     verts_3d = verts.reshape(-1, 6)
-    logger.debug(f"\nİlk 4 vertex (pozisyon):")
+    # logger.debug(f"\nİlk 4 vertex (pozisyon):")
     for i in range(min(4, len(verts_3d))):
-        logger.debug(f"  {i}: ({verts_3d[i,0]:.1f}, {verts_3d[i,1]:.1f}, {verts_3d[i,2]:.1f})")
+        # logger.debug(f"  {i}: ({verts_3d[i,0]:.1f}, {verts_3d[i,1]:.1f}, {verts_3d[i,2]:.1f})")
     
-    logger.debug(f"\nİlk 4 vertex (normal):")
+    # logger.debug(f"\nİlk 4 vertex (normal):")
     for i in range(min(4, len(verts_3d))):
-        logger.debug(f"  {i}: ({verts_3d[i,3]:.2f}, {verts_3d[i,4]:.2f}, {verts_3d[i,5]:.2f})")
+        # logger.debug(f"  {i}: ({verts_3d[i,3]:.2f}, {verts_3d[i,4]:.2f}, {verts_3d[i,5]:.2f})")

@@ -62,13 +62,13 @@ class GizmoAxes:
             # Shader oluştur
             self.shader = self.create_simple_shader()
             if self.shader is None:
-                logger.debug("✗ Shader oluşturulamadı!")
+                # logger.debug("✗ Shader oluşturulamadı!")
                 return
                 
-            logger.debug(f"✓ GizmoAxes initialized (OpenGL 3.3), Shader ID: {self.shader}, VAO: {self.VAO}")
+            # logger.debug(f"✓ GizmoAxes initialized (OpenGL 3.3), Shader ID: {self.shader}, VAO: {self.VAO}")
             
         except Exception as e:
-            logger.debug(f"✗ GizmoAxes initialization failed: {e}")
+            # logger.debug(f"✗ GizmoAxes initialization failed: {e}")
             import traceback
             traceback.logger.debug_exc()
 
@@ -107,7 +107,7 @@ class GizmoAxes:
             # Derleme kontrolü
             if not gl.glGetShaderiv(vs, gl.GL_COMPILE_STATUS):
                 error = gl.glGetShaderInfoLog(vs).decode()
-                logger.debug(f"Vertex Shader Compile Error:\n{error}")
+                # logger.debug(f"Vertex Shader Compile Error:\n{error}")
                 gl.glDeleteShader(vs)
                 return None
             
@@ -119,7 +119,7 @@ class GizmoAxes:
             # Derleme kontrolü
             if not gl.glGetShaderiv(fs, gl.GL_COMPILE_STATUS):
                 error = gl.glGetShaderInfoLog(fs).decode()
-                logger.debug(f"Fragment Shader Compile Error:\n{error}")
+                # logger.debug(f"Fragment Shader Compile Error:\n{error}")
                 gl.glDeleteShader(vs)
                 gl.glDeleteShader(fs)
                 return None
@@ -133,7 +133,7 @@ class GizmoAxes:
             # Link kontrolü
             if not gl.glGetProgramiv(program, gl.GL_LINK_STATUS):
                 error = gl.glGetProgramInfoLog(program).decode()
-                logger.debug(f"Shader Program Link Error:\n{error}")
+                # logger.debug(f"Shader Program Link Error:\n{error}")
                 gl.glDeleteShader(vs)
                 gl.glDeleteShader(fs)
                 gl.glDeleteProgram(program)
@@ -146,7 +146,7 @@ class GizmoAxes:
             return program
             
         except Exception as e:
-            logger.debug(f"Shader creation error: {e}")
+            # logger.debug(f"Shader creation error: {e}")
             return None
 
     def render(self):
@@ -209,7 +209,7 @@ class GizmoAxes:
                 gl.glDeleteProgram(self.shader)
                 self.shader = None
                 
-            logger.debug("✓ GizmoAxes cleaned up")
+            # logger.debug("✓ GizmoAxes cleaned up")
                 
         except Exception as e:
             logger.debug(f"Gizmo cleanup error: {e}")

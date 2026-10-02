@@ -39,13 +39,13 @@ frame1 = builder.create_frame(node1, node2, render_ipe, 45)
 frame_builder = FrameBuilder()
 verts, colors, idxs = frame_builder.build(frame1)  # direkt (verts, colors, idxs)
 
-logger.debug(f"Vertex count: {len(verts) // 6}")
-logger.debug(f"Index count: {len(idxs)}")
-logger.debug(f"First few indices: {idxs[:12]}")
+# logger.debug(f"Vertex count: {len(verts) // 6}")
+# logger.debug(f"Index count: {len(idxs)}")
+# logger.debug(f"First few indices: {idxs[:12]}")
 
 def main():
     if not glfw.init():
-        logger.debug("GLFW başlatılamadı!")
+        # logger.debug("GLFW başlatılamadı!")
         return
     
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 4)
@@ -54,14 +54,14 @@ def main():
     
     window = glfw.create_window(800, 600, "Işık Testi - UBO", None, None)
     if not window:
-        logger.debug("Pencere oluşturulamadı!")
+        # logger.debug("Pencere oluşturulamadı!")
         glfw.terminate()
         return
     
     glfw.make_context_current(window)
     glfw.swap_interval(1)
     
-    logger.debug(f"OpenGL: {glGetString(GL_VERSION).decode()}")
+    # logger.debug(f"OpenGL: {glGetString(GL_VERSION).decode()}")
     
     # ===== SHADER ===== (standard shader kullan)
     shader = ShaderProgram("standard", "d:/program/cad3/src/cad3/render/shaders/standard.vert", 

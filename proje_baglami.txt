@@ -1,0 +1,1860 @@
+
+============================================================
+file: core\camera.py
+============================================================
+
+# core/camera.py
+import numpy as np
+import glm
+import math
+from dataclasses import dataclass, field
+from typing import Optional, Tuple, Union
+import logging
+logger = logging.getLogger(__name__)
+
+@dataclass
+class Camera:
+    """
+    Dinamik Kamera Sınıfı - Model boyutuna göre otomatik ayarlanır
+    - Unitless çalışır (mm, cm, m fark etmez)
+    - Model bounds'a göre zoom limitleri ve hassasiyet ayarlanır
+    """
+    
+    # ===== TEMEL PARAMETRELER =====
+    target: glm.vec3 = field(default_factory=lambda: glm.vec3(0.0, 0.0, 0.0))
+    distance: float = 50.0  # Kameranın target'a uzaklığı
+    pitch: float = 30.0     # Yukarı/aşağı açı (derece)
+    yaw: float = -45.0      # Sağ/sol açı (derece)
+    
+    # ===== PROJEKSİYON =====
+    view_mode: str = "PERSPECTIVE"  # "PERSPECTIVE" veya "ORTHO"
+    fov: float = 45.0        # Görüş açısı (derece)
+    near_ratio: float = 0.001  # near = model_size * near_ratio
+    far_ratio: float = 10.0    # far = model_size * far_ratio
+    aspect_ratio: float = 1.0
+    
+    # ===== MODEL BOUNDS (dinamik) =====
+    model_center: np.ndarray = field(default_factory=lambda: np.array([0.0, 0.0, 0.0]))
+    model_size: float = 1000.0
+    model_updated: bool = False
+    
+    # ===== HASSASİYET (model_size'a göre otomatik) =====
+    base_orbit_sensitivity: float = 0.005
+    base_pan_sensitivity: float = 0.0005
+    base_zoom_sensitivity: float = 1
+    
+    # ===== SINIRLAR (dinamik) =====
+    min_distance_ratio: float = 0.1   # model_size * min_distance_ratio
+    max_distance_ratio: float = 50.0  # model_size * max_distance_ratio
+    min_pitch: float = -89.0
+    max_pitch: float = 89.0
+    
+    # ===== CACHE =====
+    _position: Optional[glm.vec3] = None
+    _view_matrix: Optional[glm.mat4] = None
+    _projection_matrix: Optional[glm.mat4] = None
+    
+    def __post_init__(self):
+        """İlk pozisyonu hesapla"""
+        self._update_position()
+    
+    # ----------------------------------------------------------------------
+    # MODEL BOUNDS GÜNCELLEME
+    # ----------------------------------------------------------------------
+    
+    def update_bounds(self, center: np.ndarray, size: float):
+        """
+        Model bounds'larını güncelle - her model yüklendiğinde çağrılır
+        """
+        self.model_center = center
+        self.model_size = max(size, 1.0)  # Minimum 1 birim
+        self.model_updated = True
+        
+        # Hedefi model merkezine ayarla
+        self.target = glm.vec3(center[0], center[1], center[2])
+        
+        # Mesafeyi model boyutuna göre ayarla
+        self.distance = self.model_size * 2.0
+        
+        logger.debug(f"Model bounds güncellendi:")
+        logger.debug(f"  Center: ({center[0]:.2f}, {center[1]:.2f}, {center[2]:.2f})")
+        logger.debug(f"  Size: {size:.2f}")
+        logger.debug(f"  Distance: {self.distance:.2f}")
+        
+        self._update_position()
+    
+    # ----------------------------------------------------------------------
+    # DİNAMİK HASSASİYET
+    # ----------------------------------------------------------------------
+    
+    @property
+    def orbit_sensitivity(self) -> float:
+        """Model boyutuna göre orbit hassasiyeti"""
+        return self.base_orbit_sensitivity * (self.model_size / 50000)
+    
+    @property
+    def pan_sensitivity(self) -> float:
+        """Model boyutuna göre pan hassasiyeti"""
+        return self.base_pan_sensitivity * self.distance
+    
+    @property
+    def zoom_sensitivity(self) -> float:
+        """Model boyutuna göre zoom hassasiyeti"""
+        return self.base_zoom_sensitivity * (self.model_size / 100)
+    
+    @property
+    def min_distance(self) -> float:
+        """Minimum kamera mesafesi"""
+        return self.model_size * self.min_distance_ratio
+    
+    @property
+    def max_distance(self) -> float:
+        """Maksimum kamera mesafesi"""
+        return self.model_size * self.max_distance_ratio
+    
+    @property
+    def near(self) -> float:
+        """Near plane - model boyutuna göre"""
+        return max(self.model_size * self.near_ratio, 0.01)
+    
+    @property
+    def far(self) -> float:
+        """Far plane - model boyutuna göre"""
+        return self.model_size * self.far_ratio
+    
+    # ----------------------------------------------------------------------
+    # POZİSYON HESAPLAMA
+    # ----------------------------------------------------------------------
+    
+    @property
+    def position(self) -> glm.vec3:
+        """Kamera pozisyonu"""
+        if self._position is None:
+            self._update_position()
+        return self._position
+    
+    def _update_position(self):
+        """Kamera pozisyonunu güncelle"""
+        # Euler açılarını radyana çevir
+        p = math.radians(self.pitch)
+        y = math.radians(self.yaw)
+        
+        # Küresel koordinatlardan kartezyen
+        self._position = glm.vec3(
+            self.target.x + self.distance * math.cos(p) * math.cos(y),
+            self.target.y + self.distance * math.cos(p) * math.sin(y),
+            self.target.z + self.distance * math.sin(p)
+        )
+        
+        # Cache'leri temizle
+        self._view_matrix = None
+        self._projection_matrix = None
+    
+    # ----------------------------------------------------------------------
+    # MATRIX HESAPLAMALARI
+    # ----------------------------------------------------------------------
+    
+    def get_view_matrix(self) -> glm.mat4:
+        """View matrisini hesapla"""
+        if self._view_matrix is None:
+            self._view_matrix = glm.lookAt(
+                self.position,
+                self.target,
+                glm.vec3(0.0, 0.0, 1.0)  # Z-up
+            )
+        return self._view_matrix
+    
+    def get_projection_matrix(self) -> glm.mat4:
+        """Projeksiyon matrisini hesapla"""
+        if self._projection_matrix is None:
+            if self.view_mode == "PERSPECTIVE":
+                self._projection_matrix = glm.perspective(
+                    glm.radians(self.fov),
+                    self.aspect_ratio,
+                    self.near,
+                    self.far
+                )
+            else:
+                # Orthographic - model boyutuna göre
+                ortho_size = self.distance * 0.5
+                self._projection_matrix = glm.ortho(
+                    -ortho_size * self.aspect_ratio,
+                    ortho_size * self.aspect_ratio,
+                    -ortho_size,
+                    ortho_size,
+                    self.near,
+                    self.far
+                )
+        return self._projection_matrix
+    
+    def get_mvp_matrix(self, model_matrix: Optional[glm.mat4] = None) -> glm.mat4:
+        """Model-View-Projection matrisi"""
+        if model_matrix is None:
+            model_matrix = glm.mat4(1.0)
+        return self.get_projection_matrix() * self.get_view_matrix() * model_matrix
+    
+    # ----------------------------------------------------------------------
+    # KAMERA KONTROLLERİ
+    # ----------------------------------------------------------------------
+    
+    def orbit(self, dx: float, dy: float):
+        """Target etrafında döndür"""
+        self.yaw += dx * self.orbit_sensitivity * 100
+        self.pitch -= dy * self.orbit_sensitivity * 100
+        self.pitch = np.clip(self.pitch, self.min_pitch, self.max_pitch)
+        self._update_position()
+    
+    def pan(self, dx: float, dy: float):
+        """Target noktasını kaydır (kamera kaydırma)"""
+        # Kamera yön vektörleri
+        forward = glm.normalize(self.target - self.position)
+        right = glm.normalize(glm.cross(forward, glm.vec3(0, 0, 1)))
+        up = glm.normalize(glm.cross(right, forward))
+        
+        # Hareket miktarı
+        speed = self.pan_sensitivity
+        self.target += -right * dx * speed
+        self.target += up * dy * speed
+        
+        self._update_position()
+    
+    def zoom(self, delta: float):
+        """Zoom yap (mesafe değiştir)"""
+        self.distance -= delta * self.zoom_sensitivity * 10
+        self.distance = np.clip(self.distance, self.min_distance, self.max_distance)
+        self._update_position()
+    
+    def focus_on_model(self):
+        """Model'e odaklan"""
+        self.distance = self.model_size * 2.0
+        self._update_position()
+        logger.debug(f"Focus: distance={self.distance:.2f}")
+    
+    def reset(self):
+        """Kamerayı varsayılan konuma getir"""
+        self.target = glm.vec3(self.model_center[0], self.model_center[1], self.model_center[2])
+        self.distance = self.model_size * 2.0
+        self.pitch = 30.0
+        self.yaw = -45.0
+        self.view_mode = "PERSPECTIVE"
+        self._update_position()
+        logger.debug("Reset")
+    
+    # ----------------------------------------------------------------------
+    # PROJEKSİYON MODU
+    # ----------------------------------------------------------------------
+    
+    def toggle_projection(self):
+        """Perspektif/Ortho arasında geçiş yap"""
+        self.view_mode = "ORTHO" if self.view_mode == "PERSPECTIVE" else "PERSPECTIVE"
+        self._projection_matrix = None
+        logger.debug(f"Mode: {self.view_mode}")
+    
+    def set_aspect(self, width: int, height: int):
+        """En-boy oranını güncelle"""
+        self.aspect_ratio = width / height if height > 0 else 1.0
+        self._projection_matrix = None
+    
+    # ----------------------------------------------------------------------
+    # DEBUG
+    # ----------------------------------------------------------------------
+    
+    def print_info(self):
+        """Kamera bilgilerini yazdır"""
+        logger.debug(f"\n=== CAMERA INFO ===")
+        logger.debug(f"Target: ({self.target.x:.2f}, {self.target.y:.2f}, {self.target.z:.2f})")
+        logger.debug(f"Position: ({self.position.x:.2f}, {self.position.y:.2f}, {self.position.z:.2f})")
+        logger.debug(f"Distance: {self.distance:.2f}")
+        logger.debug(f"Pitch: {self.pitch:.1f}°, Yaw: {self.yaw:.1f}°")
+        logger.debug(f"Mode: {self.view_mode}")
+        logger.debug(f"Model size: {self.model_size:.2f}")
+        logger.debug(f"Sensitivities - Orbit: {self.orbit_sensitivity:.4f}, Pan: {self.pan_sensitivity:.4f}, Zoom: {self.zoom_sensitivity:.4f}")
+        logger.debug(f"Clipping - Near: {self.near:.2f}, Far: {self.far:.2f}")
+
+
+============================================================
+file: core\engine.py
+============================================================
+
+# core/engine.py
+
+from OpenGL.GL import *
+import glm
+from typing import Optional
+from pathlib import Path
+import imgui
+from imgui.integrations.glfw Renderer
+import numpy as np
+import threading
+import time
+
+from render import shaderprogram
+from domain.scene import Scene
+from core.camera import Camera
+from render.pickpass import PickPass
+from render.scenerenderer import SceneRenderer
+from render.shaderprogram import ShaderProgram
+from tools.gridsystem import GridSystem
+from tools.loader import ModelLoader
+from tools.snapsquare import SnapSquareRenderer
+from ui.inputmanager import InputManager
+from ui.uimanager import UIManager
+from core.selection_manager import SelectionManager
+from core.marquee_selector import MarqueeSelector
+from core.selection_policy import SelectionPolicy
+import logging
+logger = logging.getLogger(__name__)
+
+SHADER_DIR = Path(shaderprogram.__file__).resolve().parent / "shaders"
+W, H, TITLE = 1200, 800, "3D CAD"
+
+class RenderEngine:
+    def __init__(self):
+        self.window = None
+        self.w, self.h = W, H
+        self.pending_anim = False
+        self.load_prog, self.load_done = 100, None
+        
+        self.cam = self.input = self.imgui = None
+        self.pick_s = self.standard_s = self.node_s = self.simple_s = self.overlay_s = None
+        self.shaders = {}
+        
+        self.scene = self.renderer = None
+        self.grid = self.snap = None
+        self.sel_mgr = self.sel_policy = self.marquee = None
+        self.loader = self.ui = None
+        self.pick_pass = None
+        
+        self.hover_id = 0  # Şu an hover edilen element ID'si
+        self.hover_element_type = None  # 'node', 'frame', 'area', 'link'
+        self.hover_enabled = True
+        # Hover throttle için
+        self.last_hover_x = -1
+        self.last_hover_y = -1
+        self.last_hover_time = 0
+        self.hover_throttle = 0.033  # 30 FPS (saniyede 30 pick)
+
+        self.pending_pick_check = False  # Pick sonucu bekleniyor mu?
+        self.last_pick_x = -1
+        self.last_pick_y = -1
+    
+    def init(self) -> bool:
+        if not self._init_glfw(): return False
+        self._init_gl()
+        self._init_comps()
+        self._setup_cbs()
+        return True
+    
+    def _init_glfw(self):
+        if not glfw.init(): return False
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 4)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 6)
+        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        self.window = glfw.create_window(W, H, TITLE, None, None)
+        if not self.window: glfw.terminate(); return False
+        glfw.make_context_current(self.window)
+        glfw.swap_interval(1)
+        return True
+    
+    def _init_gl(self):
+        shader_list = ["pick", "standard", "node", "simple", "2d_overlay"]
+        loaded_count = 0
+        
+        for name in shader_list:
+            v, f = SHADER_DIR/f"{name}.vert", SHADER_DIR/f"{name}.frag"
+            logger.debug(f"v= {v}, f={f}")
+            try:
+                self.shaders[name] = ShaderProgram(name, str(v), str(f))
+                loaded_count += 1
+                logger.debug(f"✓ {name} shader yüklendi")
+            except Exception as e:
+                logger.debug(f"✗ {name} shader yüklenemedi: {e}")
+                self.shaders[name] = None
+        
+        self.pick_s = self.shaders.get("pick")
+        self.standard_s = self.shaders.get("standard")
+        self.node_s = self.shaders.get("node")
+        self.simple_s = self.shaders.get("simple")
+        self.overlay_s = self.shaders.get("2d_overlay")
+        
+        # KONTROL: Tüm shader'lar yüklendi mi?
+        missing = [name for name, s in [("pick", self.pick_s), ("standard", self.standard_s), 
+                                        ("node", self.node_s), ("simple", self.simple_s),
+                                        ("2d_overlay", self.overlay_s)] if s is None]
+        if missing:
+            logger.debug(f"⚠️ UYARI: Şu shader'lar yüklenemedi: {missing}")
+        else:
+            logger.debug(f"✅ Tüm shader'lar başarıyla yüklendi ({loaded_count}/{len(shader_list)})")
+    
+    def _init_comps(self):
+        imgui.create_context()
+        self.imgui = GlfwRenderer(self.window)
+        
+        self.cam = Camera()
+        self.cam.set_aspect(self.w, self.h)
+        self.cam.pitch, self.cam.yaw, self.cam.dist = 30.0, -45.0, 50.0
+        self.cam._update_position()
+        
+        
+        self.scene = Scene()
+        self.input = InputManager()
+        self.sel_policy = SelectionPolicy(self.input)
+        self.grid = GridSystem(self.simple_s)  # simple shader
+        self.snap = SnapSquareRenderer()
+        
+        if None in [self.pick_s, self.standard_s, self.node_s, self.simple_s, self.overlay_s]:
+            missing = []
+            if self.pick_s is None: missing.append("pick")
+            if self.standard_s is None: missing.append("standard")
+            if self.node_s is None: missing.append("node")
+            if self.simple_s is None: missing.append("simple")
+            if self.overlay_s is None: missing.append("2d_overlay")
+            raise RuntimeError(f"Kritik shader'lar yüklenemedi: {missing}")
+        
+        self.renderer = SceneRenderer(
+            pick_s=self.pick_s,
+            standard_s=self.standard_s,
+            node_s=self.node_s,
+            simple_s=self.simple_s,
+            overlay_s=self.overlay_s,
+            w=self.w, h=self.h
+        )
+        self.renderer.set_cam(self.cam)
+        self.renderer.set_grid(self.grid)
+        self.renderer.set_snap(self.snap)
+        self.renderer.set_engine(self)
+        
+        self.pick_pass = self.renderer.pick_pass
+        
+        self.sel_mgr = SelectionManager(self.renderer)
+        self.marquee = MarqueeSelector(self, self.sel_mgr, self.sel_policy)
+        self.renderer.set_marquee(self.marquee)
+        
+        self.loader = ModelLoader(self)
+        self.ui = UIManager(self.window, self, self.imgui, self.sel_mgr, self.scene.def_mgr)
+    
+    def _setup_cbs(self):
+        for cb in ["cursor_pos","mouse_button","scroll","key","window_size"]:
+            getattr(glfw, f"set_{cb}_callback")(self.window, getattr(self, f"_{cb}_cb"))
+    
+    def _scroll_cb(self, w, xo, yo): self.cam.zoom(yo)
+    
+    def _handle_hover(self, x, y):
+        """
+        Mouse pozisyonundaki elementi tespit et ve snap square tipini güncelle
+        """
+        if not self.hover_enabled:
+            return
+            
+        if not self.cam or not self.renderer or not self.renderer.pick_pass:
+            return
+        
+        # Viewport dışında mı?
+        if x < 0 or x >= self.w or y < 0 or y >= self.h:
+            if self.hover_id != 0:
+                self.hover_id = 0
+                self.hover_element_type = None
+                self.snap.set_hover_type(None)  # Snap square'i güncelle
+            return
+        
+        # Kamera matrislerini al
+        view = self.cam.get_view_matrix()
+        projection = self.cam.get_projection_matrix()
+        mvp = projection * view * self.renderer.model_mat
+        
+        # Picking pass ile ID'yi oku
+        try:
+            pid = self.renderer.pick_pass.pick(x, y, mvp, self.renderer._render_pick)
+        except Exception as e:
+            logger.error(f"Hover picking hatası: {e}")
+            return
+        
+        # Hover ID değişti mi?
+        if pid != self.hover_id:
+            self.hover_id = pid
+            self.hover_element_type = self._get_element_type_from_id(pid)
+            
+            # Snap square'i güncelle - element tipine göre priority değeri
+            priority = self._get_priority_from_type(self.hover_element_type)
+            self.snap.set_hover_type(priority, self.hover_element_type)
+            
+            # Debug log
+            if pid > 0:
+                element = self.renderer.pick_pass.get(pid)
+                if element:
+                    pass
+                    # logger.debug(f"Hover: {element.label if hasattr(element, 'label') else 'Element'} (Tip: {self.hover_element_type}, Priority: {priority})")
+            else:
+                pass
+                # logger.debug("Hover: boş")
+    
+    def _get_element_type_from_id(self, pid):
+        """Pick ID'den element tipini bul"""
+        if pid <= 0:
+            return None
+        
+        element = self.renderer.pick_pass.get(pid)
+        if not element:
+            return None
+        
+        # Element'in tipini belirle
+        if hasattr(element, 'element_type'):  # Eğer element_type attribute'u varsa
+            return element.element_type
+        
+        # Class ismine göre belirle
+        class_name = element.__class__.__name__.lower()
+        if 'node' in class_name:
+            return 'node'
+        elif 'frame' in class_name:
+            return 'frame'
+        elif 'area' in class_name:
+            return 'area'
+        elif 'link' in class_name:
+            return 'link'
+        
+        return None
+    
+    def _get_priority_from_type(self, element_type):
+        """
+        Element tipine göre snap square priority değerini döndür
+        """
+        if element_type is None or not isinstance(element_type, str):
+            return -1
+        
+        priority_map = {
+            'node': 2,    # Sarı
+            'frame': 1,   # Kırmızı
+            'area': 0,    # Mavi
+            'link': 0,    # Mavi
+        }
+        
+        priority = priority_map.get(element_type.lower(), -1)
+        #logger.debug(f"_get_priority_from_type: {element_type} -> {priority}")
+        return priority
+    
+    def _mouse_button_cb(self, w, b, a, m):
+        x, y = glfw.get_cursor_pos(w)
+        
+        if imgui.get_io().want_capture_mouse:
+            self.input.set_button_state(b, a == glfw.PRESS)
+            return
+        
+        self.input.set_button_state(b, a == glfw.PRESS)
+        ctrl = m & glfw.MOD_CONTROL
+        
+        if b == glfw.MOUSE_BUTTON_LEFT:
+            if a == glfw.PRESS:
+                self.marquee.start_selection(x, y)
+                
+            elif a == glfw.RELEASE:
+                if self.marquee.is_active:
+                    was_drag = self.marquee.end_selection()
+                    
+                    if not was_drag:
+                        # Tıklama anında pick sonucunu bekleme
+                        # Doğrudan hover_id'yi kullan
+                        self._handle_pick_from_hover(ctrl)
+    
+    def _handle_pick_from_hover(self, ctrl):
+        """Hover ID'sini kullanarak seçim yap"""
+        if self.hover_id > 0 and self.renderer and self.renderer.pick_pass:
+            element = self.renderer.get_element_from_id(self.hover_id)
+            if element:
+                #logger.debug(f"Seçim: {element.label if hasattr(element, 'label') else '?'} (ID: {self.hover_id})")
+                self.sel_mgr.select(element, additive=ctrl)
+    
+    def enable_hover(self, enabled=True):
+        """Hover özelliğini aç/kapa"""
+        self.hover_enabled = enabled
+        if not enabled and self.hover_id != 0:
+            self.hover_id = 0
+            self.hover_element_type = None
+            self.snap.set_hover_type(-1, None)
+        #logger.debug(f"Hover {'açıldı' if enabled else 'kapatıldı'}")
+    
+    def _key_cb(self, w, k, s, a, m):
+        # Önce UI'a sor (Command Line açık mı?)
+        if self.ui and self.ui.handle_key(k, a):
+            return  # Command Line tuşu işledi, normal işleme yapma
+        
+        self.input.set_key_state(k, a in (glfw.PRESS, glfw.REPEAT))
+        if a==glfw.PRESS:
+            if m & glfw.MOD_CONTROL: self._ctrl_cmd(k)
+            else: self._normal_cmd(k)
+    
+    def _window_size_cb(self, w, ww, hh):
+        self.w, self.h = ww, hh
+        if self.cam: self.cam.set_aspect(ww, hh)
+        if self.ui: self.ui.on_window_resize(ww, hh)
+        if self.renderer: self.renderer.resize(ww, hh)
+        if self.pick_pass: self.pick_pass.set_viewport(ww, hh)
+    
+    def _ctrl_cmd(self, k):
+        cmds = {
+            glfw.KEY_I: self.import_s2k,
+            glfw.KEY_E: self.import_e2k,
+            glfw.KEY_R: lambda: self.cam.reset(),
+            glfw.KEY_F: self._focus,
+            glfw.KEY_N: self.test_model,
+            glfw.KEY_O: self.cam.toggle_projection,
+            glfw.KEY_T: lambda: self.renderer.start_anim(),
+            glfw.KEY_P: lambda: setattr(self.ui.properties_window, 'visible', 
+                                     not self.ui.properties_window.visible)  # Lambda içinde toggle
+        }
+        if k in cmds: cmds[k]()
+    
+    def _normal_cmd(self, k):
+        if k==glfw.KEY_ESCAPE: self.sel_mgr.clear(); self.renderer.update_sel()
+    
+    def _focus(self):
+        if not self.renderer: return
+        self.renderer._update_bounds_from_nodes()
+        c,s = self.renderer.get_bounds()
+        self.cam.update_bounds(c, s)
+        self.cam.focus_on_model()
+    
+    def _get_element_type_from_element(self, element):
+        """Element'ten tipini bul"""
+        if element is None:
+            return None
+        
+        if hasattr(element, 'element_type'):
+            return element.element_type
+        
+        class_name = element.__class__.__name__.lower()
+        if 'node' in class_name:
+            return 'node'
+        elif 'frame' in class_name:
+            return 'frame'
+        elif 'area' in class_name:
+            return 'area'
+        elif 'link' in class_name:
+            return 'link'
+        
+        return None
+        
+    def load_model(self, b):
+        self.scene = b.scene
+        # UIManager'ı güncelle!
+        if hasattr(self, 'ui_manager'):
+            self.ui_manager.update_def_mgr(self.scene.def_mgr)
+
+        logger.debug(f"Scene def_mgr sections: {list(self.scene.def_mgr.sections.keys())}")
+        self.renderer.update_geo(self.scene)
+        self._focus()
+    
+    def test_model(self):
+        from geometry.scenebuilder import SceneBuilder
+        from tests.test_model import TestModelBuilder
+        b = SceneBuilder()
+        TestModelBuilder.build(b)
+        self.load_model(b)
+        
+    
+    def clear_scene(self):
+        self.scene = Scene()
+        self.renderer.set_scene(self.scene)
+        for r in [self.renderer.frame_r, self.renderer.node_r, self.renderer.area_r, self.renderer.link_r]:
+            r.elements = []
+        #if self.renderer.pick_pass: self.renderer.pick_pass.clear()
+    
+    def import_s2k(self, _=None):
+        import threading
+        self.clear_scene()
+        self.load_prog, self.load_done = 0, False
+        def load():
+            from tools.s2kloader import S2KLoader
+            self.load_prog = 20
+            self.scene = S2KLoader().load()
+            self.load_prog = 30
+            # UIManager'ı güncelle!
+            if hasattr(self, 'ui_manager'):
+                self.ui_manager.update_def_mgr(self.scene.def_mgr)
+            self.load_done = True
+        threading.Thread(target=load).start()
+        self._focus()
+
+    def import_e2k(self, _=None):
+        import threading
+        self.clear_scene()
+        self.load_prog, self.load_done = 0, False
+        def load():
+            from tools.e2kloader import E2KLoader
+            self.load_prog = 20
+            self.scene = E2KLoader().load()
+            self.load_prog = 30
+            # UIManager'ı güncelle!
+            if hasattr(self, 'ui_manager'):
+                self.ui_manager.update_def_mgr(self.scene.def_mgr)
+            self.load_done = True
+        threading.Thread(target=load).start()
+        self._focus()
+    
+    def cleanup(self):
+        if self.imgui: self.imgui.shutdown()
+        for obj in [self.renderer, self.snap, self.grid] + list(self.shaders.values()):
+            if obj and hasattr(obj,'cleanup'): obj.cleanup()
+        if self.window: glfw.destroy_window(self.window)
+        glfw.terminate()
+    
+    def _cursor_pos_cb(self, w, x, y):
+        self.input.update_mouse_position(x, y)
+        
+        if self.marquee and self.marquee.is_active:
+            self.marquee.update_selection(x, y)
+            return
+        
+        if self.input.buttons.get(glfw.MOUSE_BUTTON_MIDDLE, False):
+            shift = self.input.keys.get(glfw.KEY_LEFT_SHIFT, False)
+            
+            if shift:
+                self.cam.orbit(self.input.mouse_delta.x, self.input.mouse_delta.y)
+            else:
+                self.cam.pan(self.input.mouse_delta.x, self.input.mouse_delta.y)
+            
+            # Orbit/pan sırasında hover'ı temizle
+            if self.hover_id != 0:
+                self._clear_hover()
+        else:
+            # Normal mouse move
+            self._update_world_pos(x, y)
+            self._start_hover_pick(int(x), int(y))
+    
+    def _update_hover(self, pick_id):
+        """Hover durumunu güncelle - pick_id = 0 gelirse temizle"""
+        
+        # Aynı ID ise güncelleme (performans için)
+        if pick_id == self.hover_id:
+            return
+        
+        self.hover_id = pick_id
+        # logger.debug(f"_update_hover: pick_id={pick_id}, old_hover={self.hover_id}")
+        
+        if pick_id > 0:
+            # Element var
+            element = self.renderer.get_element_from_id(pick_id)
+            if element is None:
+                # Element bulunamadıysa temizle
+                self._clear_hover()
+                return
+                
+            element_type = self._get_element_type_from_element(element)
+            priority = self._get_priority_from_type(element_type)
+            
+            self.snap.set_hover_type(priority, element_type)
+            self.hover_element_type = element_type
+            
+            if element_type == 'node' and hasattr(element, 'x'):
+                self.input.mouse_world_pos = glm.vec3(element.x, element.y, element.z)
+                self.input.mouse_world_valid = True
+                #logger.debug(f"Node hover: {element.label}")
+        else:
+            # pick_id = 0 - boşluk
+            self._clear_hover()
+
+    def _clear_hover(self):
+        """Hover durumunu temizle"""
+        self.hover_id = 0
+        self.hover_element_type = None
+        self.snap.set_hover_type(-1, None)  # Gri
+        self.input.mouse_world_valid = False
+        #logger.debug("Hover temizlendi (boşluk)")
+    
+    def _check_pick_result(self):
+        """Pick sonucunu kontrol et - pick_id = 0 dahil HER ZAMAN güncelle"""
+        if not self.pending_pick_check:
+            return False
+        
+        try:
+            pick_id, pick_x, pick_y = self.renderer.check_pick()
+            
+            if pick_id is not None:  # Sonuç geldi (0 olabilir!)
+                self.pending_pick_check = False
+                
+                # ÖNEMLİ: pick_id = 0 olsa bile güncelle
+                # Çünkü boşluktayız ve hover'ı temizlemeliyiz
+                self._update_hover(pick_id)
+                
+                return True
+        except Exception as e:
+            logger.error(f"Pick kontrolü hatası: {e}")
+            self.pending_pick_check = False
+        
+        return False
+    
+    def _start_hover_pick(self, x, y):
+        """Mouse move sırasında pick başlat - snap square güncellemesi YOK"""
+        import time
+        success= False
+        if not self.renderer or not self.renderer.pick_pass:
+            return
+        
+        current_time = time.time()
+        if (current_time - self.last_hover_time) < self.hover_throttle:
+            return
+        
+        if x == self.last_hover_x and y == self.last_hover_y:
+            return
+        
+        success = self.renderer.pick_async(x, y)
+        
+        if success:
+            self.last_hover_x = x
+            self.last_hover_y = y
+            self.last_hover_time = current_time
+            self.pending_pick_check = True
+            # Burada snap square GÜNCELLENMEZ
+        # logger.debug(f"_start_hover_pick---> succes: {success}")
+    
+    def _update_world_pos(self, x, y):
+        """Dünya koordinatını güncelle - hover yoksa normal ray casting"""
+        if not self.cam or not self.input:
+            return
+        
+        # Eğer hover varsa ve node ise, world pos zaten ayarlanmıştır
+        if self.hover_id > 0 and self.hover_element_type == 'node':
+            return
+        
+        # Normal ray casting ile düzlem üzerinde pozisyon bul
+        v = self.cam.get_view_matrix()
+        p = self.cam.get_projection_matrix()
+        
+        nx = 2 * x / self.w - 1
+        ny = 1 - 2 * y / self.h
+        
+        inv = glm.inverse(p * v)
+        
+        near = inv * glm.vec4(nx, ny, -1, 1)
+        far = inv * glm.vec4(nx, ny, 1, 1)
+        
+        near = glm.vec3(near) / near.w
+        far = glm.vec3(far) / far.w
+        
+        direction = glm.normalize(far - near)
+        
+        # Z=0 düzlemi ile kesişim
+        if abs(direction.z) > 1e-6:
+            t = -near.z / direction.z
+            if t > 0:
+                self.input.mouse_world_pos = near + direction * t
+                self.input.mouse_world_valid = True
+                return
+        
+        self.input.mouse_world_valid = False
+    
+    def run(self):
+        lt = time.time()
+        fc = 0
+        
+        while not glfw.window_should_close(self.window):
+            ct = time.time()
+            dt = ct - lt
+            lt = ct
+            fc += 1
+            
+            glfw.poll_events()
+            
+            # Pick sonucunu kontrol et - SADECE BURADA hover güncellenir
+            if self.pending_pick_check:
+                self._check_pick_result()
+            
+            # Animasyon ve loading...
+            if self.pending_anim:
+                self.renderer.start_anim(4)
+                self.pending_anim = False
+            self.renderer.set_dt(dt)
+            
+            if self.load_done:
+                self.load_prog = 80
+                self.renderer.set_scene(self.scene)
+                self.renderer.update_geo(self.scene)
+                self.load_prog = 90
+                c, s = self.renderer.get_bounds()
+                self.cam.update_bounds(c, s)
+                self.cam.focus_on_model()
+                self.renderer._update_grid()
+                self.load_prog, self.load_done = 100, False
+                self.pending_anim = True
+            
+            # Render
+            glViewport(0, 0, self.w, self.h)
+            glClearColor(0.08, 0.10, 0.16, 1.0)
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            self.renderer.render(self.cam)
+            
+            self.snap.draw(
+                    self.window, 
+                    self.input.mouse_pos.x, 
+                    self.input.mouse_pos.y,
+                    self.hover_id,
+                    self.hover_element_type  # Yeni parametre
+                )
+            
+            self.ui.render()
+            glfw.swap_buffers(self.window)
+            
+            if fc % 60 == 0:
+                fps = 1.0 / dt if dt else 1
+                glfw.set_window_title(self.window, f"{TITLE} - FPS: {fps:.1f}")
+
+
+============================================================
+file: render\base_renderer.py
+============================================================
+
+# render/base_renderer.py
+
+from OpenGL.GL import *
+import numpy as np
+import glm
+import ctypes
+
+from typing import (
+    List,
+    Dict,
+    Optional,
+    Tuple,
+    TypeVar,
+    Generic
+)
+
+from abc import ABC, abstractmethod
+
+from geometry.frame_builder import FrameBuilder
+from geometry.area_builder import AreaBuilder
+from geometry.link_builder import LinkBuilder
+from geometry.node_builder import NodeBuilder
+from geometry.polygon_builder import PolygonBuilder
+
+from domain.element import (
+    Frame,
+    Node,
+    Area,
+    Link,
+    Polygon
+)
+
+# =================================================================
+# ORTAK RENK MANTIĞI (tek kaynak)
+# =================================================================
+
+def _final_color_for(element):
+    """Elementin seçim durumuna göre son rengini döndür."""
+    if element.is_selected:
+        return [1.0, 0.5, 0.0]  # Turuncu — seçili
+
+    # Polygon özel — kendi rengini kullan
+    if hasattr(element, 'element_type') and element.element_type == "Polygon":
+        return element.color   # Mor
+
+    # Tip bazlı varsayılan
+    if hasattr(element, 'section') and hasattr(element.section, 'color'):
+        return list(element.section.color)     # Frame
+    elif hasattr(element, 'thickness'):        # Area
+        return [0.5, 0.8, 1.0]
+    elif hasattr(element, 'propname'):         # Link
+        return [0.0, 1.0, 0.0]
+    else:                                       # Node
+        return [1.0, 1.0, 1.0]
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+
+class BaseRenderer(ABC, Generic[T]):
+
+    def __init__(self, shader):
+
+        self.shader = shader
+        self.render_mode = 1   # 0 = normal debug, 1 = shaded
+        # ---------------------------------------------------------
+        # Ana OpenGL buffer'ları
+        # ---------------------------------------------------------
+
+        self.vao = None
+        self.vbo = None
+        self.cbo = None
+        self.ebo = None
+        self.line_ebo = None
+        self.id_vbo = None
+
+        # ---------------------------------------------------------
+        # Basit mod OpenGL buffer'ları
+        # ---------------------------------------------------------
+
+        self.simple_vao = None
+        self.simple_vbo = None
+        self.simple_cbo = None
+        self.simple_vcount = 0
+        self.simple_draw_mode = GL_LINES   # Alt sınıflar override eder
+
+        # ---------------------------------------------------------
+        # Elements
+        # ---------------------------------------------------------
+
+        self.elements: List[T] = []
+
+        self.elem_to_idx: Dict[str, Tuple[int, int]] = {}
+        self.elem_to_vcount: Dict[str, int] = {}
+        self.elem_to_inst: Dict[str, int] = {}
+
+        self.vcount = 0
+        self.icount = 0
+        self.line_icount = 0
+        self.inst_count = 0
+
+        # ---------------------------------------------------------
+        # Bounds
+        # ---------------------------------------------------------
+
+        self.bounds_min = np.array([float("inf")] * 3)
+        self.bounds_max = np.array([float("-inf")] * 3)
+        self.bounds_center = np.zeros(3)
+        self.bounds_size = 1.0
+
+        # ---------------------------------------------------------
+        # Pick
+        # ---------------------------------------------------------
+
+        self.id_buffer_initialized = False
+
+        # ---------------------------------------------------------
+        # Vertex layout
+        #   Frame / Area : pos3 + normal3 = 6 float
+        #   Node  / Link : pos3 + normal3 + center3 = 9 float
+        # ---------------------------------------------------------
+
+        self.vertex_stride = 6 * 4
+        self.has_center = False
+
+    # =============================================================
+    # ABSTRACT
+    # =============================================================
+
+    @abstractmethod
+    def build(self, e: T) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        pass
+
+    @abstractmethod
+    def draw_mode(self) -> int:
+        pass
+
+    def build_lines(self, e: T) -> np.ndarray:
+        """FrameRenderer override eder."""
+        return np.array([], dtype=np.uint32)
+
+    def build_simple(self, e: T):
+        """
+        Basit mod (simple) için vertex + renk üretir.
+        Alt sınıflar override eder.
+        Returns: (vertices, colors)
+        """
+        return (
+            np.array([], dtype=np.float32),
+            np.array([], dtype=np.float32),
+        )
+
+    # =============================================================
+    # DIRTY
+    # =============================================================
+
+    def update_dirty(self):
+        """
+        Sadece renk buffer'larını (main + simple) günceller.
+        Geometri yeniden üretilmez — hızlıdır.
+        """
+        dirty = [e for e in self.elements if e.needs_update]
+        if not dirty:
+            return
+        logger.debug(f"{self.__class__.__name__}: {len(dirty)} dirty element - sadece renkler güncelleniyor")
+        
+        # Ortak renk fonksiyonu — SceneRenderer._get_final_color ile aynı mantık
+        self._refresh_colors()
+        
+        for e in dirty:
+            e.needs_update = False
+
+    def _refresh_colors(self):
+        """
+        Elementlerin mevcut is_selected durumuna göre renkleri yeniden üret.
+        Hem main hem simple CBO'yu tek geçişte günceller.
+        """
+        if not self.elements:
+            return
+        
+        stride_floats = 9 if self.has_center else 6
+        
+        # ---- Main CBO ----
+        if self.cbo and glIsBuffer(self.cbo):
+            cols = []
+            for e in self.elements:
+                if e.element_id not in self.elem_to_vcount:
+                    continue
+                vc = self.elem_to_vcount[e.element_id]
+                if vc == 0:
+                    continue
+                color = _final_color_for(e)
+                cols.append(np.tile(color, (vc, 1)).astype(np.float32))
+            
+            if cols:
+                new_colors = np.concatenate(cols)
+                glBindBuffer(GL_ARRAY_BUFFER, self.cbo)
+                glBufferSubData(GL_ARRAY_BUFFER, 0, new_colors.nbytes, new_colors)
+                glBindBuffer(GL_ARRAY_BUFFER, 0)
+        
+        # ---- Simple CBO ----
+        if self.simple_cbo and glIsBuffer(self.simple_cbo):
+            simple_cols = []
+            for e in self.elements:
+                if not e.is_visible:
+                    continue
+                sv, _ = self.build_simple(e)
+                if sv is None or len(sv) == 0:
+                    continue
+                count = len(sv) // stride_floats
+                color = _final_color_for(e)
+                simple_cols.append(np.tile(color, (count, 1)).astype(np.float32))
+            
+            if simple_cols:
+                new_colors = np.concatenate(simple_cols)
+                glBindBuffer(GL_ARRAY_BUFFER, self.simple_cbo)
+                
+                # Boyut uyuşmazlığı olursa (element eklendi/silindi) yeniden yükle
+                current_size = glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE)
+                if current_size == new_colors.nbytes:
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, new_colors.nbytes, new_colors)
+                else:
+                    glBufferData(GL_ARRAY_BUFFER, new_colors.nbytes, new_colors, GL_DYNAMIC_DRAW)
+                
+                glBindBuffer(GL_ARRAY_BUFFER, 0)
+    # =============================================================
+    # BOUNDS
+    # =============================================================
+
+    def get_bounds(self):
+        return self.bounds_center.copy(), self.bounds_size
+
+    # =============================================================
+    # UPDATE
+    # =============================================================
+
+    def update(self, raw: List[T]):
+        """
+        Elementleri işle, GPU buffer'larını güncelle.
+        Ana geometri + line geometri + simple geometri tek geçişte hazırlanır.
+        """
+        logger.warning(f">>> {self.__class__.__name__}.update: {len(raw)} element geldi")
+    
+        self.elements = [e for e in raw if e.is_visible]
+        logger.warning(f"    → {len(self.elements)} görünür element")
+
+        self.elem_to_idx.clear()
+        self.elem_to_vcount.clear()
+        self.elem_to_inst.clear()
+
+        # --- Boş sahne -------------------------------------------------
+        if not self.elements:
+            self.vcount = 0
+            self.icount = 0
+            self.line_icount = 0
+            self.inst_count = 0
+            self._cleanup_main()
+            self._cleanup_simple()
+            return
+
+        # --- Biriktiriciler -------------------------------------------
+        verts, cols, ids, idxs, line_idxs = [], [], [], [], []
+        simple_verts, simple_colors = [], []
+
+        voff = ioff = line_ioff = 0
+
+        self.bounds_min[:] = float("inf")
+        self.bounds_max[:] = float("-inf")
+
+        stride_floats = 9 if self.has_center else 6
+
+        # --- Her element için -----------------------------------------
+        for inst_idx, e in enumerate(self.elements):
+
+            # ---------- Ana geometri ----------
+            v, c, i = self.build(e)
+
+            if len(v) > 0 and (len(v) % stride_floats) == 0:
+                vc = len(v) // stride_floats
+                ic = len(i)
+
+                id_data = np.full(vc, e.unique_id, dtype=np.uint32)
+
+                self.elem_to_idx[e.element_id] = (ioff, ic)
+                self.elem_to_vcount[e.element_id] = vc
+                self.elem_to_inst[e.element_id] = inst_idx
+
+                pos = v.reshape(-1, stride_floats)[:, :3]
+                self.bounds_min = np.minimum(self.bounds_min, pos.min(axis=0))
+                self.bounds_max = np.maximum(self.bounds_max, pos.max(axis=0))
+
+                verts.append(v)
+                cols.append(c)
+                ids.append(id_data)
+                idxs.append(i + voff)
+
+                # Line (frame için)
+                li = self.build_lines(e)
+                if len(li) > 0:
+                    line_idxs.append(li + voff)
+                    line_ioff += len(li)
+
+                voff += vc
+                ioff += ic
+
+            # ---------- Basit mod ----------
+            sv, sc = self.build_simple(e)
+            if sv is not None and len(sv) > 0:
+                if (len(sv) % stride_floats) == 0:
+                    simple_verts.append(sv)
+                    simple_colors.append(sc)
+                else:
+                    logger.warning(
+                        f"{self.__class__.__name__}.build_simple: "
+                        f"vertex sayısı stride'a uymuyor "
+                        f"({len(sv)} % {stride_floats} != 0)"
+                    )
+
+        # --- Bounds ----------------------------------------------------
+        if voff > 0:
+            self.bounds_center = (self.bounds_min + self.bounds_max) * 0.5
+            self.bounds_size = (
+                np.linalg.norm(self.bounds_max - self.bounds_min) or 1.0
+            )
+        else:
+            self.bounds_center = np.zeros(3)
+            self.bounds_size = 1.0
+
+        # --- Sayaçlar --------------------------------------------------
+        self.vcount = voff
+        self.icount = ioff
+        self.line_icount = line_ioff
+        self.inst_count = len(self.elements)
+
+        # --- Ana buffer upload ----------------------------------------
+        if self.icount > 0 and verts:
+            vertex_data = np.concatenate(verts)
+            color_data = np.concatenate(cols)
+            id_data = np.concatenate(ids)
+            index_data = np.concatenate(idxs)
+
+            if line_idxs:
+                line_index_data = np.concatenate(line_idxs)
+            else:
+                line_index_data = np.array([], dtype=np.uint32)
+
+            self._upload(
+                vertex_data,
+                color_data,
+                id_data,
+                index_data,
+                line_index_data,
+            )
+
+        # --- Simple buffer upload -------------------------------------
+        if simple_verts:
+            sv_all = np.concatenate(simple_verts).astype(np.float32)
+            sc_all = np.concatenate(simple_colors).astype(np.float32)
+
+            
+            self._upload_simple(sv_all, sc_all)
+
+            logger.debug(
+                f"{self.__class__.__name__}: simple_vcount="
+                f"{self.simple_vcount}, draw_mode={self.simple_draw_mode}"
+            )
+        else:
+            self._cleanup_simple()
+
+    # =============================================================
+    # UPLOAD (main)
+    # =============================================================
+
+    def _upload(self, v, c, ids, i, line_i):
+        # Sadece ana buffer'ları temizle, simple buffer'a DOKUNMA
+        self._cleanup_main()
+
+        self.vao = glGenVertexArrays(1)
+        self.vbo = glGenBuffers(1)
+        self.cbo = glGenBuffers(1)
+        self.id_vbo = glGenBuffers(1)
+        self.ebo = glGenBuffers(1)
+
+        self.line_ebo = glGenBuffers(1) if len(line_i) > 0 else None
+
+        glBindVertexArray(self.vao)
+
+        # --- VBO ---
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        glBufferData(GL_ARRAY_BUFFER, v.nbytes, v, GL_STATIC_DRAW)
+
+        stride = self.vertex_stride
+
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(0))
+
+        glEnableVertexAttribArray(1)
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(12))
+
+        if self.has_center:
+            glEnableVertexAttribArray(4)
+            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(24))
+
+        # --- Color ---
+        glBindBuffer(GL_ARRAY_BUFFER, self.cbo)
+        glBufferData(GL_ARRAY_BUFFER, c.nbytes, c, GL_DYNAMIC_DRAW)
+
+        glEnableVertexAttribArray(2)
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * 4, ctypes.c_void_p(0))
+
+        # --- Pick ID ---
+        glBindBuffer(GL_ARRAY_BUFFER, self.id_vbo)
+        glBufferData(GL_ARRAY_BUFFER, ids.nbytes, ids, GL_STATIC_DRAW)
+
+        glEnableVertexAttribArray(3)
+        glVertexAttribIPointer(3, 1, GL_UNSIGNED_INT, 0, None)
+
+        # --- Triangle EBO ---
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, i.nbytes, i, GL_STATIC_DRAW)
+
+        # --- Line EBO ---
+        if self.line_ebo is not None and len(line_i) > 0:
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.line_ebo)
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, line_i.nbytes, line_i, GL_STATIC_DRAW)
+
+        glBindVertexArray(0)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+
+        self.id_buffer_initialized = True
+
+    # =============================================================
+    # UPLOAD (simple)
+    # =============================================================
+
+    def _upload_simple(self, v: np.ndarray, c: np.ndarray):
+        self._cleanup_simple()
+
+        if len(v) == 0:
+            return
+
+        self.simple_vao = glGenVertexArrays(1)
+        self.simple_vbo = glGenBuffers(1)
+        self.simple_cbo = glGenBuffers(1)
+
+        glBindVertexArray(self.simple_vao)
+
+        # Vertex
+        glBindBuffer(GL_ARRAY_BUFFER, self.simple_vbo)
+        glBufferData(GL_ARRAY_BUFFER, v.nbytes, v, GL_STATIC_DRAW)
+
+        stride = self.vertex_stride
+
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(0))
+
+        glEnableVertexAttribArray(1)
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(12))
+
+        if self.has_center:
+            glEnableVertexAttribArray(4)
+            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(24))
+
+        # Color
+        glBindBuffer(GL_ARRAY_BUFFER, self.simple_cbo)
+        glBufferData(GL_ARRAY_BUFFER, c.nbytes, c, GL_DYNAMIC_DRAW)
+
+        glEnableVertexAttribArray(2)
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * 4, ctypes.c_void_p(0))
+
+        glBindVertexArray(0)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+        # EN SON: simple_vcount'u set et
+        stride_floats = 9 if self.has_center else 6
+        self.simple_vcount = len(v) // stride_floats
+
+    # =============================================================
+    # SHADED RENDER
+    # =============================================================
+
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+        if not self.vao or self.icount == 0:
+            return
+        if model is None:
+            model = glm.mat4(1.0)
+        if self.shader is None:
+            return
+
+        self.shader.use()
+
+        mode_loc = self.shader.get_loc("renderMode")
+        if mode_loc != -1:
+            glUniform1i(mode_loc, self.render_mode)
+            
+        glUniformMatrix4fv(self.shader.get_loc("mvp"), 1, GL_FALSE, glm.value_ptr(mvp))
+        glUniformMatrix4fv(self.shader.get_loc("model"), 1, GL_FALSE, glm.value_ptr(model))
+
+        normal_matrix = glm.transpose(glm.inverse(glm.mat3(model)))
+        glUniformMatrix3fv(
+            self.shader.get_loc("normalMatrix"), 1, GL_FALSE,
+            glm.value_ptr(normal_matrix),
+        )
+
+        if view is not None:
+            loc = self.shader.get_loc("view")
+            if loc != -1:
+                glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(view))
+
+        if proj is not None:
+            loc = self.shader.get_loc("projection")
+            if loc != -1:
+                glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(proj))
+
+        cl = self.shader.get_loc("useVertexColor")
+        if cl != -1:
+            glUniform1i(cl, 1)
+
+
+        rim_intensity_loc = self.shader.get_loc("rimIntensity")
+        if rim_intensity_loc != -1:
+            glUniform1f(rim_intensity_loc, 0.80)   # 1.2 → 0.20
+        rim_power_loc = self.shader.get_loc("rimPower")
+        if rim_power_loc != -1:
+            glUniform1f(rim_power_loc, 3.0)   # 2.5 → 4.0 (daha ince rim)
+
+        if cam_pos is not None:
+            loc = self.shader.get_loc("lights.viewPos")
+            if loc != -1:
+                glUniform3f(loc, cam_pos.x, cam_pos.y, cam_pos.z)
+
+        glBindVertexArray(self.vao)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
+        glDrawElements(self.draw_mode(), self.icount, GL_UNSIGNED_INT, None)
+        glBindVertexArray(0)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+
+    # =============================================================
+    # LINE RENDER
+    # =============================================================
+
+    def render_line(self, shader):
+        if not self.vao or not self.line_ebo or self.line_icount == 0:
+            return
+        if shader is None:
+            return
+
+        shader.use()
+
+        # alpha ve useVertexColor'ı ayarla
+        a_loc = shader.get_loc("alpha")
+        if a_loc != -1:
+            glUniform1f(a_loc, 1.0)
+
+        vc_loc = shader.get_loc("useVertexColor")
+        if vc_loc != -1:
+            glUniform1i(vc_loc, 0)
+
+        oc_loc = shader.get_loc("objectColor")
+        if oc_loc != -1:
+            glUniform3f(oc_loc, 1.0, 1.0, 1.0)
+
+        glBindVertexArray(self.vao)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.line_ebo)
+        glDrawElements(GL_LINES, self.line_icount, GL_UNSIGNED_INT, None)
+        glBindVertexArray(0)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+
+    # =============================================================
+    # SIMPLE RENDER
+    # =============================================================
+
+    def render_simple(self, mvp, color=None, alpha=1.0):
+        if not self.simple_vao or self.simple_vcount == 0:
+            return
+        if self.shader is None:
+            return
+
+        self.shader.use()
+
+        loc = self.shader.get_loc("mvp")
+        if loc != -1:
+            glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
+
+        # useVertexColor
+        vc_loc = self.shader.get_loc("useVertexColor")
+        if vc_loc != -1:
+            glUniform1i(vc_loc, 0 if color is not None else 1)
+
+        # objectColor
+        if color is not None:
+            oc_loc = self.shader.get_loc("objectColor")
+            if oc_loc != -1:
+                glUniform3f(oc_loc, float(color[0]), float(color[1]), float(color[2]))
+
+        # alpha
+        a_loc = self.shader.get_loc("alpha")
+        if a_loc != -1:
+            glUniform1f(a_loc, float(alpha))
+
+        glBindVertexArray(self.simple_vao)
+        glDrawArrays(self.simple_draw_mode, 0, self.simple_vcount)
+        glBindVertexArray(0)
+
+    # =============================================================
+    # COLORS
+    # =============================================================
+
+    def update_colors(self, elements, color_func):
+        if not self.cbo or not elements:
+            return
+
+        cols = []
+        for e in elements:
+            if e.element_id not in self.elem_to_vcount:
+                continue
+            vc = self.elem_to_vcount[e.element_id]
+            if vc == 0:
+                continue
+            cols.append(
+                np.tile(color_func(e), (vc, 1)).astype(np.float32)
+            )
+
+        if cols:
+            new_colors = np.concatenate(cols)
+            glBindBuffer(GL_ARRAY_BUFFER, self.cbo)
+            glBufferSubData(GL_ARRAY_BUFFER, 0, new_colors.nbytes, new_colors)
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+    def update_simple_colors(self, elements, color_func):
+        """
+        Simple mod CBO'sunu güncelle.
+        Element → renk eşlemesini yaparak simple_cbo'ya yazar.
+        """
+        if not self.simple_cbo or not glIsBuffer(self.simple_cbo):
+            return
+        if not self.elements:
+            return
+        
+        stride_floats = 9 if self.has_center else 6
+        
+        simple_cols = []
+        for e in self.elements:
+            if not e.is_visible:
+                continue
+            sv, _ = self.build_simple(e)
+            if sv is None or len(sv) == 0:
+                continue
+            count = len(sv) // stride_floats
+            color = color_func(e)
+            simple_cols.append(np.tile(np.array(color, dtype=np.float32), (count, 1)))
+        
+        if not simple_cols:
+            return
+        
+        new_colors = np.concatenate(simple_cols).astype(np.float32)
+        
+        glBindBuffer(GL_ARRAY_BUFFER, self.simple_cbo)
+        current_size = glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE)
+        if current_size == new_colors.nbytes:
+            glBufferSubData(GL_ARRAY_BUFFER, 0, new_colors.nbytes, new_colors)
+        else:
+            glBufferData(GL_ARRAY_BUFFER, new_colors.nbytes, new_colors, GL_DYNAMIC_DRAW)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+    # =============================================================
+    # GET
+    # =============================================================
+
+    def get(self, eid: str) -> Optional[T]:
+        return next((e for e in self.elements if e.element_id == eid), None)
+
+    # =============================================================
+    # CLEANUP
+    # =============================================================
+
+    def _cleanup_main(self):
+        for buf in [self.vbo, self.cbo, self.id_vbo, self.ebo, self.line_ebo]:
+            if buf and glIsBuffer(buf):
+                glDeleteBuffers(1, [int(buf)])
+
+        if self.vao and glIsVertexArray(self.vao):
+            glDeleteVertexArrays(1, [int(self.vao)])
+
+        self.vao = None
+        self.vbo = None
+        self.cbo = None
+        self.id_vbo = None
+        self.ebo = None
+        self.line_ebo = None
+        self.id_buffer_initialized = False
+
+    def _cleanup_simple(self):
+        for buf in [self.simple_vbo, self.simple_cbo]:
+            if buf and glIsBuffer(buf):
+                glDeleteBuffers(1, [int(buf)])
+
+        if self.simple_vao and glIsVertexArray(self.simple_vao):
+            glDeleteVertexArrays(1, [int(self.simple_vao)])
+
+        self.simple_vao = None
+        self.simple_vbo = None
+        self.simple_cbo = None
+        self.simple_vcount = 0
+
+    def cleanup(self):
+        self._cleanup_main()
+        self._cleanup_simple()
+
+
+# =================================================================
+# FRAME
+# =================================================================
+
+class FrameRenderer(BaseRenderer[Frame]):
+
+    def __init__(self, shader):
+        super().__init__(shader)
+        self.builder = FrameBuilder()
+        self.vertex_stride = 6 * 4
+        self.has_center = False
+        self.simple_draw_mode = GL_LINES
+
+    def build(self, f):
+        return self.builder.build(f)
+
+    def build_lines(self, f):
+        return self.builder.build_lines(f)
+
+    def build_simple(self, f):
+        v = self.builder.build_simple_lines(f)
+        if len(v) == 0:
+            return np.array([], dtype=np.float32), np.array([], dtype=np.float32)
+        color = [1.0, 1.0, 1.0] if f.is_selected else list(f.section.color)
+        count = len(v) // 6
+        c = np.tile(np.array(color, dtype=np.float32), (count, 1))
+        return v, c
+
+    def draw_mode(self):
+        return GL_TRIANGLES
+
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+        self.shader.use()
+
+        loc = self.shader.get_loc("isConstantSize")
+        if loc != -1:
+            glUniform1i(loc, 0)
+
+        a = self.shader.get_loc("alpha")
+        if a != -1:
+            glUniform1f(a, 0.8)
+
+        super().render(mvp, model, cam_pos, view, proj)
+
+
+# =================================================================
+# AREA
+# =================================================================
+
+class AreaRenderer(BaseRenderer[Area]):
+
+    def __init__(self, shader):
+        super().__init__(shader)
+        self.builder = AreaBuilder()
+        self.lighting = None
+        self.vertex_stride = 6 * 4
+        self.has_center = False
+        self.simple_draw_mode = GL_LINES
+
+    def build(self, a):
+        return self.builder.build(a)
+
+    def build_simple(self, a):
+        v = self.builder.build_simple_lines(a)
+        if len(v) == 0:
+            return np.array([], dtype=np.float32), np.array([], dtype=np.float32)
+        color = [1.0, 1.0, 0.0] if a.is_selected else [0.5, 0.8, 1.0]
+        count = len(v) // 6
+        c = np.tile(np.array(color, dtype=np.float32), (count, 1))
+        return v, c
+
+    def draw_mode(self):
+        return GL_TRIANGLES
+
+    def set_lighting(self, l):
+        self.lighting = l
+
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+        self.shader.use()
+
+        loc = self.shader.get_loc("isConstantSize")
+        if loc != -1:
+            glUniform1i(loc, 0)
+
+        a = self.shader.get_loc("alpha")
+        if a != -1:
+            glUniform1f(a, 0.8)
+
+        # ← YENİ: renderMode uniform
+        mode_loc = self.shader.get_loc("renderMode")
+        if mode_loc != -1:
+            glUniform1i(mode_loc, self.render_mode)
+
+        super().render(mvp, model, cam_pos, view, proj)
+
+
+# =================================================================
+# LINK
+# =================================================================
+
+class LinkRenderer(BaseRenderer[Link]):
+
+    def __init__(self, shader):
+        super().__init__(shader)
+        self.builder = LinkBuilder()
+        self.vertex_stride = 6 * 4
+        self.has_center = False
+        self.simple_draw_mode = GL_LINES
+
+    def build(self, l):
+        v, c, i = self.builder.build(l)
+
+        # Builder 9-float döndürüyorsa 6-float'a indir
+        if len(v) > 0 and len(v) % 9 == 0:
+            v_6 = []
+            for j in range(0, len(v), 9):
+                v_6.extend([v[j], v[j+1], v[j+2], v[j+3], v[j+4], v[j+5]])
+            v = np.array(v_6, dtype=np.float32)
+
+        return v, c, i
+
+    def build_simple(self, l):
+        v = self.builder.build_simple_lines(l)
+        if len(v) == 0:
+            return np.array([], dtype=np.float32), np.array([], dtype=np.float32)
+        color = [1.0, 0.0, 0.0] if l.is_selected else [0.0, 1.0, 0.0]
+        count = len(v) // 6
+        c = np.tile(np.array(color, dtype=np.float32), (count, 1))
+        return v, c
+
+    def draw_mode(self):
+        return GL_TRIANGLES
+
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+        self.shader.use()
+
+        loc = self.shader.get_loc("isConstantSize")
+        if loc != -1:
+            glUniform1i(loc, 0)
+
+        super().render(mvp, model, cam_pos, view, proj)
+
+
+# =================================================================
+# NODE
+# =================================================================
+
+class NodeRenderer(BaseRenderer[Node]):
+
+    def __init__(self, shader):
+        super().__init__(shader)
+        self.builder = NodeBuilder()
+        self.vertex_stride = 9 * 4
+        self.has_center = True
+        self.simple_draw_mode = GL_POINTS
+
+    def build(self, n):
+        return self.builder.build(n)
+
+    def build_simple(self, n):
+        v = self.builder.build_simple_points(n)
+        color = [1.0, 1.0, 0.0] if n.is_selected else [1.0, 0.0, 0.0]
+        c = np.array([color], dtype=np.float32)
+        return v, c
+
+    def draw_mode(self):
+        return GL_TRIANGLES
+
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+        self.shader.use()
+
+        loc = self.shader.get_loc("isConstantSize")
+        if loc != -1:
+            glUniform1i(loc, 1)
+
+        if view is not None:
+            v_loc = self.shader.get_loc("view")
+            if v_loc != -1:
+                glUniformMatrix4fv(v_loc, 1, GL_FALSE, glm.value_ptr(view))
+
+        if proj is not None:
+            p_loc = self.shader.get_loc("projection")
+            if p_loc != -1:
+                glUniformMatrix4fv(p_loc, 1, GL_FALSE, glm.value_ptr(proj))
+
+        ps_loc = self.shader.get_loc("pointScale")
+        if ps_loc != -1:
+            glUniform1f(ps_loc, 0.01)
+
+        a_loc = self.shader.get_loc("alpha")
+        if a_loc != -1:
+            glUniform1f(a_loc, 1.0)
+
+        super().render(mvp, model, cam_pos, view, proj)
+
+        if loc != -1:
+            glUniform1i(loc, 0)
+
+# =================================================================
+# POLYGON
+# =================================================================
+
+class PolygonRenderer(BaseRenderer[Polygon]):
+
+    def __init__(self, shader):
+        super().__init__(shader)
+        self.builder = PolygonBuilder()
+        self.vertex_stride = 6 * 4
+        self.has_center = False
+        self.simple_draw_mode = GL_LINES
+
+    def build(self, p):
+        return self.builder.build(p)
+
+    def build_lines(self, p):
+        return self.builder.build_lines(p)
+
+    def build_simple(self, p):
+        v = self.builder.build_simple_lines(p)
+        if len(v) == 0:
+            return np.array([], dtype=np.float32), np.array([], dtype=np.float32)
+        color = [1.0, 0.5, 0.0] if p.is_selected else p.color
+        count = len(v) // 6
+        c = np.tile(np.array(color, dtype=np.float32), (count, 1))
+        return v, c
+
+    def draw_mode(self):
+        return GL_TRIANGLES
+
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+        self.shader.use()
+
+        loc = self.shader.get_loc("isConstantSize")
+        if loc != -1:
+            glUniform1i(loc, 0)
+
+        a = self.shader.get_loc("alpha")
+        if a != -1:
+            glUniform1f(a, 0.5)   # Yarı saydam dolgu
+
+        super().render(mvp, model, cam_pos, view, proj)
+

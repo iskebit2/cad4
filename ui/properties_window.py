@@ -34,7 +34,7 @@ class PropertiesWindow:
     def update_def_mgr(self, def_mgr):
         """Definition manager'ı güncelle (scene yüklendikten sonra)"""
         self.def_mgr = def_mgr
-        logger.debug(f"PropertiesWindow def_mgr updated with sections: {list(def_mgr.sections.keys()) if def_mgr else 'None'}")
+        # logger.debug(f"PropertiesWindow def_mgr updated with sections: {list(def_mgr.sections.keys()) if def_mgr else 'None'}")
     
     def toggle(self):
         """Pencere görünürlüğünü değiştir"""
@@ -461,7 +461,7 @@ class PropertiesWindow:
                     e.mark_dirty()
             
             self.has_unsaved_changes = True
-            print(f"DEBUG: Section changed to {selected_name}")
+            # logger.debug(f"DEBUG: Section changed to {selected_name}")
 
     def _draw_material_editor(self, attr, elements):
         """Material editörü - Section'lar için"""

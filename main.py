@@ -1,3 +1,18 @@
+#main.py
+import logging
+from kivy.logger import Logger
+
+# Kivy'nin kendi logger seviyesini ayarla
+Logger.setLevel(logging.WARNING)
+
+# Kivy'nin kendi handler'larını kaldır
+for handler in list(Logger.handlers):
+    Logger.removeHandler(handler)
+
+from logging_config import setup_logging, set_level
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 import os
 import threading
@@ -6,7 +21,7 @@ import threading
 # KIVY / OPENGL
 # ============================================================
 
-os.environ["KIVY_WINDOW"] = "sdl2"
+# os.environ["KIVY_WINDOW"] = "sdl2"
 
 from kivy.config import Config
 
@@ -23,12 +38,14 @@ from kivy.uix.filechooser import FileChooserListView
 from kivy.uix.popup import Popup
 from kivy.core.window import Window
 from kivy.clock import Clock
+from kivy.uix.floatlayout import FloatLayout
 
-from kivy_3d_widget import KivyCADWidget
-
+from core.gl_engine import KivyCADWidget
+from ui.prop_panel import PropertiesPanel
 
 Window.size = (1200, 800)
-
+set_level("core.gl_engine", "INFO")
+set_level("ui.prop_panel", "DEBUG")
 
 # ============================================================
 # CAD APP
@@ -38,45 +55,58 @@ class CADApp(App):
 
     def build(self):
 
-        root = BoxLayout(
-            orientation="vertical"
+        root = FloatLayout()
+
+        # 1. CAD widget (arkada)
+        self.cad_widget = KivyCADWidget(
+            size_hint=(1, 1),
+            pos_hint={'x': 0, 'y': 0},
         )
+        root.add_widget(self.cad_widget)
 
-        # ====================================================
-        # TOOLBAR
-        # ====================================================
-
+        # 2. Toolbar (üstte)
         toolbar = BoxLayout(
             orientation="horizontal",
             size_hint_y=None,
-            height=20,
-            spacing=1,
-            padding=1
+            height=32,
+            spacing=2,
+            padding=2
         )
 
-        toolbar.add_widget(self._button("S2K",     self.import_s2k))
-        toolbar.add_widget(self._button("Test",    self.load_test_model))
-        toolbar.add_widget(self._button("Polygon", self.draw_polygon))
-        toolbar.add_widget(self._button("Reset",   self.reset_camera))
-        toolbar.add_widget(self._button("Fit",     self.zoom_extents))
-        toolbar.add_widget(self._button("Orbit",   self.orbit_mode))
-        toolbar.add_widget(self._button("Pan",     self.pan_mode))
-        toolbar.add_widget(self._button("Del",     self.delete_selected))
-        toolbar.add_widget(self._button("ClrSel",  self.clear_selection))
-        toolbar.add_widget(self._button("Node",    self.draw_node))
-        toolbar.add_widget(self._button("Line",    self.draw_line))
-        toolbar.add_widget(self._button("Area",    self.draw_area))
-        toolbar.add_widget(self._button("Z+",      self.zoom_in))
-        toolbar.add_widget(self._button("Z-",      self.zoom_out))
+        toolbar.add_widget(self._button("☈ S2K",     self.import_s2k))
+        toolbar.add_widget(self._button("☄ Test",    self.load_test_model))
+        toolbar.add_widget(self._button("⬡ Polygon", self.draw_polygon))
+        toolbar.add_widget(self._button("↻ Reset",   self.reset_camera))
+        toolbar.add_widget(self._button("⟷ Fit",     self.zoom_extents))
+        toolbar.add_widget(self._button("☌ Orbit",   self.orbit_mode))
+        toolbar.add_widget(self._button("☍ Pan",     self.pan_mode))
+        toolbar.add_widget(self._button("☓ Del",     self.delete_selected))
+        toolbar.add_widget(self._button("☤ ClrSel",  self.clear_selection))
+        toolbar.add_widget(self._button("● Node",    self.draw_node))
+        toolbar.add_widget(self._button("─ Line",    self.draw_line))
+        toolbar.add_widget(self._button("☐ Area",    self.draw_area))
+        toolbar.add_widget(self._button("◱ Z+",      self.zoom_in))
+        toolbar.add_widget(self._button("◳ Z-",      self.zoom_out))
         # ====================================================
         # CAD VIEW
         # ====================================================
 
-        self.cad_widget = KivyCADWidget()
+        
 
         root.add_widget(toolbar)
-        root.add_widget(self.cad_widget)
-
+        
+        # 3. Properties panel (sağ üst, floating)
+        self.properties = PropertiesPanel(
+            pos_hint={'right': 1, 'top': 1},
+        )
+        self.properties.opacity = 0
+        self.properties.disabled = True
+        self.properties.pos_hint = {'right': 1, 'top': 0.96}   # toolbar altında
+        root.add_widget(self.properties)
+        
+        # CAD widget'a referans ver
+        self.cad_widget.properties_panel = self.properties
+        
         return root
 
     # ========================================================
@@ -87,8 +117,12 @@ class CADApp(App):
         button = Button(
             text=text,
             size_hint_x=None,
-            width=75,      # 95 → 85
-            font_size=12,  # metin biraz küçülsün
+            width=80,
+            font_size=12,
+            font_name="DejaVuSans.ttf",
+            background_color=(0.25, 0.25, 0.28, 1.0),
+            background_normal='',       # default resim kapat
+            background_down='',         # basılı hali de aynı
         )
         button.bind(on_release=callback)
         return button
@@ -144,7 +178,7 @@ class CADApp(App):
 
                     self.cad_widget._fit_view()
 
-                    print("S2K modeli yüklendi!")
+                    logger.info("S2K modeli yüklendi!")
 
                 Clock.schedule_once(
                     apply_scene,
@@ -153,7 +187,7 @@ class CADApp(App):
 
             except Exception as e:
 
-                print(
+                logger.info(
                     f"S2K yükleme hatası: {e}"
                 )
 
@@ -188,7 +222,7 @@ class CADApp(App):
             builder.scene
         )
 
-        print("Test modeli yüklendi!")
+        logger.info("Test modeli yüklendi!")
 
         self.cad_widget._fit_view()
 
@@ -222,11 +256,11 @@ class CADApp(App):
 
     def orbit_mode(self, *_):
 
-        print("Orbit modu")
+        logger.info("Orbit modu")
 
     def pan_mode(self, *_):
 
-        print("Pan modu")
+        logger.info("Pan modu")
 
     # ========================================================
     # EDIT
@@ -242,7 +276,7 @@ class CADApp(App):
         if not selected:
             return
 
-        print(
+        logger.info(
             f"Silinecek eleman sayısı: {len(selected)}"
         )
 
@@ -259,15 +293,15 @@ class CADApp(App):
 
     def draw_node(self, *_):
 
-        print("Draw Node")
+        logger.info("Draw Node")
 
     def draw_line(self, *_):
 
-        print("Draw Line")
+        logger.info("Draw Line")
 
     def draw_area(self, *_):
 
-        print("Draw Area")
+        logger.info("Draw Area")
 
     def draw_polygon(self, *_):
         if not self.engine:
@@ -281,13 +315,13 @@ class CADApp(App):
         deleted, rejected = self.engine.sel_mgr.delete_selected()
         
         if deleted == 0 and rejected == 0:
-            print("Silinecek eleman yok")
+            logger.info("Silinecek eleman yok")
         elif deleted == 0:
-            print(f"{rejected} eleman reddedildi (bağlı eleman var)")
+            logger.info(f"{rejected} eleman reddedildi (bağlı eleman var)")
         elif rejected == 0:
-            print(f"{deleted} eleman silindi")
+            logger.info(f"{deleted} eleman silindi")
         else:
-            print(f"{deleted} silindi, {rejected} reddedildi (bağlı)")
+            logger.info(f"{deleted} silindi, {rejected} reddedildi (bağlı)")
 
 
 # ============================================================
@@ -295,11 +329,5 @@ class CADApp(App):
 # ============================================================
 
 if __name__ == "__main__":
-    import logging
-    logging.basicConfig(
-        level=logging.DEBUG,   # burayı değiştir level=logging.WARNING
-        format="%(asctime)s | %(name)s | %(levelname)s | %(message)s"
-    )
 
-    logging.getLogger().setLevel(logging.DEBUG)
     CADApp().run()

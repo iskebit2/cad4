@@ -1,4 +1,7 @@
 # tests/test_model.py
+import logging
+logger = logging.getLogger(__name__)
+
 from geometry.scenebuilder import SceneBuilder
 from domain.definition import MatType, SectionType, LinkPropType
 
@@ -53,8 +56,8 @@ class TestModelBuilder:
         )
         
         # DEBUG: Section'lar eklendi mi kontrol et
-        print(f"DEBUG: Sections in def_mgr: {list(builder.def_mgr.sections.keys())}")
-        print(f"DEBUG: Section names: {[s.name for s in builder.def_mgr.sections.values()]}")
+        logger.info(f"DEBUG: Sections in def_mgr: {list(builder.def_mgr.sections.keys())}")
+        logger.info(f"DEBUG: Section names: {[s.name for s in builder.def_mgr.sections.values()]}")
         
         # ===== LINK PROPERTIES =====
         link1 = builder.create_link_prop(
@@ -121,7 +124,7 @@ class TestModelBuilder:
             label="TEST-POLYGON"
         )
         builder.scene.add_polygon(test_poly)
-        print(f"DEBUG: Test polygon eklendi - {len(test_poly.nodes)} köşe")
+        # logger.debug(f"DEBUG: Test polygon eklendi - {len(test_poly.nodes)} köşe")
 
         return builder.scene
 

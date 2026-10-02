@@ -11,6 +11,7 @@ class SceneBuilder:
         self.scene = Scene()
         self.def_mgr = self.scene.def_mgr
         self._node_cache: Dict[str, Node] = {}
+        
     
     def create_material(self, name: str, mat_type: MatType, 
                        E: float = 2.0e8, density: float = 7850,
@@ -28,7 +29,7 @@ class SceneBuilder:
         """Kesit oluştur ve definition manager'a ekle"""
         section = Section(name, profile_type, profile_params, material, color)
         self.def_mgr.add_section(section)
-        logger.debug(f"Section '{name}' added to def_mgr. Total sections: {len(self.def_mgr.sections)}")
+        # logger.debug(f"Section '{name}' added to def_mgr. Total sections: {len(self.def_mgr.sections)}")
         return section
     
     def create_link_prop(self, name: str, prop_type: LinkPropType = LinkPropType.LINEAR,

@@ -61,7 +61,7 @@ class SnapSquareRenderer:
         self.u_color_loc = glGetUniformLocation(self.shader, "uColor")
         glUseProgram(0)
         
-        logger.debug(f"SnapSquare uColor Loc: {self.u_color_loc}")
+        # logger.debug(f"SnapSquare uColor Loc: {self.u_color_loc}")
     
     def set_hover_type(self, priority, element_type=None):
         """
@@ -73,7 +73,7 @@ class SnapSquareRenderer:
         """
         self.current_priority = priority
         self.current_element_type = element_type
-        logger.debug(f"SnapSquare hover set: priority={priority}, type={element_type}")
+        # logger.debug(f"SnapSquare hover set: priority={priority}, type={element_type}")
     
     def get_current_size(self):
         """Mevcut hover durumuna göre snap square boyutunu hesapla"""
@@ -181,16 +181,16 @@ class SnapSquareRenderer:
             if self.shader is not None and glIsProgram(self.shader):
                 glDeleteProgram(self.shader)
                 self.shader = None
-                logger.debug("Shader silindi")
+                # logger.debug("Shader silindi")
             
             if self.vao is not None and glIsVertexArray(self.vao):
                 glDeleteVertexArrays(1, [self.vao])
                 self.vao = None
-                logger.debug("VAO silindi")
+                # logger.debug("VAO silindi")
             
             if self.vbo is not None and glIsBuffer(self.vbo):
                 glDeleteBuffers(1, [self.vbo])
                 self.vbo = None
-                logger.debug("VBO silindi")
+                # logger.debug("VBO silindi")
         except Exception as e:
-            logger.debug(f"Cleanup hatası: {e}")
+            # logger.debug(f"Cleanup hatası: {e}")
