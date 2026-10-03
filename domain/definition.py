@@ -8,9 +8,352 @@ from typing import Optional, Dict, Any, List, Tuple, Union
 from dataclasses import dataclass, field
 import uuid
 
+from domain.sap_enums import (
+    LOAD_PATTERN_TYPES,
+    LOAD_CASE_TYPES,
+    LOAD_CASE_DESIGN_TYPES,
+    COMBOTYPE
+)
+
 # ============================================================================
 # ENUMERATION'LAR
 # ============================================================================
+
+from dataclasses import dataclass, field
+from typing import Dict, Any
+
+@dataclass
+class ProjectInformation:
+    # SAP2000 Standart Alanları
+    company_name: str = ""
+    client_name: str = ""
+    project_name: str = "Endüstriyel Depo Yapısı"
+    project_number: str = ""
+    model_name: str = ""
+    model_description: str = ""
+    revision_number: str = "R0"
+    frame_type: str = ""
+    engineer: str = "Engineer"
+    checker: str = ""
+    supervisor: str = ""
+    issue_code: str = ""
+    design_code: str = ""
+    
+    # Özel / Yerel Alanlar (İngilizce attribute ismiyle)
+    cadastral_info: str = "102 / 14"       # Ada / Parsel
+    date: str = ""                          # Tarih
+    soil_class: str = "ZD"                  # Zemin Sınıfı
+    subgrade_modulus_kn_m3: float = 15000.0 # Yatak Katsayısı
+    
+    extra_items: Dict[str, Any] = field(default_factory=dict)
+
+    def to_s2k_dict(self) -> Dict[str, str]:
+        data = {
+            "Company Name": self.company_name,
+            "Client Name": self.client_name,
+            "Project Name": self.project_name,
+            "Project Number": self.project_number,
+            "Model Name": self.model_name,
+            "Model Description": self.model_description,
+            "Revision Number": self.revision_number,
+            "Frame Type": self.frame_type,
+            "Engineer": self.engineer,
+            "Checker": self.checker,
+            "Supervisor": self.supervisor,
+            "Issue Code": self.issue_code,
+            "Design Code": self.design_code,
+            # SAP2000 tablosuna basılacak etiketler
+            "Cadastral Info": self.cadastral_info,
+            "Date": self.date,
+            "Soil Class": self.soil_class,
+            "Subgrade Modulus (kN/m3)": str(self.subgrade_modulus_kn_m3),
+        }
+        
+        for key, val in self.extra_items.items():
+            data[key] = str(val)
+
+        return data
+
+    def to_s2k(self) -> str:
+        lines = ['TABLE:  "PROJECT INFORMATION"']
+        for item, val in self.to_s2k_dict().items():
+            if val:
+                lines.append(f'   Item="{item}"   Data="{val}"')
+            else:
+                lines.append(f'   Item="{item}"')
+        lines.append("")
+        return "\n".join(lines)
+    
+# -------------------------------------------------------------------------
+# LOAD PATTERNS & CASES
+# -------------------------------------------------------------------------
+
+@dataclass
+class LoadPattern:
+    """TABLE: LOAD PATTERN DEFINITIONS"""
+    name: str
+    design_type: str = "Dead"
+    self_wt_mult: float = 0.0
+    guid: Optional[str] = None
+
+@dataclass
+class StaticLoadAssignment:
+    """TABLE: CASE - STATIC 1 - LOAD ASSIGNMENTS"""
+    load_type: str      # 'Load pattern', 'Accel' vb.
+    load_name: str      # Pattern adı
+    load_sf: float = 1.0  # Ölçek çarpanı
+
+@dataclass
+class LoadCase:
+    """TABLE: LOAD CASE DEFINITIONS"""
+    name: str
+    case_type: str = "LinStatic"
+    initial_cond: str = "Zero"
+    design_type: str = "Dead"
+    design_act: str = "Non-Composite"
+    auto_type: str = "None"
+    run_case: bool = True
+    guid: Optional[str] = None
+    # Statik yük atamaları listesi
+    static_assignments: List[StaticLoadAssignment] = field(default_factory=list)
+
+@dataclass
+class ModalCase:
+    """TABLE: CASE - MODAL 1 - GENERAL"""
+    name: str
+    mode_type: str = "Eigen"    # Eigen / Ritz
+    max_num_modes: int = 12
+    min_num_modes: int = 1
+    eigen_shift: float = 0.0
+    eigen_cutoff: float = 0.0
+    eigen_tol: float = 1e-9
+    auto_shift: bool = True
+
+# -------------------------------------------------------------------------
+# COMBINATIONS
+# -------------------------------------------------------------------------
+
+@dataclass
+class ComboItem:
+    """Kombinasyon İçindeki Her Bir Eleman/Yükleme"""
+    case_or_pattern_name: str
+    scale_factor: float = 1.0
+
+@dataclass
+class LoadCombination:
+    """TABLE: COMBINATION DEFINITIONS"""
+    name: str
+    combo_type: str = "Linear Add"  # Linear Add, Envelope, Absolute Add, SRSS, Range Add
+    auto_design: bool = False
+    items: List[ComboItem] = field(default_factory=list)
+    guid: Optional[str] = None
+
+
+class SpectrumSourceType(Enum):
+    USER = "USER"
+    FROM_FILE = "FROM_FILE"
+    TSC_2018 = "TSC_2018"  # TBDY 2018
+    EUROCODE = "EUROCODE"
+    IBC = "IBC"
+
+@dataclass
+class SpectrumFunction:
+    """Tepki Spektrumu Fonksiyon Tanımları"""
+    name: str
+    source_type: SpectrumSourceType
+    damp: float = 0.05
+    # TBDY 2018 veya Kod Parametreleri
+    ss: float = 0.0
+    s1: float = 0.0
+    tl: float = 6.0
+    site_class: str = "ZC"
+    fs: float = 1.0
+    f1: float = 1.0
+    r_coeff: float = 1.0
+    d_coeff: float = 1.0
+    i_coeff: float = 1.0
+    spec_dir: str = "Horizontal"
+    # Dosyadan okuma / Kullanıcı tanımlı veri
+    file_path: Optional[str] = None
+    data_type: str = "Period vs Accel"
+    points: List[Tuple[float, float]] = field(default_factory=list) # (Periyot, İvme)
+
+@dataclass
+class ResponseSpectrumLoadAssignment:
+    """CASE - RESPONSE SPECTRUM 2 - LOAD ASSIGNMENTS"""
+    load_name: str       # U1, U2, U3 vb.
+    function_name: str   # İlgili SpectrumFunction adı
+    angle: float = 0.0
+    sf: float = 9810.0   # Ölçek Katsayısı (TransAccSF - mm/s2)
+
+@dataclass
+class ResponseSpectrumCase:
+    """CASE - RESPONSE SPECTRUM 1 & 2"""
+    name: str
+    modal_combo: str = "CQC"
+    dir_combo: str = "SRSS"
+    damping: float = 0.05
+    eccentricity: float = 0.0
+    assignments: List[ResponseSpectrumLoadAssignment] = field(default_factory=list)
+
+@dataclass
+class AutoSeismicTSC2018:
+    """AUTO SEISMIC - TSC-2018 (Eşdeğer Deprem Yükü)"""
+    load_pattern: str
+    direction: str          # X, Y, X+EccY vb.
+    percent_ecc: float = 0.05
+    period_calc: str = "Prog Calc"
+    ct_and_x: str = "0.10m, 0.75"
+    r_coeff: float = 2.5
+    d_coeff: float = 2.5
+    i_coeff: float = 1.2
+    ss: float = 0.329
+    s1: float = 0.128
+    tl: float = 8.0
+    site_class: str = "ZC"
+    fs: float = 1.3
+    f1: float = 1.5
+
+class LoadType(Enum):
+    POINT = "POINT"
+    DISTRIBUTED = "DISTRIBUTED"
+    GRAVITY = "GRAVITY"
+    TEMPERATURE = "TEMPERATURE"
+    UNIFORM = "UNIFORM"
+    SURFACE_PRESSURE = "SURFACE_PRESSURE"
+    STRAIN = "STRAIN"
+    WIND_PRESSURE = "WIND_PRESSURE"
+    UNIFORM_TO_FRAME = "UNIFORM_TO_FRAME"
+
+class LoadDirection(Enum):
+    GLOBAL_X = "GX"
+    GLOBAL_Y = "GY"
+    GLOBAL_Z = "GZ"
+    LOCAL_1 = "1"
+    LOCAL_2 = "2"
+    LOCAL_3 = "3"
+    GRAVITY = "GRAV"
+    PROJECTED_X = "PX"
+    PROJECTED_Y = "PY"
+    PROJECTED_Z = "PZ"
+
+# -------------------------------------------------------------------------
+# JOINT LOADS
+# -------------------------------------------------------------------------
+
+@dataclass
+class PointLoad:
+    """JOINT LOADS - FORCE"""
+    pattern_name: str
+    fx: float = 0.0
+    fy: float = 0.0
+    fz: float = 0.0
+    mx: float = 0.0
+    my: float = 0.0
+    mz: float = 0.0
+
+# -------------------------------------------------------------------------
+# FRAME LOADS
+# -------------------------------------------------------------------------
+
+@dataclass
+class FramePointLoad:
+    """FRAME LOADS - POINTS"""
+    pattern_name: str
+    force_or_moment: str  # 'FORCE' veya 'MOMENT'
+    direction: LoadDirection
+    value: float          # N veya N*mm
+    distance: float       # Bağıl veya Mutlak
+    is_relative: bool = True
+
+@dataclass
+class FrameDistributedLoad:
+    """FRAME LOADS - DISTRIBUTED"""
+    pattern_name: str
+    force_or_moment: str  # 'FORCE' veya 'MOMENT'
+    direction: LoadDirection
+    p1: float             # N/mm
+    p2: float             # N/mm
+    d1: float             # Mesafe A
+    d2: float             # Mesafe B
+    is_relative: bool = True
+
+@dataclass
+class FrameGravityLoad:
+    """FRAME LOADS - GRAVITY"""
+    pattern_name: str
+    multiplier_x: float = 0.0
+    multiplier_y: float = 0.0
+    multiplier_z: float = 0.0
+
+@dataclass
+class FrameTemperatureLoad:
+    """FRAME LOADS - TEMPERATURE"""
+    pattern_name: str
+    temp_type: str        # 'Temperature' veya 'Gradient'
+    val: float            # °C veya °C/mm
+
+
+# -------------------------------------------------------------------------
+# AREA LOADS
+# -------------------------------------------------------------------------
+
+@dataclass
+class AreaGravityLoad:
+    """AREA LOADS - GRAVITY"""
+    pattern_name: str
+    multiplier_x: float = 0.0
+    multiplier_y: float = 0.0
+    multiplier_z: float = 0.0
+
+@dataclass
+class AreaRefTemperatureLoad:
+    """AREA LOADS - REFERENCE TEMPERATURE"""
+    temp: float           # °C
+
+@dataclass
+class AreaStrainLoad:
+    """AREA LOADS - STRAIN"""
+    pattern_name: str
+    component: str        # 'S11', 'S22', 'S12'
+    val: float
+
+@dataclass
+class AreaSurfacePressureLoad:
+    """AREA LOADS - SURFACE PRESSURE"""
+    pattern_name: str
+    face: str             # 'BOTTOM', 'TOP'
+    pressure: float       # N/mm2
+
+@dataclass
+class AreaTemperatureLoad:
+    """AREA LOADS - TEMPERATURE"""
+    pattern_name: str
+    temp_type: str
+    val: float
+
+@dataclass
+class AreaUniformLoad:
+    """AREA LOADS - UNIFORM"""
+    pattern_name: str
+    direction: LoadDirection
+    value: float          # N/mm2
+
+@dataclass
+class AreaUniformToFrameLoad:
+    """AREA LOADS - UNIFORM TO FRAME (Tributary Area / Bir-İki Yönlü Aktarım)"""
+    pattern_name: str
+    direction: LoadDirection
+    value: float          # N/mm2
+    dist_type: str        # 'One way', 'Two way'
+
+@dataclass
+class AreaWindPressureLoad:
+    """AREA LOADS - WIND PRESSURE COEFFICIENTS"""
+    pattern_name: str
+    cp: float             # Cp katsayısı
+    windward: bool = True
+    dist_type: str = "To Joints"
 
 class MatType(Enum):
     STEEL = 1
@@ -275,9 +618,15 @@ class DefinitionManager:
         self.materials: Dict[str, Material] = {}
         self.sections: Dict[str, Section] = {}
         self.link_props: Dict[str, LinkProp] = {}
+
         self.load_patterns: Dict[str, LoadPattern] = {}
         self.load_cases: Dict[str, LoadCase] = {}
-        self.load_combos: Dict[str, LoadCombination] = {}
+        self.modal_cases: Dict[str, ModalCase] = {}
+        self.combinations: Dict[str, LoadCombination] = {}
+
+        self.spectrum_functions: Dict[str, SpectrumFunction] = {}
+        self.response_spectrum_cases: Dict[str, ResponseSpectrumCase] = {}
+        self.auto_seismics: Dict[str, AutoSeismicTSC2018] = {}
     
     def add_material(self, m: Material):
         self.materials[m.guid] = m

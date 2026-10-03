@@ -5,7 +5,7 @@ import uuid
 import math
 from logging_config import CadLogger
 
-from domain.definition import Restraint, Section, ObjType, SectionType
+from domain.definition import AreaGravityLoad, AreaStrainLoad, AreaSurfacePressureLoad, AreaTemperatureLoad, AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, FrameDistributedLoad, FrameGravityLoad, FramePointLoad, FrameTemperatureLoad, Restraint, Section, ObjType, SectionType, PointLoad
 
 from logging_config import CadLogger
 
@@ -86,6 +86,8 @@ class Node(Element):
 
         # Bağlantılar
         self.connected: List[Tuple[ObjType, str]] = []
+
+        self.loads: List[PointLoad] = []
     
     @classmethod
     def from_dict(cls, data: dict):
@@ -186,6 +188,11 @@ class Frame(Element):
         self.rotation_deg = rotation_deg
         self.release_i = None
         self.release_j = None
+
+        self.point_loads: List[FramePointLoad] = []
+        self.dist_loads: List[FrameDistributedLoad] = []
+        self.gravity_loads: List[FrameGravityLoad] = []
+        self.temp_loads: List[FrameTemperatureLoad] = []
     
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
@@ -196,6 +203,15 @@ class Area(Element):
         self.element_type= "Area"
         self.nodes = nodes
         self.thickness = thickness
+
+        self.gravity_loads: List[AreaGravityLoad] = []
+        self.ref_temp: Optional[float] = None
+        self.strain_loads: List[AreaStrainLoad] = []
+        self.surface_pressures: List[AreaSurfacePressureLoad] = []
+        self.temp_loads: List[AreaTemperatureLoad] = []
+        self.uniform_loads: List[AreaUniformLoad] = []
+        self.uniform_to_frame_loads: List[AreaUniformToFrameLoad] = []
+        self.wind_pressures: List[AreaWindPressureLoad] = []
 
 class Link(Element):
     def __init__(self, node_i: Node, node_j: Node, propname: str = "LINK1", label: str = ""):

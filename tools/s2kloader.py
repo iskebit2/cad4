@@ -22,7 +22,7 @@ import sys
 import ctypes
 from ctypes import wintypes
 from domain.element import Node, Frame, Area, Link, Section, SectionType
-from domain.definition import Material, MatType
+from domain.definition import AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, ComboItem, FrameDistributedLoad, FrameGravityLoad, LoadCase, LoadCombination, LoadDirection, LoadPattern, Material, MatType, ModalCase, PointLoad, StaticLoadAssignment
 from domain.scene import Scene
 from geometry.scenebuilder import SceneBuilder
 
@@ -74,6 +74,44 @@ def show_file_dialog() -> Optional[str]:
     
     return None
 
+class UnitConverter:
+    LENGTH_FACTORS = {'MM': 1.0, 'CM': 10.0, 'M': 1000.0, 'IN': 25.4, 'FT': 304.8}
+    FORCE_FACTORS = {'N': 1.0, 'KN': 1000.0, 'KG': 9.80665, 'KGF': 9.80665, 'TON': 9806.65, 'KIP': 4448.22, 'LB': 4.44822}
+
+    def __init__(self, currunits_str: str = "N, mm, C"):
+        self.length_scale = 1.0
+        self.force_scale = 1.0
+        self.temp_unit = "C"
+        self.parse_units(currunits_str)
+
+    def parse_units(self, currunits_str: str):
+        parts = [p.strip().upper() for p in currunits_str.split(',')]
+        if len(parts) >= 2:
+            self.force_scale = self.FORCE_FACTORS.get(parts[0], 1.0)
+            self.length_scale = self.LENGTH_FACTORS.get(parts[1], 1.0)
+        if len(parts) >= 3:
+            self.temp_unit = parts[2]
+
+    def L(self, val: float) -> float: return val * self.length_scale
+    def F(self, val: float) -> float: return val * self.force_scale
+    def M(self, val: float) -> float: return val * self.force_scale * self.length_scale
+    def E(self, val: float) -> float: return val * self.force_scale / (self.length_scale ** 2)
+    def w(self, val: float) -> float: return val * self.force_scale / self.length_scale
+    def area_w(self, val: float) -> float: return val * self.force_scale / (self.length_scale ** 2)
+    def acc(self, val: float) -> float: return val * self.length_scale  # İvme katsayısı dönüşümü (Length/s2)
+
+    def temp(self, val: float) -> float:
+        """Sıcaklık farkını °C cinsine çevirir (Fahrenheit için delta dönüşümü)"""
+        if self.temp_unit == "F":
+            return val * (5.0 / 9.0)
+        return val
+
+    def temp_grad(self, val: float) -> float:
+        """Sıcaklık gradyanını çevirir (°C / mm)"""
+        # Grad = DeltaT / Length
+        dt = self.temp(val)
+        return dt / self.length_scale
+    
 class S2KParser:
     """SAP2000 s2k dosya okuma (UI Bağımsız Saf Parser)"""
     def __init__(self, file_path: Optional[str] = None):
@@ -376,6 +414,144 @@ class S2KLoader:
         self._sections: Dict[str, Section] = {}
         self._link_props: Dict[str, str] = {}
 
+    # s2kloader.py içindeki S2KLoader sınıfı metotları:
+
+    def _get_float(self, row: dict, keys: list, default: float = 0.0) -> float:
+        """Farklı SAP2000 versiyonlarındaki olası anahtar isimlerini esnekçe okur"""
+        for k in keys:
+            if k in row and str(row[k]).strip() != "":
+                try:
+                    return float(row[k])
+                except ValueError:
+                    pass
+        return default
+
+    def _parse_direction(self, dir_str: str) -> LoadDirection:
+        d = str(dir_str).strip().upper()
+        mapping = {
+            "1": LoadDirection.LOCAL_1, "LOCAL1": LoadDirection.LOCAL_1,
+            "2": LoadDirection.LOCAL_2, "LOCAL2": LoadDirection.LOCAL_2,
+            "3": LoadDirection.LOCAL_3, "LOCAL3": LoadDirection.LOCAL_3,
+            "X": LoadDirection.GLOBAL_X, "GX": LoadDirection.GLOBAL_X, "GLOBALX": LoadDirection.GLOBAL_X,
+            "Y": LoadDirection.GLOBAL_Y, "GY": LoadDirection.GLOBAL_Y, "GLOBALY": LoadDirection.GLOBAL_Y,
+            "Z": LoadDirection.GLOBAL_Z, "GZ": LoadDirection.GLOBAL_Z, "GLOBALZ": LoadDirection.GLOBAL_Z,
+            "GRAV": LoadDirection.GRAVITY, "GRAVITY": LoadDirection.GRAVITY,
+            "PX": LoadDirection.PROJECTED_X, "PY": LoadDirection.PROJECTED_Y, "PZ": LoadDirection.PROJECTED_Z
+        }
+        return mapping.get(d, LoadDirection.GRAVITY)
+
+    def _load_all_loads(self, node_map: Dict[str, Node], frame_map: Dict[str, Frame], area_map: Dict[str, Area]):
+        
+        # ---------------------------------------------------------------------
+        # 0. JOINT LOADS - FORCE (Örnek 6)
+        # ---------------------------------------------------------------------
+        df = self.parser.get_table("JOINT LOADS - FORCE")
+        if not df.empty:
+            for _, r in df.iterrows():
+                j_id = str(r.get('Joint', '')).strip()
+                if node := node_map.get(j_id):
+                    node.loads.append(PointLoad(
+                        pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
+                        fx=self.unit_conv.F(self._get_float(r, ['F1', 'FX'])),
+                        fy=self.unit_conv.F(self._get_float(r, ['F2', 'FY'])),
+                        fz=self.unit_conv.F(self._get_float(r, ['F3', 'FZ'])),
+                        mx=self.unit_conv.M(self._get_float(r, ['M1', 'MX'])),
+                        my=self.unit_conv.M(self._get_float(r, ['M2', 'MY'])),
+                        mz=self.unit_conv.M(self._get_float(r, ['M3', 'MZ']))
+                    ))
+
+        # ---------------------------------------------------------------------
+        # 1. FRAME LOADS - GRAVITY (Örnek 1)
+        # ---------------------------------------------------------------------
+        df = self.parser.get_table("FRAME LOADS - GRAVITY")
+        if not df.empty:
+            for _, r in df.iterrows():
+                f_id = str(r.get('Frame', '')).strip()
+                if frame := frame_map.get(f_id):
+                    frame.gravity_loads.append(FrameGravityLoad(
+                        pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
+                        multiplier_x=self._get_float(r, ['MultiplierX', 'X']),
+                        multiplier_y=self._get_float(r, ['MultiplierY', 'Y']),
+                        multiplier_z=self._get_float(r, ['MultiplierZ', 'Z'])
+                    ))
+
+        # ---------------------------------------------------------------------
+        # 2. FRAME LOADS - DISTRIBUTED (Örnek 2)
+        # ---------------------------------------------------------------------
+        df = self.parser.get_table("FRAME LOADS - DISTRIBUTED")
+        if not df.empty:
+            for _, r in df.iterrows():
+                f_id = str(r.get('Frame', '')).strip()
+                if frame := frame_map.get(f_id):
+                    ftype = str(r.get('Type', 'Force')).upper()
+                    dist_type = str(r.get('DistType', 'RelDist')).strip()
+                    is_rel = "REL" in dist_type.upper()
+
+                    # Mesafe tespiti (RelDistA veya AbsDistA)
+                    d1 = self._get_float(r, ['RelDistA', 'Dist1']) if is_rel else self.unit_conv.L(self._get_float(r, ['AbsDistA', 'Dist1']))
+                    d2 = self._get_float(r, ['RelDistB', 'Dist2']) if is_rel else self.unit_conv.L(self._get_float(r, ['AbsDistB', 'Dist2']))
+
+                    # Yük şiddeti tespiti (FOverLA / FOverLB veya Val1 / Val2)
+                    raw_p1 = self._get_float(r, ['FOverLA', 'Val1'])
+                    raw_p2 = self._get_float(r, ['FOverLB', 'Val2'], default=raw_p1)
+
+                    p1 = self.unit_conv.w(raw_p1) if ftype == 'FORCE' else self.unit_conv.M(raw_p1) / self.unit_conv.length_scale
+                    p2 = self.unit_conv.w(raw_p2) if ftype == 'FORCE' else self.unit_conv.M(raw_p2) / self.unit_conv.length_scale
+
+                    frame.dist_loads.append(FrameDistributedLoad(
+                        pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
+                        force_or_moment=ftype,
+                        direction=self._parse_direction(str(r.get('Dir', 'Gravity'))),
+                        p1=p1, p2=p2, d1=d1, d2=d2, is_relative=is_rel
+                    ))
+
+        # ---------------------------------------------------------------------
+        # 3. AREA LOADS - UNIFORM (Örnek 3)
+        # ---------------------------------------------------------------------
+        df = self.parser.get_table("AREA LOADS - UNIFORM")
+        if not df.empty:
+            for _, r in df.iterrows():
+                a_id = str(r.get('Area', '')).strip()
+                if area := area_map.get(a_id):
+                    raw_val = self._get_float(r, ['UnifLoad', 'Value', 'Val'])
+                    area.uniform_loads.append(AreaUniformLoad(
+                        pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
+                        direction=self._parse_direction(str(r.get('Dir', 'Gravity'))),
+                        value=self.unit_conv.area_w(raw_val)
+                    ))
+
+        # ---------------------------------------------------------------------
+        # 4. AREA LOADS - WIND PRESSURE COEFFICIENTS (Örnek 4)
+        # ---------------------------------------------------------------------
+        df = self.parser.get_table("AREA LOADS - WIND PRESSURE COEFFICIENTS")
+        if not df.empty:
+            for _, r in df.iterrows():
+                a_id = str(r.get('Area', '')).strip()
+                if area := area_map.get(a_id):
+                    is_windward = str(r.get('Windward', 'Yes')).strip().upper() == 'YES'
+                    area.wind_pressures.append(AreaWindPressureLoad(
+                        pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
+                        cp=self._get_float(r, ['Cp', 'CP']),
+                        windward=is_windward,
+                        dist_type=str(r.get('DistType', 'To Joints')).strip()
+                    ))
+
+        # ---------------------------------------------------------------------
+        # 5. AREA LOADS - UNIFORM TO FRAME (Örnek 5)
+        # ---------------------------------------------------------------------
+        df = self.parser.get_table("AREA LOADS - UNIFORM TO FRAME")
+        if not df.empty:
+            for _, r in df.iterrows():
+                a_id = str(r.get('Area', '')).strip()
+                if area := area_map.get(a_id):
+                    raw_val = self._get_float(r, ['UnifLoad', 'Value'])
+                    area.uniform_to_frame_loads.append(AreaUniformToFrameLoad(
+                        pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
+                        direction=self._parse_direction(str(r.get('Dir', 'Gravity'))),
+                        value=self.unit_conv.area_w(raw_val),
+                        dist_type=str(r.get('DistType', 'One way')).strip()
+                    ))
+
     def load(self) -> Scene:
         """
         S2K dosyasını yükle ve Scene döndür.
@@ -483,7 +659,122 @@ class S2KLoader:
         
         return self.builder.scene
 
+    # =========================================================================
+    # PATTERN, CASE & COMBINATION PARSERS
+    # =========================================================================
 
+    def _parse_load_patterns(self):
+        """TABLE: LOAD PATTERN DEFINITIONS"""
+        def_mgr = self.builder.def_mgr
+        df = self.parser.get_table("LOAD PATTERN DEFINITIONS")
+        if df.empty: return
+
+        for _, r in df.iterrows():
+            pat_name = str(r.get('LoadPat', '')).strip()
+            if not pat_name: continue
+
+            def_mgr.load_patterns[pat_name] = LoadPattern(
+                name=pat_name,
+                design_type=str(r.get('DesignType', 'Dead')).strip(),
+                self_wt_mult=self._get_float(r, ['SelfWtMult'], 0.0),
+                guid=str(r.get('GUID', '')).strip() or None
+            )
+
+    def _parse_load_cases(self):
+        """TABLE: LOAD CASE DEFINITIONS & TABLE: CASE - STATIC 1 - LOAD ASSIGNMENTS"""
+        def_mgr = self.builder.def_mgr
+        df_cases = self.parser.get_table("LOAD CASE DEFINITIONS")
+        if df_cases.empty: return
+
+        cases: Dict[str, LoadCase] = {}
+
+        # 1. Case Tanımlarını oku
+        for _, r in df_cases.iterrows():
+            c_name = str(r.get('Case', '')).strip()
+            if not c_name: continue
+
+            run_str = str(r.get('RunCase', 'Yes')).strip().upper()
+
+            cases[c_name] = LoadCase(
+                name=c_name,
+                case_type=str(r.get('Type', 'LinStatic')).strip(),
+                initial_cond=str(r.get('InitialCond', 'Zero')).strip(),
+                design_type=str(r.get('DesignType', 'Dead')).strip(),
+                design_act=str(r.get('DesignAct', 'Non-Composite')).strip(),
+                auto_type=str(r.get('AutoType', 'None')).strip(),
+                run_case=(run_str == 'YES'),
+                guid=str(r.get('GUID', '')).strip() or None
+            )
+
+        # 2. Statik Case Yük Atamalarını bağla
+        df_static = self.parser.get_table("CASE - STATIC 1 - LOAD ASSIGNMENTS")
+        if not df_static.empty:
+            for _, r in df_static.iterrows():
+                c_name = str(r.get('Case', '')).strip()
+                if case_obj := cases.get(c_name):
+                    assignment = StaticLoadAssignment(
+                        load_type=str(r.get('LoadType', 'Load pattern')).strip(),
+                        load_name=str(r.get('LoadName', '')).strip(),
+                        load_sf=self._get_float(r, ['LoadSF'], 1.0)
+                    )
+                    case_obj.static_assignments.append(assignment)
+
+        def_mgr.load_cases = cases
+
+    def _parse_modal_cases(self):
+        """TABLE: CASE - MODAL 1 - GENERAL"""
+        def_mgr = self.builder.def_mgr
+        df = self.parser.get_table("CASE - MODAL 1 - GENERAL")
+        if df.empty: return
+
+        for _, r in df.iterrows():
+            c_name = str(r.get('Case', '')).strip()
+            if not c_name: continue
+
+            auto_shift_str = str(r.get('AutoShift', 'Yes')).strip().upper()
+
+            def_mgr.modal_cases[c_name] = ModalCase(
+                name=c_name,
+                mode_type=str(r.get('ModeType', 'Eigen')).strip(),
+                max_num_modes=int(self._get_float(r, ['MaxNumModes'], 12)),
+                min_num_modes=int(self._get_float(r, ['MinNumModes'], 1)),
+                eigen_shift=self._get_float(r, ['EigenShift'], 0.0),
+                eigen_cutoff=self._get_float(r, ['EigenCutoff'], 0.0),
+                eigen_tol=self._get_float(r, ['EigenTol'], 1e-9),
+                auto_shift=(auto_shift_str == 'YES')
+            )
+
+    def _parse_combinations(self):
+        """TABLE: COMBINATION DEFINITIONS"""
+        def_mgr = self.builder.def_mgr
+        df = self.parser.get_table("COMBINATION DEFINITIONS")
+        if df.empty: return
+
+        combos: Dict[str, LoadCombination] = {}
+
+        for _, r in df.iterrows():
+            combo_name = str(r.get('ComboName', '')).strip()
+            if not combo_name: continue
+
+            # Kombinasyon nesnesi henüz oluşturulmadıysa aç
+            if combo_name not in combos:
+                auto_des_str = str(r.get('AutoDesign', 'No')).strip().upper()
+                combos[combo_name] = LoadCombination(
+                    name=combo_name,
+                    combo_type=str(r.get('ComboType', 'Linear Add')).strip(),
+                    auto_design=(auto_des_str == 'YES'),
+                    guid=str(r.get('GUID', '')).strip() or None
+                )
+
+            # İçine katsayıyı ve yüklemeyi ekle
+            case_or_pat = str(r.get('CaseName', '')).strip()
+            if case_or_pat:
+                scale = self._get_float(r, ['ScaleFactor'], 1.0)
+                combos[combo_name].items.append(
+                    ComboItem(case_or_pattern_name=case_or_pat, scale_factor=scale)
+                )
+
+        def_mgr.combinations = combos
     # ================================================================
     # YARDIMCI METODLAR
     # ================================================================
