@@ -3,9 +3,11 @@ import numpy as np
 from typing import Tuple
 from domain.element import Polygon
 import mapbox_earcut as earcut
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 def normalize(v):

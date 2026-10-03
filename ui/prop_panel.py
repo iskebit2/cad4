@@ -1,7 +1,9 @@
 #ui/prop_panel.py
 
-import logging
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput

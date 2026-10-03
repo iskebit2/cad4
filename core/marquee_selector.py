@@ -1,4 +1,6 @@
 # core/marquee_selector.py
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 import numpy as np
 import glm

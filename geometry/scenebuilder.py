@@ -3,8 +3,9 @@ from typing import Dict,Tuple,Optional, List
 from domain.scene import Scene
 from domain.definition import DefinitionManager, MatType, Material, Section, SectionType, LinkPropType,LinkProp, LinkPropLinear, Restraint
 from domain.element import Node, Frame, Area, Link
-import logging
-logger = logging.getLogger(__name__)
+
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 class SceneBuilder:
     def __init__(self):
@@ -20,6 +21,7 @@ class SceneBuilder:
         material = Material(name=name, mat_type=mat_type, E=E, 
                           density=density, color=color)
         self.def_mgr.add_material(material)
+        # logger.debug_changed("create_material")
         return material
     
     def create_section(self, name: str, profile_type: SectionType,
@@ -29,7 +31,8 @@ class SceneBuilder:
         """Kesit oluştur ve definition manager'a ekle"""
         section = Section(name, profile_type, profile_params, material, color)
         self.def_mgr.add_section(section)
-        # logger.debug(f"Section '{name}' added to def_mgr. Total sections: {len(self.def_mgr.sections)}")
+        # logger.debug_changed(f"Section '{name}' added to def_mgr. Total sections: {len(self.def_mgr.sections)}")
+        # logger.debug_changed("create_section")
         return section
     
     def create_link_prop(self, name: str, prop_type: LinkPropType = LinkPropType.LINEAR,
@@ -41,6 +44,7 @@ class SceneBuilder:
             prop = LinkProp(name=name, prop_type=prop_type)
         
         self.def_mgr.add_link_prop(prop)
+        # logger.debug_changed("create_link_prop")
         return prop
     
     def create_node(self, x: float, y: float, z: float,
@@ -56,7 +60,8 @@ class SceneBuilder:
         
         if label:
             self._node_cache[label] = node
-        
+
+        # logger.debug_changed("create_node")
         return node
     
     def create_frame(self, node_i, node_j, section_name: str,  # section_name ile
@@ -74,6 +79,7 @@ class SceneBuilder:
         
         frame = Frame(node_i, node_j, section, rotation_deg, label)
         self.scene.add_frame(frame)
+        # logger.debug_changed("create_frame")
         return frame
     
     def create_area(self, nodes: List, thickness: float, label: str = "") -> Area:
@@ -86,6 +92,7 @@ class SceneBuilder:
         
         area = Area(area_nodes, thickness, label)
         self.scene.add_area(area)
+        # logger.debug_changed("create_area")
         return area
     
     def create_link(self, node_i, node_j, prop_name: str = "LINK1",
@@ -98,4 +105,5 @@ class SceneBuilder:
         
         link = Link(node_i, node_j, prop_name, label)
         self.scene.add_link(link)
+        # logger.debug_changed("create_link")
         return link

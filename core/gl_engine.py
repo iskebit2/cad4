@@ -1,6 +1,6 @@
 #core/gl_engine.py
 
-import logging
+
 import time
 from pathlib import Path
 import glm
@@ -27,8 +27,11 @@ from core.selection_manager import SelectionManager
 from core.marquee_selector import MarqueeSelector
 from tools.loader import ModelLoader
 from core.draw_manager import DrawManager
+from ui.snapsquare import SnapSquareRenderer
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
+
 logger.info(".... GL_VERSION: %s", glGetString(GL_VERSION))
 
 
@@ -45,7 +48,7 @@ class PureKivyEngine:
     def __init__(self, w, h):
         self.w, self.h = w, h
         self.pending_anim = False
-        self.load_prog, self.load_done = 100, None
+        self.loading = False
 
         self.shaders = {}
         self.hover_id = 0
@@ -54,7 +57,7 @@ class PureKivyEngine:
         self.last_hover_x = -1
         self.last_hover_y = -1
         self.last_hover_time = 0
-        self.hover_throttle = 0.033
+        self.hover_throttle = 0.05   # 30 → 20 FPS
         self.pending_pick_check = False
 
         # Renderer ve component'ler init_gl'de oluşturulur
@@ -66,6 +69,7 @@ class PureKivyEngine:
         self.marquee = None
         self.loader = None
         self.draw_mgr = None
+        self.snap = None
 
     # ------------------------------------------------------------------
     # INIT
@@ -108,6 +112,7 @@ class PureKivyEngine:
         self.input = InputManager()
         self.sel_policy = SelectionPolicy(self.input)
         self.grid = GridSystem(self.grid_s)
+        self.snap = SnapSquareRenderer()
 
         self.renderer = SceneRenderer(
             pick_s=self.pick_s,
@@ -119,6 +124,7 @@ class PureKivyEngine:
         )
         self.renderer.set_cam(self.cam)
         self.renderer.set_grid(self.grid)
+        self.renderer.set_snap(self.snap)
         self.renderer.set_engine(self)
 
         self.pick_pass = self.renderer.pick_pass
@@ -192,6 +198,8 @@ class PureKivyEngine:
         else:
             self._clear_hover()
 
+        
+                
     def _check_pick_result(self):
         if not self.pending_pick_check:
             return False
@@ -201,6 +209,10 @@ class PureKivyEngine:
                 self.pending_pick_check = False
                 self._update_hover(pick_id)
                 return True
+            else:
+                # pick_pass sıfırlanmış ama engine bekliyor → reset
+                if not self.renderer.pick_pass.pending_pick:
+                    self.pending_pick_check = False
         except Exception as e:
             logger.error(f"Pick kontrolü hatası: {e}")
             self.pending_pick_check = False
@@ -336,6 +348,8 @@ class KivyCADWidget(Widget):
                 return
             self.engine = PureKivyEngine(int(self.width), int(self.height))
             self.engine.init_gl()
+            self.engine.on_hover_changed_callback = self._on_hover_changed
+            self.engine.sel_mgr.on_selection_changed = self._on_selection_changed
             self.initialized = True
             logger.info("Kivy OpenGL Engine Başarıyla İlklendirildi!")
             return
@@ -344,15 +358,22 @@ class KivyCADWidget(Widget):
         dt = current_time - self.last_time
         self.last_time = current_time
 
-        if self.engine.pending_pick_check:
-            self.engine._check_pick_result()
+        # FPS
+        if not self.engine.loading:
+            self._frames = getattr(self, '_frames', 0) + 1
+            self._fps_time = getattr(self, '_fps_time', 0) + dt
+            if self._fps_time >= 1.0:
+                fps = self._frames / self._fps_time
+                logger.debug(f"FPS: {fps:.1f}")
+                self._frames = 0
+                self._fps_time = 0
+
+        # if self.engine.pending_pick_check:
+        #     self.engine._check_pick_result()
 
         if self.engine.pending_anim:
             self.engine.renderer.start_anim(4)
             self.engine.pending_anim = False
-
-        if self.engine.load_done:
-            self._apply_pending_load()
 
         # ---- Viewport ----
         w = int(self.width)
@@ -384,6 +405,19 @@ class KivyCADWidget(Widget):
                 @ self.engine.cam.get_view_matrix())
             self.engine.draw_mgr.render_preview(mvp, self.engine.preview_s)
 
+        # ---- Snap Square ----
+        if self.engine.snap is not None and self.engine.draw_mgr.is_active:
+            snap_node = self.engine.draw_mgr.hover_node
+            
+            self.engine.snap.draw_snap(
+                self.engine.input.mouse_pos.x,
+                self.engine.input.mouse_pos.y,
+                w,
+                h,
+                active=(snap_node is not None),
+            )
+        
+
         # ---- Kivy için state reset ----
         glUseProgram(0)
         glBindVertexArray(0)
@@ -395,22 +429,8 @@ class KivyCADWidget(Widget):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
+        # logger.debug(f"[SNAP] engine.snap={self.engine.snap}, draw_mgr.hover_node={self.engine.draw_mgr.hover_node}")
 
-    def _apply_pending_load(self):
-        """Thread'den gelen scene'i uygula."""
-        self.engine.load_prog = 80
-        self.engine.renderer.set_scene(self.engine.scene)
-        self.engine.renderer.update_geo(self.engine.scene)
-        self.engine.load_prog = 90
-
-        c, s = self.engine.renderer.get_bounds()
-        self.engine.cam.update_bounds(c, s)
-        self.engine.cam.focus_on_model()
-        self.engine.renderer._update_grid()
-
-        self.engine.load_prog = 100
-        self.engine.load_done = False
-        self.engine.pending_anim = True
 
     # ------------------------------------------------------------------
     # RESIZE (tek metod)
@@ -722,29 +742,6 @@ class KivyCADWidget(Widget):
     # ------------------------------------------------------------------
     # UPDATE + GLOBAL MOUSE
     # ------------------------------------------------------------------
-    def _update_properties_panel(self):
-        """Seçim/sağ tık sonrası panel'i güncelle."""
-        if not self.properties_panel:
-            return
-        
-        # Panel kapalıysa bir şey yapma
-        if self.properties_panel.opacity == 0:
-            return
-        
-        # Seçili elementleri al
-        selected = self.engine.sel_mgr.get_selected()
-        
-        if not selected:
-            # Seçim boşsa panel'i gizle
-            self.properties_panel.hide()
-            return
-        
-        # Tek eleman seçili ise onu göster
-        if len(selected) == 1:
-            self.properties_panel.show_element(selected[0])
-        else:
-            # Çoklu seçim → özet göster
-            self.properties_panel.show_selection_summary(selected)
             
     def update(self, dt):
         """Her frame: pending pick + redraw."""
@@ -768,3 +765,55 @@ class KivyCADWidget(Widget):
         if self.engine.draw_mgr.is_active:
             self.engine.input.update_mouse_position(x, y)
             self.engine.draw_mgr.on_mouse_move(x, y)
+
+    def _on_selection_changed(self, selected_elements):
+        """
+        Seçim değiştiğinde çağrılır.
+        Panel açıksa seçili elementleri göster.
+        """
+        if not self.properties_panel:
+            return
+        if self.properties_panel.opacity == 0:
+            return
+        
+        if not selected_elements:
+            self.properties_panel.hide()
+        elif len(selected_elements) == 1:
+            self.properties_panel.show_element(selected_elements[0])
+        else:
+            self.properties_panel.show_selection_summary(selected_elements)
+            
+    def _on_hover_changed(self, element):
+        """Hover değiştiğinde panel'i güncelle."""
+        if not self.properties_panel or self.properties_panel.opacity == 0:
+            return
+        
+        if element is not None:
+            # Hover var → hover elementini göster
+            self.properties_panel.show_element(element)
+        else:
+            # Hover yok → seçili elementi göster (varsa)
+            selected = self.engine.sel_mgr.get_selected()
+            if len(selected) == 1:
+                self.properties_panel.show_element(selected[0])
+            elif len(selected) > 1:
+                self.properties_panel.show_selection_summary(selected)
+            else:
+                self.properties_panel.hide()
+
+
+    def _update_properties_panel(self):
+        """Seçim/sağ tık sonrası panel'i güncelle."""
+        if not self.properties_panel:
+            return
+        if self.properties_panel.opacity == 0:
+            return
+        
+        selected = self.engine.sel_mgr.get_selected()
+        
+        if not selected:
+            self.properties_panel.hide()
+        elif len(selected) == 1:
+            self.properties_panel.show_element(selected[0])
+        else:
+            self.properties_panel.show_selection_summary(selected) 

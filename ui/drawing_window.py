@@ -2,7 +2,7 @@
 drawing_window.py - Bağımsız 3D Görüntüleyici Pencere
 """
 import sys
-import logging
+from logging_config import CadLogger
 from typing import Optional, List, Any
 
 from PySide6.QtWidgets import (
@@ -17,7 +17,9 @@ from geometry.scenebuilder import SceneBuilder
 from domain.definition import SectionType, MatType
 from core.qt_engine import RenderEngineWidget, InteractionMode
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class DrawingWindow(QMainWindow):

@@ -5,8 +5,10 @@ import math
 from typing import List, Tuple, Optional, Dict, Any
 import pandas as pd
 import re
-import logging
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 # ==================== SOLID GEOMETRY DATACLASS ====================
 

@@ -3,8 +3,10 @@ import numpy as np
 import glm
 from tools.s2kloader import S2KLoader
 from geometry.spatialgrid import SpatialGrid
-import logging
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class ModelLoader:

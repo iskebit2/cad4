@@ -1,0 +1,15 @@
+.venv/
+.vscode/
+
+__pycache__/
+*.py[cod]
+
+# Test
+test*.py
+
+# Doküman / notebook
+*.docx
+*.ipynb
+
+# Log
+*.log

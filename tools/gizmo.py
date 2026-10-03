@@ -3,8 +3,10 @@ import OpenGL.GL as gl
 import glm
 import numpy as np
 import ctypes
-import logging
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 class GizmoAxes:
     """OpenGL 3.3 için VAO kullanan Gizmo eksen çizici"""

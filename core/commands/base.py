@@ -1,9 +1,11 @@
 # core/commands/base.py
 from abc import ABC, abstractmethod
 from collections import deque
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class Command(ABC):

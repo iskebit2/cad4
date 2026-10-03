@@ -1,9 +1,11 @@
 # core/analysis/spectrum.py
 """TBDY 2018 spektrum ve spektral analiz."""
 import numpy as np
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class TBDYSpectrum:

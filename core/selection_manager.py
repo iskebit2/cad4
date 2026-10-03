@@ -2,8 +2,10 @@
 from typing import List, Set
 from core.selection_policy import SelectionMode
 from core.commands import CommandManager, DeleteElementsCommand
-import logging
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 class SelectionManager:
     """Seçim durumunu yönet - TEK KAYNAK"""
@@ -12,10 +14,22 @@ class SelectionManager:
         self.r = scene_renderer
         self.selected: Set[int] = set()
         self.cmd_mgr = CommandManager(max_history=100)
+
+        self.on_selection_changed = None   # callable veya None
     
     def _update(self):
-        """Renkleri güncelle"""
-        if self.r: self.r.update_sel()
+        """Renkleri güncelle + callback çağır."""
+        if self.r:
+            self.r.update_sel()
+
+        if self.on_selection_changed:
+            try:
+                self.on_selection_changed(list(self.get_selected()))
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(
+                    f"selection_changed callback hatası: {e}"
+                )
         
     def _update_geometry_renderers(self, scene):
         """Geometriyi güncelle (eleman ekleme/silme/değiştirme için)"""

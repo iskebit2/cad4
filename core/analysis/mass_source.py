@@ -2,9 +2,11 @@
 """
 SAP2000 mass source tablolarını oku.
 """
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 def read_mass_source(parser):

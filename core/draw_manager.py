@@ -3,7 +3,7 @@ import ctypes
 
 import glm
 import numpy as np
-import logging
+from logging_config import CadLogger
 import time
 
 from domain.element import Polygon
@@ -16,7 +16,9 @@ from OpenGL.GL import (
     GL_LINE_STRIP, GL_TRIANGLE_FAN, GL_LINES,
 )
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class DrawManager:
@@ -35,6 +37,7 @@ class DrawManager:
     def __init__(self, engine):
         self.engine = engine
         
+
         self.is_active = False
         self.points = []          # seçilen Node objeleri
         self.hover_node = None    # fare şu an hangi node üstünde
@@ -114,6 +117,13 @@ class DrawManager:
             return False
         
         node = self._find_node_at(x, y)
+        logger.debug(f"[CLICK] tıklama ({x}, {y}) → node={node}")
+        if node:
+            logger.debug(f"[CLICK] node label={node.label}, coords=({node.x},{node.y},{node.z})")
+        else:
+            # En yakın 5 node'u yazdır
+            self._debug_nearest_nodes(x, y)
+
         if node is None:
             return True  # Node yoksa tık yutulur (başka bir şey yapma)
         
@@ -129,7 +139,40 @@ class DrawManager:
         self.points.append(node)
         logger.debug(f"[Draw] Nokta eklendi: {node.label} ({len(self.points)} toplam)")
         return True
-    
+
+    def _debug_nearest_nodes(self, x, y, count=5):
+        """En yakın node'ları log'la (debug için)."""
+        cam = self.engine.cam
+        w, h = self.engine.w, self.engine.h
+        
+        if not cam or not self.engine.scene:
+            return
+        
+        mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
+        
+        distances = []
+        for node in self.engine.scene.nodes.values():
+            if not node.is_visible:
+                continue
+            
+            clip = mvp * glm.vec4(node.x, node.y, node.z, 1.0)
+            if clip.w <= 0:
+                continue
+            
+            ndc = glm.vec3(clip) / clip.w
+            px = (ndc.x + 1.0) * w / 2.0
+            py = (1.0 - ndc.y) * h / 2.0
+            
+            dx = px - x
+            dy = py - y
+            dist_sq = dx * dx + dy * dy
+            distances.append((dist_sq ** 0.5, node.label, px, py))
+        
+        distances.sort()
+        logger.debug(f"[CLICK] En yakın {count} node:")
+        for d, label, px, py in distances[:count]:
+            logger.debug(f"  {label}: {d:.1f}px mesafe, ekran=({px:.0f},{py:.0f})")
+            
     # =========================================================
     # YARDIMCI — NODE BULMA
     # =========================================================

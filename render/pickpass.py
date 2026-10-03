@@ -3,9 +3,11 @@ import numpy as np
 import glm
 from OpenGL.GL import *
 import ctypes
-import logging
+from logging_config import CadLogger
 import time
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 class PickPass:
     def __init__(self):

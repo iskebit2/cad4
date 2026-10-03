@@ -4,10 +4,12 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple
 
 import glm
-import logging
+from logging_config import CadLogger
 import numpy as np
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 # ============================================================================
@@ -86,7 +88,7 @@ class InputManager:
     # ========================================================================
 
     def update_mouse_position(self, x: float, y: float):
-
+        
         self.mouse_delta.x = x - self._last_x
         self.mouse_delta.y = y - self._last_y
 

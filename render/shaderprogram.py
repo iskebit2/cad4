@@ -2,10 +2,12 @@
 from OpenGL.GL import *
 import glm
 from typing import Dict, Optional, Any
-import logging
+from logging_config import CadLogger
 import numpy as np
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 class ShaderProgram:
     def __init__(self, name, vertex_path, fragment_path):

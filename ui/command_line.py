@@ -4,11 +4,13 @@ import imgui
 import numpy as np
 import glm
 from typing import Optional, List, Dict, Any, Callable
-import logging
+from logging_config import CadLogger
 import shlex
 import traceback
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 class CommandLine:
     """

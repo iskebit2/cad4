@@ -1,9 +1,11 @@
 # render/light_ubo.py
 from OpenGL.GL import *
 import numpy as np
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class LightUBO:

@@ -304,11 +304,7 @@ class FrameBuilder:
             (len(verts) // 6, 1)
         )
 
-        logger.debug(
-                        "XXXXXXXX FRAME TEST %d %d",
-                        len(verts) // 6,
-                        len(idxs),
-                    )
+        
 
         return (
             np.array(verts, dtype=np.float32),

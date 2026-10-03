@@ -3,11 +3,13 @@ from typing import List, Optional, Dict, Any, Tuple
 from enum import Enum
 import uuid
 import math
-import logging
+from logging_config import CadLogger
 
 from domain.definition import Restraint, Section, ObjType, SectionType
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 def id_to_color(obj_id: int) -> Tuple[float, float, float]:
     r = ((obj_id >> 0) & 0xFF) / 255.0

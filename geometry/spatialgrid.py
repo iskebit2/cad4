@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from enum import Enum
 
 from domain.definition import ElementType
-import logging
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 @dataclass
 class BoundingBox:

@@ -3,8 +3,9 @@ import numpy as np
 from typing import Tuple, List
 from domain.element import Area
 import mapbox_earcut as earcut
-import logging
-logger = logging.getLogger(__name__)
+
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 def normalize(v):
     n = np.linalg.norm(v)
@@ -96,7 +97,7 @@ class AreaBuilder:
         vc = len(verts) // 6
         colors = np.tile(color, (vc, 1)).astype(np.float32)
 
-        logger.debug(f"AreaBuilder: {vc} vertices, {len(idxs)} indices")
+        # logger.debug(f"AreaBuilder: {vc} vertices, {len(idxs)} indices")
 
         return (
             np.array(verts, dtype=np.float32),

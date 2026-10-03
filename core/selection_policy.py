@@ -1,8 +1,10 @@
 # core/selection_policy.py
 from enum import Enum
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 class SelectionMode(Enum):
     REPLACE = 0   # Öncekileri temizle, yenileri ekle (normal tıklama)

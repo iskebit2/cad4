@@ -2,9 +2,11 @@
 """Statik, modal ve spektral çözümler."""
 import numpy as np
 from scipy.linalg import eigh
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class StructuralSolver:

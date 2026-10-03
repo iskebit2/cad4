@@ -1,7 +1,9 @@
 
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 import numpy as np
 from tools.s2kloader import S2KLoader

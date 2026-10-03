@@ -4,8 +4,10 @@ import glm
 import math
 from dataclasses import dataclass, field
 from typing import Optional, Tuple, Union
-import logging
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 @dataclass
 class Camera:

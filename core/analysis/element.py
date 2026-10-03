@@ -5,9 +5,11 @@
 SAP2000 uyumlu: release'li uçlar için modifiye stiffness.
 """
 import numpy as np
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 # ============================================================

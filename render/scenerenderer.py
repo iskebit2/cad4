@@ -12,8 +12,9 @@ from tools.gridsystem import GridSystem
 from domain.scene import Scene
 from render.base_renderer import PolygonRenderer, _final_color_for, BaseRenderer, FrameRenderer, NodeRenderer, AreaRenderer, LinkRenderer
 from render.pickpass import PickPass
-import logging
-logger = logging.getLogger(__name__)
+
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 @dataclass
 class RenderStats:
@@ -51,7 +52,7 @@ class SceneRenderer:
         self.light_ubo = LightUBO()
         
         self.gizmo = self.grid = self.marquee = None
-        
+        self.snap = None
         self.show = {
                         'grid': True, 'axes': True, 'area': True,
                         'frame': True, 'link': True, 'node': True,
@@ -185,7 +186,9 @@ class SceneRenderer:
     def set_scene(self, s): 
         self.scene = s
     
-    
+    def set_snap(self, s):
+        self.snap = s
+
     def set_marquee(self, m): 
         self.marquee = m
     
@@ -210,42 +213,96 @@ class SceneRenderer:
         if self.pick_pass:
             self.pick_pass.set_main_fbo(self.mrt_fbo)
     
-    def update_geo(self, scene= None):
+    def update_geo(self, scene=None, progress_cb=None):
+        """
+        Sahne geometrisini GPU'ya yükle.
+        
+        Parameters
+        ----------
+        scene : Scene, optional
+        progress_cb : callable, optional
+            İlerleme callback'i. `progress_cb(value, message)` çağrılır.
+            `value` 0..1 arası, `message` açıklama.
+        """
+        self._last_progress_value = 0.0
         if scene is None:
-            scene= self.scene
+            scene = self.scene
 
-        # PickPass'i sıfırla — silinen ID'ler temizlenir
+        # ---- 0. PickPass sıfırla ----
         if self.pick_pass and hasattr(self.pick_pass, 'clear_registry'):
             self.pick_pass.clear_registry()
-            
+
+        def _progress(value, msg=""):
+            if progress_cb:
+                try:
+                    progress_cb(value, msg)
+                except Exception as e:
+                    logger.warning(f"progress_cb hatası: {e}")
+
+        # ---- 1. Elementleri al ----
+        _progress(0.00, "Hazırlanıyor...")
         frames = list(scene.frames.values())
         nodes = list(scene.nodes.values())
         areas = list(scene.areas.values())
         links = list(scene.links.values())
         polygons = list(scene.polygons.values())
-        
+
         self.scene = scene
-        
-        # pick_id ata (mevcut kod)
-        for frame in frames:
-            frame.pick_id = frame.unique_id
-        for node in nodes:
-            node.pick_id = node.unique_id
-        for area in areas:
-            area.pick_id = area.unique_id
-        for link in links:
-            link.pick_id = link.unique_id
-        for pg in polygons:                          # ← YENİ
-            pg.pick_id = pg.unique_id
-        
-        # Renderer'ları güncelle
+
+        # ---- 2. pick_id ata ----
+        for frame in frames: frame.pick_id = frame.unique_id
+        for node in nodes:   node.pick_id = node.unique_id
+        for area in areas:   area.pick_id = area.unique_id
+        for link in links:   link.pick_id = link.unique_id
+        for pg in polygons:  pg.pick_id = pg.unique_id
+
+        # ---- 3. Ağırlıklı adım ilerlemesi ----
+        # Yaklaşık süre tahmini için ağırlıklar (ampirik)
+        W_FRAME = 20
+        W_NODE = 4
+        W_AREA = 12
+        W_LINK = 4
+        W_POLY = 1
+
+        total = (
+            len(frames) * W_FRAME +
+            len(nodes)  * W_NODE +
+            len(areas)  * W_AREA +
+            len(links)  * W_LINK +
+            len(polygons) * W_POLY
+        ) or 1  # sıfır bölmeyi önle
+
+        done = 0
+
+        # ---- 4. Renderer'ları güncelle ----
+        _progress(0.02, f"Frames ({len(frames)})...")
         self.frame_r.update(frames)
+        done += len(frames) * W_FRAME
+        _progress(done / total, f"Frames ✓")
+
+        _progress(done / total, f"Nodes ({len(nodes)})...")
         self.node_r.update(nodes)
+        done += len(nodes) * W_NODE
+        _progress(done / total, f"Nodes ✓")
+
+        _progress(done / total, f"Areas ({len(areas)})...")
         self.area_r.update(areas)
+        done += len(areas) * W_AREA
+        _progress(done / total, f"Areas ✓")
+
+        _progress(done / total, f"Links ({len(links)})...")
         self.link_r.update(links)
+        done += len(links) * W_LINK
+        _progress(done / total, f"Links ✓")
+
+        _progress(done / total, f"Polygons ({len(polygons)})...")
         self.polygon_r.update(polygons)
+        done += len(polygons) * W_POLY
+        _progress(done / total, f"Polygons ✓")
+
+        # ---- 5. PickPass'e kaydet ----
+        _progress(min(done / total + 0.01, 0.96), "Picking...")   # ← geriye gitmesin
         
-        # PickPass'e kaydet
         for frame in frames:
             self.pick_pass.register(frame.pick_id, frame, self.frame_r)
         for node in nodes:
@@ -256,8 +313,12 @@ class SceneRenderer:
             self.pick_pass.register(link.pick_id, link, self.link_r)
         for pg in polygons:
             self.pick_pass.register(pg.pick_id, pg, self.polygon_r)
-        
+
+        # ---- 6. Bounds ----
+        _progress(0.98, "Sınırlar hesaplanıyor...")
         self._update_bounds()
+
+        _progress(1.00, "Tamamlandı")
     
     def update_sel(self):
         """Seçim renklerini güncelle - hem main hem simple CBO'ları"""
@@ -496,7 +557,7 @@ class SceneRenderer:
         return self.pick_pass.get_element(pick_id) if self.pick_pass else None
     
     def cleanup(self):
-        for r in [self.frame_r, self.node_r, self.area_r, self.link_r, self.polygon_r, self.grid, self.pick_pass]:
+        for r in [self.frame_r, self.node_r, self.area_r, self.link_r, self.polygon_r, self.grid, self.pick_pass, self.snap]:
             if r and hasattr(r, 'cleanup'):
                 r.cleanup()
         

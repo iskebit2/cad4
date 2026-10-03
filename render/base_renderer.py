@@ -53,9 +53,11 @@ def _final_color_for(element):
     else:                                       # Node
         return [1.0, 1.0, 1.0]
 
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 T = TypeVar("T")
 

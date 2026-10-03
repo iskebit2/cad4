@@ -1,0 +1,251 @@
+{
+  "project": {
+    "name": "Ahşap Konut Projesi",
+    "type": "Konut",
+    "address": "Sarıyer/İstanbul",
+    "coordinates": "36.0,42.0",
+    "altitude": 50,
+    "structure_type": "Ahşap",
+    "wood_material": "C24",
+    "building_height": 11
+  },
+  "points": {
+    "P1": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "P2": [
+      12.0,
+      0.0,
+      0.0
+    ],
+    "P3": [
+      12.0,
+      8.0,
+      0.0
+    ],
+    "P4": [
+      0.0,
+      8.0,
+      0.0
+    ],
+    "P5": [
+      0.0,
+      0.0,
+      4.0
+    ],
+    "P6": [
+      12.0,
+      0.0,
+      4.0
+    ],
+    "P7": [
+      12.0,
+      8.0,
+      5.0
+    ],
+    "P8": [
+      0.0,
+      8.0,
+      5.0
+    ]
+  },
+  "polygons": {
+    "D1": [
+      "P1",
+      "P2",
+      "P6",
+      "P5"
+    ],
+    "D2": [
+      "P1",
+      "P5",
+      "P8",
+      "P4"
+    ],
+    "D3": [
+      "P2",
+      "P3",
+      "P7",
+      "P6"
+    ],
+    "D4": [
+      "P3",
+      "P4",
+      "P8",
+      "P7"
+    ],
+    "C1": [
+      "P5",
+      "P6",
+      "P7",
+      "P8"
+    ]
+  },
+  "dead_config": {
+    "definitions": [
+      {
+        "id": "G01",
+        "name": "Fayans Kaplama",
+        "load_type": "G",
+        "value": 1.67,
+        "unit": "kN/m²",
+        "source": "Hazır Kütüphane | TS 498 | 170.0 kgf/m²",
+        "description": "kgf/m²: 170.0 → kN/m²: 1.67"
+      },
+      {
+        "id": "G02",
+        "name": "Çatı",
+        "load_type": "G",
+        "value": 1.46,
+        "unit": "kN/m²",
+        "source": "Hazır Kütüphane | TS 498 | 149.0 kgf/m²",
+        "description": "kgf/m²: 149.0 → kN/m²: 1.46"
+      },
+      {
+        "id": "G03",
+        "name": "Merdiven",
+        "load_type": "G",
+        "value": 1.88,
+        "unit": "kN/m²",
+        "source": "Hazır Kütüphane | TS 498 | 192.0 kgf/m²",
+        "description": "kgf/m²: 192.0 → kN/m²: 1.88"
+      },
+      {
+        "id": "G04",
+        "name": "13.5 cm Delikli Tuğla Duvar (Çift Yüz Sıvalı)",
+        "load_type": "G",
+        "value": 6.168,
+        "unit": "kN/m",
+        "source": "Hazır Kütüphane | Kiriş Senaryosu",
+        "description": "Kat: 2.8 m, Kiriş: 0.4 m, Net: 2.40 m, Yüzey: 2.57 kN/m² → Çizgisel: 6.168 kN/m"
+      },
+      {
+        "id": "G05",
+        "name": "13.5 cm Delikli Tuğla Duvar (Çift Yüz Sıvalı)",
+        "load_type": "G",
+        "value": 6.168,
+        "unit": "kN/m",
+        "source": "Hazır Kütüphane | Kiriş Senaryosu",
+        "description": "Kat: 2.8 m, Kiriş: 0.4 m, Net: 2.40 m, Yüzey: 2.57 kN/m² → Çizgisel: 6.168 kN/m"
+      }
+    ],
+    "assignments": {
+      "D101": {
+        "G": [
+          "G01"
+        ]
+      },
+      "D102": {
+        "G": [
+          "G02"
+        ]
+      },
+      "D104": {
+        "G": [
+          "G03"
+        ]
+      },
+      "K201": {
+        "G": [
+          "G04"
+        ]
+      }
+    }
+  },
+  "live_config": {
+    "definitions": [
+      {
+        "id": "Q01",
+        "name": "Zaman zaman kullanılan çatılar",
+        "load_type": "Q",
+        "value": 1.96,
+        "unit": "kN/m²",
+        "source": "Hazır Kütüphane | TS 498 | 200.0 kgf/m²",
+        "description": "kgf/m²: 200.0 → kN/m²: 1.96"
+      },
+      {
+        "id": "Q02",
+        "name": "Konut, teras, oda ve koridorlar",
+        "load_type": "Q",
+        "value": 1.96,
+        "unit": "kN/m²",
+        "source": "Hazır Kütüphane | TS 498 | 200.0 kgf/m²",
+        "description": "kgf/m²: 200.0 → kN/m²: 1.96"
+      }
+    ],
+    "assignments": {
+      "D101": {
+        "Q": [
+          "Q02"
+        ]
+      },
+      "D102": {
+        "Q": [
+          "Q01"
+        ]
+      }
+    }
+  },
+  "wind_config": {
+    "v_b0": 28.0,
+    "terrain": "Kategori II",
+    "rho": 1.25,
+    "ct": 1.0,
+    "kI": 1.0
+  },
+  "snow_config": {
+    "slope": 15.0,
+    "snow_region": 2,
+    "altitude": 50,
+    "Ce": 1.0,
+    "Ct": 1.0
+  },
+  "earthquake_config": {
+    "R": 2.5,
+    "D": 2.5,
+    "I": 1.2,
+    "kappa": 0.5,
+    "Hn": 10.1,
+    "gamma_E": 0.9,
+    "n": 0.3,
+    "e": "±0.05",
+    "ee": "Dbi= (η_bi/1.2)², Ek dış merkezlik= %5 + Dbi",
+    "zemin_sinifi": "ZC",
+    "limit_raw": 0.008,
+    "load_cases": [
+      "EQX",
+      "EQY",
+      "QUAKEX",
+      "QUAKEY"
+    ],
+    "drift_combo_names": [
+      "EXP",
+      "EXM",
+      "EYP",
+      "EYM"
+    ],
+    "has_irregularity": true,
+    "dd2": {
+      "Ss": 0.329,
+      "S1": 0.128,
+      "PGA": 0.143,
+      "PGV": 10.653,
+      "Fs": 1.3,
+      "F1": 1.5,
+      "Sds": 0.428,
+      "Sd1": 0.192
+    },
+    "dd3": {
+      "Ss": 0.13,
+      "S1": 0.054,
+      "PGA": 0.058,
+      "PGV": 4.54,
+      "Fs": 1.3,
+      "F1": 1.5,
+      "Sds": 0.169,
+      "Sd1": 0.081
+    }
+  }
+}

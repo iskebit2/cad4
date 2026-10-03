@@ -1,11 +1,13 @@
 # core/analysis/assembler.py
 """Global stiffness ve mass matrix montajı."""
 import numpy as np
-import logging
+from logging_config import CadLogger
 
 from core.analysis.element import local_stiffness, transformation_matrix
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class ModelAssembler:

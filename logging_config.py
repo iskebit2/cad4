@@ -1,28 +1,4 @@
-"""
-merkezi logging yapılandırması.
-
-Kullanım:
-
-    from logging_config import setup_logging
-
-    setup_logging()
-
-Geliştirme sırasında:
-
-    setup_logging("DEBUG")
-
-Modül bazında logger:
-
-    import logging
-    logger = logging.getLogger(__name__)
-
-Örneğin:
-    cad4.wind.engine
-    cad4.wind.analyzer
-    cad4.snow
-    cad4.earthquake
-    cad4.ui
-"""
+# logging_config.py
 
 from __future__ import annotations
 
@@ -32,39 +8,26 @@ from pathlib import Path
 from typing import Mapping
 
 
+
 # =============================================================================
 # AYARLAR
 # =============================================================================
 
 APP_NAME = "cad4"
 
-# Log dosyasının yeri.
-# İstersen bunu daha sonra Android'e özel hale getirebiliriz.
 LOG_FILE = Path("cad4.log")
 
+OFF = 100
 
-# Uygulama logger'larının varsayılan seviyeleri.
-#
-# Daha ayrıntılı bilgi istediğin modülü DEBUG yapabilirsin.
-MODULE_LEVELS: dict[str, str] = {
+
+DEFAULT_LEVELS: dict[str, str] = {
     "cad4": "INFO",
 
-    # Örnek:
-    # "cad4.wind": "DEBUG",
-    # "cad4.snow": "DEBUG",
-    # "cad4.earthquake": "WARNING",
-    # "cad4.ui": "INFO",
-
-    # Üçüncü parti kütüphaneler
     "kivy": "WARNING",
     "PIL": "WARNING",
     "matplotlib": "WARNING",
 }
 
-
-# =============================================================================
-# FORMATLAR
-# =============================================================================
 
 CONSOLE_FORMAT = (
     "[%(levelname)s] "
@@ -83,64 +46,131 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 # =============================================================================
-# YARDIMCI
+# LOGGER
 # =============================================================================
 
-def _build_logger_levels(
-    module_levels: Mapping[str, str],
-) -> dict[str, dict[str, str]]:
+class CadLogger:
     """
-    dictConfig için logger tanımlarını oluşturur.
+    CAD4 merkezi logging yöneticisi.
+
+    Özellikler
+    ----------
+    - Modül bazında log seviyesi
+    - Runtime'da seviye değiştirme
+    - Modülü tamamen kapatma
+    - Console / file logging
+    - debug_changed()
+    - Logger cache
+    - Mevcut Python logging API'si ile uyumlu kullanım
+
+
+    Örnek
+    -----
+        logger = CadLogger.get(__name__)
+
+        logger.debug("debug mesajı")
+        logger.info("model yüklendi")
+        logger.warning("...")
+        logger.error("...")
+
+        logger.debug_changed(
+            "camera.position",
+            camera.position,
+        )
+
+
+    main.py
+    -------
+        CadLogger.setup("DEBUG")
+
+        CadLogger.set_level(
+            "cad4.renderer",
+            "DEBUG",
+        )
+
+        CadLogger.set_level(
+            "cad4.geometry",
+            "WARNING",
+        )
+
+        CadLogger.disable(
+            "cad4.wind",
+        )
     """
 
-    loggers = {}
+    _configured = False
 
-    for name, level in module_levels.items():
-        loggers[name] = {
-            "level": level,
-            "handlers": ["console", "file"],
-            "propagate": False,
-        }
+    _loggers: dict[str, "CadLogger"] = {}
 
-    return loggers
+    _levels: dict[str, str] = {}
 
+    _last_values: dict[str, str] = {}
 
-# =============================================================================
-# CONFIG
-# =============================================================================
+    _MISSING = object()
 
-def _build_config(
-    default_level: str = "INFO",
-    module_levels: Mapping[str, str] | None = None,
-) -> dict:
-    """
-    logging.config.dictConfig() için configuration üretir.
-    """
+    # -------------------------------------------------------------------------
+    # INIT
+    # -------------------------------------------------------------------------
 
-    levels = dict(module_levels or MODULE_LEVELS)
+    def __init__(self, name: str):
+        self.name = name
+        self.logger = logging.getLogger(name)
 
-    # cad4 için genel seviye
-    levels.setdefault(APP_NAME, default_level)
+    # -------------------------------------------------------------------------
+    # SETUP
+    # -------------------------------------------------------------------------
 
-    return {
-        "version": 1,
+    @classmethod
+    def setup(
+        cls,
+        level: str = "INFO",
+        *,
+        module_levels: Mapping[str, str] | None = None,
+        log_file: str | Path | None = None,
+    ) -> None:
+        """
+        Merkezi logging sistemini kurar.
 
-        # Daha önce kurulmuş handler'ları temizle.
-        "disable_existing_loggers": False,
+        Örnek:
 
-        "formatters": {
-            "console": {
-                "format": CONSOLE_FORMAT,
-                "datefmt": DATE_FORMAT,
-            },
+            CadLogger.setup("DEBUG")
 
-            "file": {
-                "format": FILE_FORMAT,
-                "datefmt": DATE_FORMAT,
-            },
-        },
+        veya:
 
-        "handlers": {
+            CadLogger.setup(
+                "INFO",
+                module_levels={
+                    "cad4.camera": "DEBUG",
+                    "cad4.renderer": "DEBUG",
+                    "cad4.geometry": "WARNING",
+                },
+            )
+        """
+
+        global LOG_FILE
+
+        if log_file is not None:
+            LOG_FILE = Path(log_file)
+
+        LOG_FILE.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        levels = dict(DEFAULT_LEVELS)
+
+        levels[APP_NAME] = level.upper()
+
+        if module_levels:
+            levels.update(
+                {
+                    name: cls._normalize_level(value)
+                    for name, value
+                    in module_levels.items()
+                }
+            )
+
+        handlers = {
             "console": {
                 "class": "logging.StreamHandler",
                 "level": "DEBUG",
@@ -155,87 +185,368 @@ def _build_config(
                 "filename": str(LOG_FILE),
                 "encoding": "utf-8",
             },
-        },
+        }
 
-        "loggers": _build_logger_levels(levels),
+        logger_config = {}
 
-        # Root logger.
-        #
-        # Tanımlanmamış üçüncü parti logger'lar buraya düşebilir.
-        "root": {
-            "level": "WARNING",
-            "handlers": ["console"],
-        },
-    }
+        for name, logger_level in levels.items():
+            logger_config[name] = {
+                "level": logger_level,
+                "handlers": [
+                    "console",
+                    "file",
+                ],
+                "propagate": False,
+            }
 
+        config = {
+            "version": 1,
 
-# =============================================================================
-# PUBLIC API
-# =============================================================================
+            "disable_existing_loggers": False,
 
-def setup_logging(
-    level: str = "INFO",
-    *,
-    module_levels: Mapping[str, str] | None = None,
-    log_file: str | Path | None = None,
-) -> None:
-    """
-    Uygulamanın merkezi logging sistemini kurar.
+            "formatters": {
+                "console": {
+                    "format": CONSOLE_FORMAT,
+                    "datefmt": DATE_FORMAT,
+                },
 
-    Parameters
-    ----------
-    level:
-        cad4 için varsayılan seviye.
-        Örnek: "DEBUG", "INFO", "WARNING", "ERROR"
+                "file": {
+                    "format": FILE_FORMAT,
+                    "datefmt": DATE_FORMAT,
+                },
+            },
 
-    module_levels:
-        Modül bazında seviye değiştirmek için sözlük.
+            "handlers": handlers,
 
-    log_file:
-        Log dosyasının yolunu değiştirmek için kullanılır.
-    """
+            "loggers": logger_config,
 
-    global LOG_FILE
+            "root": {
+                "level": "WARNING",
+                "handlers": ["console"],
+            },
+        }
 
-    if log_file is not None:
-        LOG_FILE = Path(log_file)
+        logging.config.dictConfig(config)
 
-    # Log klasörü varsa oluştur.
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-    config = _build_config(
-        default_level=level,
-        module_levels=module_levels,
-    )
-
-    logging.config.dictConfig(config)
+        cls._levels = levels
+        cls._configured = True
 
 
-# =============================================================================
-# MODÜL SEVİYESİNİ SONRADAN DEĞİŞTİRME
-# =============================================================================
+    
+    # -------------------------------------------------------------------------
+    # GET LOGGER
+    # -------------------------------------------------------------------------
 
-def set_level(logger_name: str, level: str) -> None:
-    """
-    Çalışan uygulamada belirli bir logger'ın seviyesini değiştirir.
+    @classmethod
+    def get(cls, name: str | None = None) -> "CadLogger":
+        """
+        Modül logger'ı döndürür.
 
-    Örnek:
+        Kullanım:
 
-        set_level("cad4.wind", "DEBUG")
-        set_level("cad4.wind", "INFO")
-    """
+            logger = CadLogger.get(__name__)
+        """
 
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(level.upper())
+        name = name or APP_NAME
 
+        if name not in cls._loggers:
+            cls._loggers[name] = cls(name)
 
-def get_logger(name: str | None = None) -> logging.Logger:
-    """
-    Uygulama logger'ı döndürür.
+        return cls._loggers[name]
 
-    Örnek:
+    # -------------------------------------------------------------------------
+    # LEVEL
+    # -------------------------------------------------------------------------
 
-        logger = get_logger(__name__)
-    """
+    @classmethod
+    def set_level(
+        cls,
+        logger_name: str,
+        level: str,
+    ) -> None:
+        """
+        Runtime'da logger seviyesini değiştirir.
 
-    return logging.getLogger(name or APP_NAME)
+        Örnek:
+
+            CadLogger.set_level(
+                "cad4.camera",
+                "DEBUG",
+            )
+        """
+
+        level = cls._normalize_level(level)
+
+        logger = logging.getLogger(logger_name)
+
+        logger.setLevel(level)
+
+        cls._levels[logger_name] = level
+
+    # -------------------------------------------------------------------------
+    # ENABLE / DISABLE
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def enable(
+        cls,
+        logger_name: str,
+        level: str = "DEBUG",
+    ) -> None:
+        """
+        Logger'ı etkinleştirir.
+        """
+
+        cls.set_level(
+            logger_name,
+            level,
+        )
+
+    @classmethod
+    def disable(
+        cls,
+        logger_name: str,
+    ) -> None:
+        """
+        Logger'ı tamamen kapatır.
+        """
+
+        logger = logging.getLogger(logger_name)
+
+        logger.setLevel(OFF)
+
+        cls._levels[logger_name] = "OFF"
+
+    # -------------------------------------------------------------------------
+    # RESET
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def reset_level(
+        cls,
+        logger_name: str,
+    ) -> None:
+        """
+        Logger'ı cad4 genel seviyesine döndürür.
+        """
+
+        root_level = cls._levels.get(
+            APP_NAME,
+            "INFO",
+        )
+
+        cls.set_level(
+            logger_name,
+            root_level,
+        )
+
+    # -------------------------------------------------------------------------
+    # LEVEL QUERY
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def get_level(
+        cls,
+        logger_name: str,
+    ) -> str:
+        """
+        Logger'ın mevcut seviyesini döndürür.
+        """
+
+        logger = logging.getLogger(logger_name)
+
+        return logging.getLevelName(
+            logger.level
+        )
+
+    # -------------------------------------------------------------------------
+    # LOGGING
+    # -------------------------------------------------------------------------
+
+    def debug(
+        self,
+        msg,
+        *args,
+        **kwargs,
+    ):
+        self.logger.debug(
+            msg,
+            *args,
+            **kwargs,
+        )
+
+    def info(
+        self,
+        msg,
+        *args,
+        **kwargs,
+    ):
+        self.logger.info(
+            msg,
+            *args,
+            **kwargs,
+        )
+
+    def warning(
+        self,
+        msg,
+        *args,
+        **kwargs,
+    ):
+        self.logger.warning(
+            msg,
+            *args,
+            **kwargs,
+        )
+
+    def error(
+        self,
+        msg,
+        *args,
+        **kwargs,
+    ):
+        self.logger.error(
+            msg,
+            *args,
+            **kwargs,
+        )
+
+    def critical(
+        self,
+        msg,
+        *args,
+        **kwargs,
+    ):
+        self.logger.critical(
+            msg,
+            *args,
+            **kwargs,
+        )
+
+    def exception(
+        self,
+        msg,
+        *args,
+        **kwargs,
+    ):
+        self.logger.exception(
+            msg,
+            *args,
+            **kwargs,
+        )
+
+    # -------------------------------------------------------------------------
+    # DEBUG CHANGED
+    # -------------------------------------------------------------------------
+
+    def debug_changed(
+        self,
+        key: str,
+        value,
+    ) -> None:
+        """
+        Değer değiştiğinde DEBUG mesajı üretir.
+
+        Aynı değer tekrar tekrar yazılmaz.
+
+        Örnek:
+
+            logger.debug_changed(
+                "camera.position",
+                camera.position,
+            )
+        """
+
+        state_key = (
+            f"{self.name}:{key}"
+        )
+
+        current = repr(value)
+
+        previous = self._last_values.get(
+            state_key,
+            self._MISSING,
+        )
+
+        if (
+            previous is self._MISSING
+            or previous != current
+        ):
+            self.logger.debug(
+                "%s = %s",
+                key,
+                value,
+            )
+
+            self._last_values[state_key] = current
+
+    # -------------------------------------------------------------------------
+    # DEBUG ONCE
+    # -------------------------------------------------------------------------
+
+    def debug_once(
+        self,
+        key: str,
+        msg,
+        *args,
+    ) -> None:
+        """
+        Verilen mesajı yalnızca bir kez yazar.
+
+        Örnek:
+
+            logger.debug_once(
+                "shader-init",
+                "Shader oluşturuldu",
+            )
+        """
+
+        state_key = (
+            f"{self.name}:once:{key}"
+        )
+
+        if state_key in self._last_values:
+            return
+
+        self.logger.debug(
+            msg,
+            *args,
+        )
+
+        self._last_values[state_key] = "DONE"
+
+    # -------------------------------------------------------------------------
+    # RESET DEBUG STATE
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def clear_debug_state(cls) -> None:
+        """
+        debug_changed / debug_once hafızasını temizler.
+        """
+
+        cls._last_values.clear()
+
+    # -------------------------------------------------------------------------
+    # HELPERS
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _normalize_level(level: str) -> str:
+        level = level.upper()
+
+        if level == "OFF":
+            return "OFF"
+
+        if level not in {
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR",
+            "CRITICAL",
+        }:
+            raise ValueError(
+                f"Geçersiz log seviyesi: {level}"
+            )
+
+        return level

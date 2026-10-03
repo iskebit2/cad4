@@ -6,8 +6,10 @@ import math
 from enum import Enum
 # from domain.element import SectionType
 from domain.definition import SectionType
-import logging
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 def normalize(v: np.ndarray) -> np.ndarray:

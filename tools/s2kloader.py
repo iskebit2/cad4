@@ -16,7 +16,7 @@ import re
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Tuple
-import logging
+from logging_config import CadLogger
 from pathlib import Path
 import sys
 import ctypes
@@ -26,7 +26,9 @@ from domain.definition import Material, MatType
 from domain.scene import Scene
 from geometry.scenebuilder import SceneBuilder
 
-logger = logging.getLogger(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 def show_file_dialog() -> Optional[str]:
     """Show file dialog to select S2K file (Windows only)"""

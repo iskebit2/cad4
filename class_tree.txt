@@ -1,1154 +1,268 @@
-```text
-├── .git/
-│   ├── hooks/
-│   ├── info/
-│   ├── logs/
-│   │   └── refs/
-│   │       ├── heads/
-│   │       └── remotes/
-│   │           └── origin/
-│   ├── objects/
-│   │   ├── 00/
-│   │   ├── 01/
-│   │   ├── 04/
-│   │   ├── 06/
-│   │   ├── 08/
-│   │   ├── 0b/
-│   │   ├── 0d/
-│   │   ├── 0f/
-│   │   ├── 13/
-│   │   ├── 14/
-│   │   ├── 16/
-│   │   ├── 17/
-│   │   ├── 18/
-│   │   ├── 1b/
-│   │   ├── 1f/
-│   │   ├── 22/
-│   │   ├── 24/
-│   │   ├── 25/
-│   │   ├── 26/
-│   │   ├── 2a/
-│   │   ├── 2e/
-│   │   ├── 31/
-│   │   ├── 32/
-│   │   ├── 34/
-│   │   ├── 35/
-│   │   ├── 36/
-│   │   ├── 39/
-│   │   ├── 3a/
-│   │   ├── 3b/
-│   │   ├── 3d/
-│   │   ├── 3e/
-│   │   ├── 41/
-│   │   ├── 42/
-│   │   ├── 44/
-│   │   ├── 45/
-│   │   ├── 49/
-│   │   ├── 4a/
-│   │   ├── 4b/
-│   │   ├── 4e/
-│   │   ├── 50/
-│   │   ├── 51/
-│   │   ├── 57/
-│   │   ├── 58/
-│   │   ├── 5a/
-│   │   ├── 5b/
-│   │   ├── 5d/
-│   │   ├── 5e/
-│   │   ├── 60/
-│   │   ├── 63/
-│   │   ├── 66/
-│   │   ├── 68/
-│   │   ├── 69/
-│   │   ├── 6a/
-│   │   ├── 6d/
-│   │   ├── 71/
-│   │   ├── 73/
-│   │   ├── 74/
-│   │   ├── 75/
-│   │   ├── 79/
-│   │   ├── 7e/
-│   │   ├── 80/
-│   │   ├── 86/
-│   │   ├── 87/
-│   │   ├── 88/
-│   │   ├── 89/
-│   │   ├── 8a/
-│   │   ├── 8b/
-│   │   ├── 8c/
-│   │   ├── 8d/
-│   │   ├── 8f/
-│   │   ├── 90/
-│   │   ├── 92/
-│   │   ├── 94/
-│   │   ├── 96/
-│   │   ├── 97/
-│   │   ├── 9a/
-│   │   ├── 9d/
-│   │   ├── 9e/
-│   │   ├── a1/
-│   │   ├── a2/
-│   │   ├── a3/
-│   │   ├── a5/
-│   │   ├── a6/
-│   │   ├── a7/
-│   │   ├── aa/
-│   │   ├── ab/
-│   │   ├── ac/
-│   │   ├── b2/
-│   │   ├── b4/
-│   │   ├── b9/
-│   │   ├── bc/
-│   │   ├── bf/
-│   │   ├── c3/
-│   │   ├── c4/
-│   │   ├── c5/
-│   │   ├── c7/
-│   │   ├── c8/
-│   │   ├── ce/
-│   │   ├── cf/
-│   │   ├── d1/
-│   │   ├── d4/
-│   │   ├── d7/
-│   │   ├── d8/
-│   │   ├── db/
-│   │   ├── de/
-│   │   ├── df/
-│   │   ├── e0/
-│   │   ├── e2/
-│   │   ├── e3/
-│   │   ├── e5/
-│   │   ├── e7/
-│   │   ├── e8/
-│   │   ├── ea/
-│   │   ├── eb/
-│   │   ├── ee/
-│   │   ├── f0/
-│   │   ├── f1/
-│   │   ├── f6/
-│   │   ├── f7/
-│   │   ├── f8/
-│   │   ├── f9/
-│   │   ├── fc/
-│   │   ├── fe/
-│   │   ├── info/
-│   │   └── pack/
-│   └── refs/
-│       ├── heads/
-│       ├── remotes/
-│       │   └── origin/
-│       └── tags/
-├── .pytest_cache/
-│   └── v/
-│       └── cache/
-├── .ruff_cache/
-│   ├── 0.16.10/
 ├── agac_advanced.py
+├── assets/
+│   └── icons/
 ├── core/
 │   ├── analysis/
 │   │   ├── __init__.py
 │   │   ├── assembler.py
-│   │   │   └── **ModelAssembler**: Scene'den global K ve M matrislerini üretir.
-
-Kullanım:
-    asm = ModelAssembler(scene, node_map)
-    asm.build_stiffness()
-    asm.build_mass(mass_rules)
-│   │   │       ├── __init__: No docstring
-│   │   │       ├── build_stiffness: Tüm frame'lerden K_global üret.
-│   │   │       ├── _assemble_frame: Tek frame için K_global'a katkı ekle.
-│   │   │       └── build_mass: Mass source kuralına göre M_global üret.
-
-Parameters
-----------
-mass_source : dict
-    {
-        'multipliers': {'D': 1.0, 'L': 0.3},
-        'self_weight_mults': {'D': 1.0, 'L': 0.0},
-        'frame_loads': {frame_id: [(pattern, value), ...]},
-        'g': 9810.0,
-    }
+│   │   │   └── ModelAssembler
 │   │   ├── element.py
 │   │   ├── mass_source.py
 │   │   ├── solver.py
-│   │   │   └── **StructuralSolver**: Yapısal analiz çözücü.
-
-Kullanım:
-    solver = StructuralSolver(K_global, M_global, fixed_dofs)
-    U = solver.static_solve(F)
-    freqs, periods, modes = solver.modal_solve(n_modes=10)
-│   │   │       ├── __init__: No docstring
-│   │   │       ├── _build_reduced: No docstring
-│   │   │       ├── static_solve: K·U = F çözümü.
-
-Parameters
-----------
-F : np.ndarray (num_dofs,)
-stabilization : float veya None
-    Sıfır diyagonallere eklenecek değer. None ise otomatik.
-
-Returns
--------
-U : np.ndarray (num_dofs,)
-│   │   │       ├── modal_solve: Modal analiz — K·Φ = ω²·M·Φ özdeğer problemi.
-
-Parameters
-----------
-n_modes : int
-only_translations : bool
-    True ise sadece UX, UY, UZ DOF'ları kullanılır.
-stabilization : float veya None
-
-Returns
--------
-freqs : np.ndarray (n_modes,)
-periods : np.ndarray (n_modes,)
-eigenvectors : np.ndarray (n_modal_dofs, n_modes)
-modal_dofs : np.ndarray — hangi DOF'lar kullanıldı
-│   │   │       └── expand_to_full: Reduced vektörü full DOF'a genişlet.
+│   │   │   └── StructuralSolver
 │   │   └── spectrum.py
-│   │       └── **TBDYSpectrum**: TBDY 2018 yatay elastik tasarım spektrumu.
-
-Kullanım:
-    spec = TBDYSpectrum(Ss=0.905, S1=0.254, Fs=1.138, F1=2.092,
-                        R=4.0, D=2.5, I=1.2, TL=6.0)
-    Sa = spec.S_ra(T=1.0)  # g cinsinden
-│   │           ├── __init__: No docstring
-│   │           ├── S_ae: Yatay elastik spektral ivme (g).
-│   │           ├── R_a: Deprem yükü azaltma katsayısı.
-│   │           ├── S_ra: Azaltılmış tasarım spektral ivmesi (g).
-│   │           └── info: No docstring
+│   │       └── TBDYSpectrum
 │   ├── camera.py
-│   │   └── **Camera**: Dinamik Kamera Sınıfı - Model boyutuna göre otomatik ayarlanır
-- Unitless çalışır (mm, cm, m fark etmez)
-- Model bounds'a göre zoom limitleri ve hassasiyet ayarlanır
-│   │       ├── __post_init__: İlk pozisyonu hesapla
-│   │       ├── update_bounds: Model bounds'larını güncelle - her model yüklendiğinde çağrılır
-│   │       ├── orbit_sensitivity: Model boyutuna göre orbit hassasiyeti
-│   │       ├── pan_sensitivity: Model boyutuna göre pan hassasiyeti
-│   │       ├── zoom_sensitivity: Model boyutuna göre zoom hassasiyeti
-│   │       ├── min_distance: Minimum kamera mesafesi
-│   │       ├── max_distance: Maksimum kamera mesafesi
-│   │       ├── near: Near plane - model boyutuna göre
-│   │       ├── far: Far plane - model boyutuna göre
-│   │       ├── position: Kamera pozisyonu
-│   │       ├── _update_position: Kamera pozisyonunu güncelle
-│   │       ├── get_view_matrix: View matrisini hesapla
-│   │       ├── get_projection_matrix: Projeksiyon matrisini hesapla
-│   │       ├── get_mvp_matrix: Model-View-Projection matrisi
-│   │       ├── orbit: Target etrafında döndür
-│   │       ├── pan: Target noktasını kaydır (kamera kaydırma)
-│   │       ├── zoom: Zoom yap (mesafe değiştir)
-│   │       ├── focus_on_model: Model'e odaklan
-│   │       ├── reset: Kamerayı varsayılan konuma getir
-│   │       ├── toggle_projection: Perspektif/Ortho arasında geçiş yap
-│   │       ├── set_aspect: En-boy oranını güncelle
-│   │       └── print_info: Kamera bilgilerini yazdır
+│   │   └── Camera
 │   ├── commands/
 │   │   ├── __init__.py
 │   │   ├── base.py
-│   │   │   ├── **Command**: Tüm komutların arayüzü.
-│   │   │       ├── execute: İşlemi uygula.
-│   │   │       ├── undo: İşlemi geri al.
-│   │   │       ├── redo: Yeniden uygula (varsayılan: execute).
-│   │   │       └── name: Debug/log için okunabilir isim.
-│   │   │   └── **CommandManager**: Komut geçmişi ve undo/redo yönetimi.
-
-Kullanım:
-    mgr = CommandManager()
-    mgr.execute(DeleteElementsCommand(scene, elements))
-    mgr.undo()
-    mgr.redo()
-│   │   │       ├── __init__: No docstring
-│   │   │       ├── execute: Komutu çalıştır ve geçmişe ekle.
-│   │   │       ├── undo: Son komutu geri al.
-│   │   │       ├── redo: Son geri alınanı yeniden uygula.
-│   │   │       ├── can_undo: No docstring
-│   │   │       ├── can_redo: No docstring
-│   │   │       ├── clear: Tüm geçmişi temizle.
-│   │   │       ├── add_listener: Komut sonrası tetiklenecek callback ekle.
-│   │   │       └── _notify: No docstring
+│   │   │   ├── Command
+│   │   │   └── CommandManager
 │   │   └── delete.py
-│   │       └── **DeleteElementsCommand**: Seçili elemanları sil. Node bağlı ise reddedilir.
-Undo → silinen elemanları geri koyar.
-│   │           ├── __init__: Parameters
-----------
-scene : Scene
-elements : List[Element] — silinecek objeler (kopya, orijinal değil)
-│   │           ├── execute: Elemanları sil.
-│   │           ├── undo: Silinenleri geri koy.
-│   │           └── name: No docstring
+│   │       └── DeleteElementsCommand
 │   ├── draw_manager.py
-│   │   └── **DrawManager**: Sadece polygon çizimi için state machine.
-
-Akış:
-  1. start() → mod aktif
-  2. Node üzerine tıkla → points'e ekle
-  3. İlk noktaya tekrar tıkla veya C/Enter → close() → Polygon oluştur
-  4. ESC → cancel()
-│   │       ├── __init__: No docstring
-│   │       ├── start: No docstring
-│   │       ├── cancel: No docstring
-│   │       ├── close: C tuşu veya ilk noktaya tıkla — poligonu kapat ve oluştur.
-│   │       ├── on_mouse_move: No docstring
-│   │       ├── on_mouse_click: Return True if consumed.
-│   │       ├── _find_node_at: Ekran koordinatına en yakın node'u bul (piksel toleransı).
-│   │       ├── _screen_to_world_xy: Ekran koordinatını Z=0 düzlemindeki dünya koordinatına çevir.
-│   │       ├── _init_preview_buffers: No docstring
-│   │       ├── render_preview: Polygon çizim önizlemesi.
-
-Katmanlar (alttan üste):
-1. Mor yarı saydam dolgu (3+ nokta)
-2. Sarı çizgi dizisi (2+ nokta, noktalar arası)
-3. Beyaz aktif çizgi (son nokta → fare)
-4. Yeşil kapanış ipucu (3+ nokta, son → ilk)
-
-Depth test kapalı çizilir (overlay), çıkışta geri açılır.
-│   │       └── cleanup: No docstring
-│   ├── engine.py
+│   │   └── DrawManager
+│   ├── gl_engine.py
+│   │   ├── PureKivyEngine
+│   │   └── KivyCADWidget
 │   ├── marquee_selector.py
-│   │   └── **MarqueeSelector**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── start_selection: No docstring
-│   │       ├── update_selection: No docstring
-│   │       ├── end_selection: No docstring
-│   │       ├── cancel_selection: No docstring
-│   │       ├── get_box_coords: No docstring
-│   │       ├── _reset: No docstring
-│   │       ├── _is_drag_valid: No docstring
-│   │       ├── _get_rect: Mouse ve projection aynı Kivy widget koordinat sistemindedir.
-
-x: soldan sağa
-y: yukarıdan aşağıya
-
-Bu nedenle GLFW framebuffer scaling kullanılmaz.
-│   │       ├── _get_elements: No docstring
-│   │       ├── _in_rect: No docstring
-│   │       ├── _node_in: No docstring
-│   │       ├── _line_in: No docstring
-│   │       ├── _area_in: No docstring
-│   │       ├── _project: No docstring
-│   │       └── _line_rect: Line segment ile axis-aligned rectangle kesişim testi.
-Liang-Barsky algoritması — hızlı ve doğru.
-│   ├── qt_engine.py
-│   │   ├── **InteractionMode**: Etkileşim modları - mouse event'lerinin davranışını belirler
-│   │   └── **RenderEngineWidget**: Ana OpenGL Render Widget - Sadece 3D viewport ve interaction
-
-Sorumlulukları:
-- OpenGL context yönetimi
-- Shader yükleme ve yönetimi
-- Scene render etme
-- Mouse/keyboard interaction (mod destekli)
-- Picking, hover, selection
-- Kamera kontrolü
-│   │       ├── __init__: No docstring
-│   │       ├── initializeGL: OpenGL başlatma
-│   │       ├── _load_shaders: Shader'ları yükle
-│   │       ├── _initialize_components: Renderer ve yardımcı bileşenleri oluştur
-│   │       ├── paintGL: OpenGL çizim
-│   │       ├── resizeGL: Pencere boyut değişikliği
-│   │       ├── set_scene: Scene'i ayarla - S2KLoader veya diğer kaynaklardan gelen scene için
-
-Args:
-    scene: Yüklenecek Scene nesnesi
-    
-Returns:
-    bool: Başarılı ise True
-│   │       ├── get_scene: Mevcut scene'i döndür
-│   │       ├── get_renderer: Renderer'ı döndür
-│   │       ├── get_element_from_id: ID'den element bul
-│   │       ├── get_selected_elements: Seçili elemanları döndür
-│   │       ├── set_interaction_mode: Etkileşim modunu değiştir
-│   │       ├── get_interaction_mode: Mevcut etkileşim modunu döndür
-│   │       ├── toggle_visibility: Element tipinin görünürlüğünü toggle et
-│   │       ├── set_visibility: Element tipinin görünürlüğünü ayarla
-│   │       ├── toggle_render_mode: Render modunu değiştir (wireframe/shaded)
-│   │       ├── reset_camera: Kamerayı sıfırla
-│   │       ├── focus_model: Modeli merkeze al
-│   │       ├── toggle_projection: Projeksiyon modunu değiştir
-│   │       ├── _clear_hover: Hover durumunu temizle
-│   │       ├── _update_hover: Hover durumunu güncelle
-│   │       ├── _get_element_type: Element'ten tipini bul
-│   │       ├── _get_priority: Element tipine göre priority
-│   │       ├── _start_hover_pick: Mouse move sırasında hover pick başlat
-│   │       ├── _check_pick_result: Pick sonucunu kontrol et
-│   │       ├── _handle_select_pick: Hover ID'sini kullanarak seçim yap
-│   │       ├── _update_world_pos: Dünya koordinatını güncelle (ray casting)
-│   │       ├── mousePressEvent: Mouse basma
-│   │       ├── mouseMoveEvent: Mouse hareket
-│   │       ├── mouseReleaseEvent: Mouse bırakma
-│   │       ├── wheelEvent: Mouse tekerlek
-│   │       ├── keyPressEvent: Klavye tuşları
-│   │       ├── clear_selection: Seçimi temizle
-│   │       ├── select_element: Eleman seç
-│   │       ├── cleanup: Kaynakları temizle
-│   │       └── closeEvent: Pencere kapatıldığında
-│   ├── qt_marquee_selector.py
-│   │   └── **MarqueeSelector**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── start_selection: No docstring
-│   │       ├── update_selection: No docstring
-│   │       ├── end_selection: No docstring
-│   │       ├── cancel_selection: No docstring
-│   │       ├── get_box_coords: No docstring
-│   │       ├── _reset: No docstring
-│   │       ├── _is_drag_valid: No docstring
-│   │       ├── _get_fb_scale: Qt widget'ından framebuffer boyutlarını al - GLFW yerine Qt kullan
-│   │       ├── _get_rect: No docstring
-│   │       ├── _get_elements: No docstring
-│   │       ├── _in_rect: No docstring
-│   │       ├── _node_in: No docstring
-│   │       ├── _line_in: No docstring
-│   │       ├── _area_in: No docstring
-│   │       ├── _project: No docstring
-│   │       └── _line_rect: No docstring
+│   │   └── MarqueeSelector
 │   ├── selection_manager.py
-│   │   └── **SelectionManager**: Seçim durumunu yönet - TEK KAYNAK
-│   │       ├── __init__: No docstring
-│   │       ├── _update: Renkleri güncelle
-│   │       ├── _update_geometry_renderers: Geometriyi güncelle (eleman ekleme/silme/değiştirme için)
-│   │       ├── _clear_all: Tüm seçimleri temizle
-│   │       ├── select: Tek eleman seç
-│   │       ├── select_multiple: Çoklu eleman seç
-│   │       ├── clear: Tüm seçimleri temizle
-│   │       ├── get_selected: Seçili elemanları döndür
-│   │       ├── count: No docstring
-│   │       ├── is_selected: No docstring
-│   │       ├── delete_selected: Seçili elemanları sil (Command pattern).
-Returns: (silinen_sayı, reddedilen_sayı)
-│   │       ├── undo: Son komutu geri al.
-│   │       └── redo: Son geri alınanı yeniden yap.
+│   │   └── SelectionManager
 │   └── selection_policy.py
-│       ├── **SelectionMode**: No docstring
-│       └── **SelectionPolicy**: Seçim politikasını belirler - TEK KAYNAK
-- Hangi modifier tuşun hangi moda karşılık geldiğini yönetir
-- İleride değiştirmek çok kolay
-│           ├── __init__: No docstring
-│           ├── get_mode: Mevcut modifier tuşlara göre seçim modunu belirle
-│           ├── should_clear_on_empty_click: Boşluğa tıklandığında seçim temizlensin mi?
-│           └── get_marquee_mode: Marquee seçimi için mod (Shift = Toggle)
+│       ├── SelectionMode
+│       └── SelectionPolicy
 ├── deprem.py
 ├── domain/
 │   ├── definition.py
-│   │   ├── **MatType**: No docstring
-│   │   ├── **SectionType**: FEA çubuk kesit tipleri
-│   │       ├── __str__: No docstring
-│   │       └── __repr__: No docstring
-│   │   ├── **ElementType**: No docstring
-│   │   ├── **ObjType**: No docstring
-│   │   ├── **LinkPropType**: No docstring
-│   │   ├── **LoadPatternType**: No docstring
-│   │   ├── **LoadCaseType**: No docstring
-│   │   ├── **ComboType**: No docstring
-│   │   ├── **Material**: No docstring
-│   │       ├── E: No docstring
-│   │       ├── G: No docstring
-│   │       └── nu: No docstring
-│   │   ├── **Section**: No docstring
-│   │       └── __init__: No docstring
-│   │   ├── **LinkProp**: No docstring
-│   │   ├── **LinkPropLinear**: Linear link property - DOF bazlı stiffness ve damping
-│   │       └── __post_init__: No docstring
-│   │   ├── **LoadPattern**: No docstring
-│   │   ├── **LoadCase**: No docstring
-│   │   ├── **LoadCombination**: No docstring
-│   │   ├── **Restraint**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── from_dict: No docstring
-│   │       ├── is_free: No docstring
-│   │       ├── is_fully_fixed: No docstring
-│   │       ├── fixed_dofs: No docstring
-│   │       ├── free_dofs: No docstring
-│   │       ├── as_list: No docstring
-│   │       ├── as_dict: No docstring
-│   │       ├── as_int_mask: Solver için bit mask (performanslı)
-│   │       └── __repr__: No docstring
-│   │   └── **DefinitionManager**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── add_material: No docstring
-│   │       ├── add_section: No docstring
-│   │       ├── add_link_prop: No docstring
-│   │       └── get_section_by_name: No docstring
+│   │   ├── MatType
+│   │   ├── SectionType
+│   │   ├── ElementType
+│   │   ├── ObjType
+│   │   ├── LinkPropType
+│   │   ├── LoadPatternType
+│   │   ├── LoadCaseType
+│   │   ├── ComboType
+│   │   ├── Material
+│   │   ├── Section
+│   │   ├── LinkProp
+│   │   ├── LinkPropLinear
+│   │   ├── LoadPattern
+│   │   ├── LoadCase
+│   │   ├── LoadCombination
+│   │   ├── Restraint
+│   │   └── DefinitionManager
 │   ├── element.py
-│   │   ├── **Element**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── toggle_selection: No docstring
-│   │       ├── mark_dirty: No docstring
-│   │       └── __repr__: No docstring
-│   │   ├── **Node**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── from_dict: No docstring
-│   │       ├── coords: No docstring
-│   │       ├── set_coords: No docstring
-│   │       ├── distance_to: No docstring
-│   │       ├── is_restrained: No docstring
-│   │       ├── is_free: No docstring
-│   │       ├── has_any_restraint: No docstring
-│   │       ├── enumerate_dofs: Global DOF numaralandırması.
-Sadece serbest DOF'lara index verir.
-│   │       ├── get_dof_index: No docstring
-│   │       ├── add_connection: No docstring
-│   │       └── mark_dirty: No docstring
-│   │   ├── **Frame**: No docstring
-│   │       ├── __init__: No docstring
-│   │       └── get_length: No docstring
-│   │   ├── **Area**: No docstring
-│   │       └── __init__: No docstring
-│   │   ├── **Link**: No docstring
-│   │       └── __init__: No docstring
-│   │   └── **Polygon**: Sadece görsel amaçlı poligon. Extrude edilmez.
-Köşeleri Node veya Point (şimdilik sadece Node) olabilir.
-│   │       ├── __init__: No docstring
-│   │       ├── is_valid: No docstring
-│   │       ├── centroid: No docstring
-│   │       └── __repr__: No docstring
+│   │   ├── Element
+│   │   ├── Node
+│   │   ├── Frame
+│   │   ├── Area
+│   │   ├── Link
+│   │   └── Polygon
 │   └── scene.py
-│       └── **Scene**: No docstring
-│           ├── __init__: No docstring
-│           ├── add_node: No docstring
-│           ├── add_frame: No docstring
-│           ├── add_area: No docstring
-│           ├── add_link: No docstring
-│           ├── add_polygon: No docstring
-│           ├── can_remove: Eleman silinebilir mi?
-Returns: (bool, reason_str)
-│           ├── remove_element: Elementi scene'den çıkar. Başarılıysa True.
-Bağlı Node'ların 'connected' listesini de temizler.
-│           ├── restore_element: Silinen elementi geri koy.
-Node'ların 'connected' listesini yeniden inşa eder.
-│           ├── mark_dirty_from_node: Node değişince bağlı tüm elemanları dirty yap
-│           ├── get_element_by_id: element_id (UUID) ile element bul
-│           ├── all_elements: No docstring
-│           ├── get_selected: No docstring
-│           ├── clear_selections: No docstring
-│           ├── get_bounds: No docstring
-│           └── get_element_by_unique_id: unique_id'den elementi bul
+│       └── Scene
 ├── examples/
 ├── geometry/
 │   ├── area_builder.py
-│   │   └── **AreaBuilder**: No docstring
-│   │       ├── build: No docstring
-│   │       ├── _plane_axes: No docstring
-│   │       └── build_simple_lines: Area'nın çevresini oluşturan basit çizgi döngüsü.
-Her kenar için 2 nokta (çift yönlü olmasın diye döngü kapanışını da ekle)
-Returns: vertices array [x,y,z, nx,ny,nz]
+│   │   └── AreaBuilder
 │   ├── base_builder.py
-│   │   └── **BaseGeometryBuilder**: Tüm geometry builder'ların temel sınıfı
-│   │       ├── build: Element için geometry oluştur
-Returns: (vertices, colors, indices)
-- vertices: [x,y,z, nx,ny,nz] per vertex
-- colors: [r,g,b] per vertex
-- indices: uint32 triangle indices
-│   │       └── build_all: Tüm elementler için geometry oluştur
+│   │   └── BaseGeometryBuilder
 │   ├── frame_builder.py
-│   │   └── **FrameBuilder**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── _ensure_closed_cw: No docstring
-│   │       ├── _prepare_geometry: Profil ve elemanın 3B yerel koordinat sistemini hazırlar.
-
-Returns
--------
-profile : np.ndarray
-start_ring : np.ndarray
-end_ring : np.ndarray
-│   │       ├── build: No docstring
-│   │       ├── build_lines: Frame geometrisinin gerçek kenarlarını oluşturur.
-
-Burada triangle indexleri KULLANILMAZ.
-
-Çizilen kenarlar:
-    - Profilin başlangıç çevresi
-    - Profilin bitiş çevresi
-    - Profil köşeleri boyunca boyuna kenarlar
-│   │       └── build_simple_lines: Frame'in sadece merkez eksenini çizen basit çizgi.
-Returns: vertices array [x,y,z, nx,ny,nz] (2 nokta = 1 çizgi)
+│   │   └── FrameBuilder
 │   ├── link_builder.py
-│   │   └── **LinkBuilder**: No docstring
-│   │       ├── build: Basit link - sadece pos ve norm (6 float)
-│   │       └── build_simple_lines: Link'in sadece merkez çizgisi.
+│   │   └── LinkBuilder
 │   ├── node_builder.py
-│   │   └── **NodeBuilder**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── _create_circle: Daire oluştur - merkezde, çevre noktaları
-│   │       ├── _local_matrix: Euler açılarından rotasyon matrisi
-│   │       ├── determine_support_symbols: Restraint -> şekil belirleme
-│   │       ├── build: Node için 9'lu vertex yapısı: pos3 + norm3 + center3
-│   │       ├── _add_symbol: Sembol ekle - yerel koordinatlarda, sonra center+offset eklenir
-│   │       ├── _add_to_verts: 9'lu yapıya uygun veri ekler - p_local center'a göre OFFSET
-│   │       ├── _add_cube: Küçük küp - free node için
-│   │       └── build_simple_points: Node için sadece 1 nokta döner.
-format: pos3 + normal3 + center3 = 9 float (NodeBuilder ile uyumlu)
+│   │   └── NodeBuilder
 │   ├── polygon_builder.py
-│   │   └── **PolygonBuilder**: Düz poligon — extrude YOK.
-Kapalı döngü, düzlem normaline göre 2D triangulate edilir.
-│   │       ├── build: Shaded render için: kenar + dolgu (triangulated).
-Returns: (vertices, colors, indices)
-vertices: [x,y,z, nx,ny,nz] per vertex (6 float)
-│   │       ├── build_lines: Wireframe mod için — sadece kenar çizgileri.
-Her kenar için 2 index (kenarın iki ucu).
-│   │       ├── build_simple_lines: Simple mod için — kapalı döngü (GL_LINES ile).
-Her kenar için 2 nokta (pos3+normal3).
-│   │       └── build_simple_points: Simple mod için sadece köşe noktaları (6 float per nokta).
+│   │   └── PolygonBuilder
 │   ├── profile_generator.py
-│   │   └── **ProfileGenerator**: 2D profil geometrisi üretici sınıf
-- FrameGeometryBuilder tarafından kullanılır
-- Her kesit tipi için ayrı metod
-- Parametre validasyonu
-│   │       ├── __init__: Profil üretici fonksiyonlarının mapping'i
-│   │       ├── get_profile: Ana profil üretici fonksiyon - FrameGeometryBuilder bunu çağırır
-
-Args:
-    section_type: SectionType enum veya string ("RECT", "I", etc.)
-    params: Kesit parametreleri (b, h, t, etc.)
-    
-Returns:
-    (N,2) numpy array: profil noktaları, merkez orijinde
-│   │       ├── _validate_params: Parametreleri doğrula ve varsayılan değerleri ekle
-│   │       ├── _rect_profile: Dikdörtgen profil
-│   │       ├── _circle_profile: Daire profil
-│   │       ├── _i_profile: I-profil (IPE, HEA, HEB)
-│   │       ├── _l_profile: L-profil (köşebent)
-│   │       ├── _t_profile: T-profil
-│   │       ├── _pipe_profile: Boru profil
-│   │       ├── _tube_profile: Kutu profil
-│   │       ├── _c_profile: C-profil (U-profil, kanal)
-│   │       ├── _custom_profile: Özel profil - points parametresinden alır
-│   │       ├── _default_profile: Varsayılan profil (100x100 kare)
-│   │       └── get_profile_info: Profil hakkında bilgi döndür (alan, centroid, bounds)
+│   │   └── ProfileGenerator
 │   ├── scenebuilder.py
-│   │   └── **SceneBuilder**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── create_material: Malzeme oluştur ve definition manager'a ekle
-│   │       ├── create_section: Kesit oluştur ve definition manager'a ekle
-│   │       ├── create_link_prop: Link property oluştur
-│   │       ├── create_node: Node oluştur
-│   │       ├── create_frame: Frame oluştur - section ismi ile
-│   │       ├── create_area: Area oluştur
-│   │       └── create_link: Link oluştur - property ismi ile
+│   │   └── SceneBuilder
 │   └── spatialgrid.py
-│       ├── **BoundingBox**: Min-max bounding box
-│           ├── from_list: Vertex listesinden bounding box oluştur
-│           ├── get_center: Merkez noktayı döndür
-│           └── get_size: Boyutları döndür
-│       └── **SpatialGrid**: Uzaysal bölmeleme grid'i
-- Model yükleme anında 1 kez kurulur
-- Hover/picking için hızlı sorgulama
-- Hücre bazlı eleme ile performans
-│           ├── __init__: Args:
-    cell_size: Hücre boyutu (model ölçeğine göre)
-              Örn: 9km model → 500m hücre
-│           ├── _get_cell_coords: Bir noktanın hangi hücrede olduğunu döndür
-
-Performans: floor div operasyonu, hızlı
-│           ├── _get_cell_range: Bounding box'ın kapsadığı hücre aralığını döndür
-
-Returns:
-    ((x_min, x_max), (y_min, y_max), (z_min, z_max))
-│           ├── add_element: Grid'e eleman ekle
-
-Args:
-    element_idx: Eleman indeksi (individual_data'daki sıra)
-    vertex_list: OpenGL vertex listesi [x,y,z,r,g,b,a, x,y,z...]
-    element_type: Eleman tipi (opsiyonel, debug için)
-│           ├── add_elements_batch: Toplu eleman ekleme (performans için)
-
-Args:
-    elements: (index, vertex_list) çiftleri
-    types: Eleman tipleri listesi (opsiyonel)
-│           ├── query_point: Bir noktayı içeren hücredeki elemanları döndür
-
-Args:
-    x, y, z: Sorgu noktası
-    
-Returns:
-    O hücredeki eleman indeksleri
-│           ├── query_box: Bir kutu içindeki tüm elemanları döndür
-
-Args:
-    min_xyz: (min_x, min_y, min_z)
-    max_xyz: (max_x, max_y, max_z)
-    
-Returns:
-    Kutudaki tüm eleman indeksleri (unique)
-│           ├── query_frustum: Görüntü düzlemi (frustum) içindeki elemanları döndür
-
-Args:
-    frustum_min: Kameranın görüş kutusu minimum
-    frustum_max: Kameranın görüş kutusu maksimum
-    margin: Genişletme marjı (hücre sayısı cinsinden)
-    
-Returns:
-    Görüntüdeki tüm eleman indeksleri
-│           ├── query_ray: Işın boyunca geçilen hücrelerdeki elemanları döndür
-
-Args:
-    ray_origin: Işın başlangıç noktası (x,y,z)
-    ray_direction: Işın yönü (dx,dy,dz) - normalize edilmemiş olabilir
-    max_distance: Maksimum mesafe
-    
-Returns:
-    Işın boyunca bulunan eleman indeksleri
-│           ├── get_neighbor_cells: Bir hücrenin komşularını döndür
-
-Args:
-    x, y, z: Merkez hücre koordinatları
-    radius: Komşuluk yarıçapı (1 = 3x3x3, 2 = 5x5x5, ...)
-    
-Returns:
-    Komşu hücre anahtarları
-│           ├── query_pick_candidates: Picking için aday elemanları döndür
-
-Args:
-    screen_center: Tıklanan noktanın dünya koordinatı
-    radius_cells: Kaç hücre genişliğinde tarama yapılacak
-    
-Returns:
-    Picking için aday eleman indeksleri
-│           ├── get_element_bbox: Elemanın bounding box'ını döndür
-│           ├── get_cell_stats: Grid istatistiklerini döndür
-│           └── clear: Grid'i temizle
-├── kivy_3d_widget.py
-│   ├── **PureKivyEngine**: GLFW ve ImGui'den arındırılmış render motoru.
-│       ├── __init__: No docstring
-│       ├── init_gl: No docstring
-│       ├── _init_shaders: No docstring
-│       ├── _init_camera: No docstring
-│       ├── _init_components: No docstring
-│       ├── resize: No docstring
-│       ├── _handle_pick_from_hover: No docstring
-│       ├── _get_element_type_from_element: No docstring
-│       ├── _get_priority_from_type: No docstring
-│       ├── _clear_hover: No docstring
-│       ├── _update_hover: No docstring
-│       ├── _check_pick_result: No docstring
-│       ├── _start_hover_pick: No docstring
-│       ├── _update_world_pos: No docstring
-│       ├── enable_hover: No docstring
-│       ├── load_model: No docstring
-│       ├── fit_view: Sadece kamerayı modele oturt — render modunu değiştirmez.
-│       ├── clear_scene: No docstring
-│       └── test_model: No docstring
-│   └── **KivyCADWidget**: No docstring
-│       ├── __init__: No docstring
-│       ├── _draw_gl: No docstring
-│       ├── _apply_pending_load: Thread'den gelen scene'i uygula.
-│       ├── _on_widget_resize: No docstring
-│       ├── _fit_view: Sadece kamerayı fit et — mod değiştirmez.
-│       ├── _on_key_down: No docstring
-│       ├── _handle_escape: ESC: aktif duruma göre iptal et.
-│       ├── _on_key_up: No docstring
-│       ├── on_touch_down: No docstring
-│       ├── _on_middle_down: Middle tık: çift tık kontrolü + pan/orbit için hazırlık.
-│       ├── _on_left_down: Sol tık: draw / orbit / marquee ayrımı.
-│       ├── on_touch_move: No docstring
-│       ├── _on_middle_move: Middle drag: drag algılama + orbit/pan.
-│       ├── on_touch_up: No docstring
-│       ├── _on_left_up: No docstring
-│       ├── update: Her frame: pending pick + redraw.
-│       └── _on_global_mouse_move: Kivy'nin on_touch_move'u sadece fare basılıyken tetiklenir.
-Sürekli fare takibi için global mouse_pos bind'i gerekir.
+│       ├── BoundingBox
+│       └── SpatialGrid
 ├── logging_config.py
+│   └── CadLogger
 ├── main.py
-│   └── **CADApp**: No docstring
-│       ├── build: No docstring
-│       ├── _button: No docstring
-│       ├── engine: No docstring
-│       ├── import_s2k: No docstring
-│       ├── load_test_model: No docstring
-│       ├── zoom_in: No docstring
-│       ├── zoom_out: No docstring
-│       ├── zoom_extents: No docstring
-│       ├── reset_camera: No docstring
-│       ├── orbit_mode: No docstring
-│       ├── pan_mode: No docstring
-│       ├── delete_selected: No docstring
-│       ├── clear_selection: No docstring
-│       ├── draw_node: No docstring
-│       ├── draw_line: No docstring
-│       ├── draw_area: No docstring
-│       ├── draw_polygon: No docstring
-│       └── delete_selected: No docstring
+│   └── CADApp
 ├── render/
 │   ├── base_renderer.py
-│   │   ├── **BaseRenderer**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── build: No docstring
-│   │       ├── draw_mode: No docstring
-│   │       ├── build_lines: FrameRenderer override eder.
-│   │       ├── build_simple: Basit mod (simple) için vertex + renk üretir.
-Alt sınıflar override eder.
-Returns: (vertices, colors)
-│   │       ├── update_dirty: Sadece renk buffer'larını (main + simple) günceller.
-Geometri yeniden üretilmez — hızlıdır.
-│   │       ├── _refresh_colors: Elementlerin mevcut is_selected durumuna göre renkleri yeniden üret.
-Hem main hem simple CBO'yu tek geçişte günceller.
-│   │       ├── get_bounds: No docstring
-│   │       ├── update: Elementleri işle, GPU buffer'larını güncelle.
-Ana geometri + line geometri + simple geometri tek geçişte hazırlanır.
-│   │       ├── _upload: No docstring
-│   │       ├── _upload_simple: No docstring
-│   │       ├── render: No docstring
-│   │       ├── render_line: No docstring
-│   │       ├── render_simple: No docstring
-│   │       ├── update_colors: No docstring
-│   │       ├── update_simple_colors: Simple mod CBO'sunu güncelle.
-Element → renk eşlemesini yaparak simple_cbo'ya yazar.
-│   │       ├── get: No docstring
-│   │       ├── _cleanup_main: No docstring
-│   │       ├── _cleanup_simple: No docstring
-│   │       └── cleanup: No docstring
-│   │   ├── **FrameRenderer**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── build: No docstring
-│   │       ├── build_lines: No docstring
-│   │       ├── build_simple: No docstring
-│   │       ├── draw_mode: No docstring
-│   │       └── render: No docstring
-│   │   ├── **AreaRenderer**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── build: No docstring
-│   │       ├── build_simple: No docstring
-│   │       ├── draw_mode: No docstring
-│   │       ├── set_lighting: No docstring
-│   │       └── render: No docstring
-│   │   ├── **LinkRenderer**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── build: No docstring
-│   │       ├── build_simple: No docstring
-│   │       ├── draw_mode: No docstring
-│   │       └── render: No docstring
-│   │   ├── **NodeRenderer**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── build: No docstring
-│   │       ├── build_simple: No docstring
-│   │       ├── draw_mode: No docstring
-│   │       └── render: No docstring
-│   │   └── **PolygonRenderer**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── build: No docstring
-│   │       ├── build_lines: No docstring
-│   │       ├── build_simple: No docstring
-│   │       ├── draw_mode: No docstring
-│   │       └── render: No docstring
+│   │   ├── BaseRenderer
+│   │   ├── FrameRenderer
+│   │   ├── AreaRenderer
+│   │   ├── LinkRenderer
+│   │   ├── NodeRenderer
+│   │   └── PolygonRenderer
 │   ├── light_ubo.py
-│   │   └── **LightUBO**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── update: No docstring
-│   │       └── cleanup: No docstring
+│   │   └── LightUBO
 │   ├── lightingsystem.py
-│   │   └── **LightingSystem**: No docstring
-│   │       ├── update_ubo: No docstring
-│   │       ├── set_pos: No docstring
-│   │       ├── set_color: No docstring
-│   │       ├── set_intensity: No docstring
-│   │       └── cleanup: No docstring
+│   │   └── LightingSystem
 │   ├── pickpass.py
-│   │   └── **PickPass**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── _create_resources: 1x1 FBO ve PBO'ları oluştur (yedek)
-│   │       ├── set_main_fbo: Ana MRT FBO'sunu set et
-│   │       ├── register: Tek bir elementi kaydet
-│   │       ├── unregister: Elementi kayıttan çıkar
-│   │       ├── clear_registry: Tüm kayıtlı element/renderer eşlemelerini temizle.
-│   │       ├── get_element: Pick ID'den elementi bul
-│   │       ├── get_renderer: Pick ID'den renderer'ı bul
-│   │       ├── set_viewport: Viewport boyutunu güncelle
-│   │       ├── pick_async: MRT ile halihazırda çizilmiş olan ID buffer'dan asenkron okuma başlatır.
-│   │       ├── check_pick: Pick sonucunu kontrol et - 0 döndürebilir!
-│   │       └── cleanup: Kaynakları temizle
+│   │   └── PickPass
 │   ├── scenerenderer.py
-│   │   ├── **RenderStats**: No docstring
-│   │   └── **SceneRenderer**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── _init_marquee_buffers: Marquee için kalıcı buffer'ları oluştur
-│   │       ├── _create_mrt_fbo: MRT FBO'su oluştur
-│   │       ├── _cleanup_mrt: MRT kaynaklarını temizle
-│   │       ├── set_cam: No docstring
-│   │       ├── set_grid: No docstring
-│   │       ├── set_scene: No docstring
-│   │       ├── set_marquee: No docstring
-│   │       ├── set_engine: No docstring
-│   │       ├── set_dt: No docstring
-│   │       ├── resize: No docstring
-│   │       ├── update_geo: No docstring
-│   │       ├── update_sel: Seçim renklerini güncelle - hem main hem simple CBO'ları
-│   │       ├── _get_final_color: Ortak _final_color_for'a delege et (tek kaynak)
-│   │       ├── _default_color: Element tipine göre varsayılan renk
-│   │       ├── render: No docstring
-│   │       ├── _render_wireframe: Wireframe (GL_LINES/GL_POINTS) render et
-│   │       ├── toggle_render_mode: No docstring
-│   │       ├── _draw_marquee: Marquee overlay çizimi - sağa mavi, sola yeşil
-│   │       ├── pick_async: Asenkron picking başlat - MRT ID buffer'dan okur
-│   │       ├── check_pick: Pick sonucunu kontrol et
-│   │       ├── get_element_from_id: Pick ID'den elementi bul
-│   │       ├── cleanup: No docstring
-│   │       ├── update_dirty: Tüm renderer'lardaki dirty elementleri güncelle
-│   │       ├── _update_bounds_from_nodes: No docstring
-│   │       ├── _update_bounds: No docstring
-│   │       ├── _update_grid: No docstring
-│   │       ├── start_anim: No docstring
-│   │       ├── _update_anim: No docstring
-│   │       ├── _render_line: Gerçek geometrik kenarları çiz.
-│   │       ├── _render_simple: En basit mod: düz çizgiler + noktalar
-│   │       └── get_bounds: No docstring
+│   │   ├── RenderStats
+│   │   └── SceneRenderer
 │   ├── shaderprogram.py
-│   │   └── **ShaderProgram**: No docstring
-│   │       ├── __init__: No docstring
-│   │       ├── _read_file: No docstring
-│   │       ├── _compile: No docstring
-│   │       ├── _create_program: No docstring
-│   │       ├── _compile_shader: No docstring
-│   │       ├── use: No docstring
-│   │       ├── set_int: No docstring
-│   │       ├── get_uniform_location: Uniform lokasyonunu cache'leyerek döndür
-│   │       ├── get_loc: No docstring
-│   │       ├── set_float: No docstring
-│   │       ├── set_vec3: No docstring
-│   │       ├── set_vec3_list: No docstring
-│   │       ├── set_mat3: 3x3 matris gönder (normalMatrix için)
-│   │       ├── set_mat4: No docstring
-│   │       ├── set_int_array: No docstring
-│   │       ├── set_float_array: No docstring
-│   │       ├── set_vec3_array: Vec3 array gönder
-│   │       └── cleanup: No docstring
+│   │   └── ShaderProgram
 │   └── shaders/
+├── structload/
+│   ├── analysis/
+│   │   ├── __init__.py
+│   │   └── analysis_runner.py
+│   │       └── AnalysisResult
+│   ├── assets/
+│   │   └── fonts/
+│   ├── data/
+│   │   ├── __init__.py
+│   │   ├── defaults.py
+│   │   ├── material_data.py
+│   │   ├── mechanical.py
+│   │   │   ├── woodMaterial
+│   │   │   ├── osbMaterial
+│   │   │   ├── concreteMaterial
+│   │   │   └── steelMaterial
+│   │   ├── preset_loader.py
+│   │   │   └── PresetLibrary
+│   │   ├── project_schema.py
+│   │   ├── snow_data.py
+│   │   └── wind_data.py
+│   │       ├── SurfaceType
+│   │       ├── WindRelation
+│   │       └── RoofType
+│   ├── examples/
+│   ├── gui/
+│   │   ├── __init__.py
+│   │   ├── analysis_panels.py
+│   │   │   ├── AnalysisDataPanel
+│   │   │   └── ResultPanel
+│   │   ├── debug_panel.py
+│   │   │   └── DebugPanel
+│   │   ├── file_dialog.py
+│   │   │   └── FileDialog
+│   │   ├── hazir_yuk_karti.py
+│   │   │   ├── KartBilesenSatiri
+│   │   │   └── HazirYukDetayKarti
+│   │   ├── panels.py
+│   │   │   ├── KartBilesenSatiri
+│   │   │   ├── HazirYukDetayKarti
+│   │   │   ├── BilesenSatiri
+│   │   │   ├── HazirYukPaneli
+│   │   │   ├── YukTanimlamaPaneli
+│   │   │   ├── ElemanAtamaPaneli
+│   │   │   ├── RaporPaneli
+│   │   │   └── YukAtamaApp
+│   │   ├── report_panel.py
+│   │   │   └── RaporPaneli
+│   │   ├── report_view.py
+│   │   │   ├── CardContainer
+│   │   │   ├── AutoLabel
+│   │   │   └── ReportView
+│   │   └── status_bar.py
+│   │       └── StatusBar
+│   ├── loads/
+│   │   ├── __init__.py
+│   │   ├── load_definition.py
+│   │   │   ├── LoadComponent
+│   │   │   └── LoadDefinition
+│   │   ├── load_manager.py
+│   │   │   └── LoadManager
+│   │   ├── snow_load.py
+│   │   │   └── SnowLoad
+│   │   ├── spectrum.py
+│   │   │   └── Spectrum
+│   │   └── wall_load_engine.py
+│   │       └── WallLoadEngine
+│   ├── main.py
+│   │   ├── SectionHeader
+│   │   └── StructuralAnalysisApp
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   ├── test0.py
+│   │   │   ├── ProjectDataPanel
+│   │   │   └── YukAtamaApp
+│   │   ├── test2.py
+│   │   ├── test3.py
+│   │   ├── test4.py
+│   │   ├── test6.py
+│   │   └── test_spectrum.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── math_utils.py
+│   │   ├── meta_tables.py
+│   │   ├── my_document.py
+│   │   │   └── MyDocument
+│   │   ├── report_dataframe.py
+│   │   │   └── ReportDataFrame
+│   │   └── status_manager.py
+│   │       └── StatusManager
+│   └── windcalc/
+│       ├── __init__.py
+│       ├── analysis.py
+│       │   ├── ZoneResult
+│       │   └── ZoneBundle
+│       ├── edge.py
+│       │   └── Edge
+│       ├── geometry_utils.py
+│       ├── report.py
+│       ├── surface.py
+│       │   └── Surface
+│       ├── surface_analyzer.py
+│       ├── visualize.py
+│       ├── wind_analyzer.py
+│       │   ├── ZoneKind
+│       │   └── WindAnalyzer
+│       ├── wind_results.py
+│       │   └── WindReport
+│       ├── windengine.py
+│       │   └── WindEngine
+│       ├── zone.py
+│       │   └── Zone
+│       └── zone_generator.py
+│           └── ZoneKind
+├── test_.py
+├── tests/
+│   ├── test1.py
+│   ├── test_frame.py
+│   ├── test_frame_simple.py
+│   ├── test_icon.py
+│   │   ├── IconButton
+│   │   └── IconGallery
+│   ├── test_mesnet.py
+│   ├── test_model.py
+│   │   └── TestModelBuilder
+│   ├── test_profile.py
+│   ├── test_svg.py
+│   └── testicon.py
+│       ├── IconButton
+│       └── TestApp
 ├── tools/
-│   ├── e2kloader.py
-│   │   ├── **Point3D**: 3D nokta koordinatı
-│   │   ├── **Element**: Eleman (line, area)
-│   │   └── **E2KParser**: ETABS .$et / .e2k dosya okuma - TAM KAPSAMLI VERSİYON
-│   │       ├── __init__: No docstring
-│   │       ├── _load_and_parse: Load and parse ETABS file
-│   │       ├── _extract_sections: Extract sections from lines
-│   │       ├── _parse_line: Parse a line respecting quoted strings
-│   │       ├── _try_convert: Try to convert string to number
-│   │       ├── _process_program_info: Process program information
-│   │       ├── _process_stories: Process STORIES section
-│   │       ├── _process_point_coordinates: Process POINT COORDINATES section
-│   │       ├── _process_point_assigns: Process POINT ASSIGNS section
-│   │       ├── _create_3d_points: Create comprehensive 3D point table
-│   │       ├── _process_line_connectivity: Process LINE CONNECTIVITIES section
-│   │       ├── _process_area_connectivity: Process AREA CONNECTIVITIES section
-│   │       ├── _create_line_geometry: Create line geometry with 3D coordinates
-│   │       ├── _create_area_geometry: Create area geometry with 3D coordinates
-│   │       ├── _process_section: Process a section based on its type
-│   │       ├── _parse_generic: Generic parser for any section
-│   │       ├── _parse_key_value_pairs: Parse sections with key-value pairs
-│   │       ├── _parse_simple_list: Parse simple lists (like PIER/SPANDREL NAMES)
-│   │       ├── _parse_materials: Parse MATERIAL PROPERTIES section
-│   │       ├── _parse_frame_sections: Parse FRAME SECTIONS section
-│   │       ├── _parse_shell_props: Parse SHELLPROP sections
-│   │       ├── _parse_line_assigns: Parse LINE ASSIGNS section
-│   │       ├── _parse_area_assigns: Parse AREA ASSIGNS section
-│   │       ├── _parse_load_combinations: Parse LOAD COMBINATIONS section
-│   │       ├── get_points_by_story: Get all points for a specific story
-│   │       ├── get_lines_by_story: Get all lines for a specific story
-│   │       ├── get_areas_by_story: Get all areas for a specific story
-│   │       ├── get_frame_section: Get frame section properties
-│   │       └── get_shell_prop: Get shell property
 │   ├── gizmo.py
-│   │   └── **GizmoAxes**: OpenGL 3.3 için VAO kullanan Gizmo eksen çizici
-│   │       ├── __init__: No docstring
-│   │       ├── create_simple_shader: Çok basit bir shader oluştur
-│   │       ├── render: Gizmo'yu ekranın sol alt köşesine çiz (GLM uyumlu)
-│   │       └── cleanup: Kaynakları temizle
+│   │   └── GizmoAxes
 │   ├── gridsystem.py
-│   │   └── **GridSystem**: Model boyutuna göre otomatik ölçeklenen grid.
-
-Kullanım:
-    grid = GridSystem(shader)
-    grid.update(glm.vec3(cx, cy, 0), size=5000)
-    grid.draw(mvp)
-│   │       ├── __init__: No docstring
-│   │       ├── update: Merkez ve boyuta göre grid'i yeniden üret.
-│   │       ├── draw: Grid'i çiz.
-│   │       ├── cleanup: GPU kaynaklarını serbest bırak.
-│   │       ├── _optimal_divisions: Grid boyutuna göre optimal bölünme sayısı.
-│   │       ├── _major_spacing: Grid boyutuna göre ana çizgi aralığı.
-│   │       ├── _create_grid: Grid vertex'lerini oluştur ve GPU'ya yükle.
-│   │       ├── _line_color: Koordinata göre major/minor çizgi rengi.
-│   │       ├── _upload: Vertex listesini GPU'ya yükle.
-│   │       └── _delete_buffers: VAO/VBO'yu sil (yeni grid için).
+│   │   └── GridSystem
 │   ├── importp.py
-│   │   ├── **SectionType**: FEA çubuk kesit tipleri
-│   │   └── **S2KParser**: sap2000 s2k dosya okuma
-│   │       ├── __init__: No docstring
-│   │       ├── _load_and_parse: Load and parse S2K file
-│   │       ├── get_table: Get table by name, return empty DataFrame if not found
-│   │       ├── add_point_with_id: Add point with ID
-│   │       └── build_model: Tablolardan gelen ham veriyi SolidElement objelerine dönüştürür
+│   │   ├── SectionType
+│   │   └── S2KParser
 │   ├── loader.py
-│   │   └── **ModelLoader**: Model yükleme işlemlerinden sorumlu sınıf
-│   │       ├── __init__: No docstring
-│   │       ├── import_s2k: S2K dosyası içe aktar
-│   │       ├── load_model: Model verilerini yükle ve tüm bileşenleri güncelle
-│   │       └── _focus_on_model: Kamerayı modele odakla
-│   ├── s2kloader.py
-│   │   ├── **S2KParser**: SAP2000 s2k dosya okuma (UI Bağımsız Saf Parser)
-│   │       ├── __init__: No docstring
-│   │       ├── _load_and_parse: Load and parse S2K file
-│   │       └── get_table: Get table by name, return empty DataFrame if not found
-│   │   └── **S2KLoader**: SAP2000 .$2k dosyasından model yükler
-│   │       ├── __init__: No docstring
-│   │       ├── load: S2K dosyasını yükle ve Scene döndür.
-
-Akış:
-1. Malzemeleri yükle
-2. Kesitleri yükle
-3. Area kalınlıklarını yükle
-4. Link property'lerini yükle
-5. Node restraint'larını yükle
-6. Node'ları oluştur
-7. Frame'leri oluştur (section atamalarıyla)
-8. Area'ları oluştur
-9. Link'leri oluştur
-│   │       ├── _load_materials: Malzemeleri yükle ve döndür.
-│   │       ├── _load_frame_sections: Frame kesitlerini yükle. İsimle key'li dict döndür.
-│   │       ├── _load_area_thicknesses: Area section adı → kalınlık eşlemesi.
-│   │       ├── _load_link_properties: Link ID → property name eşlemesi.
-│   │       ├── _load_node_restraints: Node ID → restraint dict eşlemesi.
-│   │       ├── _create_nodes: Node'ları oluştur.
-│   │       ├── _create_frames: Frame'leri oluştur. Her frame'e doğru section ve release bilgisi atanır.
-│   │       ├── _create_areas: Area'ları oluştur.
-│   │       └── _create_links: Link'leri oluştur.
-│   └── snapsquare.py
-│       └── **SnapSquareRenderer**: No docstring
-│           ├── __init__: No docstring
-│           ├── _init_shader: No docstring
-│           ├── set_hover_type: Hover durumunu güncelle - priority ve element tipine göre snap square değişir
-
-Args:
-    priority: -1 (yok), 0 (area/link), 1 (frame), 2 (node)
-    element_type: 'node', 'frame', 'area', 'link' veya None
-│           ├── get_current_size: Mevcut hover durumuna göre snap square boyutunu hesapla
-│           ├── get_current_color: Mevcut hover durumuna göre snap square rengini al
-│           ├── draw: No docstring
-│           └── cleanup: Kaynakları temizle
+│   │   └── ModelLoader
+│   └── s2kloader.py
+│       ├── S2KParser
+│       └── S2KLoader
 └── ui/
     ├── command_line.py
-    │   └── **CommandLine**: CAD3 için komut satırı arayüzü
-- "node 100 200 300" gibi komutlar
-- Tab completion
-- Komut geçmişi
-    │       ├── __init__: No docstring
-    │       ├── _register_default_commands: Varsayılan komutları kaydet
-    │       ├── register_command: Yeni komut kaydet
-    │       ├── toggle: Komut satırını aç/kapa
-    │       ├── show_message: Mesaj göster
-    │       ├── _update_suggestions: Otomatik tamamlama önerileri
-    │       ├── _complete_suggestion: Seçili öneriyi tamamla
-    │       ├── _execute_command: Komutu çalıştır
-    │       ├── _handle_key: Klavye girdilerini işle
-    │       ├── render: ImGui ile komut satırını çiz
-    │       ├── _cmd_node: Node ekle: node x y z [label]
-    │       ├── _cmd_frame: Frame ekle
-    │       ├── _cmd_area: Area ekle
-    │       ├── _cmd_link: Link ekle
-    │       ├── _cmd_camera: Kamera ayarları
-    │       ├── _cmd_view: Görünüm modları
-    │       ├── _cmd_select: Seçim komutları
-    │       ├── _cmd_delete: Seçili elemanları sil
-    │       ├── _cmd_import: Dosya import
-    │       ├── _cmd_export: Dosya export
-    │       ├── _cmd_help: Yardım
-    │       ├── _cmd_clear: Ekranı temizle
-    │       └── _cmd_exit: Komut satırını kapat
+    │   └── CommandLine
     ├── drawing_window.py
-    │   └── **DrawingWindow**: 3D Görüntüleyici Pencere
-    │       ├── __init__: No docstring
-    │       ├── _setup_menu: No docstring
-    │       ├── _setup_toolbar: No docstring
-    │       ├── _create_tool_button: No docstring
-    │       ├── _on_selection_changed: No docstring
-    │       ├── _on_mode_changed: No docstring
-    │       ├── _load_sample_model: Örnek 3D model yükle
-    │       ├── _create_sample_scene: Örnek scene oluştur
-    │       ├── set_scene: Scene'i ayarla
-    │       ├── get_engine: Engine widget'ını döndür
-    │       ├── get_scene: Mevcut scene'i döndür
-    │       └── closeEvent: No docstring
+    │   └── DrawingWindow
     ├── inputmanager.py
-    │   └── **InputManager**: No docstring
-    │       ├── __post_init__: No docstring
-    │       ├── update_mouse_position: No docstring
-    │       ├── set_key_state: No docstring
-    │       ├── is_key_pressed: No docstring
-    │       ├── set_modifier_state: No docstring
-    │       ├── update_modifiers: Kivy'nin on_key_down / on_key_up tarafından gönderilen
-modifier listesini InputManager'a aktarır.
-    │       ├── is_ctrl_pressed: No docstring
-    │       ├── is_shift_pressed: No docstring
-    │       ├── is_alt_pressed: No docstring
-    │       ├── set_button_state: No docstring
-    │       ├── get_drag_rect: No docstring
-    │       ├── is_crossing_mode: No docstring
-    │       └── get_drag_mode_name: No docstring
-    ├── properties_window.py
-    │   └── **PropertiesWindow**: Properties penceresi - element özelliklerini düzenler
-    │       ├── __init__: No docstring
-    │       ├── update_def_mgr: Definition manager'ı güncelle (scene yüklendikten sonra)
-    │       ├── toggle: Pencere görünürlüğünü değiştir
-    │       ├── show: Pencereyi göster
-    │       ├── hide: Pencereyi gizle
-    │       ├── _push_style: Güvenli style push - sayaç tutar
-    │       ├── _pop_style: Güvenli style pop - sayaçtan düşer
-    │       ├── _clear_styles: Kalan tüm style'ları temizle
-    │       ├── render: Properties penceresini çiz
-    │       ├── _draw_type_filter: Tip filtresi combo box
-    │       ├── _draw_restraint_editor: Restraint editörü
-    │       ├── _draw_coord_editor: Koordinat editörü
-    │       ├── _draw_float_editor: Float editörü
-    │       ├── _draw_text_editor: Text editörü
-    │       ├── _draw_color_editor: Renk editörü
-    │       ├── _draw_action_buttons: Apply/Discard butonları
-    │       ├── _apply_changes: Değişiklikleri uygula - dirty flag ile
-    │       ├── _draw_properties: Element özelliklerini çiz - Section ve Material desteği ile
-    │       ├── _draw_section_editor: Section editörü - Frame'ler için
-    │       └── _draw_material_editor: Material editörü - Section'lar için
-    ├── qt_engine.py
-    │   ├── **InteractionMode**: No docstring
-    │   └── **RenderEngineWidget**: Ana OpenGL Viewport Widget - Sadece 3D Görüntüleme ve Etkileşim Motoru
-    │       ├── __init__: No docstring
-    │       ├── initializeGL: OpenGL başlatma
-    │       ├── _load_shaders: Shader'ları yükle
-    │       ├── _init_components: Renderer ve bileşenleri oluştur
-    │       ├── paintGL: OpenGL çizim
-    │       ├── resizeGL: Pencere boyut değişikliği
-    │       ├── set_scene: Scene'i ayarla
-    │       ├── _load_scene: Scene'i renderer'a yükle
-    │       ├── get_scene: Mevcut scene'i döndür
-    │       ├── reset_camera: No docstring
-    │       ├── focus_model: No docstring
-    │       ├── toggle_projection: No docstring
-    │       ├── toggle_render_mode: No docstring
-    │       ├── set_mode: Etkileşim modunu değiştir
-    │       ├── get_mode: No docstring
-    │       ├── clear_selection: No docstring
-    │       ├── get_selected_elements: No docstring
-    │       ├── toggle_visibility: No docstring
-    │       ├── _start_hover_pick: Hover pick başlat
-    │       ├── _check_pick_result: Pick sonucunu kontrol et (timer ile)
-    │       ├── _update_hover: Hover durumunu güncelle
-    │       ├── _clear_hover: Hover durumunu temizle
-    │       ├── _handle_pick_from_hover: Hover'daki elementi seç
-    │       ├── _get_element_type: Element tipini bul
-    │       ├── _get_priority: Element tipine göre priority
-    │       ├── _update_world_pos: Dünya koordinatını güncelle
-    │       ├── mouseMoveEvent: Mouse hareket
-    │       ├── mousePressEvent: Mouse basma
-    │       ├── mouseReleaseEvent: Mouse bırakma
-    │       ├── wheelEvent: Mouse tekerlek
-    │       ├── keyPressEvent: Klavye tuşları
-    │       ├── cleanup: Kaynakları temizle
-    │       └── closeEvent: No docstring
-    ├── uimanager.py
-    └── viewport_manager.py
-        └── **ViewportManager**: PySide6 tarafından çağrılan, GLFW Motorunun yaşam döngüsünü
-yöneten Thread-Safe Yöneticisi Sınıf.
-            ├── __init__: No docstring
-            ├── is_running: Motor penceresinin açık ve çalışır durumda olup olmadığını döndürür.
-            ├── launch_viewport: Native GLFW 3D Viewport penceresini ayrı bir süreçte başlatır.
-Pencere zaten açıksa öne getirir / sahneyi günceller.
-            ├── update_scene: Çalışmakta olan GLFW motoruna yeni/güncellenmiş Scene verisini fırlatır.
-            └── close_viewport: GLFW penceresini güvenli bir şekilde kapatır.
-```
+    │   └── InputManager
+    ├── prop_panel.py
+    │   ├── GroupHeader
+    │   ├── CollapsibleGroup
+    │   └── PropertiesPanel
+    ├── snapsquare.py
+    │   └── SnapSquareRenderer
+    └── toolbar.py
+        ├── IconTextButton
+        └── Toolbar
