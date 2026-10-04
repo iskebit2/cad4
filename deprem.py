@@ -1,4 +1,4 @@
-from core.analysis.analysis import run_modal_analysis
+from core.analysis.structuralanalysis import run_modal_analysis
 from core.analysis.assembler import ModelAssembler
 from tools.s2kloader import S2KLoader
 
