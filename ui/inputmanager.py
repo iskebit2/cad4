@@ -113,10 +113,10 @@ class InputManager:
 
                     self.is_dragging = True
 
-                    logger.debug(
-                        f"[Input] Drag started "
-                        f"(distance={dist:.1f}px)"
-                    )
+                    # logger.debug(
+                    #     f"[Input] Drag started "
+                    #     f"(distance={dist:.1f}px)"
+                    # )
 
     # ========================================================================
     # KEYBOARD
@@ -212,10 +212,10 @@ class InputManager:
 
             self.is_dragging = False
 
-            logger.debug(
-                f"[Input] Left button pressed "
-                f"at {self.drag_start}"
-            )
+            # logger.debug(
+            #     f"[Input] Left button pressed "
+            #     f"at {self.drag_start}"
+            # )
 
         # ------------------------------------------------------------
         # LEFT UP
@@ -223,17 +223,17 @@ class InputManager:
 
         else:
 
-            if self.is_dragging:
+            # if self.is_dragging:
 
-                logger.debug(
-                    "[Input] Drag ended"
-                )
+            #     logger.debug(
+            #         "[Input] Drag ended"
+            #     )
 
-            else:
+            # else:
 
-                logger.debug(
-                    "[Input] Left button released"
-                )
+            #     logger.debug(
+            #         "[Input] Left button released"
+            #     )
 
             self.drag_start = None
             self.drag_current = None

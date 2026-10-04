@@ -82,7 +82,7 @@ class BaseRenderer(ABC, Generic[T]):
         # ---------------------------------------------------------
         # Basit mod OpenGL buffer'ları
         # ---------------------------------------------------------
-
+        self.simple_idbo = None
         self.simple_vao = None
         self.simple_vbo = None
         self.simple_cbo = None
@@ -267,7 +267,7 @@ class BaseRenderer(ABC, Generic[T]):
 
         # --- Biriktiriciler -------------------------------------------
         verts, cols, ids, idxs, line_idxs = [], [], [], [], []
-        simple_verts, simple_colors = [], []
+        simple_verts, simple_colors, simple_ids = [], [], []
 
         voff = ioff = line_ioff = 0
 
@@ -312,10 +312,16 @@ class BaseRenderer(ABC, Generic[T]):
 
             # ---------- Basit mod ----------
             sv, sc = self.build_simple(e)
+
             if sv is not None and len(sv) > 0:
                 if (len(sv) % stride_floats) == 0:
+                    vc = len(sv) // stride_floats
+
                     simple_verts.append(sv)
                     simple_colors.append(sc)
+                    simple_ids.append(
+                        np.full(vc, e.unique_id, dtype=np.uint32)
+                    )
                 else:
                     logger.warning(
                         f"{self.__class__.__name__}.build_simple: "
@@ -363,16 +369,16 @@ class BaseRenderer(ABC, Generic[T]):
         if simple_verts:
             sv_all = np.concatenate(simple_verts).astype(np.float32)
             sc_all = np.concatenate(simple_colors).astype(np.float32)
+            sid_all = np.concatenate(simple_ids)
 
-            
-            self._upload_simple(sv_all, sc_all)
+            self._upload_simple(sv_all, sc_all, sid_all)
 
             logger.debug(
-                            "%s: simple_vcount=%s, draw_mode=%s",
-                            self.__class__.__name__,
-                            self.simple_vcount,
-                            self.simple_draw_mode,
-                        )
+                "%s: simple_vcount=%s, draw_mode=%s",
+                self.__class__.__name__,
+                self.simple_vcount,
+                self.simple_draw_mode,
+            )
         else:
             self._cleanup_simple()
 
@@ -443,7 +449,12 @@ class BaseRenderer(ABC, Generic[T]):
     # UPLOAD (simple)
     # =============================================================
 
-    def _upload_simple(self, v: np.ndarray, c: np.ndarray):
+    def _upload_simple(
+        self,
+        v: np.ndarray,
+        c: np.ndarray,
+        ids: np.ndarray,
+    ):
         self._cleanup_simple()
 
         if len(v) == 0:
@@ -452,36 +463,94 @@ class BaseRenderer(ABC, Generic[T]):
         self.simple_vao = glGenVertexArrays(1)
         self.simple_vbo = glGenBuffers(1)
         self.simple_cbo = glGenBuffers(1)
+        self.simple_idbo = glGenBuffers(1)
 
         glBindVertexArray(self.simple_vao)
 
+        # ---------------------------------------------------------
         # Vertex
+        # ---------------------------------------------------------
         glBindBuffer(GL_ARRAY_BUFFER, self.simple_vbo)
-        glBufferData(GL_ARRAY_BUFFER, v.nbytes, v, GL_STATIC_DRAW)
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            v.nbytes,
+            v,
+            GL_STATIC_DRAW,
+        )
 
         stride = self.vertex_stride
 
+        # Position
         glEnableVertexAttribArray(0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(0))
+        glVertexAttribPointer(
+            0, 3, GL_FLOAT, GL_FALSE,
+            stride, ctypes.c_void_p(0)
+        )
 
+        # Vertex color
         glEnableVertexAttribArray(1)
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(12))
+        glVertexAttribPointer(
+            1, 3, GL_FLOAT, GL_FALSE,
+            stride, ctypes.c_void_p(12)
+        )
 
+        # Center
         if self.has_center:
             glEnableVertexAttribArray(4)
-            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(24))
+            glVertexAttribPointer(
+                4, 3, GL_FLOAT, GL_FALSE,
+                stride, ctypes.c_void_p(24)
+            )
 
-        # Color
+        # ---------------------------------------------------------
+        # Pick ID
+        # ---------------------------------------------------------
+        glBindBuffer(GL_ARRAY_BUFFER, self.simple_idbo)
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            ids.nbytes,
+            ids,
+            GL_STATIC_DRAW,
+        )
+
+        glEnableVertexAttribArray(3)
+
+        # uint attribute → glVertexAttribIPointer
+        glVertexAttribIPointer(
+            3,
+            1,
+            GL_UNSIGNED_INT,
+            4,
+            ctypes.c_void_p(0),
+        )
+
+        # ---------------------------------------------------------
+        # Color buffer
+        # ---------------------------------------------------------
         glBindBuffer(GL_ARRAY_BUFFER, self.simple_cbo)
-        glBufferData(GL_ARRAY_BUFFER, c.nbytes, c, GL_DYNAMIC_DRAW)
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            c.nbytes,
+            c,
+            GL_DYNAMIC_DRAW,
+        )
 
         glEnableVertexAttribArray(2)
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * 4, ctypes.c_void_p(0))
+        glVertexAttribPointer(
+            2,
+            3,
+            GL_FLOAT,
+            GL_FALSE,
+            3 * 4,
+            ctypes.c_void_p(0),
+        )
 
         glBindVertexArray(0)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
 
-        # EN SON: simple_vcount'u set et
+        # ---------------------------------------------------------
+        # Vertex count
+        # ---------------------------------------------------------
         stride_floats = 9 if self.has_center else 6
         self.simple_vcount = len(v) // stride_floats
 
@@ -580,36 +649,51 @@ class BaseRenderer(ABC, Generic[T]):
     # SIMPLE RENDER
     # =============================================================
 
-    def render_simple(self, mvp, color=None, alpha=1.0):
+    def render_simple(self, mvp, shader, color=None, alpha=1.0):
         if not self.simple_vao or self.simple_vcount == 0:
             return
-        if self.shader is None:
+
+        if shader is None:
             return
 
-        self.shader.use()
+        shader.use()
 
-        loc = self.shader.get_loc("mvp")
+        loc = shader.get_loc("mvp")
         if loc != -1:
-            glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
+            glUniformMatrix4fv(
+                loc, 1, GL_FALSE,
+                glm.value_ptr(mvp)
+            )
 
-        # useVertexColor
-        vc_loc = self.shader.get_loc("useVertexColor")
+        vc_loc = shader.get_loc("useVertexColor")
         if vc_loc != -1:
-            glUniform1i(vc_loc, 0 if color is not None else 1)
+            glUniform1i(
+                vc_loc,
+                0 if color is not None else 1
+            )
 
-        # objectColor
         if color is not None:
-            oc_loc = self.shader.get_loc("objectColor")
+            oc_loc = shader.get_loc("objectColor")
             if oc_loc != -1:
-                glUniform3f(oc_loc, float(color[0]), float(color[1]), float(color[2]))
+                glUniform3f(
+                    oc_loc,
+                    float(color[0]),
+                    float(color[1]),
+                    float(color[2])
+                )
 
-        # alpha
-        a_loc = self.shader.get_loc("alpha")
+        a_loc = shader.get_loc("alpha")
         if a_loc != -1:
             glUniform1f(a_loc, float(alpha))
 
         glBindVertexArray(self.simple_vao)
-        glDrawArrays(self.simple_draw_mode, 0, self.simple_vcount)
+
+        glDrawArrays(
+            self.simple_draw_mode,
+            0,
+            self.simple_vcount
+        )
+
         glBindVertexArray(0)
 
     # =============================================================
@@ -708,6 +792,10 @@ class BaseRenderer(ABC, Generic[T]):
         if self.simple_vao and glIsVertexArray(self.simple_vao):
             glDeleteVertexArrays(1, [int(self.simple_vao)])
 
+        if self.simple_idbo:
+            glDeleteBuffers(1, [self.simple_idbo])
+            self.simple_idbo = None
+            
         self.simple_vao = None
         self.simple_vbo = None
         self.simple_cbo = None
@@ -775,18 +863,33 @@ class AreaRenderer(BaseRenderer[Area]):
         self.lighting = None
         self.vertex_stride = 6 * 4
         self.has_center = False
-        self.simple_draw_mode = GL_LINES
+        self.simple_draw_mode = GL_TRIANGLES
 
     def build(self, a):
         return self.builder.build(a)
 
     def build_simple(self, a):
-        v = self.builder.build_simple_lines(a)
+        v = self.builder.build_simple(a)
+
         if len(v) == 0:
-            return np.array([], dtype=np.float32), np.array([], dtype=np.float32)
-        color = [1.0, 1.0, 0.0] if a.is_selected else [0.5, 0.8, 1.0]
+            return (
+                np.array([], dtype=np.float32),
+                np.array([], dtype=np.float32),
+            )
+
+        color = (
+            [1.0, 1.0, 0.0]
+            if a.is_selected
+            else [0.5, 0.8, 1.0]
+        )
+
         count = len(v) // 6
-        c = np.tile(np.array(color, dtype=np.float32), (count, 1))
+
+        c = np.tile(
+            np.array(color, dtype=np.float32),
+            (count, 1)
+        )
+
         return v, c
 
     def draw_mode(self):
@@ -804,13 +907,12 @@ class AreaRenderer(BaseRenderer[Area]):
 
         a = self.shader.get_loc("alpha")
         if a != -1:
-            glUniform1f(a, 0.8)
+            glUniform1f(a, 0.4)
 
-        # ← YENİ: renderMode uniform
         mode_loc = self.shader.get_loc("renderMode")
         if mode_loc != -1:
             glUniform1i(mode_loc, self.render_mode)
-
+        
         super().render(mvp, model, cam_pos, view, proj)
 
 

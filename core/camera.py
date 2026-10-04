@@ -196,8 +196,8 @@ class Camera:
     
     def orbit(self, dx: float, dy: float):
         """Target etrafında döndür"""
-        self.yaw += dx * self.orbit_sensitivity * 100
-        self.pitch -= dy * self.orbit_sensitivity * 100
+        self.yaw -= dx * self.orbit_sensitivity * 100
+        self.pitch += dy * self.orbit_sensitivity * 100
         self.pitch = np.clip(self.pitch, self.min_pitch, self.max_pitch)
         self._update_position()
     

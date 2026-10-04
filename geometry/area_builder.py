@@ -126,31 +126,31 @@ class AreaBuilder:
             v = np.cross(normal, u)
             return u, v, normal
 
-    def build_simple_lines(self, area: Area) -> np.ndarray:
-        """
-        Area'nın çevresini oluşturan basit çizgi döngüsü.
-        Her kenar için 2 nokta (çift yönlü olmasın diye döngü kapanışını da ekle)
-        Returns: vertices array [x,y,z, nx,ny,nz]
-        """
-        points = np.array([[n.x, n.y, n.z] for n in area.nodes], dtype=np.float32)
-        if len(points) < 2:
+    def build_simple(self, area: Area) -> np.ndarray:
+        points = np.array(
+            [[n.x, n.y, n.z] for n in area.nodes],
+            dtype=np.float32
+        )
+
+        if len(points) < 3:
             return np.array([], dtype=np.float32)
-        
-        N = len(points)
-        
-        # Normal hesapla (tüm kenarlar aynı normali paylaşsın)
-        v1 = points[1] - points[0]
-        v2 = points[2] - points[0] if N >= 3 else np.array([0,0,1], dtype=np.float32)
-        normal = np.cross(v1, v2)
-        n = np.linalg.norm(normal)
-        normal = normal / n if n > 1e-10 else np.array([0,0,1], dtype=np.float32)
-        
+
+        center = np.mean(points, axis=0)
+
         verts = []
-        for i in range(N):
-            j = (i + 1) % N
+
+        for i in range(len(points)):
             p0 = points[i]
-            p1 = points[j]
-            verts.extend([p0[0], p0[1], p0[2], normal[0], normal[1], normal[2]])
-            verts.extend([p1[0], p1[1], p1[2], normal[0], normal[1], normal[2]])
-        
+            p1 = points[(i + 1) % len(points)]
+
+            # triangle: center - p0 - p1
+            verts.extend(center)
+            verts.extend([0.0, 0.0, 1.0])
+
+            verts.extend(p0)
+            verts.extend([0.0, 0.0, 1.0])
+
+            verts.extend(p1)
+            verts.extend([0.0, 0.0, 1.0])
+
         return np.array(verts, dtype=np.float32)

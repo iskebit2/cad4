@@ -1,0 +1,72 @@
+
+TABLE: "MATERIAL PROPERTIES 01 - GENERAL"
+   Material=4000Psi  Type=Concrete
+   Material=A416Gr270  Type=Steel
+   Material=A615Gr60  Type=Steel
+   Material=C30/37  Type=Concrete
+   Material=cam  Type=Steel
+   Material=MAT  Type=Steel
+   Material=S235  Type=Steel
+   Material=S275  Type=Steel
+
+TABLE: "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES"
+   Material=4000Psi  E1=200000000.0  G12=77000000.0  U12=0.3  UnitMass=7850
+   Material=A416Gr270  E1=200000000.0  G12=77000000.0  U12=0.3  UnitMass=7850
+   Material=A615Gr60  E1=200000000.0  G12=77000000.0  U12=0.3  UnitMass=7850
+   Material=C30/37  E1=200000000.0  G12=77000000.0  U12=0.3  UnitMass=7850
+   Material=cam  E1=200000000.0  G12=77000000.0  U12=0.3  UnitMass=7850
+   Material=MAT  E1=200000000.0  G12=77000000.0  U12=0.3  UnitMass=7850
+   Material=S235  E1=200000000.0  G12=77000000.0  U12=0.3  UnitMass=7850
+   Material=S275  E1=200000000.0  G12=77000000.0  U12=0.3  UnitMass=7850
+
+TABLE: "FRAME SECTION PROPERTIES 01 - GENERAL"
+
+TABLE: "LOAD PATTERN DEFINITIONS"
+   LoadPat=D  DesignType=Dead  SelfWtMult=1.0
+   LoadPat=L  DesignType=Live  SelfWtMult=0.0
+   LoadPat=NGX  DesignType=Notional  SelfWtMult=0.0
+   LoadPat=NGY  DesignType=Notional  SelfWtMult=0.0
+   LoadPat=NQX  DesignType=Notional  SelfWtMult=0.0
+   LoadPat=NQY  DesignType=Notional  SelfWtMult=0.0
+   LoadPat=QUAKEX  DesignType=Quake  SelfWtMult=0.0
+   LoadPat=QUAKEY  DesignType=Quake  SelfWtMult=0.0
+   LoadPat=WIND  DesignType=Wind  SelfWtMult=0.0
+
+TABLE: "LOAD CASE DEFINITIONS"
+   Case=DEAD  Type=LinStatic  DesignType=Dead
+   Case=LIVE  Type=LinStatic  DesignType=Live
+   Case=NGX  Type=LinStatic  DesignType=Notional
+   Case=NGY  Type=LinStatic  DesignType=Notional
+   Case=NQX  Type=LinStatic  DesignType=Notional
+   Case=NQY  Type=LinStatic  DesignType=Notional
+   Case=MODAL  Type=LinModal  DesignType=Quake
+   Case=EQX  Type=LinRespSpec  DesignType=Quake
+   Case=EQY  Type=LinRespSpec  DesignType=Quake
+   Case=GX  Type=NonStatic  DesignType=Other
+   Case=GY  Type=NonStatic  DesignType=Other
+   Case=QX  Type=NonStatic  DesignType=Other
+   Case=QY  Type=NonStatic  DesignType=Other
+   Case=QUAKEX  Type=LinStatic  DesignType=Quake
+   Case=QUAKEY  Type=LinStatic  DesignType=Quake
+   Case=WIND  Type=LinStatic  DesignType=Wind
+
+TABLE: "CASE - STATIC 1 - LOAD ASSIGNMENTS"
+   Case=DEAD  LoadType=Load pattern  LoadName=D  LoadSF=1.0
+   Case=LIVE  LoadType=Load pattern  LoadName=L  LoadSF=1.0
+   Case=NGX  LoadType=Load pattern  LoadName=NGX  LoadSF=1.0
+   Case=NGY  LoadType=Load pattern  LoadName=NGY  LoadSF=1.0
+   Case=NQX  LoadType=Load pattern  LoadName=NQX  LoadSF=1.0
+   Case=NQY  LoadType=Load pattern  LoadName=NQY  LoadSF=1.0
+   Case=GX  LoadType=Load pattern  LoadName=D  LoadSF=1.0
+   Case=GX  LoadType=Load pattern  LoadName=NGX  LoadSF=1.0
+   Case=GY  LoadType=Load pattern  LoadName=D  LoadSF=1.0
+   Case=GY  LoadType=Load pattern  LoadName=NGY  LoadSF=1.0
+   Case=QX  LoadType=Load pattern  LoadName=L  LoadSF=1.0
+   Case=QX  LoadType=Load pattern  LoadName=NQX  LoadSF=1.0
+   Case=QY  LoadType=Load pattern  LoadName=L  LoadSF=1.0
+   Case=QY  LoadType=Load pattern  LoadName=NQY  LoadSF=1.0
+   Case=QUAKEX  LoadType=Load pattern  LoadName=QUAKEX  LoadSF=1.0
+   Case=QUAKEY  LoadType=Load pattern  LoadName=QUAKEY  LoadSF=1.0
+   Case=WIND  LoadType=Load pattern  LoadName=WIND  LoadSF=1.0
+
+TABLE: "COMBINATION DEFINITIONS"

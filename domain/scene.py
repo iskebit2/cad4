@@ -1,8 +1,9 @@
 # domain/scene.py
 from typing import Dict, Optional, List
 import numpy as np
+from domain.definition_manager import DefinitionManager
 from domain.element import Node, Frame, Area, Link, Element, Polygon
-from domain.definition import DefinitionManager, ObjType
+from domain.definition import ObjType
 
 
 class Scene:

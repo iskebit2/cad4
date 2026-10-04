@@ -38,6 +38,10 @@ class PickPass:
         # Timeout mekanizması
         self.pick_start_time = 0
         self.pick_timeout = 0.5  # 500ms timeout
+
+        self.pick_size = 7
+        self.pick_half = self.pick_size // 2
+        self.pick_bytes = self.pick_size * self.pick_size * 4
         
         # 1x1 FBO oluştur (yedek, asıl picking MRT'den)
         self._create_resources()
@@ -45,52 +49,98 @@ class PickPass:
         # logger.debug("PickPass başlatıldı - MRT picking modu")
     
     def _create_resources(self):
-        """1x1 FBO ve PBO'ları oluştur (yedek)"""
+        """Pick kaynaklarını oluştur."""
         try:
-            # FBO
+            # ---------------------------------------------------------
+            # Yedek 1x1 FBO
+            # ---------------------------------------------------------
             self.fbo = glGenFramebuffers(1)
             glBindFramebuffer(GL_FRAMEBUFFER, self.fbo)
-            
-            # 1x1 Color texture (unsigned int)
+
             self.texture = glGenTextures(1)
             glBindTexture(GL_TEXTURE_2D, self.texture)
+
             glTexImage2D(
-                GL_TEXTURE_2D, 0, GL_R32UI, 
-                1, 1, 0, 
-                GL_RED_INTEGER, GL_UNSIGNED_INT, None
+                GL_TEXTURE_2D,
+                0,
+                GL_R32UI,
+                1,
+                1,
+                0,
+                GL_RED_INTEGER,
+                GL_UNSIGNED_INT,
+                None,
             )
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+
+            glTexParameteri(
+                GL_TEXTURE_2D,
+                GL_TEXTURE_MIN_FILTER,
+                GL_NEAREST,
+            )
+            glTexParameteri(
+                GL_TEXTURE_2D,
+                GL_TEXTURE_MAG_FILTER,
+                GL_NEAREST,
+            )
+
             glFramebufferTexture2D(
-                GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
-                GL_TEXTURE_2D, self.texture, 0
+                GL_FRAMEBUFFER,
+                GL_COLOR_ATTACHMENT0,
+                GL_TEXTURE_2D,
+                self.texture,
+                0,
             )
-            
-            # 1x1 Depth buffer
+
+            # Depth
             self.depth_rbo = glGenRenderbuffers(1)
             glBindRenderbuffer(GL_RENDERBUFFER, self.depth_rbo)
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 1, 1)
-            glFramebufferRenderbuffer(
-                GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                GL_RENDERBUFFER, self.depth_rbo
+
+            glRenderbufferStorage(
+                GL_RENDERBUFFER,
+                GL_DEPTH_COMPONENT24,
+                1,
+                1,
             )
-            
-            # FBO kontrolü
+
+            glFramebufferRenderbuffer(
+                GL_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT,
+                GL_RENDERBUFFER,
+                self.depth_rbo,
+            )
+
             status = glCheckFramebufferStatus(GL_FRAMEBUFFER)
+
             if status != GL_FRAMEBUFFER_COMPLETE:
-                raise RuntimeError(f"FBO tamamlanamadı: {status}")
-            
-            # İki PBO oluştur
+                raise RuntimeError(
+                    f"FBO tamamlanamadı: {status}"
+                )
+
+            # ---------------------------------------------------------
+            # PBO'lar
+            # ---------------------------------------------------------
             for i in range(2):
                 self.pbos[i] = glGenBuffers(1)
-                glBindBuffer(GL_PIXEL_PACK_BUFFER, self.pbos[i])
-                glBufferData(GL_PIXEL_PACK_BUFFER, 4, None, GL_STREAM_READ)
-            
+
+                glBindBuffer(
+                    GL_PIXEL_PACK_BUFFER,
+                    self.pbos[i],
+                )
+
+                glBufferData(
+                    GL_PIXEL_PACK_BUFFER,
+                    self.pick_bytes,
+                    None,
+                    GL_STREAM_READ,
+                )
+
             glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
             glBindFramebuffer(GL_FRAMEBUFFER, 0)
-            
+
         except Exception as e:
-            logger.error(f"PickPass kaynak oluşturma hatası: {e}")
+            logger.error(
+                f"PickPass kaynak oluşturma hatası: {e}"
+            )
             raise
     
     def set_main_fbo(self, fbo):
@@ -128,96 +178,269 @@ class PickPass:
 
     def pick_async(self, x, y):
         """
-        MRT ile halihazırda çizilmiş olan ID buffer'dan asenkron okuma başlatır.
+        Fare çevresindeki 7x7 piksel alanından ID okumasını başlatır.
+        PBO kullanıldığı için okuma asenkrondur.
         """
-        
-        # 1. Bekleyen pick varsa timeout kontrolü
+
+        # ---------------------------------------------------------
+        # Bekleyen pick
+        # ---------------------------------------------------------
         if self.pending_pick:
             if time.time() - self.pick_start_time > self.pick_timeout:
                 self.pending_pick = False
-                # logger.debug("Pick timeout - sıfırlandı")
             else:
                 return False
 
-        # 2. Koordinat kontrolü
-        if x < 0 or x >= self.viewport_width or y < 0 or y >= self.viewport_height:
+        # ---------------------------------------------------------
+        # Koordinat kontrolü
+        # ---------------------------------------------------------
+        if (
+            x < 0
+            or x >= self.viewport_width
+            or y < 0
+            or y >= self.viewport_height
+        ):
             self.last_pick_id = 0
             return True
 
         try:
-            # 3. ANA FBO'yu bağla (MRT FBO)
+            # -----------------------------------------------------
+            # MRT FBO
+            # -----------------------------------------------------
             if self.main_fbo:
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, self.main_fbo)
+                glBindFramebuffer(
+                    GL_READ_FRAMEBUFFER,
+                    self.main_fbo,
+                )
                 glReadBuffer(GL_COLOR_ATTACHMENT1)
             else:
-                # Main FBO yoksa varsayılan framebuffer'ı kullan
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, 0)
-                glReadBuffer(GL_FRONT) # Default FB için
-            
-            # 4. Okuma yapılacak buffer'ı seç (location = 1 olan ID buffer)
-            #glReadBuffer(GL_COLOR_ATTACHMENT1)
-            
-            # 5. PBO'ya yazma emri ver
-            glBindBuffer(GL_PIXEL_PACK_BUFFER, self.pbos[self.current_pbo])
-            
-            # OpenGL'de Y koordinatı aşağıdan yukarı
-            opengl_y = self.viewport_height - y - 1
-            
-            glPixelStorei(GL_PACK_ALIGNMENT, 1)
-            
-            # 1 piksellik uint ID verisini oku
-            glReadPixels(int(x), int(opengl_y), 1, 1, 
-                        GL_RED_INTEGER, GL_UNSIGNED_INT, 0)
-            
-            # 6. Durum yönetimi
-            self.pending_pick = True
-            self.pending_x = x
-            self.pending_y = y
-            self.pick_start_time = time.time()
-            self.read_pbo = self.current_pbo
-            self.current_pbo = 1 - self.current_pbo  # Ping-pong
+                glBindFramebuffer(
+                    GL_READ_FRAMEBUFFER,
+                    0,
+                )
+                glReadBuffer(GL_FRONT)
 
-            # 7. Temizlik
-            glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, 0)
-            
+            # -----------------------------------------------------
+            # Pick alanı
+            # -----------------------------------------------------
+            size = self.pick_size
+            half = self.pick_half
+
+            x0 = int(x) - half
+            y0 = int(y) - half
+
+            # Ekran sınırlarına taşmayı önle
+            x0 = max(0, min(
+                x0,
+                self.viewport_width - size,
+            ))
+
+            y0 = max(0, min(
+                y0,
+                self.viewport_height - size,
+            ))
+
+            # OpenGL Y ekseni ters
+            opengl_y = self.viewport_height - y0 - size
+
+            # -----------------------------------------------------
+            # PBO
+            # -----------------------------------------------------
+            pbo = self.pbos[self.current_pbo]
+
+            glBindBuffer(
+                GL_PIXEL_PACK_BUFFER,
+                pbo,
+            )
+
+            glPixelStorei(
+                GL_PACK_ALIGNMENT,
+                1,
+            )
+
+            glReadPixels(
+                x0,
+                opengl_y,
+                size,
+                size,
+                GL_RED_INTEGER,
+                GL_UNSIGNED_INT,
+                0,
+            )
+
+            # -----------------------------------------------------
+            # Pending state
+            # -----------------------------------------------------
+            self.pending_pick = True
+
+            self.pending_x = int(x)
+            self.pending_y = int(y)
+
+            self.pick_start_time = time.time()
+
+            self.read_pbo = self.current_pbo
+            self.current_pbo = 1 - self.current_pbo
+
+            # -----------------------------------------------------
+            # Temizlik
+            # -----------------------------------------------------
+            glBindBuffer(
+                GL_PIXEL_PACK_BUFFER,
+                0,
+            )
+
+            glBindFramebuffer(
+                GL_READ_FRAMEBUFFER,
+                0,
+            )
+
             return True
 
         except Exception as e:
-            logger.error(f"pick_async (MRT) hatası: {e}")
+            logger.error(
+                f"pick_async hatası: {e}"
+            )
+
             self.pending_pick = False
+
             return False
 
+    # def check_pick(self):
+    #     """Pick sonucunu kontrol et - 0 döndürebilir!"""
+    #     if not self.pending_pick:
+    #         return None, None, None
+
+    #     try:
+    #         read_pbo = self.pbos[self.read_pbo]
+    #         glBindBuffer(GL_PIXEL_PACK_BUFFER, read_pbo)
+            
+    #         ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)
+    #         if ptr:
+    #             char_ptr = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_uint32))
+    #             pick_id = int(char_ptr[0])
+    #             glUnmapBuffer(GL_PIXEL_PACK_BUFFER)
+    #         else:
+    #             pick_id = 0
+                
+    #         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
+
+    #         self.pending_pick = False
+    #         self.last_pick_id = pick_id
+            
+    #         # 0 döndürebiliriz - bu boşluk demek
+    #         return pick_id, self.pending_x, self.pending_y
+
+    #     except Exception as e:
+    #         logger.error(f"check_pick hatası: {e}")
+    #         self.pending_pick = False
+    #         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
+    #         return None, None, None
+
     def check_pick(self):
-        """Pick sonucunu kontrol et - 0 döndürebilir!"""
+        """
+        PBO'dan 7x7 pick alanını okur.
+
+        Fare merkezine en yakın sıfır olmayan ID seçilir.
+        """
+
         if not self.pending_pick:
             return None, None, None
 
         try:
-            read_pbo = self.pbos[self.read_pbo]
-            glBindBuffer(GL_PIXEL_PACK_BUFFER, read_pbo)
-            
-            ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)
-            if ptr:
-                char_ptr = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_uint32))
-                pick_id = int(char_ptr[0])
-                glUnmapBuffer(GL_PIXEL_PACK_BUFFER)
-            else:
-                pick_id = 0
-                
-            glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
+            pbo = self.pbos[self.read_pbo]
 
+            glBindBuffer(
+                GL_PIXEL_PACK_BUFFER,
+                pbo,
+            )
+
+            ptr = glMapBuffer(
+                GL_PIXEL_PACK_BUFFER,
+                GL_READ_ONLY,
+            )
+
+            if not ptr:
+                glBindBuffer(
+                    GL_PIXEL_PACK_BUFFER,
+                    0,
+                )
+
+                self.pending_pick = False
+
+                return 0, self.pending_x, self.pending_y
+
+            count = self.pick_size * self.pick_size
+
+            array_type = ctypes.c_uint32 * count
+
+            data = ctypes.cast(
+                ptr,
+                ctypes.POINTER(array_type),
+            ).contents
+
+            ids = np.frombuffer(
+                data,
+                dtype=np.uint32,
+            ).copy()
+
+            glUnmapBuffer(
+                GL_PIXEL_PACK_BUFFER
+            )
+
+            glBindBuffer(
+                GL_PIXEL_PACK_BUFFER,
+                0,
+            )
+
+            # -----------------------------------------------------
+            # En yakın ID'yi bul
+            # -----------------------------------------------------
+            center = self.pick_half
+
+            best_id = 0
+            best_dist = float("inf")
+
+            for index, pick_id in enumerate(ids):
+
+                if pick_id == 0:
+                    continue
+
+                row = index // self.pick_size
+                col = index % self.pick_size
+
+                dx = col - center
+                dy = row - center
+
+                dist2 = dx * dx + dy * dy
+
+                if dist2 < best_dist:
+                    best_dist = dist2
+                    best_id = int(pick_id)
+
+            # -----------------------------------------------------
+            # Sonuç
+            # -----------------------------------------------------
             self.pending_pick = False
-            self.last_pick_id = pick_id
-            
-            # 0 döndürebiliriz - bu boşluk demek
-            return pick_id, self.pending_x, self.pending_y
+            self.last_pick_id = best_id
+
+            return (
+                best_id,
+                self.pending_x,
+                self.pending_y,
+            )
 
         except Exception as e:
-            logger.error(f"check_pick hatası: {e}")
+            logger.error(
+                f"check_pick hatası: {e}"
+            )
+
             self.pending_pick = False
-            glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
-            return None, None, None
+
+            return (
+                0,
+                self.pending_x,
+                self.pending_y,
+            )
     
     def cleanup(self):
         """Kaynakları temizle"""

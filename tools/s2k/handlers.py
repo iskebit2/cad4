@@ -267,7 +267,7 @@ def handle_load_patterns(ctx: LoadContext, df: pd.DataFrame):
             name=name,
             design_type=str(row.get('DesignType', 'Dead')).strip(),
             self_wt_mult=safe_float(row, 'SelfWtMult', 0.0),
-            guid=str(row.get('GUID', '')).strip() or None,
+            
         )
 
 
@@ -290,7 +290,7 @@ def handle_load_cases(ctx: LoadContext, df: pd.DataFrame):
             design_act=str(row.get('DesignAct', 'Non-Composite')).strip(),
             auto_type=str(row.get('AutoType', 'None')).strip(),
             run_case=(run_str == 'YES'),
-            guid=str(row.get('GUID', '')).strip() or None,
+            
         )
 
 
@@ -350,7 +350,7 @@ def handle_combinations(ctx: LoadContext, df: pd.DataFrame):
                 name=name,
                 combo_type=str(row.get('ComboType', 'Linear Add')).strip(),
                 auto_design=(auto_des_str == 'YES'),
-                guid=str(row.get('GUID', '')).strip() or None,
+                
             )
         
         case_or_pat = str(row.get('CaseName', '')).strip()

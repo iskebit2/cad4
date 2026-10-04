@@ -1,7 +1,8 @@
 # geometry/scenebuilder.py
 from typing import Dict,Tuple,Optional, List
 from domain.scene import Scene
-from domain.definition import DefinitionManager, MatType, Material, Section, SectionType, LinkPropType,LinkProp, LinkPropLinear, Restraint
+from domain.definition import MatType, Material, Section, SectionType, LinkPropType,LinkProp, LinkPropLinear, Restraint
+from domain.definition_manager import DefinitionManager
 from domain.element import Node, Frame, Area, Link
 
 from logging_config import CadLogger

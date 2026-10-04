@@ -1,0 +1,3141 @@
+{
+  "version": 2,
+  "materials": {
+    "__dict__": {
+      "C24": {
+        "__dataclass__": "Material",
+        "name": "C24",
+        "mat_type": {
+          "__enum__": "MatType",
+          "value": 8
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            1.0,
+            0.0
+          ]
+        },
+        "E1": 11000.0,
+        "E2": 370.0,
+        "E3": 370.0,
+        "G12": 690.0,
+        "G13": 690.0,
+        "G23": 69.0,
+        "nu12": 0.3,
+        "nu13": 0.3,
+        "nu23": 0.1,
+        "density": 3.5e-09
+      },
+      "C30/37": {
+        "__dataclass__": "Material",
+        "name": "C30/37",
+        "mat_type": {
+          "__enum__": "MatType",
+          "value": 2
+        },
+        "color": {
+          "__tuple__": [
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        "E1": 33000.0,
+        "E2": 33000.0,
+        "E3": 33000.0,
+        "G12": 13750.0,
+        "G13": 13750.0,
+        "G23": 13750.0,
+        "nu12": 0.2,
+        "nu13": 0.2,
+        "nu23": 0.2,
+        "density": 2.5485e-09
+      },
+      "PANEL": {
+        "__dataclass__": "Material",
+        "name": "PANEL",
+        "mat_type": {
+          "__enum__": "MatType",
+          "value": 8
+        },
+        "color": {
+          "__tuple__": [
+            0.0,
+            1.0,
+            1.0
+          ]
+        },
+        "E1": 2500.0,
+        "E2": 2500.0,
+        "E3": 2500.0,
+        "G12": 961.538461538462,
+        "G13": 961.538461538462,
+        "G23": 961.538461538462,
+        "nu12": 0.3,
+        "nu13": 0.3,
+        "nu23": 0.3,
+        "density": 6.1e-10
+      },
+      "Rebar": {
+        "__dataclass__": "Material",
+        "name": "Rebar",
+        "mat_type": {
+          "__enum__": "MatType",
+          "value": 6
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            1.0
+          ]
+        },
+        "E1": 199947.9788,
+        "E2": 199947.9788,
+        "E3": 199947.9788,
+        "G12": 77000000.0,
+        "G13": 77000000.0,
+        "G23": 77000000.0,
+        "nu12": 0.3,
+        "nu13": 0.3,
+        "nu23": 0.3,
+        "density": 7.849e-09
+      },
+      "S355": {
+        "__dataclass__": "Material",
+        "name": "S355",
+        "mat_type": {
+          "__enum__": "MatType",
+          "value": 1
+        },
+        "color": {
+          "__tuple__": [
+            0.0,
+            1.0,
+            1.0
+          ]
+        },
+        "E1": 210000.0,
+        "E2": 210000.0,
+        "E3": 210000.0,
+        "G12": 80769.2307692308,
+        "G13": 80769.2307692308,
+        "G23": 80769.2307692308,
+        "nu12": 0.3,
+        "nu13": 0.3,
+        "nu23": 0.3,
+        "density": 7.849e-09
+      },
+      "TASDUVAR": {
+        "__dataclass__": "Material",
+        "name": "TASDUVAR",
+        "mat_type": {
+          "__enum__": "MatType",
+          "value": 9
+        },
+        "color": {
+          "__tuple__": [
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        "E1": 450.0,
+        "E2": 450.0,
+        "E3": 450.0,
+        "G12": 187.5,
+        "G13": 187.5,
+        "G23": 187.5,
+        "nu12": 0.2,
+        "nu13": 0.2,
+        "nu23": 0.2,
+        "density": 2.4473e-09
+      },
+      "Tendon": {
+        "__dataclass__": "Material",
+        "name": "Tendon",
+        "mat_type": {
+          "__enum__": "MatType",
+          "value": 7
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        "E1": 196500.5999,
+        "E2": 196500.5999,
+        "E3": 196500.5999,
+        "G12": 77000000.0,
+        "G13": 77000000.0,
+        "G23": 77000000.0,
+        "nu12": 0.3,
+        "nu13": 0.3,
+        "nu23": 0.3,
+        "density": 7.849e-09
+      }
+    }
+  },
+  "sections": {
+    "__dict__": {
+      "100*100": {
+        "__dataclass__": "Section",
+        "name": "100*100",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 100.0,
+            "b": 100.0,
+            "Area": 10000.0,
+            "J": 14083333.3333333,
+            "I33": 8333333.33333333,
+            "I22": 8333333.33333333,
+            "I23": 0.0,
+            "AS2": 8333.33333333333,
+            "AS3": 8333.33333333333,
+            "S33Top": 166666.666666667,
+            "S33Bot": 166666.666666667,
+            "S22Left": 166666.666666667,
+            "S22Right": 166666.666666667,
+            "Z33": 250000.0,
+            "Z22": 250000.0,
+            "R33": 28.8675134594813,
+            "R22": 28.8675134594813,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "100*120": {
+        "__dataclass__": "Section",
+        "name": "100*120",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 100.0,
+            "b": 120.0,
+            "Area": 12000.0,
+            "J": 19843942.9012346,
+            "I33": 10000000.0,
+            "I22": 14400000.0,
+            "I23": 0.0,
+            "AS2": 10000.0,
+            "AS3": 10000.0,
+            "S33Top": 200000.0,
+            "S33Bot": 200000.0,
+            "S22Left": 240000.0,
+            "S22Right": 240000.0,
+            "Z33": 300000.0,
+            "Z22": 360000.0,
+            "R33": 28.8675134594813,
+            "R22": 34.6410161513775,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "100*40": {
+        "__dataclass__": "Section",
+        "name": "100*40",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 100.0,
+            "b": 40.0,
+            "Area": 4000.0,
+            "J": 1596880.21333333,
+            "I33": 3333333.33333333,
+            "I22": 533333.333333333,
+            "I23": 0.0,
+            "AS2": 3333.33333333333,
+            "AS3": 3333.33333333333,
+            "S33Top": 66666.6666666667,
+            "S33Bot": 66666.6666666667,
+            "S22Left": 26666.6666666667,
+            "S22Right": 26666.6666666667,
+            "Z33": 100000.0,
+            "Z22": 40000.0,
+            "R33": 28.8675134594813,
+            "R22": 11.5470053837925,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            1.0,
+            0.0
+          ]
+        }
+      },
+      "100*50": {
+        "__dataclass__": "Section",
+        "name": "100*50",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 100.0,
+            "b": 50.0,
+            "Area": 5000.0,
+            "J": 2861002.60416667,
+            "I33": 4166666.66666667,
+            "I22": 1041666.66666667,
+            "I23": 0.0,
+            "AS2": 4166.66666666667,
+            "AS3": 4166.66666666667,
+            "S33Top": 83333.3333333333,
+            "S33Bot": 83333.3333333333,
+            "S22Left": 41666.6666666667,
+            "S22Right": 41666.6666666667,
+            "Z33": 125000.0,
+            "Z22": 62500.0,
+            "R33": 28.8675134594813,
+            "R22": 14.4337567297406,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "120*100": {
+        "__dataclass__": "Section",
+        "name": "120*100",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 120.0,
+            "b": 100.0,
+            "Area": 12000.0,
+            "J": 19843942.9012346,
+            "I33": 14400000.0,
+            "I22": 10000000.0,
+            "I23": 0.0,
+            "AS2": 10000.0,
+            "AS3": 10000.0,
+            "S33Top": 240000.0,
+            "S33Bot": 240000.0,
+            "S22Left": 200000.0,
+            "S22Right": 200000.0,
+            "Z33": 360000.0,
+            "Z22": 300000.0,
+            "R33": 34.6410161513775,
+            "R22": 28.8675134594813,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            0.8,
+            0.8,
+            0.8
+          ]
+        }
+      },
+      "120*40": {
+        "__dataclass__": "Section",
+        "name": "120*40",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 120.0,
+            "b": 40.0,
+            "Area": 4800.0,
+            "J": 2022953.08641975,
+            "I33": 5760000.0,
+            "I22": 640000.0,
+            "I23": 0.0,
+            "AS2": 4000.0,
+            "AS3": 4000.0,
+            "S33Top": 96000.0,
+            "S33Bot": 96000.0,
+            "S22Left": 32000.0,
+            "S22Right": 32000.0,
+            "Z33": 144000.0,
+            "Z22": 48000.0,
+            "R33": 34.6410161513775,
+            "R22": 11.5470053837925,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            0.8,
+            0.8,
+            0.8
+          ]
+        }
+      },
+      "120*80": {
+        "__dataclass__": "Section",
+        "name": "120*80",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 120.0,
+            "b": 80.0,
+            "Area": 9600.0,
+            "J": 12019990.1234568,
+            "I33": 11520000.0,
+            "I22": 5120000.0,
+            "I23": 0.0,
+            "AS2": 8000.0,
+            "AS3": 8000.0,
+            "S33Top": 192000.0,
+            "S33Bot": 192000.0,
+            "S22Left": 128000.0,
+            "S22Right": 128000.0,
+            "Z33": 288000.0,
+            "Z22": 192000.0,
+            "R33": 34.6410161513775,
+            "R22": 23.094010767585,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "40*100": {
+        "__dataclass__": "Section",
+        "name": "40*100",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 40.0,
+            "b": 100.0,
+            "Area": 4000.0,
+            "J": 1596880.21333333,
+            "I33": 533333.333333333,
+            "I22": 3333333.33333333,
+            "I23": 0.0,
+            "AS2": 3333.33333333333,
+            "AS3": 3333.33333333333,
+            "S33Top": 26666.6666666667,
+            "S33Bot": 26666.6666666667,
+            "S22Left": 66666.6666666667,
+            "S22Right": 66666.6666666667,
+            "Z33": 40000.0,
+            "Z22": 100000.0,
+            "R33": 11.5470053837925,
+            "R22": 28.8675134594813,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "40*120": {
+        "__dataclass__": "Section",
+        "name": "40*120",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 40.0,
+            "b": 120.0,
+            "Area": 4800.0,
+            "J": 2022953.08641975,
+            "I33": 640000.0,
+            "I22": 5760000.0,
+            "I23": 0.0,
+            "AS2": 4000.0,
+            "AS3": 4000.0,
+            "S33Top": 32000.0,
+            "S33Bot": 32000.0,
+            "S22Left": 96000.0,
+            "S22Right": 96000.0,
+            "Z33": 48000.0,
+            "Z22": 144000.0,
+            "R33": 11.5470053837925,
+            "R22": 34.6410161513775,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            0.0,
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "40*80": {
+        "__dataclass__": "Section",
+        "name": "40*80",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 40.0,
+            "b": 80.0,
+            "Area": 3200.0,
+            "J": 1171866.66666667,
+            "I33": 426666.666666667,
+            "I22": 1706666.66666667,
+            "I23": 0.0,
+            "AS2": 2666.66666666667,
+            "AS3": 2666.66666666667,
+            "S33Top": 21333.3333333333,
+            "S33Bot": 21333.3333333333,
+            "S22Left": 42666.6666666667,
+            "S22Right": 42666.6666666667,
+            "Z33": 32000.0,
+            "Z22": 64000.0,
+            "R33": 11.5470053837925,
+            "R22": 23.094010767585,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "50*100": {
+        "__dataclass__": "Section",
+        "name": "50*100",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 50.0,
+            "b": 100.0,
+            "Area": 5000.0,
+            "J": 2861002.60416667,
+            "I33": 1041666.66666667,
+            "I22": 4166666.66666667,
+            "I23": 0.0,
+            "AS2": 4166.66666666667,
+            "AS3": 4166.66666666667,
+            "S33Top": 41666.6666666667,
+            "S33Bot": 41666.6666666667,
+            "S22Left": 83333.3333333333,
+            "S22Right": 83333.3333333333,
+            "Z33": 62500.0,
+            "Z22": 125000.0,
+            "R33": 14.4337567297406,
+            "R22": 28.8675134594813,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "80*40": {
+        "__dataclass__": "Section",
+        "name": "80*40",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 80.0,
+            "b": 40.0,
+            "Area": 3200.0,
+            "J": 1171866.66666667,
+            "I33": 1706666.66666667,
+            "I22": 426666.666666667,
+            "I23": 0.0,
+            "AS2": 2666.66666666667,
+            "AS3": 2666.66666666667,
+            "S33Top": 42666.6666666667,
+            "S33Bot": 42666.6666666667,
+            "S22Left": 21333.3333333333,
+            "S22Right": 21333.3333333333,
+            "Z33": 64000.0,
+            "Z22": 32000.0,
+            "R33": 23.094010767585,
+            "R22": 11.5470053837925,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "80*80": {
+        "__dataclass__": "Section",
+        "name": "80*80",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 80.0,
+            "b": 80.0,
+            "Area": 6400.0,
+            "J": 5768533.33333333,
+            "I33": 3413333.33333333,
+            "I22": 3413333.33333333,
+            "I23": 0.0,
+            "AS2": 5333.33333333333,
+            "AS3": 5333.33333333333,
+            "S33Top": 85333.3333333333,
+            "S33Bot": 85333.3333333333,
+            "S22Left": 85333.3333333333,
+            "S22Right": 85333.3333333333,
+            "Z33": 128000.0,
+            "Z22": 128000.0,
+            "R33": 23.094010767585,
+            "R22": 23.094010767585,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            0.8,
+            0.8,
+            0.8
+          ]
+        }
+      },
+      "IPE300": {
+        "__dataclass__": "Section",
+        "name": "IPE300",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "I"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 300.0,
+            "b": 150.0,
+            "tw": 7.1,
+            "tf": 10.7,
+            "Area": 5380.0,
+            "J": 199000.0,
+            "I33": 83560000.0,
+            "I22": 6040000.0,
+            "I23": 1.49011611938477e-08,
+            "AS2": 2130.0,
+            "AS3": 2675.0,
+            "S33Top": 557066.7,
+            "S33Bot": 557066.7,
+            "S22Left": 80533.34,
+            "S22Right": 80533.34,
+            "Z33": 628000.0,
+            "Z22": 125000.0,
+            "R33": 124.6258,
+            "R22": 33.50637,
+            "Cw": 125934052921.875,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "S355",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 1
+          },
+          "color": {
+            "__tuple__": [
+              0.0,
+              1.0,
+              1.0
+            ]
+          },
+          "E1": 210000.0,
+          "E2": 210000.0,
+          "E3": 210000.0,
+          "G12": 80769.2307692308,
+          "G13": 80769.2307692308,
+          "G23": 80769.2307692308,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.3,
+          "density": 7.849e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "TAHTA20": {
+        "__dataclass__": "Section",
+        "name": "TAHTA20",
+        "profile_type": {
+          "__enum__": "SectionType",
+          "value": "RECT"
+        },
+        "profile_params": {
+          "__dict__": {
+            "h": 100.0,
+            "b": 20.0,
+            "Area": 2000.0,
+            "J": 233071.146666667,
+            "I33": 1666666.66666667,
+            "I22": 66666.6666666667,
+            "I23": 0.0,
+            "AS2": 1666.66666666667,
+            "AS3": 1666.66666666667,
+            "S33Top": 33333.3333333333,
+            "S33Bot": 33333.3333333333,
+            "S22Left": 6666.66666666667,
+            "S22Right": 6666.66666666667,
+            "Z33": 50000.0,
+            "Z22": 10000.0,
+            "R33": 28.8675134594813,
+            "R22": 5.77350269189626,
+            "Cw": 0.0,
+            "AMod": 1.0,
+            "A2Mod": 1.0,
+            "A3Mod": 1.0,
+            "JMod": 1.0,
+            "I2Mod": 1.0,
+            "I3Mod": 1.0,
+            "MMod": 1.0,
+            "WMod": 1.0
+          }
+        },
+        "material": {
+          "__dataclass__": "Material",
+          "name": "C24",
+          "mat_type": {
+            "__enum__": "MatType",
+            "value": 8
+          },
+          "color": {
+            "__tuple__": [
+              1.0,
+              1.0,
+              0.0
+            ]
+          },
+          "E1": 11000.0,
+          "E2": 370.0,
+          "E3": 370.0,
+          "G12": 690.0,
+          "G13": 690.0,
+          "G23": 69.0,
+          "nu12": 0.3,
+          "nu13": 0.3,
+          "nu23": 0.1,
+          "density": 3.5e-09
+        },
+        "color": {
+          "__tuple__": [
+            1.0,
+            1.0,
+            0.0
+          ]
+        }
+      }
+    }
+  },
+  "link_props": {
+    "__dict__": {
+      "LINK1": {
+        "__dataclass__": "LinkPropLinear",
+        "name": "LINK1",
+        "prop_type": {
+          "__enum__": "LinkPropType",
+          "value": 1
+        },
+        "DOF": {
+          "__dict__": {
+            "U1": true,
+            "U2": true,
+            "U3": true,
+            "R1": true,
+            "R2": true,
+            "R3": true
+          }
+        },
+        "Fixed": {
+          "__dict__": {}
+        },
+        "Ke": {
+          "__dict__": {
+            "U1": 0.0,
+            "U2": 0.0,
+            "U3": 0.0,
+            "R1": 0.0,
+            "R2": 0.0,
+            "R3": 0.0
+          }
+        },
+        "Ce": {
+          "__dict__": {
+            "U1": 0.0,
+            "U2": 0.0,
+            "U3": 0.0,
+            "R1": 0.0,
+            "R2": 0.0,
+            "R3": 0.0
+          }
+        }
+      }
+    }
+  },
+  "load_patterns": {
+    "__dict__": {
+      "DEAD": {
+        "__dataclass__": "LoadPattern",
+        "name": "DEAD",
+        "design_type": "Dead",
+        "self_wt_mult": 1.0
+      },
+      "WindXP+cpi": {
+        "__dataclass__": "LoadPattern",
+        "name": "WindXP+cpi",
+        "design_type": "Wind",
+        "self_wt_mult": 0.0
+      },
+      "WindXE+cpi": {
+        "__dataclass__": "LoadPattern",
+        "name": "WindXE+cpi",
+        "design_type": "Wind",
+        "self_wt_mult": 0.0
+      },
+      "WindYP+cpi": {
+        "__dataclass__": "LoadPattern",
+        "name": "WindYP+cpi",
+        "design_type": "Wind",
+        "self_wt_mult": 0.0
+      },
+      "WindYE+cpi": {
+        "__dataclass__": "LoadPattern",
+        "name": "WindYE+cpi",
+        "design_type": "Wind",
+        "self_wt_mult": 0.0
+      },
+      "WindXP-cpi": {
+        "__dataclass__": "LoadPattern",
+        "name": "WindXP-cpi",
+        "design_type": "Wind",
+        "self_wt_mult": 0.0
+      },
+      "WindXE-cpi": {
+        "__dataclass__": "LoadPattern",
+        "name": "WindXE-cpi",
+        "design_type": "Wind",
+        "self_wt_mult": 0.0
+      },
+      "WindYP-cpi": {
+        "__dataclass__": "LoadPattern",
+        "name": "WindYP-cpi",
+        "design_type": "Wind",
+        "self_wt_mult": 0.0
+      },
+      "WindYE-cpi": {
+        "__dataclass__": "LoadPattern",
+        "name": "WindYE-cpi",
+        "design_type": "Wind",
+        "self_wt_mult": 0.0
+      },
+      "LIVE": {
+        "__dataclass__": "LoadPattern",
+        "name": "LIVE",
+        "design_type": "Live",
+        "self_wt_mult": 0.0
+      },
+      "SNOW_FULL": {
+        "__dataclass__": "LoadPattern",
+        "name": "SNOW_FULL",
+        "design_type": "Snow",
+        "self_wt_mult": 0.0
+      },
+      "SNOW_HX": {
+        "__dataclass__": "LoadPattern",
+        "name": "SNOW_HX",
+        "design_type": "Snow",
+        "self_wt_mult": 0.0
+      },
+      "SNOW_HY": {
+        "__dataclass__": "LoadPattern",
+        "name": "SNOW_HY",
+        "design_type": "Snow",
+        "self_wt_mult": 0.0
+      },
+      "QUAKEX": {
+        "__dataclass__": "LoadPattern",
+        "name": "QUAKEX",
+        "design_type": "Quake",
+        "self_wt_mult": 0.0
+      },
+      "QUAKEY": {
+        "__dataclass__": "LoadPattern",
+        "name": "QUAKEY",
+        "design_type": "Quake",
+        "self_wt_mult": 0.0
+      }
+    }
+  },
+  "load_cases": {
+    "__dict__": {
+      "DEAD": {
+        "__dataclass__": "LoadCase",
+        "name": "DEAD",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Dead",
+        "design_act": "Non-Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "DEAD",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "LIVE": {
+        "__dataclass__": "LoadCase",
+        "name": "LIVE",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Live",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "LIVE",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "SNOW_FULL": {
+        "__dataclass__": "LoadCase",
+        "name": "SNOW_FULL",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Snow",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "SNOW_FULL",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "SNOW_HX": {
+        "__dataclass__": "LoadCase",
+        "name": "SNOW_HX",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Snow",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "SNOW_HX",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "SNOW_HY": {
+        "__dataclass__": "LoadCase",
+        "name": "SNOW_HY",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Snow",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "SNOW_HY",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "MODAL": {
+        "__dataclass__": "LoadCase",
+        "name": "MODAL",
+        "case_type": "LinModal",
+        "initial_cond": "Zero",
+        "design_type": "Other",
+        "design_act": "Other",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": []
+        }
+      },
+      "EQX": {
+        "__dataclass__": "LoadCase",
+        "name": "EQX",
+        "case_type": "LinRespSpec",
+        "initial_cond": "nan",
+        "design_type": "Quake",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": []
+        }
+      },
+      "EQY": {
+        "__dataclass__": "LoadCase",
+        "name": "EQY",
+        "case_type": "LinRespSpec",
+        "initial_cond": "nan",
+        "design_type": "Quake",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": []
+        }
+      },
+      "QUAKEX": {
+        "__dataclass__": "LoadCase",
+        "name": "QUAKEX",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Quake",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "QUAKEX",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "QUAKEY": {
+        "__dataclass__": "LoadCase",
+        "name": "QUAKEY",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Quake",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "QUAKEY",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "WindXP+cpi": {
+        "__dataclass__": "LoadCase",
+        "name": "WindXP+cpi",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Wind",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "WindXP+cpi",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "WindXE+cpi": {
+        "__dataclass__": "LoadCase",
+        "name": "WindXE+cpi",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Wind",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "WindXE+cpi",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "WindYP+cpi": {
+        "__dataclass__": "LoadCase",
+        "name": "WindYP+cpi",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Wind",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "WindYP+cpi",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "WindYE+cpi": {
+        "__dataclass__": "LoadCase",
+        "name": "WindYE+cpi",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Wind",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "WindYE+cpi",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "WindXP-cpi": {
+        "__dataclass__": "LoadCase",
+        "name": "WindXP-cpi",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Wind",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "WindXP-cpi",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "WindXE-cpi": {
+        "__dataclass__": "LoadCase",
+        "name": "WindXE-cpi",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Wind",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "WindXE-cpi",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "WindYP-cpi": {
+        "__dataclass__": "LoadCase",
+        "name": "WindYP-cpi",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Wind",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "WindYP-cpi",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      },
+      "WindYE-cpi": {
+        "__dataclass__": "LoadCase",
+        "name": "WindYE-cpi",
+        "case_type": "LinStatic",
+        "initial_cond": "Zero",
+        "design_type": "Wind",
+        "design_act": "Short-Term Composite",
+        "auto_type": "None",
+        "run_case": true,
+        "static_assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "StaticLoadAssignment",
+              "load_type": "Load pattern",
+              "load_name": "WindYE-cpi",
+              "load_sf": 1.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  "modal_cases": {
+    "__dict__": {
+      "MODAL": {
+        "__dataclass__": "ModalCase",
+        "name": "MODAL",
+        "mode_type": "Eigen",
+        "max_num_modes": 24,
+        "min_num_modes": 1,
+        "eigen_shift": 0.0,
+        "eigen_cutoff": 0.0,
+        "eigen_tol": 1e-09,
+        "auto_shift": true
+      }
+    }
+  },
+  "combinations": {
+    "__dict__": {
+      "ULS01": {
+        "__dataclass__": "LoadCombination",
+        "name": "ULS01",
+        "combo_type": "Linear Add",
+        "auto_design": false,
+        "items": {
+          "__list__": [
+            {
+              "__dataclass__": "ComboItem",
+              "case_or_pattern_name": "DEAD",
+              "scale_factor": 1.35
+            },
+            {
+              "__dataclass__": "ComboItem",
+              "case_or_pattern_name": "LIVE",
+              "scale_factor": 1.5
+            }
+          ]
+        }
+      },
+      "ULS02": {
+        "__dataclass__": "LoadCombination",
+        "name": "ULS02",
+        "combo_type": "Linear Add",
+        "auto_design": false,
+        "items": {
+          "__list__": [
+            {
+              "__dataclass__": "ComboItem",
+              "case_or_pattern_name": "DEAD",
+              "scale_factor": 1.35
+            },
+            {
+              "__dataclass__": "ComboItem",
+              "case_or_pattern_name": "LIVE",
+              "scale_factor": 1.5
+            },
+            {
+              "__dataclass__": "ComboItem",
+              "case_or_pattern_name": "SNOW_FULL",
+              "scale_factor": 1.05
+            },
+            {
+              "__dataclass__": "ComboItem",
+              "case_or_pattern_name": "WindXP+cpi",
+              "scale_factor": 1.05
+            }
+          ]
+        }
+      }
+    }
+  },
+  "spectrum_functions": {
+    "__dict__": {
+      "TSC2018DD2": {
+        "__dataclass__": "SpectrumFunction",
+        "name": "TSC2018DD2",
+        "source_type": {
+          "__enum__": "SpectrumSourceType",
+          "value": "TSC_2018"
+        },
+        "damp": 0.05,
+        "ss": 2.29,
+        "s1": 0.187,
+        "tl": 6.0,
+        "site_class": "ZC",
+        "fs": 1.2,
+        "f1": 1.5,
+        "r_coeff": 4.0,
+        "d_coeff": 2.0,
+        "i_coeff": 1.0,
+        "spec_dir": "Horizontal",
+        "file_path": null,
+        "data_type": "Period vs Accel",
+        "points": {
+          "__list__": [
+            {
+              "__tuple__": [
+                0.0,
+                0.5496
+              ]
+            },
+            {
+              "__tuple__": [
+                0.04,
+                0.98716
+              ]
+            },
+            {
+              "__tuple__": [
+                0.08,
+                0.77029
+              ]
+            },
+            {
+              "__tuple__": [
+                0.12,
+                0.584375
+              ]
+            },
+            {
+              "__tuple__": [
+                0.16,
+                0.438281
+              ]
+            },
+            {
+              "__tuple__": [
+                0.2,
+                0.350625
+              ]
+            },
+            {
+              "__tuple__": [
+                0.24,
+                0.292187
+              ]
+            },
+            {
+              "__tuple__": [
+                0.28,
+                0.250446
+              ]
+            },
+            {
+              "__tuple__": [
+                0.32,
+                0.219141
+              ]
+            },
+            {
+              "__tuple__": [
+                0.36,
+                0.194792
+              ]
+            },
+            {
+              "__tuple__": [
+                0.4,
+                0.175312
+              ]
+            },
+            {
+              "__tuple__": [
+                0.44,
+                0.159375
+              ]
+            },
+            {
+              "__tuple__": [
+                0.48,
+                0.146094
+              ]
+            },
+            {
+              "__tuple__": [
+                0.52,
+                0.134856
+              ]
+            },
+            {
+              "__tuple__": [
+                0.56,
+                0.125223
+              ]
+            },
+            {
+              "__tuple__": [
+                0.6,
+                0.116875
+              ]
+            },
+            {
+              "__tuple__": [
+                0.64,
+                0.10957
+              ]
+            },
+            {
+              "__tuple__": [
+                0.68,
+                0.103125
+              ]
+            },
+            {
+              "__tuple__": [
+                0.72,
+                0.097396
+              ]
+            },
+            {
+              "__tuple__": [
+                0.76,
+                0.09227
+              ]
+            },
+            {
+              "__tuple__": [
+                0.8,
+                0.087656
+              ]
+            },
+            {
+              "__tuple__": [
+                0.84,
+                0.083482
+              ]
+            },
+            {
+              "__tuple__": [
+                0.88,
+                0.079687
+              ]
+            },
+            {
+              "__tuple__": [
+                0.92,
+                0.076223
+              ]
+            },
+            {
+              "__tuple__": [
+                0.96,
+                0.073047
+              ]
+            },
+            {
+              "__tuple__": [
+                1.0,
+                0.070125
+              ]
+            },
+            {
+              "__tuple__": [
+                1.04,
+                0.067428
+              ]
+            },
+            {
+              "__tuple__": [
+                1.08,
+                0.064931
+              ]
+            },
+            {
+              "__tuple__": [
+                1.12,
+                0.062612
+              ]
+            },
+            {
+              "__tuple__": [
+                1.16,
+                0.060453
+              ]
+            },
+            {
+              "__tuple__": [
+                1.2,
+                0.058437
+              ]
+            },
+            {
+              "__tuple__": [
+                1.24,
+                0.056552
+              ]
+            },
+            {
+              "__tuple__": [
+                1.28,
+                0.054785
+              ]
+            },
+            {
+              "__tuple__": [
+                1.32,
+                0.053125
+              ]
+            },
+            {
+              "__tuple__": [
+                1.36,
+                0.051562
+              ]
+            },
+            {
+              "__tuple__": [
+                1.4,
+                0.050089
+              ]
+            },
+            {
+              "__tuple__": [
+                1.44,
+                0.048698
+              ]
+            },
+            {
+              "__tuple__": [
+                1.48,
+                0.047382
+              ]
+            },
+            {
+              "__tuple__": [
+                1.52,
+                0.046135
+              ]
+            },
+            {
+              "__tuple__": [
+                1.56,
+                0.044952
+              ]
+            },
+            {
+              "__tuple__": [
+                1.6,
+                0.043828
+              ]
+            },
+            {
+              "__tuple__": [
+                1.64,
+                0.042759
+              ]
+            },
+            {
+              "__tuple__": [
+                1.68,
+                0.041741
+              ]
+            },
+            {
+              "__tuple__": [
+                1.72,
+                0.04077
+              ]
+            },
+            {
+              "__tuple__": [
+                1.76,
+                0.039844
+              ]
+            },
+            {
+              "__tuple__": [
+                1.8,
+                0.038958
+              ]
+            },
+            {
+              "__tuple__": [
+                1.84,
+                0.038111
+              ]
+            },
+            {
+              "__tuple__": [
+                1.88,
+                0.037301
+              ]
+            },
+            {
+              "__tuple__": [
+                1.92,
+                0.036523
+              ]
+            },
+            {
+              "__tuple__": [
+                1.96,
+                0.035778
+              ]
+            },
+            {
+              "__tuple__": [
+                2.0,
+                0.035062
+              ]
+            },
+            {
+              "__tuple__": [
+                2.04,
+                0.034375
+              ]
+            },
+            {
+              "__tuple__": [
+                2.08,
+                0.033714
+              ]
+            },
+            {
+              "__tuple__": [
+                2.12,
+                0.033078
+              ]
+            },
+            {
+              "__tuple__": [
+                2.16,
+                0.032465
+              ]
+            },
+            {
+              "__tuple__": [
+                2.2,
+                0.031875
+              ]
+            },
+            {
+              "__tuple__": [
+                2.24,
+                0.031306
+              ]
+            },
+            {
+              "__tuple__": [
+                2.28,
+                0.030757
+              ]
+            },
+            {
+              "__tuple__": [
+                2.32,
+                0.030226
+              ]
+            },
+            {
+              "__tuple__": [
+                2.36,
+                0.029714
+              ]
+            },
+            {
+              "__tuple__": [
+                2.4,
+                0.029219
+              ]
+            },
+            {
+              "__tuple__": [
+                2.44,
+                0.02874
+              ]
+            },
+            {
+              "__tuple__": [
+                2.48,
+                0.028276
+              ]
+            },
+            {
+              "__tuple__": [
+                2.52,
+                0.027827
+              ]
+            },
+            {
+              "__tuple__": [
+                2.56,
+                0.027393
+              ]
+            },
+            {
+              "__tuple__": [
+                2.6,
+                0.026971
+              ]
+            },
+            {
+              "__tuple__": [
+                2.64,
+                0.026562
+              ]
+            },
+            {
+              "__tuple__": [
+                2.68,
+                0.026166
+              ]
+            },
+            {
+              "__tuple__": [
+                2.72,
+                0.025781
+              ]
+            },
+            {
+              "__tuple__": [
+                2.76,
+                0.025408
+              ]
+            },
+            {
+              "__tuple__": [
+                2.8,
+                0.025045
+              ]
+            },
+            {
+              "__tuple__": [
+                2.84,
+                0.024692
+              ]
+            },
+            {
+              "__tuple__": [
+                2.88,
+                0.024349
+              ]
+            },
+            {
+              "__tuple__": [
+                2.92,
+                0.024015
+              ]
+            },
+            {
+              "__tuple__": [
+                2.96,
+                0.023691
+              ]
+            },
+            {
+              "__tuple__": [
+                3.0,
+                0.023375
+              ]
+            },
+            {
+              "__tuple__": [
+                3.04,
+                0.023067
+              ]
+            },
+            {
+              "__tuple__": [
+                3.08,
+                0.022768
+              ]
+            },
+            {
+              "__tuple__": [
+                3.12,
+                0.022476
+              ]
+            },
+            {
+              "__tuple__": [
+                3.16,
+                0.022191
+              ]
+            },
+            {
+              "__tuple__": [
+                3.2,
+                0.021914
+              ]
+            },
+            {
+              "__tuple__": [
+                3.24,
+                0.021644
+              ]
+            },
+            {
+              "__tuple__": [
+                3.28,
+                0.02138
+              ]
+            },
+            {
+              "__tuple__": [
+                3.32,
+                0.021122
+              ]
+            },
+            {
+              "__tuple__": [
+                3.36,
+                0.020871
+              ]
+            },
+            {
+              "__tuple__": [
+                3.4,
+                0.020625
+              ]
+            },
+            {
+              "__tuple__": [
+                3.44,
+                0.020385
+              ]
+            },
+            {
+              "__tuple__": [
+                3.48,
+                0.020151
+              ]
+            },
+            {
+              "__tuple__": [
+                3.52,
+                0.019922
+              ]
+            },
+            {
+              "__tuple__": [
+                3.56,
+                0.019698
+              ]
+            },
+            {
+              "__tuple__": [
+                3.6,
+                0.019479
+              ]
+            },
+            {
+              "__tuple__": [
+                3.64,
+                0.019265
+              ]
+            },
+            {
+              "__tuple__": [
+                3.68,
+                0.019056
+              ]
+            },
+            {
+              "__tuple__": [
+                3.72,
+                0.018851
+              ]
+            },
+            {
+              "__tuple__": [
+                3.76,
+                0.01865
+              ]
+            },
+            {
+              "__tuple__": [
+                3.8,
+                0.018454
+              ]
+            },
+            {
+              "__tuple__": [
+                3.84,
+                0.018262
+              ]
+            },
+            {
+              "__tuple__": [
+                3.88,
+                0.018073
+              ]
+            },
+            {
+              "__tuple__": [
+                3.92,
+                0.017889
+              ]
+            },
+            {
+              "__tuple__": [
+                3.96,
+                0.017708
+              ]
+            },
+            {
+              "__tuple__": [
+                4.0,
+                0.017531
+              ]
+            },
+            {
+              "__tuple__": [
+                4.04,
+                0.017358
+              ]
+            },
+            {
+              "__tuple__": [
+                4.08,
+                0.017187
+              ]
+            },
+            {
+              "__tuple__": [
+                4.12,
+                0.017021
+              ]
+            },
+            {
+              "__tuple__": [
+                4.16,
+                0.016857
+              ]
+            },
+            {
+              "__tuple__": [
+                4.2,
+                0.016696
+              ]
+            },
+            {
+              "__tuple__": [
+                4.24,
+                0.016539
+              ]
+            },
+            {
+              "__tuple__": [
+                4.28,
+                0.016384
+              ]
+            },
+            {
+              "__tuple__": [
+                4.32,
+                0.016233
+              ]
+            },
+            {
+              "__tuple__": [
+                4.36,
+                0.016084
+              ]
+            },
+            {
+              "__tuple__": [
+                4.4,
+                0.015937
+              ]
+            },
+            {
+              "__tuple__": [
+                4.44,
+                0.015794
+              ]
+            },
+            {
+              "__tuple__": [
+                4.48,
+                0.015653
+              ]
+            },
+            {
+              "__tuple__": [
+                4.52,
+                0.015514
+              ]
+            },
+            {
+              "__tuple__": [
+                4.56,
+                0.015378
+              ]
+            },
+            {
+              "__tuple__": [
+                4.6,
+                0.015245
+              ]
+            },
+            {
+              "__tuple__": [
+                4.64,
+                0.015113
+              ]
+            },
+            {
+              "__tuple__": [
+                4.68,
+                0.014984
+              ]
+            },
+            {
+              "__tuple__": [
+                4.72,
+                0.014857
+              ]
+            },
+            {
+              "__tuple__": [
+                4.76,
+                0.014732
+              ]
+            },
+            {
+              "__tuple__": [
+                4.8,
+                0.014609
+              ]
+            },
+            {
+              "__tuple__": [
+                4.84,
+                0.014489
+              ]
+            },
+            {
+              "__tuple__": [
+                4.88,
+                0.01437
+              ]
+            },
+            {
+              "__tuple__": [
+                4.92,
+                0.014253
+              ]
+            },
+            {
+              "__tuple__": [
+                4.96,
+                0.014138
+              ]
+            },
+            {
+              "__tuple__": [
+                5.0,
+                0.014025
+              ]
+            },
+            {
+              "__tuple__": [
+                5.04,
+                0.013914
+              ]
+            },
+            {
+              "__tuple__": [
+                5.08,
+                0.013804
+              ]
+            },
+            {
+              "__tuple__": [
+                5.12,
+                0.013696
+              ]
+            },
+            {
+              "__tuple__": [
+                5.16,
+                0.01359
+              ]
+            },
+            {
+              "__tuple__": [
+                5.2,
+                0.013486
+              ]
+            },
+            {
+              "__tuple__": [
+                5.24,
+                0.013383
+              ]
+            },
+            {
+              "__tuple__": [
+                5.28,
+                0.013281
+              ]
+            },
+            {
+              "__tuple__": [
+                5.32,
+                0.013181
+              ]
+            },
+            {
+              "__tuple__": [
+                5.36,
+                0.013083
+              ]
+            },
+            {
+              "__tuple__": [
+                5.4,
+                0.012986
+              ]
+            },
+            {
+              "__tuple__": [
+                5.44,
+                0.012891
+              ]
+            },
+            {
+              "__tuple__": [
+                5.48,
+                0.012797
+              ]
+            },
+            {
+              "__tuple__": [
+                5.52,
+                0.012704
+              ]
+            },
+            {
+              "__tuple__": [
+                5.56,
+                0.012612
+              ]
+            },
+            {
+              "__tuple__": [
+                5.6,
+                0.012522
+              ]
+            },
+            {
+              "__tuple__": [
+                5.64,
+                0.012434
+              ]
+            },
+            {
+              "__tuple__": [
+                5.68,
+                0.012346
+              ]
+            },
+            {
+              "__tuple__": [
+                5.72,
+                0.01226
+              ]
+            },
+            {
+              "__tuple__": [
+                5.76,
+                0.012174
+              ]
+            },
+            {
+              "__tuple__": [
+                5.8,
+                0.012091
+              ]
+            },
+            {
+              "__tuple__": [
+                5.84,
+                0.012008
+              ]
+            },
+            {
+              "__tuple__": [
+                5.88,
+                0.011926
+              ]
+            },
+            {
+              "__tuple__": [
+                5.92,
+                0.011845
+              ]
+            },
+            {
+              "__tuple__": [
+                5.96,
+                0.011766
+              ]
+            },
+            {
+              "__tuple__": [
+                6.0,
+                0.011687
+              ]
+            },
+            {
+              "__tuple__": [
+                6.04,
+                0.011533
+              ]
+            },
+            {
+              "__tuple__": [
+                6.08,
+                0.011382
+              ]
+            },
+            {
+              "__tuple__": [
+                6.12,
+                0.011234
+              ]
+            },
+            {
+              "__tuple__": [
+                6.16,
+                0.011088
+              ]
+            },
+            {
+              "__tuple__": [
+                6.2,
+                0.010946
+              ]
+            },
+            {
+              "__tuple__": [
+                6.24,
+                0.010806
+              ]
+            },
+            {
+              "__tuple__": [
+                6.28,
+                0.010669
+              ]
+            },
+            {
+              "__tuple__": [
+                6.32,
+                0.010534
+              ]
+            },
+            {
+              "__tuple__": [
+                6.36,
+                0.010402
+              ]
+            },
+            {
+              "__tuple__": [
+                6.4,
+                0.010272
+              ]
+            },
+            {
+              "__tuple__": [
+                6.44,
+                0.010145
+              ]
+            },
+            {
+              "__tuple__": [
+                6.48,
+                0.01002
+              ]
+            },
+            {
+              "__tuple__": [
+                6.52,
+                0.009898
+              ]
+            },
+            {
+              "__tuple__": [
+                6.56,
+                0.009777
+              ]
+            },
+            {
+              "__tuple__": [
+                6.6,
+                0.009659
+              ]
+            },
+            {
+              "__tuple__": [
+                6.64,
+                0.009543
+              ]
+            },
+            {
+              "__tuple__": [
+                6.68,
+                0.009429
+              ]
+            },
+            {
+              "__tuple__": [
+                6.72,
+                0.009317
+              ]
+            },
+            {
+              "__tuple__": [
+                6.76,
+                0.009207
+              ]
+            },
+            {
+              "__tuple__": [
+                6.8,
+                0.009099
+              ]
+            },
+            {
+              "__tuple__": [
+                6.84,
+                0.008993
+              ]
+            },
+            {
+              "__tuple__": [
+                6.88,
+                0.008889
+              ]
+            },
+            {
+              "__tuple__": [
+                6.92,
+                0.008786
+              ]
+            },
+            {
+              "__tuple__": [
+                6.96,
+                0.008686
+              ]
+            },
+            {
+              "__tuple__": [
+                7.0,
+                0.008587
+              ]
+            },
+            {
+              "__tuple__": [
+                7.04,
+                0.008489
+              ]
+            },
+            {
+              "__tuple__": [
+                7.08,
+                0.008394
+              ]
+            },
+            {
+              "__tuple__": [
+                7.12,
+                0.0083
+              ]
+            },
+            {
+              "__tuple__": [
+                7.16,
+                0.008207
+              ]
+            },
+            {
+              "__tuple__": [
+                7.2,
+                0.008116
+              ]
+            },
+            {
+              "__tuple__": [
+                7.24,
+                0.008027
+              ]
+            },
+            {
+              "__tuple__": [
+                7.28,
+                0.007939
+              ]
+            },
+            {
+              "__tuple__": [
+                7.32,
+                0.007852
+              ]
+            },
+            {
+              "__tuple__": [
+                7.36,
+                0.007767
+              ]
+            },
+            {
+              "__tuple__": [
+                7.4,
+                0.007684
+              ]
+            },
+            {
+              "__tuple__": [
+                7.44,
+                0.007601
+              ]
+            },
+            {
+              "__tuple__": [
+                7.48,
+                0.00752
+              ]
+            },
+            {
+              "__tuple__": [
+                7.52,
+                0.00744
+              ]
+            },
+            {
+              "__tuple__": [
+                7.56,
+                0.007362
+              ]
+            },
+            {
+              "__tuple__": [
+                7.6,
+                0.007284
+              ]
+            },
+            {
+              "__tuple__": [
+                7.64,
+                0.007208
+              ]
+            },
+            {
+              "__tuple__": [
+                7.68,
+                0.007133
+              ]
+            },
+            {
+              "__tuple__": [
+                7.72,
+                0.00706
+              ]
+            },
+            {
+              "__tuple__": [
+                7.76,
+                0.006987
+              ]
+            },
+            {
+              "__tuple__": [
+                7.8,
+                0.006916
+              ]
+            },
+            {
+              "__tuple__": [
+                7.84,
+                0.006845
+              ]
+            },
+            {
+              "__tuple__": [
+                7.88,
+                0.006776
+              ]
+            },
+            {
+              "__tuple__": [
+                7.92,
+                0.006708
+              ]
+            },
+            {
+              "__tuple__": [
+                7.96,
+                0.00664
+              ]
+            },
+            {
+              "__tuple__": [
+                8.0,
+                0.006574
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "response_spectrum_cases": {
+    "__dict__": {
+      "EQX": {
+        "__dataclass__": "ResponseSpectrumCase",
+        "name": "EQX",
+        "modal_combo": "CQC",
+        "dir_combo": "SRSS",
+        "damping": 0.05,
+        "eccentricity": 0.0,
+        "assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "ResponseSpectrumLoadAssignment",
+              "load_name": "U1",
+              "function_name": "TSC2018DD2",
+              "angle": 0.0,
+              "sf": 9810.0
+            }
+          ]
+        }
+      },
+      "EQY": {
+        "__dataclass__": "ResponseSpectrumCase",
+        "name": "EQY",
+        "modal_combo": "CQC",
+        "dir_combo": "SRSS",
+        "damping": 0.05,
+        "eccentricity": 0.0,
+        "assignments": {
+          "__list__": [
+            {
+              "__dataclass__": "ResponseSpectrumLoadAssignment",
+              "load_name": "U2",
+              "function_name": "TSC2018DD2",
+              "angle": 0.0,
+              "sf": 9810.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  "auto_seismics": {
+    "__dict__": {
+      "QUAKEX": {
+        "__dataclass__": "AutoSeismicTSC2018",
+        "load_pattern": "QUAKEX",
+        "direction": "X",
+        "percent_ecc": 0.05,
+        "period_calc": "Prog Calc",
+        "ct_and_x": "0.10m, 0.75",
+        "r_coeff": 4.0,
+        "d_coeff": 2.0,
+        "i_coeff": 1.0,
+        "ss": 0.626,
+        "s1": 0.187,
+        "tl": 8.0,
+        "site_class": "ZC",
+        "fs": 1.2496,
+        "f1": 1.5
+      },
+      "QUAKEY": {
+        "__dataclass__": "AutoSeismicTSC2018",
+        "load_pattern": "QUAKEY",
+        "direction": "Y",
+        "percent_ecc": 0.05,
+        "period_calc": "Prog Calc",
+        "ct_and_x": "0.10m, 0.75",
+        "r_coeff": 4.0,
+        "d_coeff": 2.0,
+        "i_coeff": 1.0,
+        "ss": 0.626,
+        "s1": 0.187,
+        "tl": 8.0,
+        "site_class": "ZC",
+        "fs": 1.2496,
+        "f1": 1.5
+      }
+    }
+  },
+  "mass_source_map": {
+    "__dict__": {
+      "DEAD": 1.0,
+      "LIVE": 0.3
+    }
+  },
+  "project_info": {
+    "__dict__": {
+      "gen": {
+        "__dataclass__": "GeneralProjectInfo",
+        "company_name": "",
+        "client_name": "",
+        "project_name": "",
+        "project_number": "",
+        "model_name": "",
+        "model_description": "",
+        "revision_number": "",
+        "frame_type": "",
+        "engineer": "",
+        "checker": "",
+        "supervisor": "",
+        "issue_code": "",
+        "design_code": ""
+      },
+      "site": {
+        "__dataclass__": "SiteInformation",
+        "live_load_factor": 0.3,
+        "cadastral_info": "--- / --",
+        "date": "xx.xx.20xx",
+        "soil_class": "ZD",
+        "subgrade_modulus_kn_m3": 1500,
+        "extra_items": {
+          "__dict__": {}
+        }
+      }
+    }
+  }
+}

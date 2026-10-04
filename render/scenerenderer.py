@@ -33,7 +33,7 @@ class SceneRenderer:
         self.scene = self.camera = self.engine = None
         
         # Render modu: 'shaded' veya 'wireframe'
-        self.render_mode = 'shaded'
+        self.render_mode = 'simple'
         
         # Renderer'ları oluştur
         self.frame_r = FrameRenderer(self.standard_shader)
@@ -342,8 +342,7 @@ class SceneRenderer:
     def _get_final_color(self, element):
         """Ortak _final_color_for'a delege et (tek kaynak)"""
         
-        return _final_color_for(element)
-        
+        return _final_color_for(element) 
     
     def _default_color(self, element):
         """Element tipine göre varsayılan renk"""
@@ -359,8 +358,13 @@ class SceneRenderer:
             return [0.0, 1.0, 0.0]
         else:  # Node
             return [1.0, 1.0, 1.0]
-    
-    
+        
+    def toggle_render_mode(self):
+        modes = ['shaded', 'line', 'simple', 'normal']
+        idx = modes.index(self.render_mode) if self.render_mode in modes else 0
+        self.render_mode = modes[(idx + 1) % len(modes)]
+        logger.info(f"Render modu: {self.render_mode}")
+        return self.render_mode
             
     def render(self, cam, target_fbo=0): # <-- target_fbo varsayılan 0 eklendi
         if not cam:
@@ -413,7 +417,7 @@ class SceneRenderer:
         elif self.render_mode == 'line':
             self._render_line(mvp, v, p)
         
-        elif self.render_mode == 'simple':   # ← YENİ
+        elif self.render_mode == 'simple':
             self._render_simple(mvp, v, p)
         
         # 2. MRT'den Hedef FBO'ya (Qt'nin FBO'suna) Blit et
@@ -455,13 +459,116 @@ class SceneRenderer:
         if self.show['area'] and self.area_r:
             self.area_r.render_wireframe(self.simple_shader)
 
-    def toggle_render_mode(self):
-        modes = ['shaded', 'line', 'simple', 'normal']
-        idx = modes.index(self.render_mode) if self.render_mode in modes else 0
-        self.render_mode = modes[(idx + 1) % len(modes)]
-        logger.info(f"Render modu: {self.render_mode}")
-        return self.render_mode
 
+
+    def _render_line(self, mvp, view, proj):
+        """Gerçek geometrik kenarları çiz."""
+
+        if not self.simple_shader:
+            return
+
+        self.simple_shader.use()
+
+        mvp_loc = self.simple_shader.get_loc("mvp")
+
+        if mvp_loc != -1:
+            glUniformMatrix4fv(
+                mvp_loc,
+                1,
+                GL_FALSE,
+                glm.value_ptr(mvp)
+            )
+
+        # Frame
+        if self.show['frame'] and self.frame_r:
+            self.frame_r.render_line(self.simple_shader)
+
+    def _render_simple(self, mvp, view, proj):
+    
+        if not self.simple_shader:
+            logger.error("_render_simple: simple_shader None!")
+            return
+
+        glPointSize(4.0)
+        color = None
+        glDisable(GL_DEPTH_TEST)
+        glDisable(GL_CULL_FACE)
+
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        
+        # -------------------------------------------------
+        # FRAME
+        # -------------------------------------------------
+        if self.show['frame'] and self.frame_r:
+            self.frame_r.render_simple(
+                mvp,
+                self.simple_shader,
+                color=color,
+                alpha=1.0
+            )
+
+        # -------------------------------------------------
+        # AREA — TRANSPARENT FILL
+        # -------------------------------------------------
+        if self.show['area'] and self.area_r:
+
+            glEnable(GL_DEPTH_TEST)
+
+            glEnable(GL_BLEND)
+            glBlendFunc(
+                GL_SRC_ALPHA,
+                GL_ONE_MINUS_SRC_ALPHA
+            )
+
+            glDepthMask(GL_FALSE)
+
+            self.area_r.render_simple(
+                mvp,
+                self.simple_shader,
+                color=color,
+                alpha=0.35
+            )
+
+            glDepthMask(GL_TRUE)
+            glDisable(GL_BLEND)
+
+        # -------------------------------------------------
+        # LINK
+        # -------------------------------------------------
+        if self.show['link'] and self.link_r:
+            self.link_r.render_simple(
+                mvp,
+                self.simple_shader,
+                color=color,
+                alpha=1.0
+            )
+
+        # -------------------------------------------------
+        # NODE
+        # -------------------------------------------------
+        if self.show['node'] and self.node_r:
+            self.node_r.render_simple(
+                mvp,
+                self.simple_shader,
+                color=color,
+                alpha=1.0
+            )
+
+        # -------------------------------------------------
+        # POLYGON
+        # -------------------------------------------------
+        if self.show['polygon'] and self.polygon_r:
+            self.polygon_r.render_simple(
+                mvp,
+                self.simple_shader,
+                color=None,
+                alpha=1.0
+            )
+    
+    def get_bounds(self):
+        return self.center, self.size
+    
     def _draw_marquee(self):
 
         """Marquee overlay çizimi - sağa mavi, sola yeşil"""
@@ -556,26 +663,6 @@ class SceneRenderer:
         """Pick ID'den elementi bul"""
         return self.pick_pass.get_element(pick_id) if self.pick_pass else None
     
-    def cleanup(self):
-        for r in [self.frame_r, self.node_r, self.area_r, self.link_r, self.polygon_r, self.grid, self.pick_pass, self.snap]:
-            if r and hasattr(r, 'cleanup'):
-                r.cleanup()
-        
-        # Marquee buffer'larını temizle
-        
-        for buf in [self.marquee_vao, 
-                    self.marquee_vbo, 
-                    self.marquee_ebo_fill, 
-                    self.marquee_ebo_line]:
-            if buf and glIsVertexArray(buf):
-                glDeleteVertexArrays(1, [buf])
-            elif buf and glIsBuffer(buf):
-                glDeleteBuffers(1, [buf])
-        
-        if self.lighting and hasattr(self.lighting, 'cleanup'):
-            self.lighting.cleanup()
-        
-        self._cleanup_mrt()
 
     def update_dirty(self):
         """Tüm renderer'lardaki dirty elementleri güncelle"""
@@ -665,70 +752,23 @@ class SceneRenderer:
         if t >= 1.0:
             self.animating = False
 
-    def _render_line(self, mvp, view, proj):
-        """Gerçek geometrik kenarları çiz."""
-
-        if not self.simple_shader:
-            return
-
-        self.simple_shader.use()
-
-        mvp_loc = self.simple_shader.get_loc("mvp")
-
-        if mvp_loc != -1:
-            glUniformMatrix4fv(
-                mvp_loc,
-                1,
-                GL_FALSE,
-                glm.value_ptr(mvp)
-            )
-
-        # Frame
-        if self.show['frame'] and self.frame_r:
-            self.frame_r.render_line(self.simple_shader)
-
-        # Şimdilik diğerleri eski wireframe mantığıyla değil,
-        # line geometryleri henüz olmadığı için çizilmiyor.
-
-    def _render_simple(self, mvp, view, proj):
-        """En basit mod: düz çizgiler + noktalar"""
-        if not self.simple_shader:
-            logger.error("_render_simple: simple_shader None!")
-            return
+    def cleanup(self):
+        for r in [self.frame_r, self.node_r, self.area_r, self.link_r, self.polygon_r, self.grid, self.pick_pass, self.snap]:
+            if r and hasattr(r, 'cleanup'):
+                r.cleanup()
         
-        # Debug: her renderer'ın ne kadar verisi var?
-        logger.debug(
-                        "SIMPLE RENDER | "
-                        "frame_vc=%s, area_vc=%s, link_vc=%s, node_vc=%s",
-                        self.frame_r.simple_vcount if self.frame_r else "N/A",
-                        self.area_r.simple_vcount if self.area_r else "N/A",
-                        self.link_r.simple_vcount if self.link_r else "N/A",
-                        self.node_r.simple_vcount if self.node_r else "N/A",
-                    )
+        # Marquee buffer'larını temizle
         
-        # Nokta boyutu
-        glPointSize(8.0)
+        for buf in [self.marquee_vao, 
+                    self.marquee_vbo, 
+                    self.marquee_ebo_fill, 
+                    self.marquee_ebo_line]:
+            if buf and glIsVertexArray(buf):
+                glDeleteVertexArrays(1, [buf])
+            elif buf and glIsBuffer(buf):
+                glDeleteBuffers(1, [buf])
         
-        # Frame - çizgi (vertex color)
-        if self.show['frame'] and self.frame_r:
-            self.frame_r.render_simple(mvp, color=None, alpha=1.0)
+        if self.lighting and hasattr(self.lighting, 'cleanup'):
+            self.lighting.cleanup()
         
-        # Area - çevre çizgisi
-        if self.show['area'] and self.area_r:
-            self.area_r.render_simple(mvp, color=None, alpha=1.0)
-        
-        # Link - çizgi
-        if self.show['link'] and self.link_r:
-            self.link_r.render_simple(mvp, color=None, alpha=1.0)
-        
-        # Node - nokta
-        if self.show['node'] and self.node_r:
-            self.node_r.render_simple(mvp, color=None, alpha=1.0)
-
-        # Polygon
-        if self.show['polygon'] and self.polygon_r:
-            self.polygon_r.render_simple(mvp, color=None, alpha=1.0)
-    
-    def get_bounds(self):
-        return self.center, self.size
-    
+        self._cleanup_mrt()

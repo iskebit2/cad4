@@ -103,7 +103,6 @@ class LoadPattern:
     name: str
     design_type: str = "Dead"
     self_wt_mult: float = 0.0
-    guid: Optional[str] = None
 
 @dataclass
 class StaticLoadAssignment:
@@ -122,7 +121,6 @@ class LoadCase:
     design_act: str = "Non-Composite"
     auto_type: str = "None"
     run_case: bool = True
-    guid: Optional[str] = None
     # Statik yük atamaları listesi
     static_assignments: List[StaticLoadAssignment] = field(default_factory=list)
 
@@ -155,7 +153,6 @@ class LoadCombination:
     combo_type: str = "Linear Add"  # Linear Add, Envelope, Absolute Add, SRSS, Range Add
     auto_design: bool = False
     items: List[ComboItem] = field(default_factory=list)
-    guid: Optional[str] = None
 
 
 class SpectrumSourceType(Enum):
@@ -484,6 +481,25 @@ class LinkPropType(Enum):
     MULTILINEAR_PLASTIC = 9
     ISOLATOR3 = 10
 
+    @classmethod
+    def from_sap(cls, sap_str: str) -> "LinkPropType":
+        if not sap_str:
+            return cls.LINEAR
+        mapping = {
+            "LINEAR": cls.LINEAR, "LIN": cls.LINEAR,
+            "DAMPER": cls.DAMPER,
+            "GAP": cls.GAP,
+            "HOOK": cls.HOOK,
+            "PLASTIC": cls.PLASTIC_WEN, "PLASTICWEN": cls.PLASTIC_WEN,
+            "ISOLATOR1": cls.ISOLATOR1,
+            "ISOLATOR2": cls.ISOLATOR2,
+            "MULTILINEARELASTIC": cls.MULTILINEAR_ELASTIC,
+            "MULTILINEARPLASTIC": cls.MULTILINEAR_PLASTIC,
+            "ISOLATOR3": cls.ISOLATOR3,
+        }
+        key = sap_str.strip().upper().replace(" ", "").replace("_", "")
+        return mapping.get(key, cls.LINEAR)
+
 class LoadPatternType(Enum):
     DEAD = 1
     SUPER_DEAD = 2
@@ -529,7 +545,6 @@ class Material:
     nu23: float = 0.3
     
     density: float = 7850
-    guid: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     # Çubuk eleman analizlerinde (1 ekseni boyunca) geriye dönük uyumluluk için
     @property
@@ -557,17 +572,17 @@ DEFAULT_MATERIAL = Material(
     density=7850
 )
 
+@dataclass
 class Section:
-    def __init__(self, name: str, profile_type: SectionType,
-                 profile_params: Dict[str, float],
-                 material: Optional[Material] = None,
-                 color: Tuple[float, float, float] = (0.8, 0.8, 0.8)):
-        self.name = name
-        self.profile_type = profile_type
-        self.profile_params = profile_params
-        self.material = material if material is not None else DEFAULT_MATERIAL
-        self.color = color
-        self.guid = str(uuid.uuid4())
+    name: str
+    profile_type: SectionType
+    profile_params: Dict[str, float]
+    material: Optional[Material] = None
+    color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
+
+    def __post_init__(self):
+        if self.material is None:
+            self.material = DEFAULT_MATERIAL
 
 # ============================================================================
 # LINK PROPERTIES
@@ -577,16 +592,27 @@ class Section:
 class LinkProp:
     name: str = "LINK1"
     prop_type: LinkPropType = LinkPropType.LINEAR
-    guid: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 @dataclass
 class LinkPropLinear(LinkProp):
     """Linear link property - DOF bazlı stiffness ve damping"""
     prop_type: LinkPropType = LinkPropType.LINEAR
-    DOF: Dict[str, bool] = None
-    Fixed: Dict[str, bool] = None
-    Ke: Dict[str, float] = None  # Stiffness
-    Ce: Dict[str, float] = None  # Damping
+    DOF: Dict[str, bool] = field(default_factory=lambda: {
+    "U1": True, "U2": True, "U3": True,
+    "R1": True, "R2": True, "R3": True
+    })
+
+    Fixed: Dict[str, bool] = field(default_factory=dict)
+
+    Ke: Dict[str, float] = field(default_factory=lambda: {
+        "U1": 0.0, "U2": 0.0, "U3": 0.0,
+        "R1": 0.0, "R2": 0.0, "R3": 0.0
+    })
+
+    Ce: Dict[str, float] = field(default_factory=lambda: {
+        "U1": 0.0, "U2": 0.0, "U3": 0.0,
+        "R1": 0.0, "R2": 0.0, "R3": 0.0
+    })
     
     def __post_init__(self):
         self.DOF = self.DOF or {"U1": True, "U2": True, "U3": True,
@@ -598,17 +624,17 @@ class LinkPropLinear(LinkProp):
                                "R1": 0, "R2": 0, "R3": 0}
 
 
+@dataclass
 class Restraint:
+    ux: bool = False
+    uy: bool = False
+    uz: bool = False
+    rx: bool = False
+    ry: bool = False
+    rz: bool = False
+
     DOF_ORDER = ('ux', 'uy', 'uz', 'rx', 'ry', 'rz')
 
-    def __init__(self, ux=False, uy=False, uz=False,
-                 rx=False, ry=False, rz=False):
-        self.ux = ux
-        self.uy = uy
-        self.uz = uz
-        self.rx = rx
-        self.ry = ry
-        self.rz = rz
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
@@ -619,9 +645,7 @@ class Restraint:
             ry=data.get("ry", False),
             rz=data.get("rz", False),
         )
-    # ----------------------------
-    # Temel durum kontrolleri
-    # ----------------------------
+
     def is_free(self):
         return not any(self.as_list())
 
@@ -634,9 +658,6 @@ class Restraint:
     def free_dofs(self):
         return [name for name in self.DOF_ORDER if not getattr(self, name)]
 
-    # ----------------------------
-    # Veri dönüşümleri
-    # ----------------------------
     def as_list(self):
         return [getattr(self, dof) for dof in self.DOF_ORDER]
 
@@ -644,164 +665,14 @@ class Restraint:
         return {dof: getattr(self, dof) for dof in self.DOF_ORDER}
 
     def as_int_mask(self):
-        """Solver için bit mask (performanslı)"""
         mask = 0
         for i, dof in enumerate(self.DOF_ORDER):
             if getattr(self, dof):
                 mask |= (1 << i)
         return mask
 
-    # ----------------------------
-    # String gösterim
-    # ----------------------------
     def __repr__(self):
         fixed = self.fixed_dofs()
         if not fixed:
             return "<Restraint: FREE>"
         return f"<Restraint fixed={fixed}>"
-
-# ============================================================================
-# MANAGER
-# ============================================================================
-
-class DefinitionManager:
-    def __init__(self):
-        self.materials: Dict[str, Material] = {}
-        self.sections: Dict[str, Section] = {}
-        self.link_props: Dict[str, LinkProp] = {}
-
-        self.load_patterns: Dict[str, LoadPattern] = {}
-        self.load_cases: Dict[str, LoadCase] = {}
-        self.modal_cases: Dict[str, ModalCase] = {}
-        self.combinations: Dict[str, LoadCombination] = {}
-
-        self.spectrum_functions: Dict[str, SpectrumFunction] = {}
-        self.response_spectrum_cases: Dict[str, ResponseSpectrumCase] = {}
-        self.auto_seismics: Dict[str, AutoSeismicTSC2018] = {}
-        self.mass_source_map: Dict[str, float] = {}
-        self.project_info: Dict[str, GeneralProjectInfo | SiteInformation] = {
-            "gen": GeneralProjectInfo(),
-            "site": SiteInformation(),
-        }
-
-    # --- ESKİ METOTLARIN ---
-    def add_material(self, m: Material):
-        self.materials[m.guid] = m
-
-    def add_section(self, s: Section):
-        self.sections[s.guid] = s
-
-    def add_link_prop(self, p: LinkProp):
-        self.link_props[p.guid] = p
-
-    def get_section_by_name(self, name: str) -> Optional[Section]:
-        for s in self.sections.values():
-            if s.name == name:
-                return s
-        return None
-
-    # =========================================================================
-    # SPEKTRUM VE DEPREM YÖNETİM METOTLARI (YENİ EKLENENLER)
-    # =========================================================================
-
-    def add_spectrum_function(self, spec: SpectrumFunction):
-        """Spektrum fonksiyonunu hafızaya kaydeder."""
-        self.spectrum_functions[spec.name] = spec
-
-    def add_response_spectrum_case(self, rs_case: ResponseSpectrumCase):
-        """Response Spectrum analiz yük durumunu kaydeder."""
-        self.response_spectrum_cases[rs_case.name] = rs_case
-
-    def add_auto_seismic(self, auto_seismic: AutoSeismicTSC2018):
-        """Eşdeğer Deprem Yükü tanımını kaydeder."""
-        self.auto_seismics[auto_seismic.load_pattern] = auto_seismic
-
-    def create_tbdy2018_spectrum(
-        self,
-        name: str,
-        ss: float,
-        s1: float,
-        site_class: str = "ZC",
-        r_coeff: float = 1.0,
-        d_coeff: float = 1.0,
-        i_coeff: float = 1.0,
-        tl: float = 6.0,
-        num_points: int = 200
-    ) -> SpectrumFunction:
-        """
-        TBDY 2018 parametrelerinden Fs, F1, Sds, Sd1, Ta, Tb değerlerini türetip
-        otomatik olarak (T, Sae) spektrum eğri noktalarını hesaplar ve SpectrumFunction döndürür.
-        """
-        fs, f1 = get_tsc2018_site_coefficients(ss, s1, site_class)
-        sds = ss * fs
-        sd1 = s1 * f1
-
-        ta = 0.2 * (sd1 / sds) if sds > 0 else 0.0
-        tb = (sd1 / sds) if sds > 0 else 0.0
-
-        # Spektrum eğrisi nokta matrisini üret (T = 0'dan T = T_L + 2.0 saniyeye kadar)
-        points: List[Tuple[float, float]] = []
-        max_t = max(tl + 2.0, 8.0)
-        dt = max_t / num_points
-
-        # R, D, I katsayılarına göre azaltılmış/elastik spektral ivme hesabı (Sae / Ra)
-        # Eğer elastik spektrum isteniyorsa r_coeff=1.0, d_coeff=1.0 bırakılır.
-        for i in range(num_points + 1):
-            t = i * dt
-            
-            # TBDY 2018 Denklem (2.2) - Yatay Elastik Deprem İvmesi Sae(T)
-            if 0 <= t < ta:
-                sae = (0.4 + 0.6 * (t / ta)) * sds if ta > 0 else sds
-            elif ta <= t <= tb:
-                sae = sds
-            elif tb < t <= tl:
-                sae = sd1 / t
-            else:
-                sae = (sd1 * tl) / (t ** 2)
-
-            # Azaltma Katsayısı Ra(T) Hesabı - TBDY 2018 Denklem (4.1)
-            if t < tb:
-                ra = d_coeff + (r_coeff / i_coeff - d_coeff) * (t / tb) if tb > 0 else r_coeff / i_coeff
-            else:
-                ra = r_coeff / i_coeff
-
-            # İvme spektrumu Sa(T) = Sae(T) / Ra(T)
-            sa_design = sae / ra if ra > 0 else sae
-            points.append((round(t, 4), round(sa_design, 6)))
-
-        # SpectrumFunction nesnesi oluştur ve kaydet
-        spec_func = SpectrumFunction(
-            name=name,
-            source_type=SpectrumSourceType.TSC_2018,
-            ss=ss,
-            s1=s1,
-            tl=tl,
-            site_class=site_class,
-            fs=fs,
-            f1=f1,
-            r_coeff=r_coeff,
-            d_coeff=d_coeff,
-            i_coeff=i_coeff,
-            points=points
-        )
-        self.add_spectrum_function(spec_func)
-        return spec_func
-
-    def __inspector_tree__(self) -> dict:
-        """
-        GUI Inspector için iç yapının kategorize edilmiş görünümü.
-        Eleman sayıları 0 olsa dahi alt kategoriler ağaçta görünür.
-        """
-        return {
-            "Materials": self.materials,
-            "Sections": self.sections,
-            "Link Properties": self.link_props,
-            "Load Patterns": self.load_patterns,
-            "Load Cases": self.load_cases,
-            "Modal Cases": self.modal_cases,
-            "Load Combinations": self.combinations,
-            "Spectrum Functions": self.spectrum_functions,
-            "Response Spectrum Cases": self.response_spectrum_cases,
-            "Auto Seismics (TBDY 2018)": self.auto_seismics,
-            "Project Information": self.project_info or "Tanımlanmadı"
-        }

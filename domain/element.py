@@ -58,8 +58,6 @@ class Element:
             f"pick_id={self.pick_id}>"
         )
 
-from typing import Optional, List, Tuple
-import math
 
 class Node(Element):
     DOF_ORDER = ('ux', 'uy', 'uz', 'rx', 'ry', 'rz')

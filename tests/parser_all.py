@@ -483,49 +483,32 @@ def _parse_area_assign(df: pd.DataFrame) -> Dict[str, str]:
     
     return result
 
-def _parse_link_assign(df) -> Dict[str, str]:
-    if df is None or df.empty or 'Link' not in df.columns:
-        return {}
-    result = {}
-    for _, r in df.iterrows():
-        lid = str(r.get('Link', '')).strip()
-        if not lid:
-            continue
-        prop = str(r.get('Prop', r.get('LinkProp', r.get('PropName', '')))).strip()
-        if prop:
-            result[lid] = prop
-    return result
 
-def _create_links(builder, ctx, node_map):
+def _create_links(builder: SceneBuilder, ctx: LoadContext, node_map: Dict[str, Node]) -> int:
     if ctx.df_link_conn is None or ctx.df_link_conn.empty:
         return 0
-
-    prop_map = _parse_link_assign(ctx.df_link_assign)
-    default_prop = next(iter(ctx.link_props), None)
-
-    if default_prop is None:
-        logger.warning("[Links] Hiç link property yok, link'ler atlanıyor")
-        return 0
-
+    
     count = 0
     for _, row in ctx.df_link_conn.iterrows():
         link_id = str(row.get('Link', '')).strip()
         joint_i = str(row.get('JointI', '')).strip()
         joint_j = str(row.get('JointJ', '')).strip()
+        
         if not link_id or joint_i not in node_map or joint_j not in node_map:
             continue
-
-        prop_name = prop_map.get(link_id, default_prop)
-
-        try:
-            builder.create_link(
-                node_map[joint_i], node_map[joint_j],
-                prop_name=prop_name, label=f"L{link_id}",
-            )
-            count += 1
-        except Exception as e:
-            logger.warning(f"Link {link_id}: {e}")
-
+        
+        prop_name = ctx.link_props.get(link_id, "LINK1")
+        if hasattr(prop_name, 'name'):
+            prop_name = prop_name.name
+        
+        builder.create_link(
+            node_map[joint_i],
+            node_map[joint_j],
+            prop_name=prop_name,
+            label=f"L{link_id}",
+        )
+        count += 1
+    
     return count
 
 
@@ -847,48 +830,17 @@ def handle_link_props(ctx: LoadContext, df: pd.DataFrame):
     """LINK PROPERTY DEFINITIONS 01 - GENERAL."""
     if df.empty:
         return
-
+    
     for _, row in df.iterrows():
-        # LinkProp adı: 'Link' veya 'LinkProp' veya 'Name'
-        name = str(
-            row.get('Link', row.get('LinkProp', row.get('Name', '')))
-        ).strip()
-        if not name:
+        link_id = str(row.get('Link', '')).strip()
+        prop_name = str(row.get('LinkType', 'LINEAR')).strip()
+        if not link_id:
             continue
-
-        if name in ctx.link_props:
-            logger.warning(f"LinkProp '{name}' zaten var, atlanıyor")
-            continue
-
-        # ✅ Enum ile tip parse
-        link_type_str = str(row.get('LinkType', 'LINEAR')).strip()
-        prop_type = LinkPropType.from_sap(link_type_str)
-
-        # ✅ Alt sınıf seçimi (enum ile)
-        prop = _make_link_prop(name, prop_type)
-
-        ctx.link_props[name] = prop
-        logger.debug(
-            f"LinkProp '{name}': SAP='{link_type_str}' → {prop_type.name}"
+        
+        ctx.link_props[link_id] = LinkPropLinear(
+            name=prop_name,
+            prop_type=LinkPropType.LINEAR,
         )
-
-
-def _make_link_prop(name: str, prop_type: LinkPropType):
-    """LinkPropType → doğru LinkProp alt sınıfı."""
-    factory = {
-        LinkPropType.LINEAR: LinkPropLinear,
-        LinkPropType.DAMPER: LinkPropLinear,      # şimdilik
-        LinkPropType.GAP: LinkPropLinear,          # şimdilik
-        LinkPropType.HOOK: LinkPropLinear,         # şimdilik
-        LinkPropType.PLASTIC_WEN: LinkPropLinear,  # şimdilik
-        LinkPropType.ISOLATOR1: LinkPropLinear,    # şimdilik
-        LinkPropType.ISOLATOR2: LinkPropLinear,    # şimdilik
-        LinkPropType.MULTILINEAR_ELASTIC: LinkPropLinear,
-        LinkPropType.MULTILINEAR_PLASTIC: LinkPropLinear,
-        LinkPropType.ISOLATOR3: LinkPropLinear,
-    }
-    cls = factory.get(prop_type, LinkPropLinear)
-    return cls(name=name, prop_type=prop_type)
 
 
 # ============================================================
@@ -1434,15 +1386,19 @@ class S2KLoader:
         return scene
 
 if __name__ == "__main__":
-    app = S2KLoader("examples/model3d.s2k")
+        
+    # ============================================================
+    # 1. MODEL YÜKLE
+    # ============================================================
+
+    app = S2KLoader("examples/testmodel.s2k")
     scene = app.load()
-    # print(scene.links)
     key_list = ['materials', 'sections', 'link_props', 'load_patterns', 'load_cases', 'modal_cases', 'combinations', 'spectrum_functions', 'response_spectrum_cases', 'auto_seismics', 'mass_source_map', 'project_info']
     for key_ in key_list:
-        print()
         print(key_)
         dict_= getattr(scene.def_mgr, key_, {})
         for k in dict_:
             v= dict_[k]
             print(" >", k, type(v))
             print("   >", v)
+
