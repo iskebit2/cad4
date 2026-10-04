@@ -2,14 +2,9 @@
 """Global stiffness ve mass matrix montajı."""
 import numpy as np
 from logging_config import CadLogger
-
 from core.analysis.element import local_stiffness, transformation_matrix
-
-from logging_config import CadLogger
-
-logger = CadLogger.get(__name__)
-
-
+import logging
+logger = logging.getLogger(__name__)
 class ModelAssembler:
     """
     Scene'den global K ve M matrislerini üretir.

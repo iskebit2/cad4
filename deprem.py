@@ -1,22 +1,15 @@
 
-from logging_config import CadLogger
+import logging
 
-from logging_config import CadLogger
-
-logger = CadLogger.get(__name__)
+logger = logging.getLogger(__name__)
 
 import numpy as np
 from tools.s2kloader import S2KLoader
-from core.analysis import (
-    ModelAssembler,
-    read_mass_source,
-    read_frame_loads,
-    StructuralSolver,
-    TBDYSpectrum,
-    read_spectrum_from_parser,
-)
+from core.analysis.solver import StructuralSolver
+from core.analysis.assembler import ModelAssembler
+from core.analysis.mass_source import build_global_mass_matrix
 
-
+    
 # ============================================================
 # 1. MODEL YÜKLE
 # ============================================================
@@ -26,6 +19,10 @@ scene = app.load()
 
 node_map = {key: i for i, key in enumerate(scene.nodes.keys())}
 num_dofs = len(scene.nodes) * 6
+project_info = getattr(scene.def_mgr, "project_info", {})
+
+site_info = project_info.get("site")
+n = getattr(site_info, "live_load_factor", 0.3)
 
 for key, node in scene.nodes.items():
     base = node_map[key] * 6
@@ -38,35 +35,9 @@ logger.info(
     len(scene.areas),
     len(scene.links),
 )
-
-
-# ============================================================
-# 2. MASS SOURCE VE YÜKLER
-# ============================================================
-
-mass_source = read_mass_source(app.parser)
-mass_source['frame_loads'] = read_frame_loads(app.parser)
-mass_source['g'] = 9810.0
-
-logger.info(
-    "Mass source multipliers: %d Self weight mults: %d",
-    mass_source['multipliers'],
-    mass_source['self_weight_mults'],
-)
-
-
-# ============================================================
-# 3. GLOBAL MATRİSLER
-# ============================================================
-
 asm = ModelAssembler(scene, node_map, num_dofs)
 K = asm.build_stiffness()
-M, mass_report = asm.build_mass(mass_source)
-
-
-# ============================================================
-# 4. SINIR KOŞULLARI
-# ============================================================
+M, mass_report = build_global_mass_matrix(scene, num_dofs, n)
 
 fixed_dofs = []
 for key, node in scene.nodes.items():
@@ -76,20 +47,20 @@ for key, node in scene.nodes.items():
             if getattr(node.restraint, dof_name, False):
                 fixed_dofs.append(base + i)
 
-logger.info(f"\n=== KÜTLE RAPORU ===")
-for pat, m in mass_report['user'].items():
-    logger.info(f"  Kullanıcı {pat}: {m:.4f} ton")
-for pat, m in mass_report['self'].items():
-    logger.info(f"  Self {pat}:      {m:.4f} ton")
-logger.info(f"  TOPLAM:         {sum(mass_report['user'].values()) + sum(mass_report['self'].values()):.4f} ton")
 
 
-logger.info(f"\nKilitli DOF: {len(fixed_dofs)}")
 
 
-# ============================================================
-# 5. ÇÖZÜCÜ
-# ============================================================
+logger.info(f"\n=== KÜTLE RAPORU === {mass_report['breakdown']}")
+
+
+
+# logger.info(f"\nKilitli DOF: {len(fixed_dofs)}")
+
+
+# # ============================================================
+# # 5. ÇÖZÜCÜ
+# # ============================================================
 
 solver = StructuralSolver(K, M, fixed_dofs, num_dofs)
 
@@ -118,13 +89,10 @@ for i in range(min(5, len(periods))):
 
 
 # ---- 5c. Spektral analiz ----
-seismic = read_spectrum_from_parser(app.parser)
-spec = TBDYSpectrum(**seismic)
+# 1. 'points' listesini değil, SpectrumFunction nesnesinin kendisini alıyoruz
+spec_func = scene.def_mgr.spectrum_functions['ZD']
 
-logger.info(f"\n=== TBDY 2018 SPEKTRUM ===")
-logger.info(spec.info())
-
-# SRSS birleştirme (basit örnek)
+# SRSS birleştirme
 U_modes = []
 r_x = np.zeros(len(modal_dofs))
 for i, dof in enumerate(modal_dofs):
@@ -141,8 +109,9 @@ for n in range(min(6, len(periods))):
     L_n = phi @ M_mod @ r_x
     Gamma = L_n / M_n if M_n > 0 else 0
     
-    S_a = spec.S_ra(T_n) * 9810  # mm/s²
-    w_n2 = (2 * np.pi / T_n) ** 2
+    # 2. Periyoda (T_n) karşılık gelen Sa değerini noktalar üzerinden interpolasyonla çekiyoruz
+    S_a = spec_func.get_sa(T_n) * 9810  # mm/s² (g cinsinden ivmeyi mm/s²'ye çeviriyorsan)
+    w_n2 = (2 * np.pi / T_n) ** 2 if T_n > 0 else 1.0
     
     u_n = Gamma * (S_a / w_n2) * phi
     

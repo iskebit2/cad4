@@ -204,6 +204,8 @@ class Area(Element):
         self.nodes = nodes
         self.thickness = thickness
 
+        self.material = None          # ← YENİ
+        self.section_name = ""        # ← YENİ
         self.gravity_loads: List[AreaGravityLoad] = []
         self.ref_temp: Optional[float] = None
         self.strain_loads: List[AreaStrainLoad] = []

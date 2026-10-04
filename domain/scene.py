@@ -13,6 +13,8 @@ class Scene:
         self.links: Dict[int, Link] = {}
         self.polygons: Dict[int, Polygon] = {}   # YENİ
         self.def_mgr = DefinitionManager()
+        self.units = "N, mm, C"
+        # self.project_info = None
     
     def add_node(self, node: Node):
         self.nodes[node.unique_id] = node

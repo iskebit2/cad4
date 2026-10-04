@@ -16,18 +16,62 @@ from domain.sap_enums import (
 )
 
 # ============================================================================
+# TBDY 2018 DEPREM TABLOLARI VE KATSAYILARI (LOOKUP TABLES)
+# ============================================================================
+
+# Tablo 2.1 – Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (Fs)
+TSC_2018_FS_TABLE = {
+    # Zemin Sınıfı: [(Ss_sınırı, Fs_değeri), ...] -> İnterpolasyon için
+    "ZA": [(0.25, 0.8), (0.50, 0.8), (0.75, 0.8), (1.00, 0.8), (1.25, 0.8), (1.50, 0.8)],
+    "ZB": [(0.25, 0.9), (0.50, 0.9), (0.75, 0.9), (1.00, 0.9), (1.25, 0.9), (1.50, 0.9)],
+    "ZC": [(0.25, 1.3), (0.50, 1.3), (0.75, 1.2), (1.00, 1.2), (1.25, 1.2), (1.50, 1.2)],
+    "ZD": [(0.25, 1.6), (0.50, 1.4), (0.75, 1.2), (1.00, 1.1), (1.25, 1.0), (1.50, 1.0)],
+    "ZE": [(0.25, 2.4), (0.50, 1.7), (0.75, 1.3), (1.00, 1.1), (1.25, 0.9), (1.50, 0.8)],
+}
+
+# Tablo 2.2 – 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (F1)
+TSC_2018_F1_TABLE = {
+    "ZA": [(0.10, 0.8), (0.20, 0.8), (0.30, 0.8), (0.40, 0.8), (0.50, 0.8), (0.60, 0.8)],
+    "ZB": [(0.10, 0.8), (0.20, 0.8), (0.30, 0.8), (0.40, 0.8), (0.50, 0.8), (0.60, 0.8)],
+    "ZC": [(0.10, 1.5), (0.20, 1.5), (0.30, 1.5), (0.40, 1.4), (0.50, 1.3), (0.60, 1.2)],
+    "ZD": [(0.10, 2.4), (0.20, 2.2), (0.30, 2.0), (0.40, 1.8), (0.50, 1.6), (0.60, 1.5)],
+    "ZE": [(0.10, 4.2), (0.20, 3.3), (0.30, 2.8), (0.40, 2.4), (0.50, 2.2), (0.60, 2.0)],
+}
+
+def get_tsc2018_site_coefficients(ss: float, s1: float, site_class: str) -> Tuple[float, float]:
+    """
+    TBDY 2018 Tablo 2.1 ve 2.2'ye göre doğrusal interpolasyon ile Fs ve F1 katsayılarını hesaplar.
+    ZF sınıfında sahaya özel zemin davranışı analizi gerektiğinden varsayılan 1.0 döner.
+    """
+    site_class = site_class.upper()
+    if site_class not in TSC_2018_FS_TABLE or site_class == "ZF":
+        return 1.0, 1.0
+
+    def interpolate(val: float, points: List[Tuple[float, float]]) -> float:
+        if val <= points[0][0]:
+            return points[0][1]
+        if val >= points[-1][0]:
+            return points[-1][1]
+        for i in range(len(points) - 1):
+            x0, y0 = points[i]
+            x1, y1 = points[i + 1]
+            if x0 <= val <= x1:
+                return y0 + (y1 - y0) * (val - x0) / (x1 - x0)
+        return 1.0
+
+    fs = interpolate(ss, TSC_2018_FS_TABLE[site_class])
+    f1 = interpolate(s1, TSC_2018_F1_TABLE[site_class])
+    return fs, f1
+
+# ============================================================================
 # ENUMERATION'LAR
 # ============================================================================
 
-from dataclasses import dataclass, field
-from typing import Dict, Any
-
 @dataclass
-class ProjectInformation:
-    # SAP2000 Standart Alanları
+class GeneralProjectInfo:
     company_name: str = ""
     client_name: str = ""
-    project_name: str = "Endüstriyel Depo Yapısı"
+    project_name: str = "Test Yapısı"
     project_number: str = ""
     model_name: str = ""
     model_description: str = ""
@@ -38,51 +82,16 @@ class ProjectInformation:
     supervisor: str = ""
     issue_code: str = ""
     design_code: str = ""
-    
-    # Özel / Yerel Alanlar (İngilizce attribute ismiyle)
-    cadastral_info: str = "102 / 14"       # Ada / Parsel
-    date: str = ""                          # Tarih
-    soil_class: str = "ZD"                  # Zemin Sınıfı
-    subgrade_modulus_kn_m3: float = 15000.0 # Yatak Katsayısı
-    
+
+@dataclass
+class SiteInformation:
+    live_load_factor: float = 0.3
+    cadastral_info: str = "102 / 14"
+    date: str = ""
+    soil_class: str = "ZD"
+    subgrade_modulus_kn_m3: float = 15000.0
     extra_items: Dict[str, Any] = field(default_factory=dict)
 
-    def to_s2k_dict(self) -> Dict[str, str]:
-        data = {
-            "Company Name": self.company_name,
-            "Client Name": self.client_name,
-            "Project Name": self.project_name,
-            "Project Number": self.project_number,
-            "Model Name": self.model_name,
-            "Model Description": self.model_description,
-            "Revision Number": self.revision_number,
-            "Frame Type": self.frame_type,
-            "Engineer": self.engineer,
-            "Checker": self.checker,
-            "Supervisor": self.supervisor,
-            "Issue Code": self.issue_code,
-            "Design Code": self.design_code,
-            # SAP2000 tablosuna basılacak etiketler
-            "Cadastral Info": self.cadastral_info,
-            "Date": self.date,
-            "Soil Class": self.soil_class,
-            "Subgrade Modulus (kN/m3)": str(self.subgrade_modulus_kn_m3),
-        }
-        
-        for key, val in self.extra_items.items():
-            data[key] = str(val)
-
-        return data
-
-    def to_s2k(self) -> str:
-        lines = ['TABLE:  "PROJECT INFORMATION"']
-        for item, val in self.to_s2k_dict().items():
-            if val:
-                lines.append(f'   Item="{item}"   Data="{val}"')
-            else:
-                lines.append(f'   Item="{item}"')
-        lines.append("")
-        return "\n".join(lines)
     
 # -------------------------------------------------------------------------
 # LOAD PATTERNS & CASES
@@ -177,6 +186,72 @@ class SpectrumFunction:
     file_path: Optional[str] = None
     data_type: str = "Period vs Accel"
     points: List[Tuple[float, float]] = field(default_factory=list) # (Periyot, İvme)
+
+    def __post_init__(self):
+        """Eğer TBDY 2018 seçilmişse ve points dizisi henüz boşsa noktaları üretir."""
+        if self.source_type == SpectrumSourceType.TSC_2018 and not self.points:
+            self.generate_tbdy2018_points()
+
+    def generate_tbdy2018_points(self, num_points: int = 200):
+        """TBDY 2018 parametrelerinden T-Sa eğri noktalarını hesaplar."""
+        # Fs ve F1 zemin katsayılarını hesapla
+        self.fs, self.f1 = get_tsc2018_site_coefficients(self.ss, self.s1, self.site_class)
+        sds = self.ss * self.fs
+        sd1 = self.s1 * self.f1
+
+        ta = 0.2 * (sd1 / sds) if sds > 0 else 0.0
+        tb = (sd1 / sds) if sds > 0 else 0.0
+
+        self.points.clear()
+        max_t = max(self.tl + 2.0, 8.0)
+        dt = max_t / num_points
+
+        for i in range(num_points + 1):
+            t = i * dt
+            # TBDY 2018 Denklem (2.2) - Sae(T)
+            if 0 <= t < ta:
+                sae = (0.4 + 0.6 * (t / ta)) * sds if ta > 0 else sds
+            elif ta <= t <= tb:
+                sae = sds
+            elif tb < t <= self.tl:
+                sae = sd1 / t
+            else:
+                sae = (sd1 * self.tl) / (t ** 2)
+
+            # Azaltma Katsayısı Ra(T) - Denklem (4.1)
+            if t < tb:
+                ra = self.d_coeff + (self.r_coeff / self.i_coeff - self.d_coeff) * (t / tb) if tb > 0 else self.r_coeff / self.i_coeff
+            else:
+                ra = self.r_coeff / self.i_coeff
+
+            sa_design = sae / ra if ra > 0 else sae
+            self.points.append((round(t, 4), round(sa_design, 6)))
+
+    def get_sa(self, period: float) -> float:
+        """
+        Verilen T periyodu için points (T, Sa) listesinden doğrusal interpolasyon ile Sa değerini döndürür.
+        """
+        if not self.points:
+            return 0.0
+        
+        # Periyot dizinin en başından küçükse ilk değeri dön
+        if period <= self.points[0][0]:
+            return self.points[0][1]
+        
+        # Periyot dizinin en sonundan büyükse son değeri dön
+        if period >= self.points[-1][0]:
+            return self.points[-1][1]
+        
+        # İki nokta arasında doğrusal interpolasyon (Linear Interpolation)
+        for i in range(len(self.points) - 1):
+            t0, sa0 = self.points[i]
+            t1, sa1 = self.points[i + 1]
+            if t0 <= period <= t1:
+                if t1 == t0:
+                    return sa0
+                return sa0 + (sa1 - sa0) * (period - t0) / (t1 - t0)
+                
+        return 0.0
 
 @dataclass
 class ResponseSpectrumLoadAssignment:
@@ -522,30 +597,6 @@ class LinkPropLinear(LinkProp):
         self.Ce = self.Ce or {"U1": 0, "U2": 0, "U3": 0,
                                "R1": 0, "R2": 0, "R3": 0}
 
-# ============================================================================
-# LOAD DEFINITIONS
-# ============================================================================
-
-@dataclass
-class LoadPattern:
-    name: str
-    pattern_type: LoadPatternType = LoadPatternType.DEAD
-    self_weight_multiplier: float = 1.0
-    guid: str = field(default_factory=lambda: str(uuid.uuid4()))
-
-@dataclass
-class LoadCase:
-    name: str
-    case_type: LoadCaseType = LoadCaseType.LIN_STATIC
-    patterns: List[Tuple[LoadPattern, float]] = field(default_factory=list)
-    guid: str = field(default_factory=lambda: str(uuid.uuid4()))
-
-@dataclass
-class LoadCombination:
-    name: str
-    combo_type: ComboType = ComboType.LINEAR_ADD
-    cases: List[Tuple[LoadCase, float]] = field(default_factory=list)
-    guid: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 class Restraint:
     DOF_ORDER = ('ux', 'uy', 'uz', 'rx', 'ry', 'rz')
@@ -627,18 +678,130 @@ class DefinitionManager:
         self.spectrum_functions: Dict[str, SpectrumFunction] = {}
         self.response_spectrum_cases: Dict[str, ResponseSpectrumCase] = {}
         self.auto_seismics: Dict[str, AutoSeismicTSC2018] = {}
-    
+        self.mass_source_map: Dict[str, float] = {}
+        self.project_info: Dict[str, GeneralProjectInfo | SiteInformation] = {
+            "gen": GeneralProjectInfo(),
+            "site": SiteInformation(),
+        }
+
+    # --- ESKİ METOTLARIN ---
     def add_material(self, m: Material):
         self.materials[m.guid] = m
-    
+
     def add_section(self, s: Section):
         self.sections[s.guid] = s
-    
+
     def add_link_prop(self, p: LinkProp):
         self.link_props[p.guid] = p
-    
+
     def get_section_by_name(self, name: str) -> Optional[Section]:
         for s in self.sections.values():
             if s.name == name:
                 return s
         return None
+
+    # =========================================================================
+    # SPEKTRUM VE DEPREM YÖNETİM METOTLARI (YENİ EKLENENLER)
+    # =========================================================================
+
+    def add_spectrum_function(self, spec: SpectrumFunction):
+        """Spektrum fonksiyonunu hafızaya kaydeder."""
+        self.spectrum_functions[spec.name] = spec
+
+    def add_response_spectrum_case(self, rs_case: ResponseSpectrumCase):
+        """Response Spectrum analiz yük durumunu kaydeder."""
+        self.response_spectrum_cases[rs_case.name] = rs_case
+
+    def add_auto_seismic(self, auto_seismic: AutoSeismicTSC2018):
+        """Eşdeğer Deprem Yükü tanımını kaydeder."""
+        self.auto_seismics[auto_seismic.load_pattern] = auto_seismic
+
+    def create_tbdy2018_spectrum(
+        self,
+        name: str,
+        ss: float,
+        s1: float,
+        site_class: str = "ZC",
+        r_coeff: float = 1.0,
+        d_coeff: float = 1.0,
+        i_coeff: float = 1.0,
+        tl: float = 6.0,
+        num_points: int = 200
+    ) -> SpectrumFunction:
+        """
+        TBDY 2018 parametrelerinden Fs, F1, Sds, Sd1, Ta, Tb değerlerini türetip
+        otomatik olarak (T, Sae) spektrum eğri noktalarını hesaplar ve SpectrumFunction döndürür.
+        """
+        fs, f1 = get_tsc2018_site_coefficients(ss, s1, site_class)
+        sds = ss * fs
+        sd1 = s1 * f1
+
+        ta = 0.2 * (sd1 / sds) if sds > 0 else 0.0
+        tb = (sd1 / sds) if sds > 0 else 0.0
+
+        # Spektrum eğrisi nokta matrisini üret (T = 0'dan T = T_L + 2.0 saniyeye kadar)
+        points: List[Tuple[float, float]] = []
+        max_t = max(tl + 2.0, 8.0)
+        dt = max_t / num_points
+
+        # R, D, I katsayılarına göre azaltılmış/elastik spektral ivme hesabı (Sae / Ra)
+        # Eğer elastik spektrum isteniyorsa r_coeff=1.0, d_coeff=1.0 bırakılır.
+        for i in range(num_points + 1):
+            t = i * dt
+            
+            # TBDY 2018 Denklem (2.2) - Yatay Elastik Deprem İvmesi Sae(T)
+            if 0 <= t < ta:
+                sae = (0.4 + 0.6 * (t / ta)) * sds if ta > 0 else sds
+            elif ta <= t <= tb:
+                sae = sds
+            elif tb < t <= tl:
+                sae = sd1 / t
+            else:
+                sae = (sd1 * tl) / (t ** 2)
+
+            # Azaltma Katsayısı Ra(T) Hesabı - TBDY 2018 Denklem (4.1)
+            if t < tb:
+                ra = d_coeff + (r_coeff / i_coeff - d_coeff) * (t / tb) if tb > 0 else r_coeff / i_coeff
+            else:
+                ra = r_coeff / i_coeff
+
+            # İvme spektrumu Sa(T) = Sae(T) / Ra(T)
+            sa_design = sae / ra if ra > 0 else sae
+            points.append((round(t, 4), round(sa_design, 6)))
+
+        # SpectrumFunction nesnesi oluştur ve kaydet
+        spec_func = SpectrumFunction(
+            name=name,
+            source_type=SpectrumSourceType.TSC_2018,
+            ss=ss,
+            s1=s1,
+            tl=tl,
+            site_class=site_class,
+            fs=fs,
+            f1=f1,
+            r_coeff=r_coeff,
+            d_coeff=d_coeff,
+            i_coeff=i_coeff,
+            points=points
+        )
+        self.add_spectrum_function(spec_func)
+        return spec_func
+
+    def __inspector_tree__(self) -> dict:
+        """
+        GUI Inspector için iç yapının kategorize edilmiş görünümü.
+        Eleman sayıları 0 olsa dahi alt kategoriler ağaçta görünür.
+        """
+        return {
+            "Materials": self.materials,
+            "Sections": self.sections,
+            "Link Properties": self.link_props,
+            "Load Patterns": self.load_patterns,
+            "Load Cases": self.load_cases,
+            "Modal Cases": self.modal_cases,
+            "Load Combinations": self.combinations,
+            "Spectrum Functions": self.spectrum_functions,
+            "Response Spectrum Cases": self.response_spectrum_cases,
+            "Auto Seismics (TBDY 2018)": self.auto_seismics,
+            "Project Information": self.project_info or "Tanımlanmadı"
+        }
