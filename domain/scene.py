@@ -141,7 +141,20 @@ class Scene:
     def mark_dirty_from_node(self, node: Node):
         """Node değişince bağlı tüm elemanları dirty yap"""
         for obj_type, elem_id in node.connected:
-            elem = self.get_element_by_id(elem_id)  # Bu metod yok!
+            # elem_id → unique_id (int). Ama unique_id değil,
+            # element_id (str) tutuluyor olabilir — kontrol et
+            elem = None
+
+            # Önce unique_id olarak dene
+            try:
+                elem = self.get_element_by_unique_id(int(elem_id))
+            except (ValueError, TypeError):
+                pass
+
+            # Bulamazsa element_id (UUID) olarak dene
+            if elem is None:
+                elem = self.get_element_by_id(str(elem_id))
+
             if elem:
                 elem.mark_dirty()
     
@@ -242,4 +255,49 @@ class Scene:
         if element:
             return element
         return None
-    
+
+    # domain/scene.py — Scene sınıfına EKLE
+
+    # ========================================================
+    # ELEMENT DISPATCH (Command sistemi için)
+    # ========================================================
+
+    def _bucket(self, element):
+        """Element tipine göre (dict, key) döndürür."""
+        if isinstance(element, Node):     return self.nodes
+        if isinstance(element, Frame):    return self.frames
+        if isinstance(element, Area):     return self.areas
+        if isinstance(element, Link):     return self.links
+        if isinstance(element, Polygon):  return self.polygons
+        return None
+
+    def is_element_added(self, element) -> bool:
+        """Bu eleman scene'de mi?"""
+        bucket = self._bucket(element)
+        if bucket is None:
+            return False
+        return element.unique_id in bucket
+
+    def add_element(self, element) -> bool:
+        """
+        Tip-bazlı dispatch: doğru add_* metodu çağırır.
+        Bağlantılar otomatik kurulur (add_frame/add_link/add_area gibi).
+        Zaten ekliyse tekrar eklemez (idempotent).
+        """
+        if self.is_element_added(element):
+            return False
+
+        if isinstance(element, Node):
+            self.add_node(element)
+        elif isinstance(element, Frame):
+            self.add_frame(element)
+        elif isinstance(element, Area):
+            self.add_area(element)
+        elif isinstance(element, Link):
+            self.add_link(element)
+        elif isinstance(element, Polygon):
+            self.add_polygon(element)
+        else:
+            return False
+
+        return True

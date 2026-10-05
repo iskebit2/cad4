@@ -1,5 +1,7 @@
-#core/gl_engine.py
+# core/gl_engine.py
 
+from kivy.config import Config
+Config.set("input", "mouse", "mouse,disable_multitouch")
 
 import time
 from pathlib import Path
@@ -29,6 +31,9 @@ from tools.loader import ModelLoader
 from core.draw_manager import DrawManager
 from ui.snapsquare import SnapSquareRenderer
 
+# ─── (1) YENİ IMPORT ───
+from core.edit.edit_controller import EditController
+
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
@@ -57,10 +62,9 @@ class PureKivyEngine:
         self.last_hover_x = -1
         self.last_hover_y = -1
         self.last_hover_time = 0
-        self.hover_throttle = 0.05   # 30 → 20 FPS
+        self.hover_throttle = 0.05
         self.pending_pick_check = False
 
-        # Renderer ve component'ler init_gl'de oluşturulur
         self.cam = self.input = None
         self.scene = None
         self.renderer = None
@@ -70,10 +74,7 @@ class PureKivyEngine:
         self.loader = None
         self.draw_mgr = None
         self.snap = None
-
-    # ------------------------------------------------------------------
-    # INIT
-    # ------------------------------------------------------------------
+        self.edit = None          # ─── (2) YENİ: EditController ───
 
     def init_gl(self):
         self._init_shaders()
@@ -97,7 +98,7 @@ class PureKivyEngine:
         self.simple_s = self.shaders.get("simple")
         self.overlay_s = self.shaders.get("2d_overlay")
         self.preview_s = self.shaders.get("preview")
-        self.grid_s = self.shaders.get("grid")     # ← YENİ
+        self.grid_s = self.shaders.get("grid")
 
     def _init_camera(self):
         self.cam = Camera()
@@ -134,9 +135,8 @@ class PureKivyEngine:
         self.loader = ModelLoader(self)
         self.draw_mgr = DrawManager(self)
 
-    # ------------------------------------------------------------------
-    # RESIZE
-    # ------------------------------------------------------------------
+        # ─── (3) YENİ: EditController ───
+        self.edit = EditController(self)
 
     def resize(self, w, h):
         self.w, self.h = max(1, w), max(1, h)
@@ -146,10 +146,6 @@ class PureKivyEngine:
             self.renderer.resize(self.w, self.h)
         if self.pick_pass:
             self.pick_pass.set_viewport(self.w, self.h)
-
-    # ------------------------------------------------------------------
-    # HOVER / PICK
-    # ------------------------------------------------------------------
 
     def _handle_pick_from_hover(self, ctrl=False):
         if self.hover_id > 0 and self.renderer and self.renderer.pick_pass:
@@ -198,8 +194,6 @@ class PureKivyEngine:
         else:
             self._clear_hover()
 
-        
-                
     def _check_pick_result(self):
         if not self.pending_pick_check:
             return False
@@ -210,7 +204,6 @@ class PureKivyEngine:
                 self._update_hover(pick_id)
                 return True
             else:
-                # pick_pass sıfırlanmış ama engine bekliyor → reset
                 if not self.renderer.pick_pass.pending_pick:
                     self.pending_pick_check = False
         except Exception as e:
@@ -266,17 +259,12 @@ class PureKivyEngine:
             self.hover_id = 0
             self.hover_element_type = None
 
-    # ------------------------------------------------------------------
-    # SCENE
-    # ------------------------------------------------------------------
-
     def load_model(self, builder):
         self.scene = builder.scene
         self.renderer.update_geo(self.scene)
         self.fit_view()
 
     def fit_view(self):
-        """Sadece kamerayı modele oturt — render modunu değiştirmez."""
         if not self.renderer:
             return
         self.renderer._update_bounds_from_nodes()
@@ -292,12 +280,10 @@ class PureKivyEngine:
                   self.renderer.polygon_r]:
             r.elements = []
 
-    def test_model(self):
-        from geometry.scenebuilder import SceneBuilder
-        from tests.test_model import TestModelBuilder
-        b = SceneBuilder()
-        TestModelBuilder.build(b)
-        self.load_model(b)
+    def set_scene(self, scene):
+        self.scene = scene
+        self.renderer.update_geo(self.scene)
+        self.fit_view()
 
 
 # ============================================================
@@ -307,7 +293,7 @@ class PureKivyEngine:
 class KivyCADWidget(Widget):
 
     MIDDLE_DOUBLE_CLICK_INTERVAL = 0.25
-    MIDDLE_DOUBLE_CLICK_MAX_DRAG = 4.0   # piksel — bu kadar hareketten fazlaysa "drag"
+    MIDDLE_DOUBLE_CLICK_MAX_DRAG = 4.0
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -323,7 +309,6 @@ class KivyCADWidget(Widget):
         self._middle_press_pos = (0, 0)
         self._middle_dragged = False
 
-        # FBO YOK. Sadece Callback.
         with self.canvas:
             self.callback = Callback(self._draw_gl)
 
@@ -337,11 +322,6 @@ class KivyCADWidget(Widget):
 
         Clock.schedule_interval(self.update, 1.0 / 60.0)
 
-
-    # ------------------------------------------------------------------
-    # GL DRAW
-    # ------------------------------------------------------------------
-
     def _draw_gl(self, instr):
         if not self.initialized:
             if self.width <= 1 or self.height <= 1:
@@ -350,6 +330,11 @@ class KivyCADWidget(Widget):
             self.engine.init_gl()
             self.engine.on_hover_changed_callback = self._on_hover_changed
             self.engine.sel_mgr.on_selection_changed = self._on_selection_changed
+
+            # ─── (4) YENİ: panel controller'ı bağla ───
+            if self.properties_panel is not None:
+                self.properties_panel.controller = self.engine.edit
+
             self.initialized = True
             logger.info("Kivy OpenGL Engine Başarıyla İlklendirildi!")
             return
@@ -358,40 +343,30 @@ class KivyCADWidget(Widget):
         dt = current_time - self.last_time
         self.last_time = current_time
 
-        # FPS
         if not self.engine.loading:
             self._frames = getattr(self, '_frames', 0) + 1
             self._fps_time = getattr(self, '_fps_time', 0) + dt
             if self._fps_time >= 1.0:
                 fps = self._frames / self._fps_time
-                logger.debug(f"FPS: {fps:.1f}")
                 self._frames = 0
                 self._fps_time = 0
-
-        # if self.engine.pending_pick_check:
-        #     self.engine._check_pick_result()
 
         if self.engine.pending_anim:
             self.engine.renderer.start_anim(4)
             self.engine.pending_anim = False
 
-        # ---- Viewport ----
         w = int(self.width)
         h = int(self.height)
 
         if w <= 0 or h <= 0:
             return
 
-        # Kivy yukarıdan aşağı, OpenGL aşağıdan yukarı
-        # self.x, self.y — Kivy widget koordinatları
-        # Window.size — pencere boyutu
         win_w, win_h = Window.size
         x = int(self.x)
         y = int(win_h - self.y - h)
 
         glViewport(x, y, w, h)
 
-        # ---- Render ----
         glEnable(GL_DEPTH_TEST)
         glClearColor(0.08, 0.10, 0.16, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -399,16 +374,14 @@ class KivyCADWidget(Widget):
         self.engine.renderer.set_dt(dt)
         self.engine.renderer.render(self.engine.cam)
 
-        # ---- Preview ----
         if self.engine.draw_mgr.is_active:
             mvp = (self.engine.cam.get_projection_matrix()
                 @ self.engine.cam.get_view_matrix())
             self.engine.draw_mgr.render_preview(mvp, self.engine.preview_s)
 
-        # ---- Snap Square ----
         if self.engine.snap is not None and self.engine.draw_mgr.is_active:
             snap_node = self.engine.draw_mgr.hover_node
-            
+
             self.engine.snap.draw_snap(
                 self.engine.input.mouse_pos.x,
                 self.engine.input.mouse_pos.y,
@@ -416,9 +389,7 @@ class KivyCADWidget(Widget):
                 h,
                 active=(snap_node is not None),
             )
-        
 
-        # ---- Kivy için state reset ----
         glUseProgram(0)
         glBindVertexArray(0)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
@@ -429,31 +400,15 @@ class KivyCADWidget(Widget):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        # logger.debug(f"[SNAP] engine.snap={self.engine.snap}, draw_mgr.hover_node={self.engine.draw_mgr.hover_node}")
-
-
-    # ------------------------------------------------------------------
-    # RESIZE (tek metod)
-    # ------------------------------------------------------------------
-
     def _on_widget_resize(self, *args):
         if self.engine:
             w = max(1, int(self.width))
             h = max(1, int(self.height))
             self.engine.resize(w, h)
 
-    # ------------------------------------------------------------------
-    # KAMERA YARDIMCILARI
-    # ------------------------------------------------------------------
-
     def _fit_view(self):
-        """Sadece kamerayı fit et — mod değiştirmez."""
         if self.engine:
             self.engine.fit_view()
-
-    # ------------------------------------------------------------------
-    # KEY EVENTS
-    # ------------------------------------------------------------------
 
     def _on_key_down(self, window, key, scancode, codepoint, modifiers):
         self.pressed_keys.add(key)
@@ -505,17 +460,43 @@ class KivyCADWidget(Widget):
                     logger.info("Yeniden yapılacak işlem yok")
             return True
 
+        # ─── (5) DEĞİŞTİ: Ctrl+P test bloğu kaldırıldı,
+        #     yerine Ctrl+N (yeni node) ve Ctrl+F (yeni frame) ───
+
+        # ---- Ctrl+N: yeni node formu ----
+        if key == 110 and 'ctrl' in modifiers:
+            if self.properties_panel is not None:
+                self.properties_panel.show_new_element(
+                    "node",
+                    defaults={
+                        "label": "N",
+                        "x": 0.0, "y": 0.0, "z": 0.0,
+                    },
+                    repeat=True,          # ← ardışık ekleme
+                )
+            return True
+
+        # ---- Ctrl+F: yeni frame formu ----
+        if key == 102 and 'ctrl' in modifiers:
+            if self.properties_panel is not None:
+                self.properties_panel.show_new_element("frame", defaults={
+                    "label": "F1",
+                    "node_i_id": "",
+                    "node_j_id": "",
+                    "section_name": "",
+                })
+            return True
+
         return False
 
     def _handle_escape(self):
-        """ESC: aktif duruma göre iptal et."""
         if not self.engine:
             return True
-        
+
         if self.properties_panel and self.properties_panel.opacity > 0:
             self.properties_panel.hide()
             return True
-    
+
         if self.engine.draw_mgr.is_active:
             self.engine.draw_mgr.cancel()
             return True
@@ -536,16 +517,12 @@ class KivyCADWidget(Widget):
         self.pressed_keys.discard(key)
 
         if self.engine and self.engine.input:
-            if key in (303, 304):       # Shift
+            if key in (303, 304):
                 self.engine.input.set_modifier_state("shift", False)
-            elif key in (305, 306):     # Ctrl
+            elif key in (305, 306):
                 self.engine.input.set_modifier_state("ctrl", False)
-            elif key in (307, 308):     # Alt
+            elif key in (307, 308):
                 self.engine.input.set_modifier_state("alt", False)
-
-    # ------------------------------------------------------------------
-    # MOUSE DOWN
-    # ------------------------------------------------------------------
 
     def on_touch_down(self, touch):
         if not self.collide_point(*touch.pos) or not self.engine:
@@ -557,7 +534,6 @@ class KivyCADWidget(Widget):
         touch.grab(self)
         self.engine.input.update_mouse_position(x, y)
 
-        # ---- WHEEL ----
         if touch.button == 'scrollup':
             self.engine.cam.zoom(-1.0)
             touch.ungrab(self)
@@ -567,21 +543,17 @@ class KivyCADWidget(Widget):
             touch.ungrab(self)
             return True
 
-        # ---- MIDDLE ----
         if touch.button == 'middle':
             self._on_middle_down(x, y, touch)
             return True
 
-        # ---- RIGHT ----
         if touch.button == 'right':
             self.engine.input.set_button_state(MOUSE_BUTTON_RIGHT, True)
 
-            # Hover'da bir element var mı?
             element = None
             if self.engine.hover_id > 0:
                 element = self.engine.renderer.get_element_from_id(self.engine.hover_id)
-            
-            # Panel'e bildir
+
             if self.properties_panel:
                 if element:
                     self.properties_panel.show_element(element)
@@ -590,7 +562,6 @@ class KivyCADWidget(Widget):
 
             return True
 
-        # ---- LEFT ----
         if touch.button == 'left':
             self._on_left_down(x, y)
             return True
@@ -598,14 +569,12 @@ class KivyCADWidget(Widget):
         return True
 
     def _on_middle_down(self, x, y, touch):
-        """Middle tık: çift tık kontrolü + pan/orbit için hazırlık."""
         self.engine.input.set_button_state(MOUSE_BUTTON_MIDDLE, True)
         self.engine.pending_pick_check = False
         self.engine._clear_hover()
 
         now = time.time()
 
-        # Çift tık kontrolü (sadece önceki tık drag değilse)
         if (now - self._last_middle_click_time) < self.MIDDLE_DOUBLE_CLICK_INTERVAL:
             self._last_middle_click_time = 0
             self._fit_view()
@@ -617,7 +586,6 @@ class KivyCADWidget(Widget):
         self._middle_dragged = False
 
     def _on_left_down(self, x, y):
-        """Sol tık: draw / orbit / marquee ayrımı."""
         self.engine.input.set_button_state(MOUSE_BUTTON_LEFT, True)
 
         if self.engine.draw_mgr.is_active:
@@ -625,15 +593,11 @@ class KivyCADWidget(Widget):
             return
 
         if self.engine.input.is_shift_pressed():
-            return  # Shift+Sol → orbit (move'da işleniyor)
+            return
 
         self.engine.marquee.start_selection(x, y)
         self.engine._update_world_pos(x, y)
         self.engine._start_hover_pick(int(x), int(y))
-
-    # ------------------------------------------------------------------
-    # MOUSE MOVE
-    # ------------------------------------------------------------------
 
     def on_touch_move(self, touch):
         if touch.grab_current is not self or not self.engine:
@@ -647,48 +611,38 @@ class KivyCADWidget(Widget):
 
         self.engine.input.update_mouse_position(x, y)
 
-        # ---- DRAW ----
         if self.engine.draw_mgr.is_active:
             self.engine.draw_mgr.on_mouse_move(x, y)
             return True
 
-        # ---- MIDDLE (pan / orbit) ----
         if touch.button == 'middle':
             self._on_middle_move(dx, dy, x, y)
             return True
 
-        # ---- RIGHT ----
         if touch.button == 'right':
-            # Sağ tık drag: şimdilik işlem yok (ileride context menu)
             return True
 
-        # ---- MARQUEE ----
         if self.engine.marquee and self.engine.marquee.is_active:
             self.engine.marquee.update_selection(x, y)
             return True
 
-        # ---- LEFT + SHIFT → ORBIT ----
         if touch.button == 'left' and self.engine.input.is_shift_pressed():
             self.engine.cam.orbit(dx, dy)
             if self.engine.hover_id != 0:
                 self.engine._clear_hover()
             return True
 
-        # ---- NORMAL HOVER / PICK ----
         self.engine._update_world_pos(x, y)
         self.engine._start_hover_pick(int(x), int(y))
         return True
 
     def _on_middle_move(self, dx, dy, x, y):
-        """Middle drag: drag algılama + orbit/pan."""
-        # Drag threshold kontrolü (çift tık iptali için)
         if not self._middle_dragged:
             px, py = self._middle_press_pos
             if ((x - px) ** 2 + (y - py) ** 2) ** 0.5 > self.MIDDLE_DOUBLE_CLICK_MAX_DRAG:
                 self._middle_dragged = True
-                self._last_middle_click_time = 0  # çift tık iptal
+                self._last_middle_click_time = 0
 
-        # Ctrl+Middle → orbit, Middle → pan
         if self.engine.input.is_ctrl_pressed():
             self.engine.cam.orbit(dx, dy)
         else:
@@ -696,10 +650,6 @@ class KivyCADWidget(Widget):
 
         self.engine.pending_pick_check = False
         self.engine._clear_hover()
-
-    # ------------------------------------------------------------------
-    # MOUSE UP
-    # ------------------------------------------------------------------
 
     def on_touch_up(self, touch):
         if touch.grab_current is not self:
@@ -736,24 +686,14 @@ class KivyCADWidget(Widget):
             if not was_drag:
                 ctrl = self.engine.input.is_ctrl_pressed()
                 self.engine._handle_pick_from_hover(ctrl)
-                # ← Panel güncelle
                 self._update_properties_panel()
 
-    # ------------------------------------------------------------------
-    # UPDATE + GLOBAL MOUSE
-    # ------------------------------------------------------------------
-            
     def update(self, dt):
-        """Her frame: pending pick + redraw."""
         if self.engine and self.engine.pending_pick_check:
             self.engine._check_pick_result()
         self.canvas.ask_update()
 
     def _on_global_mouse_move(self, window, pos):
-        """
-        Kivy'nin on_touch_move'u sadece fare basılıyken tetiklenir.
-        Sürekli fare takibi için global mouse_pos bind'i gerekir.
-        """
         if not self.engine:
             return
         if not self.collide_point(*pos):
@@ -767,32 +707,25 @@ class KivyCADWidget(Widget):
             self.engine.draw_mgr.on_mouse_move(x, y)
 
     def _on_selection_changed(self, selected_elements):
-        """
-        Seçim değiştiğinde çağrılır.
-        Panel açıksa seçili elementleri göster.
-        """
         if not self.properties_panel:
             return
         if self.properties_panel.opacity == 0:
             return
-        
+
         if not selected_elements:
             self.properties_panel.hide()
         elif len(selected_elements) == 1:
             self.properties_panel.show_element(selected_elements[0])
         else:
             self.properties_panel.show_selection_summary(selected_elements)
-            
+
     def _on_hover_changed(self, element):
-        """Hover değiştiğinde panel'i güncelle."""
         if not self.properties_panel or self.properties_panel.opacity == 0:
             return
-        
+
         if element is not None:
-            # Hover var → hover elementini göster
             self.properties_panel.show_element(element)
         else:
-            # Hover yok → seçili elementi göster (varsa)
             selected = self.engine.sel_mgr.get_selected()
             if len(selected) == 1:
                 self.properties_panel.show_element(selected[0])
@@ -801,19 +734,17 @@ class KivyCADWidget(Widget):
             else:
                 self.properties_panel.hide()
 
-
     def _update_properties_panel(self):
-        """Seçim/sağ tık sonrası panel'i güncelle."""
         if not self.properties_panel:
             return
         if self.properties_panel.opacity == 0:
             return
-        
+
         selected = self.engine.sel_mgr.get_selected()
-        
+
         if not selected:
             self.properties_panel.hide()
         elif len(selected) == 1:
             self.properties_panel.show_element(selected[0])
         else:
-            self.properties_panel.show_selection_summary(selected) 
+            self.properties_panel.show_selection_summary(selected)
