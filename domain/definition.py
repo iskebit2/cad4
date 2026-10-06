@@ -3,7 +3,7 @@
 SAP2000 uyumlu tanım sınıfları
 - Material, Section, LinkProp, LoadPattern, LoadCase, Combo, Restraint
 """
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import Optional, Dict, Any, List, Tuple, Union
 from dataclasses import dataclass, field
 import uuid
@@ -66,6 +66,59 @@ def get_tsc2018_site_coefficients(ss: float, s1: float, site_class: str) -> Tupl
 # ============================================================================
 # ENUMERATION'LAR
 # ============================================================================
+class PropAreaType(IntEnum):
+    #This optional value is 0, 1, 2 or 3, indicating the type of area properties included in the name list.
+    All = 0
+    Shell = 1
+    Plane = 2
+    Asolid = 3
+
+class PropType(IntEnum):
+    """SAP2000 eFramePropType."""
+
+    I = 1
+    Channel = 2
+    T = 3
+    Angle = 4
+    DblAngle = 5
+    Box = 6
+    Pipe = 7
+    Rectangular = 8
+    Circle = 9
+    General = 10
+    DbChannel = 11
+    Auto = 12
+    SD = 13
+    Variable = 14
+    Joist = 15
+    Bridge = 16
+    Cold_C = 17
+    Cold_2C = 18
+    Cold_Z = 19
+    Cold_L = 20
+    Cold_2L = 21
+    Cold_HAT = 22
+    BuiltupICoverplate = 23
+    PCCGIRDERI = 24
+    PCCGIRDERU = 25
+    BuiltupIHybrid = 26
+    BuiltupUHybrid = 27
+    PCCGirderSuperT = 41
+    Cold_Box = 42
+    Cold_I = 43
+    Cold_Pipe = 44
+    Cold_T = 45
+    Trapezoidal = 46
+    
+class SymType(IntEnum):
+    """SAP2000 material directional symmetry type."""
+    ISOTROPIC = 0
+    ORTHOTROPIC = 1
+    ANISOTROPIC = 2
+    UNIAXIAL = 3
+
+
+    
 
 @dataclass
 class GeneralProjectInfo:
@@ -92,7 +145,7 @@ class SiteInformation:
     subgrade_modulus_kn_m3: float = 15000.0
     extra_items: Dict[str, Any] = field(default_factory=dict)
 
-    
+
 # -------------------------------------------------------------------------
 # LOAD PATTERNS & CASES
 # -------------------------------------------------------------------------
@@ -230,15 +283,15 @@ class SpectrumFunction:
         """
         if not self.points:
             return 0.0
-        
+
         # Periyot dizinin en başından küçükse ilk değeri dön
         if period <= self.points[0][0]:
             return self.points[0][1]
-        
+
         # Periyot dizinin en sonundan büyükse son değeri dön
         if period >= self.points[-1][0]:
             return self.points[-1][1]
-        
+
         # İki nokta arasında doğrusal interpolasyon (Linear Interpolation)
         for i in range(len(self.points) - 1):
             t0, sa0 = self.points[i]
@@ -247,7 +300,7 @@ class SpectrumFunction:
                 if t1 == t0:
                     return sa0
                 return sa0 + (sa1 - sa0) * (period - t0) / (t1 - t0)
-                
+
         return 0.0
 
 @dataclass
@@ -309,6 +362,19 @@ class LoadDirection(Enum):
     PROJECTED_Y = "PY"
     PROJECTED_Z = "PZ"
 
+SAP_FRAME_LOAD_DIRECTION = {
+    1: LoadDirection.LOCAL_1,
+    2: LoadDirection.LOCAL_2,
+    3: LoadDirection.LOCAL_3,
+    4: LoadDirection.GLOBAL_X,
+    5: LoadDirection.GLOBAL_Y,
+    6: LoadDirection.GLOBAL_Z,
+    7: LoadDirection.GRAVITY,
+    8: LoadDirection.PROJECTED_X,
+    9: LoadDirection.PROJECTED_Y,
+    10: LoadDirection.PROJECTED_Z,
+}
+
 # -------------------------------------------------------------------------
 # JOINT LOADS
 # -------------------------------------------------------------------------
@@ -330,25 +396,25 @@ class PointLoad:
 
 @dataclass
 class FramePointLoad:
-    """FRAME LOADS - POINTS"""
     pattern_name: str
-    force_or_moment: str  # 'FORCE' veya 'MOMENT'
+    force_or_moment: str
     direction: LoadDirection
-    value: float          # N veya N*mm
-    distance: float       # Bağıl veya Mutlak
+    value: float
+    distance: float
     is_relative: bool = True
+    coordinate_system: str = "GLOBAL"
 
 @dataclass
 class FrameDistributedLoad:
-    """FRAME LOADS - DISTRIBUTED"""
     pattern_name: str
-    force_or_moment: str  # 'FORCE' veya 'MOMENT'
+    force_or_moment: str
     direction: LoadDirection
-    p1: float             # N/mm
-    p2: float             # N/mm
-    d1: float             # Mesafe A
-    d2: float             # Mesafe B
+    p1: float
+    p2: float
+    d1: float
+    d2: float
     is_relative: bool = True
+    coordinate_system: str = "GLOBAL"
 
 @dataclass
 class FrameGravityLoad:
@@ -406,18 +472,18 @@ class AreaTemperatureLoad:
 
 @dataclass
 class AreaUniformLoad:
-    """AREA LOADS - UNIFORM"""
     pattern_name: str
     direction: LoadDirection
-    value: float          # N/mm2
+    value: float
+    coordinate_system: str = "GLOBAL"
 
 @dataclass
 class AreaUniformToFrameLoad:
-    """AREA LOADS - UNIFORM TO FRAME (Tributary Area / Bir-İki Yönlü Aktarım)"""
     pattern_name: str
     direction: LoadDirection
-    value: float          # N/mm2
-    dist_type: str        # 'One way', 'Two way'
+    value: float
+    dist_type: str
+    coordinate_system: str = "GLOBAL"
 
 @dataclass
 class AreaWindPressureLoad:
@@ -451,13 +517,13 @@ class SectionType(Enum):
     BOX = "BOX"
     CHANNEL = "CHANNEL"  # C ile aynı
     CUSTOM = "CUSTOM"
-    
+
     def __str__(self):
         return self.value
-    
+
     def __repr__(self):
         return f"SectionType.{self.name}"
-    
+
 class ElementType(Enum):
     NODE = "NODE"
     FRAME = "FRAME"
@@ -469,36 +535,6 @@ class ObjType(Enum):
     AREA = 5
     LINK = 7
 
-class LinkPropType(Enum):
-    LINEAR = 1
-    DAMPER = 2
-    GAP = 3
-    HOOK = 4
-    PLASTIC_WEN = 5
-    ISOLATOR1 = 6
-    ISOLATOR2 = 7
-    MULTILINEAR_ELASTIC = 8
-    MULTILINEAR_PLASTIC = 9
-    ISOLATOR3 = 10
-
-    @classmethod
-    def from_sap(cls, sap_str: str) -> "LinkPropType":
-        if not sap_str:
-            return cls.LINEAR
-        mapping = {
-            "LINEAR": cls.LINEAR, "LIN": cls.LINEAR,
-            "DAMPER": cls.DAMPER,
-            "GAP": cls.GAP,
-            "HOOK": cls.HOOK,
-            "PLASTIC": cls.PLASTIC_WEN, "PLASTICWEN": cls.PLASTIC_WEN,
-            "ISOLATOR1": cls.ISOLATOR1,
-            "ISOLATOR2": cls.ISOLATOR2,
-            "MULTILINEARELASTIC": cls.MULTILINEAR_ELASTIC,
-            "MULTILINEARPLASTIC": cls.MULTILINEAR_PLASTIC,
-            "ISOLATOR3": cls.ISOLATOR3,
-        }
-        key = sap_str.strip().upper().replace(" ", "").replace("_", "")
-        return mapping.get(key, cls.LINEAR)
 
 class LoadPatternType(Enum):
     DEAD = 1
@@ -528,22 +564,22 @@ class Material:
     name: str = "DEFAULT"
     mat_type: MatType = MatType.STEEL
     color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
-    
+
     # 3 Lokal eksen elastisite modülleri (Ortotropik destekli)
     E1: float = 2.0e8
     E2: float = 2.0e8
     E3: float = 2.0e8
-    
+
     # 3 Düzlem kayma modülleri
     G12: float = 7.7e7
     G13: float = 7.7e7
     G23: float = 7.7e7
-    
+
     # Poisson oranları (U12, U13, U23)
     nu12: float = 0.3
     nu13: float = 0.3
     nu23: float = 0.3
-    
+
     density: float = 7850
 
     # Çubuk eleman analizlerinde (1 ekseni boyunca) geriye dönük uyumluluk için
@@ -584,9 +620,96 @@ class Section:
         if self.material is None:
             self.material = DEFAULT_MATERIAL
 
+@dataclass
+class AreaSection:
+    name: str
+    prop_type: PropAreaType
+    material: Optional[Material] = None
+    thickness: float = 0.0
+
+    # SAP area modifiers
+    membrane_f11: float = 1.0
+    membrane_f22: float = 1.0
+    membrane_f12: float = 1.0
+
+    bending_m11: float = 1.0
+    bending_m22: float = 1.0
+    bending_m12: float = 1.0
+
+    shear_v13: float = 1.0
+    shear_v23: float = 1.0
+
+    mass: float = 1.0
+    weight: float = 1.0
+
+    # SAP'ye özgü ek tanımlar
+    params: Dict = None
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+
+    @property
+    def modifiers(self):
+        return (
+            self.membrane_f11,
+            self.membrane_f22,
+            self.membrane_f12,
+            self.bending_m11,
+            self.bending_m22,
+            self.bending_m12,
+            self.shear_v13,
+            self.shear_v23,
+            self.mass,
+            self.weight,
+        )
+    
 # ============================================================================
 # LINK PROPERTIES
 # ============================================================================
+class LinkPropType(IntEnum):
+    LINEAR = 1
+    DAMPER = 2
+    GAP = 3
+    HOOK = 4
+    PLASTIC_WEN = 5
+    ISOLATOR1 = 6 #(Rubber isolator)
+    ISOLATOR2 = 7 #(Friction isolator)
+    MULTILINEAR_ELASTIC = 8
+    MULTILINEAR_PLASTIC = 9
+    ISOLATOR3 = 10 #(T/C Friction isolator)
+
+    @classmethod
+    def from_sap(cls, sap_str: str) -> "LinkPropType":
+        if not sap_str:
+            return cls.LINEAR
+        mapping = {
+            "LINEAR": cls.LINEAR, "LIN": cls.LINEAR,
+            "DAMPER": cls.DAMPER,
+            "GAP": cls.GAP,
+            "HOOK": cls.HOOK,
+            "PLASTIC": cls.PLASTIC_WEN, "PLASTICWEN": cls.PLASTIC_WEN,
+            "ISOLATOR1": cls.ISOLATOR1,
+            "ISOLATOR2": cls.ISOLATOR2,
+            "MULTILINEARELASTIC": cls.MULTILINEAR_ELASTIC,
+            "MULTILINEARPLASTIC": cls.MULTILINEAR_PLASTIC,
+            "ISOLATOR3": cls.ISOLATOR3,
+        }
+        key = sap_str.strip().upper().replace(" ", "").replace("_", "")
+        return mapping.get(key, cls.LINEAR)
+
+@dataclass
+class LinkProperty:
+    name: str
+    prop_type: LinkPropType
+
+    dof: Tuple[bool, ...] = ()
+    fixed: Tuple[bool, ...] = ()
+
+    ke: Tuple[float, ...] = ()
+    ce: Tuple[float, ...] = ()
+
+    params: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class LinkProp:
@@ -613,7 +736,7 @@ class LinkPropLinear(LinkProp):
         "U1": 0.0, "U2": 0.0, "U3": 0.0,
         "R1": 0.0, "R2": 0.0, "R3": 0.0
     })
-    
+
     def __post_init__(self):
         self.DOF = self.DOF or {"U1": True, "U2": True, "U3": True,
                                  "R1": True, "R2": True, "R3": True}
@@ -646,6 +769,10 @@ class Restraint:
             rz=data.get("rz", False),
         )
 
+    @classmethod
+    def from_list(cls, values):
+        return cls(*values)
+    
     def is_free(self):
         return not any(self.as_list())
 
@@ -676,3 +803,41 @@ class Restraint:
         if not fixed:
             return "<Restraint: FREE>"
         return f"<Restraint fixed={fixed}>"
+
+
+class SectionCutDefinedBy(str, Enum):
+    GROUP = "Group"
+    QUAD = "Quad"
+    COORDINATE = "Coordinate"
+
+
+class SectionCutResultType(str, Enum):
+    ANALYSIS = "Analysis"
+    DESIGN = "Design"
+
+
+@dataclass
+class QuadDefinition:
+    points: List[Tuple[float, float, float]] = field(default_factory=list)
+
+
+@dataclass
+class SectionCut:
+    name: str = "DEFAULT"
+    defined_by: SectionCutDefinedBy = SectionCutDefinedBy.QUAD
+    group: str = "All"
+    result_type: SectionCutResultType = SectionCutResultType.ANALYSIS
+
+    default_loc: bool = True
+
+    global_x: float = 0.0
+    global_y: float = 0.0
+    global_z: float = 0.0
+
+    angle_a: float = 0.0
+    angle_b: float = 0.0
+    angle_c: float = 0.0
+
+    elem_side: str = "Positive"
+
+    quad: Optional[QuadDefinition] = None

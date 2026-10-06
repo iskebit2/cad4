@@ -27,7 +27,7 @@ from kivy.uix.floatlayout import FloatLayout
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
-
+logger.setup("INFO")
 
 from core.engine_factory import create_cad_widget
 from gui.panel_main_menu import MainMenuPanel
@@ -100,6 +100,20 @@ class MainApp(App):
         )
         btn_menu.bind(on_release=self.open_main_menu)
         toolbar.add_widget(btn_menu)
+
+        btn_import = Button(
+                    text="-> Import",
+                    size_hint_x=None,
+                    width=dp(120),
+                    font_size=dp(14),
+                    font_name="DejaVuSans.ttf",
+                    background_normal="",
+                    background_color=(0.15, 0.20, 0.28, 1),
+                    color=(0.9, 0.9, 0.9, 1),
+                    bold=True
+                )
+        btn_import.bind(on_release=self._import_from_sap)
+        toolbar.add_widget(btn_import)
 
         # Durum Başlığı
         lbl_info = Label(
@@ -496,6 +510,27 @@ class MainApp(App):
         popup.bind(on_dismiss=lambda *_: setattr(self, '_picker_open', False))
 
         popup.open()
+
+    def _import_from_sap(self, *_):
+        from tools.sap_connect import cSap
+        from exchange.cad4_sap_exchange import import_sap_to_scene
+
+        sap = cSap()
+        sap.set_units(9)                    # N, mm, C
+
+        counts = import_sap_to_scene(
+            sap,
+            self.engine.scene,              # ← mevcut sahne
+            # selection_only=True,
+            # on_done=lambda: self._after_sap_import(),
+        )
+        print(counts)
+
+
+        if counts:
+            self.engine.renderer.update_geo(self.engine.scene)
+            self.engine.fit_view()
+
 
 
 

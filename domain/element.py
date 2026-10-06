@@ -59,34 +59,51 @@ class Element:
         )
 
 
+
 class Node(Element):
     DOF_ORDER = ('ux', 'uy', 'uz', 'rx', 'ry', 'rz')
 
-    def __init__(self,
-                 x: float,
-                 y: float,
-                 z: float,
-                 label: str = "",
-                 restraint: Optional[Restraint] = None):
-        
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        z: float,
+        label: str = "",
+        restraint: Optional[Restraint] = None,
+        mass: Tuple[float, ...] = (0.0,) * 6,
+        spring: Tuple[float, ...] = (),
+    ):
         super().__init__(label)
-        self.element_type= "Node"
+
+        self.element_type = "Node"
+
         # Geometri
         self.x = x
         self.y = y
         self.z = z
 
         # Fiziksel sınır şartı
-        self.restraint: Optional[Restraint] = restraint
+        self.restraint = restraint
 
-        # Solver için global DOF indexleri (assemble aşamasında doldurulur)
+        # Nodal mass
+        self.mass = tuple(mass)
+
+        # Nodal spring stiffness
+        self.spring = tuple(spring)
+
+        # Solver
         self.dof_indices: List[Optional[int]] = [None] * 6
 
         # Bağlantılar
         self.connected: List[Tuple[ObjType, str]] = []
 
+        # Yükler
         self.loads: List[PointLoad] = []
-    
+
+    @classmethod
+    def from_list(cls, values):
+        return cls(*values)
+
     @classmethod
     def from_dict(cls, data: dict):
         restraint_data = data.get("restraint")
