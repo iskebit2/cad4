@@ -197,14 +197,27 @@ class EditController:
                     label=v.get("label") or None)
 
     def _build_polygon(self, v):
-        from domain.element import Polygon
+        from domain.element import Polygon, PolygonType
         node_labels = v.get("nodes", [])
         if isinstance(node_labels, str):
             node_labels = [s.strip() for s in node_labels.split(",") if s.strip()]
         nodes = [self._resolve_node(n) for n in node_labels]
         if not nodes or any(n is None for n in nodes):
             raise ValueError("Polygon için tüm node'lar bulunamadı")
-        return Polygon(nodes=nodes, label=v.get("label") or None)
+
+        # PolygonType Enum dönüşümü
+        raw_type = v.get("poly_type", "GENERIC")
+        if isinstance(raw_type, str):
+            try:
+                poly_type = PolygonType[raw_type.strip().upper()]
+            except KeyError:
+                poly_type = PolygonType.GENERIC
+        elif isinstance(raw_type, PolygonType):
+            poly_type = raw_type
+        else:
+            poly_type = PolygonType.GENERIC
+
+        return Polygon(nodes=nodes, label=v.get("label") or None, poly_type=poly_type)
 
     # ========================================================
     # ALAN OKU / YAZ
@@ -219,6 +232,9 @@ class EditController:
             return getattr(getattr(element, "section", None), "name", None)
         if field == "nodes":
             return [n.unique_id for n in getattr(element, "nodes", [])]
+        if field == "poly_type":
+            pt = getattr(element, "poly_type", None)
+            return pt.name if hasattr(pt, "name") else str(pt)
 
         parts = field.split(".")
         obj = element
@@ -246,6 +262,18 @@ class EditController:
             if any(n is None for n in node_objs):
                 raise ValueError("Bazı node'lar bulunamadı")
             element.nodes = node_objs
+            return
+
+        # YENİ: PolygonType Enum dönüşümü
+        if field == "poly_type":
+            from domain.element import PolygonType
+            if isinstance(value, str):
+                try:
+                    setattr(element, "poly_type", PolygonType[value.strip().upper()])
+                except KeyError:
+                    raise ValueError(f"Geçersiz poligon tipi: {value!r}. Geçerli tipler: {[t.name for t in PolygonType]}")
+            elif isinstance(value, PolygonType):
+                setattr(element, "poly_type", value)
             return
 
         parts = field.split(".")

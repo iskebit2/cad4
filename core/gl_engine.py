@@ -321,7 +321,36 @@ class KivyCADWidget(Widget):
         )
 
         Clock.schedule_interval(self.update, 1.0 / 60.0)
+    @staticmethod
+    def _is_modal_open():
+        from kivy.uix.popup import Popup
+        from kivy.uix.modalview import ModalView
+        from kivy.core.window import Window
 
+        # ⬇️ Basit cache: her 100ms'de bir yeniden tara
+        import time
+        now = time.time()
+        cache = KivyCADWidget._modal_cache
+        if now - cache.get("t", 0) < 0.1:
+            return cache.get("v", False)
+
+        result = False
+        for top in Window.children:
+            try:
+                for w in top.walk():
+                    if isinstance(w, (Popup, ModalView)) and w.parent is not None:
+                        result = True
+                        break
+                if result:
+                    break
+            except Exception:
+                continue
+
+        KivyCADWidget._modal_cache = {"t": now, "v": result}
+        return result
+
+    _modal_cache = {}
+    
     def _draw_gl(self, instr):
         if not self.initialized:
             if self.width <= 1 or self.height <= 1:
@@ -411,6 +440,13 @@ class KivyCADWidget(Widget):
             self.engine.fit_view()
 
     def _on_key_down(self, window, key, scancode, codepoint, modifiers):
+        # ⬇️ YENİ: Modal açıkken kısayolları devre dışı bırak
+        if self._is_modal_open():
+            # Sadece ESC'ye izin ver (modal kapatabilsin)
+            if key == 27:
+                return False   # Event'i modal'a bırak
+            return True        # Diğer tuşları yut
+        
         self.pressed_keys.add(key)
 
         if self.engine and self.engine.input:
@@ -421,6 +457,17 @@ class KivyCADWidget(Widget):
             if self.engine:
                 mode = self.engine.renderer.toggle_render_mode()
                 logger.info(f"Render mode: {mode}")
+            return True
+
+        # ---- D: Draw Modunu Aç/Kapat (Toggle) ----
+        if key == 100:  # 'd' tuşu
+            if self.engine:
+                if self.engine.draw_mgr.is_active:
+                    self.engine.draw_mgr.close()
+                    logger.info("Çizim Modu Kapatıldı (D)")
+                else:
+                    self.engine.draw_mgr.start()
+                    logger.info("Çizim Modu Başlatıldı (D)")
             return True
 
         # ---- C: draw modu kapat ----
@@ -524,7 +571,78 @@ class KivyCADWidget(Widget):
             elif key in (307, 308):
                 self.engine.input.set_modifier_state("alt", False)
 
+    def on_touch_up(self, touch):
+        # ⬇️ YENİ: Modal açıkken hiçbir şey yapma
+        if self._is_modal_open():
+            return False
+        if touch.grab_current is not self:
+            return False
+
+        x = touch.x - self.x
+        y = self.height - (touch.y - self.y)
+
+        if touch.button == 'left':
+            self._on_left_up(x, y)
+
+        elif touch.button == 'right':
+            self.engine.input.set_button_state(MOUSE_BUTTON_RIGHT, False)
+
+        elif touch.button == 'middle':
+            self.engine.input.set_button_state(MOUSE_BUTTON_MIDDLE, False)
+            self.engine.pending_pick_check = False
+            self.engine._clear_hover()
+
+        touch.ungrab(self)
+        return True
+    
+    def on_touch_move(self, touch):
+        # ⬇️ YENİ: Modal açıkken hiçbir şey yapma
+        if self._is_modal_open():
+            return False
+        if touch.grab_current is not self or not self.engine:
+            return False
+
+        x = touch.x - self.x
+        y = self.height - (touch.y - self.y)
+
+        dx = touch.dx
+        dy = -touch.dy
+
+        self.engine.input.update_mouse_position(x, y)
+
+        # 1. ORTA TUŞ: Pan / Orbit (Çizim modunda olsak bile öncelikli)
+        if touch.button == 'middle':
+            self._on_middle_move(dx, dy, x, y)
+            return True
+
+        # 2. SHIFT + SOL TIK: Kamera Orbit (Döndürme)
+        if touch.button == 'left' and self.engine.input.is_shift_pressed():
+            self.engine.cam.orbit(dx, dy)
+            if self.engine.hover_id != 0:
+                self.engine._clear_hover()
+            return True
+
+        # 3. ÇİZİM MODU: Sadece kamera hareketi yapılmıyorsa çizim önizlemesini/snapping'i güncelle
+        if self.engine.draw_mgr.is_active:
+            self.engine.draw_mgr.on_mouse_move(x, y)
+            return True
+
+        if touch.button == 'right':
+            return True
+
+        if self.engine.marquee and self.engine.marquee.is_active:
+            self.engine.marquee.update_selection(x, y)
+            return True
+
+        self.engine._update_world_pos(x, y)
+        self.engine._start_hover_pick(int(x), int(y))
+        return True
+
     def on_touch_down(self, touch):
+        # ⬇️ YENİ: Modal açıkken hiçbir şey yapma
+        if self._is_modal_open():
+            return False
+        
         if not self.collide_point(*touch.pos) or not self.engine:
             return False
 
@@ -543,6 +661,7 @@ class KivyCADWidget(Widget):
             touch.ungrab(self)
             return True
 
+        # Orta tuş (Pan / Orbit) çizim modundan bağımsız her zaman çalışmalı
         if touch.button == 'middle':
             self._on_middle_down(x, y, touch)
             return True
@@ -599,42 +718,6 @@ class KivyCADWidget(Widget):
         self.engine._update_world_pos(x, y)
         self.engine._start_hover_pick(int(x), int(y))
 
-    def on_touch_move(self, touch):
-        if touch.grab_current is not self or not self.engine:
-            return False
-
-        x = touch.x - self.x
-        y = self.height - (touch.y - self.y)
-
-        dx = touch.dx
-        dy = -touch.dy
-
-        self.engine.input.update_mouse_position(x, y)
-
-        if self.engine.draw_mgr.is_active:
-            self.engine.draw_mgr.on_mouse_move(x, y)
-            return True
-
-        if touch.button == 'middle':
-            self._on_middle_move(dx, dy, x, y)
-            return True
-
-        if touch.button == 'right':
-            return True
-
-        if self.engine.marquee and self.engine.marquee.is_active:
-            self.engine.marquee.update_selection(x, y)
-            return True
-
-        if touch.button == 'left' and self.engine.input.is_shift_pressed():
-            self.engine.cam.orbit(dx, dy)
-            if self.engine.hover_id != 0:
-                self.engine._clear_hover()
-            return True
-
-        self.engine._update_world_pos(x, y)
-        self.engine._start_hover_pick(int(x), int(y))
-        return True
 
     def _on_middle_move(self, dx, dy, x, y):
         if not self._middle_dragged:
@@ -651,26 +734,6 @@ class KivyCADWidget(Widget):
         self.engine.pending_pick_check = False
         self.engine._clear_hover()
 
-    def on_touch_up(self, touch):
-        if touch.grab_current is not self:
-            return False
-
-        x = touch.x - self.x
-        y = self.height - (touch.y - self.y)
-
-        if touch.button == 'left':
-            self._on_left_up(x, y)
-
-        elif touch.button == 'right':
-            self.engine.input.set_button_state(MOUSE_BUTTON_RIGHT, False)
-
-        elif touch.button == 'middle':
-            self.engine.input.set_button_state(MOUSE_BUTTON_MIDDLE, False)
-            self.engine.pending_pick_check = False
-            self.engine._clear_hover()
-
-        touch.ungrab(self)
-        return True
 
     def _on_left_up(self, x, y):
         self.engine.input.set_button_state(MOUSE_BUTTON_LEFT, False)
@@ -694,6 +757,9 @@ class KivyCADWidget(Widget):
         self.canvas.ask_update()
 
     def _on_global_mouse_move(self, window, pos):
+        # ⬇️ YENİ: Modal açıkken CAD widget fareyi güncellemesin
+        if self._is_modal_open():
+            return
         if not self.engine:
             return
         if not self.collide_point(*pos):

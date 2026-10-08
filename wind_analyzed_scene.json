@@ -1,0 +1,2068 @@
+{
+  "units": "N, mm, C",
+  "definitions": {
+    "materials": [],
+    "sections": [],
+    "link_props": []
+  },
+  "nodes": [
+    {
+      "unique_id": 1,
+      "element_id": "cef523fa-bdae-484e-a4a2-d52de7ba8928",
+      "element_type": "Node",
+      "label": "P1",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 2,
+      "element_id": "5ce6a7ea-7965-4e6b-a08d-ce06dc2d3c98",
+      "element_type": "Node",
+      "label": "P2",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 3,
+      "element_id": "d8340c2e-49d2-4961-bfdf-3781763e6975",
+      "element_type": "Node",
+      "label": "P3",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 4,
+      "element_id": "d0aa0b39-296b-49a7-b5ba-4a64280ce28c",
+      "element_type": "Node",
+      "label": "P4",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 5,
+      "element_id": "b13e3009-0d05-48c7-b6f8-ba704aa1b68b",
+      "element_type": "Node",
+      "label": "P5",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 6,
+      "element_id": "917319ea-9429-45e4-8166-c01786d1d4d1",
+      "element_type": "Node",
+      "label": "P6",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 7,
+      "element_id": "48305adc-37e8-4c13-965b-60e7b9b3e397",
+      "element_type": "Node",
+      "label": "P7",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 8,
+      "element_id": "182050cc-0cfa-485c-8996-20f1c661f5df",
+      "element_type": "Node",
+      "label": "P8",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 14,
+      "element_id": "f7523a69-5605-4f14-99d0-ba356cdb0868",
+      "element_type": "Node",
+      "label": "W_NODE_0",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 15,
+      "element_id": "e92c7afe-59c5-4557-b2e6-dead62d6b79f",
+      "element_type": "Node",
+      "label": "W_NODE_0",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.6,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 16,
+      "element_id": "be001b9e-0cdd-4c1b-99f8-0f30bbc77de3",
+      "element_type": "Node",
+      "label": "W_NODE_0",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.5999999999999996,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 17,
+      "element_id": "40bcefc0-dab9-43e3-80ae-de75b9398397",
+      "element_type": "Node",
+      "label": "W_NODE_0",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 18,
+      "element_id": "98f0e2ef-f1d0-4b8a-832f-22f6b4b06992",
+      "element_type": "Node",
+      "label": "W_NODE_0",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 20,
+      "element_id": "2330c795-c09b-4243-9bbb-9236df003aba",
+      "element_type": "Node",
+      "label": "W_NODE_1",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.6,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 21,
+      "element_id": "41851c5b-aa48-4fa7-af42-42e9fdb4438e",
+      "element_type": "Node",
+      "label": "W_NODE_1",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 22,
+      "element_id": "657e581e-84e2-400a-8bf8-5748f3063dbc",
+      "element_type": "Node",
+      "label": "W_NODE_1",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 23,
+      "element_id": "51919f8f-1668-4065-ad5e-4ba7608fb182",
+      "element_type": "Node",
+      "label": "W_NODE_1",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.5999999999999996,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 24,
+      "element_id": "9b42fa23-f274-4f2f-a910-5a1d73965113",
+      "element_type": "Node",
+      "label": "W_NODE_1",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.6,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 26,
+      "element_id": "b22017da-aa4b-4c9d-b816-0943c02cb532",
+      "element_type": "Node",
+      "label": "W_NODE_2",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 27,
+      "element_id": "d118754c-fb30-4129-bcc2-a11e8a6033e5",
+      "element_type": "Node",
+      "label": "W_NODE_2",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 28,
+      "element_id": "f9812a8a-9c94-4228-a390-db4c44be6b6a",
+      "element_type": "Node",
+      "label": "W_NODE_2",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 29,
+      "element_id": "b9e68092-5cf3-4ede-8fc7-e344d580bb77",
+      "element_type": "Node",
+      "label": "W_NODE_2",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 30,
+      "element_id": "d5f96182-5242-4fa6-8eac-9869c0e79559",
+      "element_type": "Node",
+      "label": "W_NODE_2",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 32,
+      "element_id": "e8243db1-a6d1-4aca-84d0-03eed9e1edb1",
+      "element_type": "Node",
+      "label": "W_NODE_3",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 33,
+      "element_id": "9a1a49e4-8ade-4e80-a582-5cd11e24b98d",
+      "element_type": "Node",
+      "label": "W_NODE_3",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 34,
+      "element_id": "eb266a9c-9a09-4efb-9425-a8587ffd0551",
+      "element_type": "Node",
+      "label": "W_NODE_3",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 35,
+      "element_id": "7bdb4bf3-27e3-48f0-90b0-1c4aee8c35f4",
+      "element_type": "Node",
+      "label": "W_NODE_3",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 36,
+      "element_id": "7c2bd211-56b4-47c1-b153-2316f569b007",
+      "element_type": "Node",
+      "label": "W_NODE_3",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 38,
+      "element_id": "1a406375-0cb4-4b9d-bea8-08e9c2813b44",
+      "element_type": "Node",
+      "label": "W_NODE_4",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 39,
+      "element_id": "dbc69c9c-f346-4965-8d77-4b92c327b3c1",
+      "element_type": "Node",
+      "label": "W_NODE_4",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 40,
+      "element_id": "541f6fc7-2b78-4f72-bf41-ff42895b8439",
+      "element_type": "Node",
+      "label": "W_NODE_4",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 41,
+      "element_id": "d9ec4985-e775-4c91-b3e6-fe63d0341082",
+      "element_type": "Node",
+      "label": "W_NODE_4",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 42,
+      "element_id": "051135a8-a402-44c6-8097-61bac9ad5267",
+      "element_type": "Node",
+      "label": "W_NODE_4",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 44,
+      "element_id": "11f53441-b58b-4b5b-a776-c1db88a2d796",
+      "element_type": "Node",
+      "label": "W_NODE_5",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.5999999999999996,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 45,
+      "element_id": "de2aee28-0d72-40c0-b646-59f3e2edf49e",
+      "element_type": "Node",
+      "label": "W_NODE_5",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 46,
+      "element_id": "c344120c-608e-4bc4-9be4-0c298cdaf3e2",
+      "element_type": "Node",
+      "label": "W_NODE_5",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 47,
+      "element_id": "ff6a738a-a37b-4f91-be42-1e29b8a92cda",
+      "element_type": "Node",
+      "label": "W_NODE_5",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.5999999999999996,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 48,
+      "element_id": "6af4bd68-5ce6-4ef6-bea1-f190c3440c5c",
+      "element_type": "Node",
+      "label": "W_NODE_5",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.5999999999999996,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 50,
+      "element_id": "8929410b-670d-46bd-85c5-a60d4fb030fb",
+      "element_type": "Node",
+      "label": "W_NODE_6",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 51,
+      "element_id": "ad358d8b-d0ef-4e67-9511-b4be317f8b35",
+      "element_type": "Node",
+      "label": "W_NODE_6",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.5999999999999996,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 52,
+      "element_id": "d8389836-7468-4fe1-95c6-94ab34475345",
+      "element_type": "Node",
+      "label": "W_NODE_6",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 1.5999999999999996,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 53,
+      "element_id": "2663f5ec-a85a-46f4-8798-9281bcefb1a9",
+      "element_type": "Node",
+      "label": "W_NODE_6",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 54,
+      "element_id": "0d5ab417-15ee-4a5e-bf51-55c17c2bd4f9",
+      "element_type": "Node",
+      "label": "W_NODE_6",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 56,
+      "element_id": "59ece2d3-cfc9-4caa-abc7-03e5f51dfe6f",
+      "element_type": "Node",
+      "label": "W_NODE_7",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 57,
+      "element_id": "25e34e99-2df7-4e12-8866-763e5435ecd8",
+      "element_type": "Node",
+      "label": "W_NODE_7",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 58,
+      "element_id": "7c71f03c-e669-4fed-9d22-3d611937f70d",
+      "element_type": "Node",
+      "label": "W_NODE_7",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 8.0,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 59,
+      "element_id": "e49e2d87-248e-4014-a363-02efb2e42f8b",
+      "element_type": "Node",
+      "label": "W_NODE_7",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 8.0,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 60,
+      "element_id": "3b267e85-7730-4371-8654-b2b0439dda0b",
+      "element_type": "Node",
+      "label": "W_NODE_7",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 8.0,
+      "z": 0.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 62,
+      "element_id": "94d86c9f-23ff-4d63-95b9-82c675539f16",
+      "element_type": "Node",
+      "label": "W_NODE_8",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 6.015444246572667,
+      "z": 4.751930530821584,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 63,
+      "element_id": "52832e00-fa8b-4bef-b44b-457ea0211b5c",
+      "element_type": "Node",
+      "label": "W_NODE_8",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000006,
+      "y": 6.015444246572667,
+      "z": 4.751930530821584,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 64,
+      "element_id": "67c594d4-027f-46c2-9fa5-1a324493d442",
+      "element_type": "Node",
+      "label": "W_NODE_8",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000007,
+      "y": 8.000000000000002,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 65,
+      "element_id": "5f81795f-7dc6-48b1-898c-0f64b93c8031",
+      "element_type": "Node",
+      "label": "W_NODE_8",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 8.000000000000002,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 66,
+      "element_id": "c306ffab-1bda-4603-92e6-fa3e384be35f",
+      "element_type": "Node",
+      "label": "W_NODE_8",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 6.015444246572667,
+      "z": 4.751930530821584,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 68,
+      "element_id": "761e4acf-844e-4093-9c89-bcdec7174fdd",
+      "element_type": "Node",
+      "label": "W_NODE_9",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 1.9845557534273364,
+      "z": 4.248069469178417,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 69,
+      "element_id": "2d330390-05dd-4fef-9ca6-c5b31e02fbf3",
+      "element_type": "Node",
+      "label": "W_NODE_9",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 70,
+      "element_id": "bdf3a5a4-b206-44aa-a422-c4929aa2c819",
+      "element_type": "Node",
+      "label": "W_NODE_9",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000002,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 71,
+      "element_id": "883edbfa-d0d3-479b-8545-4f5639f971a9",
+      "element_type": "Node",
+      "label": "W_NODE_9",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000003,
+      "y": 1.9845557534273355,
+      "z": 4.248069469178417,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 72,
+      "element_id": "a681ac89-8b4a-4cac-8c05-94c82acab026",
+      "element_type": "Node",
+      "label": "W_NODE_9",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 1.9845557534273364,
+      "z": 4.248069469178417,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 74,
+      "element_id": "7d70c73d-df9a-469f-8363-edb1b0da91a1",
+      "element_type": "Node",
+      "label": "W_NODE_10",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 6.015444246572667,
+      "z": 4.751930530821584,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 75,
+      "element_id": "655b3705-2200-4125-9100-cb0221e9ef23",
+      "element_type": "Node",
+      "label": "W_NODE_10",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 1.9845557534273364,
+      "z": 4.248069469178417,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 76,
+      "element_id": "dddf58d8-91c2-4ee2-847b-d15910d3c52a",
+      "element_type": "Node",
+      "label": "W_NODE_10",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000003,
+      "y": 1.9845557534273355,
+      "z": 4.248069469178417,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 77,
+      "element_id": "8ebe5464-4972-4c55-8a8e-f24e10b51946",
+      "element_type": "Node",
+      "label": "W_NODE_10",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000006,
+      "y": 6.015444246572667,
+      "z": 4.751930530821584,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 78,
+      "element_id": "00705bc3-9bfa-4fa3-8ab8-33ff51bc2f4b",
+      "element_type": "Node",
+      "label": "W_NODE_10",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.0,
+      "y": 6.015444246572667,
+      "z": 4.751930530821584,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 80,
+      "element_id": "cd58cd65-69af-436c-9cdf-fb737272ca06",
+      "element_type": "Node",
+      "label": "W_NODE_11",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000002,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 81,
+      "element_id": "f16e1f69-f83b-42a9-9b15-1d1d523ae47f",
+      "element_type": "Node",
+      "label": "W_NODE_11",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 4.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 82,
+      "element_id": "5790188b-1679-4d1e-8248-c6d5068dbc4c",
+      "element_type": "Node",
+      "label": "W_NODE_11",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 4.0,
+      "y": 8.000000000000002,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 83,
+      "element_id": "b0a6cedb-7193-4825-b383-164a1723dc17",
+      "element_type": "Node",
+      "label": "W_NODE_11",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000007,
+      "y": 8.000000000000002,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 84,
+      "element_id": "51a863fa-281c-417a-a5dc-24f9babb4310",
+      "element_type": "Node",
+      "label": "W_NODE_11",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0.8000000000000002,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 86,
+      "element_id": "77ec28ca-bc3b-4a9e-808f-16140542fd76",
+      "element_type": "Node",
+      "label": "W_NODE_12",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 4.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 87,
+      "element_id": "d265504f-b304-47d9-aaa1-442e27dcc760",
+      "element_type": "Node",
+      "label": "W_NODE_12",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 88,
+      "element_id": "5bfab355-7785-47c6-be02-208ffccb1ce8",
+      "element_type": "Node",
+      "label": "W_NODE_12",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 12.0,
+      "y": 8.000000000000002,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 89,
+      "element_id": "32f4f23f-0644-4095-ac5e-9bf5a00bc2be",
+      "element_type": "Node",
+      "label": "W_NODE_12",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 4.0,
+      "y": 8.000000000000002,
+      "z": 5.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 90,
+      "element_id": "e4aa7a15-bcfb-440c-9b82-924e766bf0f1",
+      "element_type": "Node",
+      "label": "W_NODE_12",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 4.0,
+      "y": 0.0,
+      "z": 4.0,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    }
+  ],
+  "frames": [],
+  "areas": [],
+  "links": [],
+  "polygons": [
+    {
+      "unique_id": 9,
+      "element_id": "75c08fc4-d50d-45d4-9198-f3e5ecade24b",
+      "element_type": "Polygon",
+      "label": "D1",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        1,
+        2,
+        6,
+        5
+      ],
+      "color": [
+        0.8,
+        0.3,
+        0.8
+      ],
+      "windplane": {}
+    },
+    {
+      "unique_id": 10,
+      "element_id": "ea3c547f-0f7d-4031-8994-90bbb161a013",
+      "element_type": "Polygon",
+      "label": "D2",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        1,
+        5,
+        8,
+        4
+      ],
+      "color": [
+        0.8,
+        0.3,
+        0.8
+      ],
+      "windplane": {}
+    },
+    {
+      "unique_id": 11,
+      "element_id": "893ad671-bd55-41a3-a1da-d8ca756a8f26",
+      "element_type": "Polygon",
+      "label": "D3",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        2,
+        3,
+        7,
+        6
+      ],
+      "color": [
+        0.8,
+        0.3,
+        0.8
+      ],
+      "windplane": {}
+    },
+    {
+      "unique_id": 12,
+      "element_id": "f5f46e2e-662e-4e9f-99f7-bd64592b568a",
+      "element_type": "Polygon",
+      "label": "D4",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        3,
+        4,
+        8,
+        7
+      ],
+      "color": [
+        0.8,
+        0.3,
+        0.8
+      ],
+      "windplane": {}
+    },
+    {
+      "unique_id": 13,
+      "element_id": "697cc7b0-376c-4ef2-89e8-346d4a776c1e",
+      "element_type": "Polygon",
+      "label": "C1",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "color": [
+        0.8,
+        0.3,
+        0.8
+      ],
+      "windplane": {}
+    },
+    {
+      "unique_id": 19,
+      "element_id": "9e75a0fd-498e-41ed-b5c6-bfb0276f6d81",
+      "element_type": "Polygon",
+      "label": "ZONE_A_POLY_9",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "color": [
+        0.0,
+        0.022,
+        1.0
+      ],
+      "windplane": {
+        "label": "A",
+        "surface": "POLY_9",
+        "table_type": "WALL",
+        "table_type_dir": 0,
+        "pitch": 0.0,
+        "cpe10": -1.2,
+        "cpe1": -1.4,
+        "kind": "ZoneKind.TURBULENCE"
+      }
+    },
+    {
+      "unique_id": 25,
+      "element_id": "97aa1ad2-4270-4aa8-a21c-94aeb177b0e1",
+      "element_type": "Polygon",
+      "label": "ZONE_B_POLY_9",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "color": [
+        0.0,
+        0.717,
+        1.0
+      ],
+      "windplane": {
+        "label": "B",
+        "surface": "POLY_9",
+        "table_type": "WALL",
+        "table_type_dir": 0,
+        "pitch": 0.0,
+        "cpe10": -0.8,
+        "cpe1": -1.1,
+        "kind": "ZoneKind.ORDINARY"
+      }
+    },
+    {
+      "unique_id": 31,
+      "element_id": "d7a5018d-7973-42f9-a202-be1a51e5a5b2",
+      "element_type": "Polygon",
+      "label": "ZONE_C_POLY_9",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "color": [
+        0.239,
+        1.0,
+        0.761
+      ],
+      "windplane": {
+        "label": "C",
+        "surface": "POLY_9",
+        "table_type": "WALL",
+        "table_type_dir": 0,
+        "pitch": 0.0,
+        "cpe10": -0.5,
+        "cpe1": -0.5,
+        "kind": "ZoneKind.WEAK"
+      }
+    },
+    {
+      "unique_id": 37,
+      "element_id": "805af5bd-acb4-405a-a9f0-d5deb42dbcb1",
+      "element_type": "Polygon",
+      "label": "ZONE_D_POLY_10",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        32,
+        33,
+        34,
+        35,
+        36
+      ],
+      "color": [
+        0.674,
+        0.0,
+        0.0
+      ],
+      "windplane": {
+        "label": "D",
+        "surface": "POLY_10",
+        "table_type": "WALL",
+        "table_type_dir": 0,
+        "pitch": 0.0,
+        "cpe10": 0.7,
+        "cpe1": 1.0,
+        "kind": "ZoneKind.ORDINARY"
+      }
+    },
+    {
+      "unique_id": 43,
+      "element_id": "7047c4e5-e866-4461-9bc3-3333d7383bfa",
+      "element_type": "Polygon",
+      "label": "ZONE_E_POLY_11",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        38,
+        39,
+        40,
+        41,
+        42
+      ],
+      "color": [
+        0.587,
+        1.0,
+        0.413
+      ],
+      "windplane": {
+        "label": "E",
+        "surface": "POLY_11",
+        "table_type": "WALL",
+        "table_type_dir": 0,
+        "pitch": 0.0,
+        "cpe10": -0.3,
+        "cpe1": -0.3,
+        "kind": "ZoneKind.ORDINARY"
+      }
+    },
+    {
+      "unique_id": 49,
+      "element_id": "81e7de07-2f8a-4bdc-811c-127dc5840f90",
+      "element_type": "Polygon",
+      "label": "ZONE_A_POLY_12",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        44,
+        45,
+        46,
+        47,
+        48
+      ],
+      "color": [
+        0.0,
+        0.022,
+        1.0
+      ],
+      "windplane": {
+        "label": "A",
+        "surface": "POLY_12",
+        "table_type": "WALL",
+        "table_type_dir": 0,
+        "pitch": 0.0,
+        "cpe10": -1.2,
+        "cpe1": -1.4,
+        "kind": "ZoneKind.TURBULENCE"
+      }
+    },
+    {
+      "unique_id": 55,
+      "element_id": "e02eaffa-bfde-46f3-8f65-d92a87f3abd4",
+      "element_type": "Polygon",
+      "label": "ZONE_B_POLY_12",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        50,
+        51,
+        52,
+        53,
+        54
+      ],
+      "color": [
+        0.0,
+        0.717,
+        1.0
+      ],
+      "windplane": {
+        "label": "B",
+        "surface": "POLY_12",
+        "table_type": "WALL",
+        "table_type_dir": 0,
+        "pitch": 0.0,
+        "cpe10": -0.8,
+        "cpe1": -1.1,
+        "kind": "ZoneKind.ORDINARY"
+      }
+    },
+    {
+      "unique_id": 61,
+      "element_id": "9a35d15a-8384-4257-906a-f362e729ac54",
+      "element_type": "Polygon",
+      "label": "ZONE_C_POLY_12",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        56,
+        57,
+        58,
+        59,
+        60
+      ],
+      "color": [
+        0.239,
+        1.0,
+        0.761
+      ],
+      "windplane": {
+        "label": "C",
+        "surface": "POLY_12",
+        "table_type": "WALL",
+        "table_type_dir": 0,
+        "pitch": 0.0,
+        "cpe10": -0.5,
+        "cpe1": -0.5,
+        "kind": "ZoneKind.WEAK"
+      }
+    },
+    {
+      "unique_id": 67,
+      "element_id": "9dce2900-52ae-463b-b825-b1d58c8ce6ea",
+      "element_type": "Polygon",
+      "label": "ZONE_Fu_POLY_13",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        62,
+        63,
+        64,
+        65,
+        66
+      ],
+      "color": [
+        0.0,
+        0.227,
+        1.0
+      ],
+      "windplane": {
+        "label": "Fu",
+        "surface": "POLY_13",
+        "table_type": "MONOPITCH",
+        "table_type_dir": 90,
+        "pitch": 7.125016348901757,
+        "cpe10": [
+          -2.1637504904670526,
+          0.0
+        ],
+        "cpe1": [
+          -2.6637504904670526,
+          0.0
+        ],
+        "kind": "ZoneKind.TURBULENCE_CORNER_HIGH"
+      }
+    },
+    {
+      "unique_id": 73,
+      "element_id": "e3b19633-f10b-493d-af6c-79508f3c05c9",
+      "element_type": "Polygon",
+      "label": "ZONE_Fl_POLY_13",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        68,
+        69,
+        70,
+        71,
+        72
+      ],
+      "color": [
+        0.0,
+        0.375,
+        1.0
+      ],
+      "windplane": {
+        "label": "Fl",
+        "surface": "POLY_13",
+        "table_type": "MONOPITCH",
+        "table_type_dir": 90,
+        "pitch": 7.125016348901757,
+        "cpe10": [
+          -1.9937491825549123,
+          0.0
+        ],
+        "cpe1": [
+          -1.9937491825549123,
+          0.0
+        ],
+        "kind": "ZoneKind.TURBULENCE_CORNER_LOW"
+      }
+    },
+    {
+      "unique_id": 79,
+      "element_id": "2daa3ac0-fa1f-45e7-bba6-cbbfcbaf760e",
+      "element_type": "Polygon",
+      "label": "ZONE_G_POLY_13",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        74,
+        75,
+        76,
+        77,
+        78
+      ],
+      "color": [
+        0.0,
+        0.525,
+        1.0
+      ],
+      "windplane": {
+        "label": "G",
+        "surface": "POLY_13",
+        "table_type": "MONOPITCH",
+        "table_type_dir": 90,
+        "pitch": 7.125016348901757,
+        "cpe10": [
+          -1.8212501634890177,
+          0.0
+        ],
+        "cpe1": [
+          -2.106250817445088,
+          0.0
+        ],
+        "kind": "ZoneKind.TURBULENCE_REMAIN"
+      }
+    },
+    {
+      "unique_id": 85,
+      "element_id": "1ca14e2b-2bea-4bad-a6b1-b70e4e28144f",
+      "element_type": "Polygon",
+      "label": "ZONE_H_POLY_13",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        80,
+        81,
+        82,
+        83,
+        84
+      ],
+      "color": [
+        0.55,
+        1.0,
+        0.45
+      ],
+      "windplane": {
+        "label": "H",
+        "surface": "POLY_13",
+        "table_type": "MONOPITCH",
+        "table_type_dir": 90,
+        "pitch": 7.125016348901757,
+        "cpe10": [
+          -0.6425003269780352,
+          0.0
+        ],
+        "cpe1": [
+          -1.2,
+          0.0
+        ],
+        "kind": "ZoneKind.ORDINARY"
+      }
+    },
+    {
+      "unique_id": 91,
+      "element_id": "c504e52e-ccac-44d5-9fc7-847fd817b59f",
+      "element_type": "Polygon",
+      "label": "ZONE_I_POLY_13",
+      "is_selected": false,
+      "is_visible": true,
+      "node_ids": [
+        86,
+        87,
+        88,
+        89,
+        90
+      ],
+      "color": [
+        0.637,
+        1.0,
+        0.363
+      ],
+      "windplane": {
+        "label": "I",
+        "surface": "POLY_13",
+        "table_type": "MONOPITCH",
+        "table_type_dir": 90,
+        "pitch": 7.125016348901757,
+        "cpe10": [
+          -0.5425003269780351,
+          0.0
+        ],
+        "cpe1": [
+          -0.648751144423123,
+          0.0
+        ],
+        "kind": "ZoneKind.WEAK"
+      }
+    }
+  ]
+}

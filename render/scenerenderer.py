@@ -300,6 +300,18 @@ class SceneRenderer:
         done += len(polygons) * W_POLY
         _progress(done / total, f"Polygons ✓")
 
+        # Outline'ları bir kez üret
+        outline_parts = []
+        for pg in polygons:
+            if pg.is_visible:
+                v = self.polygon_r.builder.build_simple_lines(pg)
+                if len(v) > 0:
+                    outline_parts.append(v)
+        if outline_parts:
+            self.polygon_r._upload_outline(np.concatenate(outline_parts).astype(np.float32))
+        else:
+            self.polygon_r._cleanup_outline()
+            
         # ---- 5. PickPass'e kaydet ----
         _progress(min(done / total + 0.01, 0.96), "Picking...")   # ← geriye gitmesin
         
@@ -484,87 +496,40 @@ class SceneRenderer:
             self.frame_r.render_line(self.simple_shader)
 
     def _render_simple(self, mvp, view, proj):
-    
         if not self.simple_shader:
-            logger.error("_render_simple: simple_shader None!")
             return
-
         glPointSize(4.0)
-        color = None
-        glDisable(GL_DEPTH_TEST)
         glDisable(GL_CULL_FACE)
-
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        
-        # -------------------------------------------------
-        # FRAME
-        # -------------------------------------------------
+
+        # 1. FRAME (depth test açık)
+        glEnable(GL_DEPTH_TEST)
         if self.show['frame'] and self.frame_r:
-            self.frame_r.render_simple(
-                mvp,
-                self.simple_shader,
-                color=color,
-                alpha=1.0
-            )
+            self.frame_r.render_simple(mvp, self.simple_shader, alpha=1.0)
 
-        # -------------------------------------------------
-        # AREA — TRANSPARENT FILL
-        # -------------------------------------------------
+        # 2. AREA (transparan)
         if self.show['area'] and self.area_r:
-
-            glEnable(GL_DEPTH_TEST)
-
-            glEnable(GL_BLEND)
-            glBlendFunc(
-                GL_SRC_ALPHA,
-                GL_ONE_MINUS_SRC_ALPHA
-            )
-
             glDepthMask(GL_FALSE)
-
-            self.area_r.render_simple(
-                mvp,
-                self.simple_shader,
-                color=color,
-                alpha=0.35
-            )
-
+            self.area_r.render_simple(mvp, self.simple_shader, alpha=0.35)
             glDepthMask(GL_TRUE)
-            glDisable(GL_BLEND)
 
-        # -------------------------------------------------
-        # LINK
-        # -------------------------------------------------
-        if self.show['link'] and self.link_r:
-            self.link_r.render_simple(
-                mvp,
-                self.simple_shader,
-                color=color,
-                alpha=1.0
-            )
-
-        # -------------------------------------------------
-        # NODE
-        # -------------------------------------------------
-        if self.show['node'] and self.node_r:
-            self.node_r.render_simple(
-                mvp,
-                self.simple_shader,
-                color=color,
-                alpha=1.0
-            )
-
-        # -------------------------------------------------
-        # POLYGON
-        # -------------------------------------------------
+        # 3. POLYGON (transparan + outline) — NODE'LARDAN ÖNCE
         if self.show['polygon'] and self.polygon_r:
-            self.polygon_r.render_simple(
-                mvp,
-                self.simple_shader,
-                color=None,
-                alpha=1.0
-            )
+            glDepthMask(GL_FALSE)
+            self.polygon_r.render_simple(mvp, self.simple_shader, alpha=0.50)
+            self.polygon_r.render_lines_white(mvp, self.simple_shader)
+            glDepthMask(GL_TRUE)
+
+        # 4. LINK
+        if self.show['link'] and self.link_r:
+            self.link_r.render_simple(mvp, self.simple_shader, alpha=1.0)
+
+        # 5. NODE (en üstte)
+        glDisable(GL_DEPTH_TEST)
+        if self.show['node'] and self.node_r:
+            self.node_r.render_simple(mvp, self.simple_shader, alpha=1.0)
+        glEnable(GL_DEPTH_TEST)
     
     def get_bounds(self):
         return self.center, self.size

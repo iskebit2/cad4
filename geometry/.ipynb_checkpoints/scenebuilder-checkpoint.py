@@ -19,7 +19,7 @@ class SceneBuilder:
                        E: float = 2.0e8, density: float = 7850,
                        color: Tuple[float, float, float] = (0.8, 0.8, 0.8)) -> Material:
         """Malzeme oluştur ve definition manager'a ekle"""
-        material = Material(name=name, mat_type=mat_type, E1=E, 
+        material = Material(name=name, mat_type=mat_type, E=E, 
                           density=density, color=color)
         self.def_mgr.add_material(material)
         # logger.debug_changed("create_material")

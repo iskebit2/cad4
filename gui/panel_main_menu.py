@@ -1,12 +1,11 @@
+# gui/panel_main_menu.py
 import sys
 from pathlib import Path
 
-# --- PYDROID HİYERARŞİ DÜZELTİCİ ---
 FILE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = FILE_DIR.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-# ------------------------------------
 
 import os
 from kivy.app import App
@@ -47,7 +46,7 @@ class MainMenuContent(BoxLayout):
 
         status_box = BoxLayout(size_hint_y=None, height=dp(24))
         lbl_status = Label(
-            text="[color=50a0ff]●[/color] SISTEM HAZIR | Model Yuklendi",
+            text="[color=50a0ff]●[/color] SISTEM HAZIR | CAD Sahnesi Aktif",
             markup=True,
             font_size=dp(11),
             font_name=FONT_DEFAULT,
@@ -62,11 +61,11 @@ class MainMenuContent(BoxLayout):
 
         grid.add_widget(MenuButton("MODEL INSPECTOR", "Eleman ve metraj detaylari", lambda *a: self._trigger("inspector"), True))
         grid.add_widget(MenuButton("ANALIZ VE YUKLER", "Statik / Deprem hesap paneli", lambda *a: self._trigger("analysis")))
-        grid.add_widget(MenuButton("MALZEME VE KESITLER", "Kutu, Profil ve Ahsap tanimlari", lambda *a: self._trigger("materials")))
-        grid.add_widget(MenuButton("RAPORLAMA", "Hesap ozeti ve pdf ciktisi", lambda *a: self._trigger("reports")))
-        grid.add_widget(MenuButton("MODEL YUKLE / KAYDET", "S2K, JSON veya Proje Dosyasi", lambda *a: self._trigger("files")))
-        grid.add_widget(MenuButton("AYARLAR", "Birimler ve Arayuz Tercihleri", lambda *a: self._trigger("settings")))
-
+        grid.add_widget(MenuButton("PROJE AÇ (JSON)", "Kayıtlı modeli sahneye yükle", lambda *a: self._trigger("open_project")))
+        grid.add_widget(MenuButton("PROJE KAYDET (JSON)", "Mevcut sahneyi diske kaydet", lambda *a: self._trigger("save_project")))
+        grid.add_widget(MenuButton("SAP2000 IMPORT", "S2K veya Canlı Bağlantı", lambda *a: self._trigger("import_s2k")))
+        grid.add_widget(MenuButton("YENİ MODEL", "Temiz bir çalışma alanı aç", lambda *a: self._trigger("new_project")))
+        grid.add_widget(MenuButton("GÖRÜNÜRLÜK FİLTRESİ", "Elemanları tek tek veya toplu gizle", lambda *a: self._trigger("visibility")))
         self.add_widget(grid)
 
     def _trigger(self, action_key):

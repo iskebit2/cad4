@@ -1,4 +1,5 @@
 # ui/prop_panel.py
+import numpy as np
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
@@ -602,14 +603,57 @@ class PropertiesPanel(BoxLayout):
     # --------------------------------------------------------
 
     def _build_polygon_content(self, polygon):
-        g = CollapsibleGroup("Geometri")
-        g.add_field("Köşe sayısı", len(polygon.nodes))
-        self._add_group(g)
+        # 1. Genel / Tip Grubu
+        g_gen = CollapsibleGroup("Poligon Bilgileri")
+        
+        # Poligon Tipini Göster ve Düzenlenebilir Yap
+        current_type_name = polygon.poly_type.name if hasattr(polygon.poly_type, 'name') else str(polygon.poly_type)
+        g_gen.add_field(
+            "Poligon Tipi",
+            current_type_name,
+            field_name="poly_type",
+            element=polygon,
+            editable=True,
+            kind="str"  # GENERIC, SURFACE, ZONE, SECTION_CUT, LOAD_AREA
+        )
+        
+        g_gen.add_field("Köşe sayısı", len(polygon.nodes))
+        self._add_group(g_gen)
 
-        g = CollapsibleGroup("Köşeler (salt okunur)")
+        # 2. Rüzgar Alanı (windplane) Verileri Varsa Ekle
+        if getattr(polygon, "windplane", None):
+            wp = polygon.windplane
+            g_wind = CollapsibleGroup("Rüzgar Bölgesi (TS EN 1991-1-4)")
+            
+            g_wind.add_field("Zone Etiketi", wp.get("label", "-"))
+            g_wind.add_field("Yüzey", wp.get("surface", "-"))
+            g_wind.add_field("Tablo Tipi", wp.get("table_type", "-"))
+            
+            def format_cpe(val):
+                if val is None:
+                    return "-"
+                if isinstance(val, (tuple, list, np.ndarray)):
+                    formatted = [f"{v:.3f}" if isinstance(v, (int, float)) else str(v) for v in val]
+                    return f"[{', '.join(formatted)}]"
+                if isinstance(val, (int, float)):
+                    return f"{val:.3f}"
+                return str(val)
+
+            if "cpe10" in wp and wp["cpe10"] is not None:
+                g_wind.add_field("Cpe,10", format_cpe(wp["cpe10"]))
+            if "cpe1" in wp and wp["cpe1"] is not None:
+                g_wind.add_field("Cpe,1", format_cpe(wp["cpe1"]))
+            if "pitch" in wp:
+                g_wind.add_field("Eğim (°)", f"{wp['pitch']:.1f}")
+                
+            self._add_group(g_wind)
+
+        # 3. Köşe Listesi
+        g_nodes = CollapsibleGroup("Köşeler (salt okunur)")
         for i, n in enumerate(polygon.nodes):
-            g.add_field(f"Köşe {i+1}", n.label)
-        self._add_group(g)
+            g_nodes.add_field(f"Köşe {i+1}", f"{n.label} ({n.x:.1f}, {n.y:.1f}, {n.z:.1f})")
+        self._add_group(g_nodes)
+        g_nodes.toggle()  # Başlangıçta kapalı tut
 
     # ========================================================
     # SHOW / HIDE

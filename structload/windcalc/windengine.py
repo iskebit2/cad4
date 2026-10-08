@@ -1,3 +1,5 @@
+# structload/windcalc/windengine.py
+
 from dataclasses import dataclass, field
 import math
 import numpy as np

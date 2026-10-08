@@ -284,33 +284,29 @@ class FrameBuilder:
                 ])
 
         # ---------------------------------------------------------
-        # COLORS
+        # COLORS (Daima RGB - 3 Kanal Olmak Zorunda!)
         # ---------------------------------------------------------
 
-        color = np.array(
-            frame.section.color,
-            dtype=np.float32
-        )
+        raw_color = frame.section.color if hasattr(frame.section, 'color') else [0.5, 0.5, 0.5]
 
         if frame.is_selected:
-
-            color = np.array(
-                [0.2, 1.0, 0.2],
-                dtype=np.float32
-            )
+            color = np.array([0.2, 1.0, 0.2], dtype=np.float32)
+        else:
+            # KRİTİK DÜZELTME: RGBA gelse bile sadece ilk 3 kanalı (RGB) al
+            color = np.array(raw_color[:3], dtype=np.float32)
 
         colors = np.tile(
             color,
             (len(verts) // 6, 1)
         )
 
-        
-
         return (
             np.array(verts, dtype=np.float32),
             colors,
             np.array(idxs, dtype=np.uint32)
         )
+        
+
 
     def build_lines(self, frame: Frame) -> np.ndarray:
         """
@@ -419,7 +415,7 @@ class FrameBuilder:
     def build_simple_lines(self, frame: Frame) -> np.ndarray:
         """
         Frame'in sadece merkez eksenini çizen basit çizgi.
-        Returns: vertices array [x,y,z, nx,ny,nz] (2 nokta = 1 çizgi)
+        Returns: vertices array [x,y,z, nx,ny,nz] (2 nokta = 12 float)
         """
         start = np.array([frame.node_i.x, frame.node_i.y, frame.node_i.z], dtype=np.float32)
         end = np.array([frame.node_j.x, frame.node_j.y, frame.node_j.z], dtype=np.float32)

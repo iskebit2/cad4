@@ -1,0 +1,186 @@
+{
+  "units": "N, mm, C",
+  "definitions": {
+    "materials": [
+      {
+        "name": "S355",
+        "mat_type": "STEEL",
+        "color": [
+          0.8,
+          0.8,
+          0.8
+        ],
+        "E1": 210000000.0,
+        "E2": 200000000.0,
+        "E3": 200000000.0,
+        "G12": 77000000.0,
+        "G13": 77000000.0,
+        "G23": 77000000.0,
+        "nu12": 0.3,
+        "nu13": 0.3,
+        "nu23": 0.3,
+        "density": 7850
+      }
+    ],
+    "sections": [
+      {
+        "name": "HEA300",
+        "profile_type": "I",
+        "profile_params": {
+          "h": 290,
+          "b": 300,
+          "tw": 8.5,
+          "tf": 14.0
+        },
+        "material_name": "S355",
+        "color": [
+          0.8,
+          0.8,
+          0.8
+        ]
+      }
+    ],
+    "link_props": []
+  },
+  "nodes": [
+    {
+      "unique_id": 1,
+      "element_id": "95483ee4-b442-4a05-9cbb-e415b0512185",
+      "element_type": "Node",
+      "label": "N1",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "restraint": {
+        "ux": true,
+        "uy": true,
+        "uz": true,
+        "rx": true,
+        "ry": true,
+        "rz": true
+      },
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 2,
+      "element_id": "38b05530-feb3-417f-bdfb-8b90b8a0475e",
+      "element_type": "Node",
+      "label": "N2",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 5000,
+      "y": 0,
+      "z": 0,
+      "restraint": {
+        "ux": true,
+        "uy": true,
+        "uz": true,
+        "rx": true,
+        "ry": true,
+        "rz": true
+      },
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 3,
+      "element_id": "8bfa1270-8ad9-489b-bfcc-4e353fabb407",
+      "element_type": "Node",
+      "label": "N3",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 0,
+      "y": 0,
+      "z": 3000,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    },
+    {
+      "unique_id": 4,
+      "element_id": "5e208fb8-bd72-46b1-ad64-0d35c195fbaf",
+      "element_type": "Node",
+      "label": "N4",
+      "is_selected": false,
+      "is_visible": true,
+      "x": 5000,
+      "y": 0,
+      "z": 3000,
+      "restraint": null,
+      "mass": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spring": []
+    }
+  ],
+  "frames": [
+    {
+      "unique_id": 5,
+      "element_id": "ff10e1c7-2040-4f14-9583-e56922f455b3",
+      "element_type": "Frame",
+      "label": "KOLON1",
+      "is_selected": false,
+      "is_visible": true,
+      "node_i_id": 1,
+      "node_j_id": 3,
+      "section_name": "HEA300",
+      "rotation_deg": 0.0
+    },
+    {
+      "unique_id": 6,
+      "element_id": "7c8b5667-8ea7-4379-9d84-c1bb37a537dd",
+      "element_type": "Frame",
+      "label": "KOLON2",
+      "is_selected": false,
+      "is_visible": true,
+      "node_i_id": 2,
+      "node_j_id": 4,
+      "section_name": "HEA300",
+      "rotation_deg": 0.0
+    },
+    {
+      "unique_id": 7,
+      "element_id": "fa04eda2-8e3f-4c8b-a556-2652153bdc14",
+      "element_type": "Frame",
+      "label": "KIRIS1",
+      "is_selected": false,
+      "is_visible": true,
+      "node_i_id": 3,
+      "node_j_id": 4,
+      "section_name": "HEA300",
+      "rotation_deg": 0.0
+    }
+  ],
+  "areas": [],
+  "links": [],
+  "polygons": []
+}

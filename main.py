@@ -1,9 +1,19 @@
+# main.py
+
+
+
+
 import os
+
+# ⬅️ Kivy loglarını tamamen sustur
+os.environ["KIVY_LOG_LEVEL"] = "error"        # veya "critical"
+os.environ["KIVY_NO_CONSOLELOG"] = "1"        # konsola hiç log basma
+os.environ["KIVY_NO_FILELOG"] = "1"           # dosyaya da log basma
+os.environ["KIVY_NO_ARGS"] = "1"              # Kivy args parsing'i kapat
+
 import sys
 from pathlib import Path
 import threading
-
-from gui.prop_panel import PropertiesPanel
 
 # --- PYDROID / TERMUX DİZİN VE HİYERARŞİ DÜZELTİCİ ---
 FILE_DIR = Path(__file__).resolve().parent
@@ -11,7 +21,7 @@ if str(FILE_DIR) not in sys.path:
     sys.path.insert(0, str(FILE_DIR))
 # ----------------------------------------------------
 
-os.environ["KIVY_LOG_LEVEL"] = "warning"
+
 
 from kivy.app import App
 from kivy.metrics import dp
@@ -21,37 +31,40 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.core.window import Window
-from kivy.graphics import Color, RoundedRectangle
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.popup import Popup
 
 from logging_config import CadLogger
+CadLogger.setup("INFO")
 logger = CadLogger.get(__name__)
-logger.setup("INFO")
+
+logger.debug("DEBUG testi")
+logger.info("INFO testi")
+logger.warning("WARNING testi")
+logger.error("ERROR testi")
 
 from core.engine_factory import create_cad_widget
 from gui.panel_main_menu import MainMenuPanel
 from gui.panel_inspector import ModelInspectorPanel
 from gui.analysis_popup import AnalysisPopup
-from gui.basecustompopup import BaseCustomPopup, FONT_DEFAULT
+from gui.basecustompopup import FONT_DEFAULT
+from gui.prop_panel import PropertiesPanel
+from gui.panel_visibility import VisibilityPanel
+from domain.scene import Scene
 
-
-
+from debug_lines import debug_layout
 class MainApp(App):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.cad_widget = None
         self.inspector_popup = None
-        self.project_popup = None
-        self._project_panel = None 
+        self.analysis_popup = None
         self.menu_popup = None
         self.current_path = ""
         self._picker_open = False
         
-        
-        # ANA VERİ
-        from domain.scene import Scene
+        # ANA VERİ - Sahne
         self.scene = Scene()
 
     @property
@@ -66,33 +79,23 @@ class MainApp(App):
         root.add_widget(self.cad_widget)
 
         self.title = "Yapısal Analiz ve CAD Paneli"
-        
-        # Ekran/Panel referans takibi
-        self.menu_popup = None
-        self.inspector_popup = None
-        self.analysis_popup = None
-
-        # Model/Sahne Verisi
-        self.scene = self._load_initial_scene()
-
-        
 
         # Üst Araç Çubuğu (Toolbar)
         toolbar = BoxLayout(
             size_hint_y=None,
             height=dp(48),
-            spacing=dp(8),
-            padding=(dp(8), dp(4))
+            pos_hint={'top': 1, 'x': 0},  # ← EKRANIN EN ÜSTÜNE SABİTLE
+            spacing=dp(6),
+            padding=(dp(6), dp(4))
         )
 
-        # Hamburger / Ana Menü Butonu
-        
+        # 1. Hamburger / Ana Menü Butonu
         btn_menu = Button(
             text="☰",
             size_hint_x=None,
-            width=dp(20),
-            font_size=dp(14),
-            font_name="DejaVuSans.ttf",
+            width=dp(36),
+            font_size=dp(16),
+            font_name= FONT_DEFAULT,
             background_normal="",
             background_color=(0.15, 0.20, 0.28, 1),
             color=(0.9, 0.9, 0.9, 1),
@@ -101,175 +104,310 @@ class MainApp(App):
         btn_menu.bind(on_release=self.open_main_menu)
         toolbar.add_widget(btn_menu)
 
+        # 2. Hızlı Aç Butonu (Open)
+        btn_open = Button(
+            text="Aç",
+            size_hint_x=None,
+            width=dp(65),
+            font_size=dp(13),
+            font_name=FONT_DEFAULT,
+            background_normal="",
+            background_color=(0.18, 0.35, 0.55, 1),
+            color=(1, 1, 1, 1),
+            bold=True
+        )
+        btn_open.bind(on_release=self.action_open)
+        toolbar.add_widget(btn_open)
+
+        # 3. Hızlı Kaydet Butonu (Save)
+        btn_save = Button(
+            text="Kaydet",
+            size_hint_x=None,
+            width=dp(75),
+            font_size=dp(13),
+            font_name=FONT_DEFAULT,
+            background_normal="",
+            background_color=(0.18, 0.50, 0.32, 1),
+            color=(1, 1, 1, 1),
+            bold=True
+        )
+        btn_save.bind(on_release=self.action_save)
+        toolbar.add_widget(btn_save)
+
+        # 4. Çizim Modu Butonu (Draw Mode)
+        self.btn_draw_mode = Button(
+            text="✏ Çizim (D)",
+            size_hint_x=None,
+            width=dp(95),
+            font_size=dp(12),
+            font_name=FONT_DEFAULT,
+            background_normal="",
+            background_color=(0.22, 0.28, 0.38, 1),
+            color=(0.9, 0.9, 0.9, 1),
+            bold=True
+        )
+        self.btn_draw_mode.bind(on_release=self.toggle_draw_mode)
+        toolbar.add_widget(self.btn_draw_mode)
+
+        # 5. SAP2000 Import
         btn_import = Button(
-                    text="-> Import",
-                    size_hint_x=None,
-                    width=dp(120),
-                    font_size=dp(14),
-                    font_name="DejaVuSans.ttf",
-                    background_normal="",
-                    background_color=(0.15, 0.20, 0.28, 1),
-                    color=(0.9, 0.9, 0.9, 1),
-                    bold=True
-                )
+            text="SAP Import",
+            size_hint_x=None,
+            width=dp(95),
+            font_size=dp(12),
+            font_name=FONT_DEFAULT,
+            background_normal="",
+            background_color=(0.25, 0.22, 0.38, 1),
+            color=(1, 1, 1, 1),
+            bold=True
+        )
         btn_import.bind(on_release=self._import_from_sap)
         toolbar.add_widget(btn_import)
 
         # Durum Başlığı
-        lbl_info = Label(
-            text="MODEL: AKTİF",
+        self.lbl_info = Label(
+            text="MODEL: YENİ SAHNE",
             halign="left",
             valign="middle",
-            color=(0.6, 0.65, 0.72, 1)
+            color=(0.6, 0.65, 0.72, 1),
+            font_size=dp(12)
         )
-        lbl_info.bind(size=lbl_info.setter("text_size"))
-        toolbar.add_widget(lbl_info)
+        self.lbl_info.bind(size=self.lbl_info.setter("text_size"))
+        toolbar.add_widget(self.lbl_info)
+        
+        btn_visibility = Button(
+            text="👁 Filtre",
+            size_hint_x=None,
+            width=dp(80),
+            font_size=dp(12),
+            font_name=FONT_DEFAULT,
+            background_normal="",
+            background_color=(0.20, 0.40, 0.50, 1),
+            color=(1, 1, 1, 1),
+            bold=True
+        )
+        btn_visibility.bind(on_release=self.show_visibility_panel)
+        toolbar.add_widget(btn_visibility)
+
+        btn_wind = Button(
+            text="💨 Rüzgar Zones",
+            size_hint_x=None,
+            width=dp(105),
+            font_size=dp(12),
+            font_name=FONT_DEFAULT,
+            background_normal="",
+            background_color=(0.15, 0.45, 0.60, 1),
+            color=(1, 1, 1, 1),
+            bold=True
+        )
+        btn_wind.bind(on_release=self.show_wind_config_panel)
+        toolbar.add_widget(btn_wind)
 
         root.add_widget(toolbar)
 
-        # Orta Alan (Viewport / Çizim Alanı Temsili)
-        # viewport_placeholder = Label(
-        #     text="[ CAD Viewport / Çizim Alanı ]\n\nÜst menüden veya Ana Menüden panelleri açabilirsiniz.",
-        #     halign="center",
-        #     valign="middle",
-        #     color=(0.4, 0.45, 0.5, 1)
-        # )
-        # root.add_widget(viewport_placeholder)
-
-        # 3. Properties panel (sağ üst, floating)
-        self.properties = PropertiesPanel(pos_hint={'right': 1, 'top': 0.96},)
+        # Properties Panel
+        self.properties = PropertiesPanel(pos_hint={'right': 1, 'top': 0.96})
         root.add_widget(self.properties)
         self.properties.hide()     
-        
         self.cad_widget.properties_panel = self.properties
         
-        # 4. Yükleme göstergesi
+        # Yükleme Göstergesi
         self.loading_indicator = self._make_loading_indicator()
         self.loading_indicator.opacity = 0
         self.loading_indicator.disabled = True
         root.add_widget(self.loading_indicator)
 
+        # Çizim modu durumunu sürekli güncel tutan periyodik denetleyici
+        Clock.schedule_interval(self._update_draw_btn_ui, 0.2)
+
+        debug_layout(root)
+
         return root
 
-    def _load_initial_scene(self):
-        """Örnek/Varsayılan sahne verisini hazırlar."""
-        try:
-            from structload.data.defaults import proje_data
-            return proje_data
-        except ImportError:
-            return {
-                "units": "kN-m",
-                "snow_config": {},
-                "earthquake_config": {},
-                "polygons": {}
-            }
+    # ========================================================
+    # DRAW MODE İŞLEMLERİ
+    # ========================================================
+
+    def toggle_draw_mode(self, *_):
+        """Çizim modunu buton üzerinden açar veya kapatır."""
+        if not self.engine or not self.engine.draw_mgr:
+            return
+
+        if self.engine.draw_mgr.is_active:
+            self.engine.draw_mgr.close()
+            logger.info("[UserAction] Çizim modu kapatıldı.")
+        else:
+            self.engine.draw_mgr.start()
+            logger.info("[UserAction] Çizim modu başlatıldı.")
+        
+        self._update_draw_btn_ui()
+
+    def _update_draw_btn_ui(self, *_):
+        """Engine tarafındaki draw_mgr durumuna göre butonun rengini ve yazısını günceller."""
+        if not self.engine or not hasattr(self.engine, "draw_mgr") or not self.btn_draw_mode:
+            return
+
+        if self.engine.draw_mgr.is_active:
+            self.btn_draw_mode.background_color = (0.20, 0.60, 0.35, 1)  # Aktifken Yeşil
+            self.btn_draw_mode.text = "✏ Çizim [AÇIK]"
+        else:
+            self.btn_draw_mode.background_color = (0.22, 0.28, 0.38, 1)  # Pasifken Standart
+            self.btn_draw_mode.text = "✏ Çizim (D)"
 
     # ========================================================
-    # LOADING INDICATOR
+    # YÜKLEME GÖSTERGESİ (LOADING INDICATOR)
     # ========================================================
 
     def _make_loading_indicator(self):
         box = BoxLayout(
             orientation='horizontal',
             size_hint=(None, None),
-            size=(dp(150), dp(34)),
-            pos_hint={'right': 1, 'y': 0},
+            size=(dp(160), dp(36)),
+            pos_hint={'right': 0.98, 'y': 0.02},
             spacing=dp(6),
             padding=(dp(8), dp(4)),
         )
-        
-        with box.canvas.before:
-            Color(0.15, 0.18, 0.24, 0.9)
-            box._bg = RoundedRectangle(
-                pos=box.pos,
-                size=box.size,
-                radius=[dp(6)],
-            )
-        
-        def _update_bg(*args):
-            box._bg.pos = box.pos
-            box._bg.size = box.size
-        
-        box.bind(pos=_update_bg, size=_update_bg)
-        
         label = Label(
-            text="Yükleniyor...",
+            text="İşlem yapılıyor...",
             font_size=dp(11),
+            font_name=FONT_DEFAULT,
             color=(0.9, 0.9, 0.9, 1.0),
-            halign='left',
+            halign='center',
             valign='middle',
         )
         label.bind(size=label.setter('text_size'))
         box.add_widget(label)
-        
         box.label = label
         return box
 
-    def _show_loading(self, text="Yükleniyor..."):
-        if not hasattr(self, 'loading_indicator'):
-            return
-        self.loading_indicator.label.text = text
-        self.loading_indicator.opacity = 1
-        self.loading_indicator.disabled = False
+    def _show_loading(self, text="İşlem yapılıyor..."):
+        if hasattr(self, 'loading_indicator'):
+            self.loading_indicator.label.text = text
+            self.loading_indicator.opacity = 1
+            self.loading_indicator.disabled = False
 
     def _hide_loading(self):
-        if not hasattr(self, 'loading_indicator'):
-            return
-        self.loading_indicator.opacity = 0
-        self.loading_indicator.disabled = True
+        if hasattr(self, 'loading_indicator'):
+            self.loading_indicator.opacity = 0
+            self.loading_indicator.disabled = True
 
     # ============================================================
-    # PANEL YÖNETİM METOTLARI (ÇİFTE POPUP OLMADAN DOĞRUDAN ÇAĞRILAR)
+    # PANEL VE MENÜ YÖNETİMİ
     # ============================================================
 
     def open_main_menu(self, *_):
-        """Tüm araçları derli toplu gruplar halinde sunan ana menü."""
-        logger.info("[UserAction] Hamburger Menü açıldı.")
-        
         if self.menu_popup:
             return
-
         self.menu_popup = MainMenuPanel(on_action_selected=self.on_menu_choice)
         self.menu_popup.bind(on_dismiss=lambda *_: setattr(self, 'menu_popup', None))
         self.menu_popup.open()
 
     def on_menu_choice(self, action_key):
-        """Ana menüdeki buton tıklamalarını ilgili panellere yönlendirir."""
-        logger.info(f"[UserAction] Menü seçimi yapıldı: {action_key}")
-        
         if action_key == "inspector":
             self.show_inspector()
         elif action_key == "analysis":
             self.show_analysis()
-        elif action_key == "materials":
-            logger.info("Malzeme/Kesit paneli yakında...")
-        elif action_key == "reports":
-            logger.info("Raporlama paneli yakında...")
-        elif action_key == "files":
+        elif action_key == "open_project":
+            self.action_open()
+        elif action_key == "save_project":
+            self.action_save()
+        elif action_key == "import_s2k":
             self.import_s2k()
-            logger.info("Dosya işlemleri paneli yakında...")
-        elif action_key == "settings":
-            logger.info("Ayarlar paneli yakında...")
+        elif action_key == "new_project":
+            self.action_new()
+        elif action_key == "visibility":
+            self.show_visibility_panel()
 
     def show_inspector(self, *_):
-        """Model Inspector panelini açar."""
         if self.inspector_popup:
             return
-
-        logger.info("[UserAction] Model Inspector açılıyor.")
         self.inspector_popup = ModelInspectorPanel(scene=self.scene)
         self.inspector_popup.bind(on_dismiss=lambda *_: setattr(self, 'inspector_popup', None))
         self.inspector_popup.open()
 
     def show_analysis(self, *_):
-        """Yapısal Analiz ve Yük Raporu panelini açar."""
         if self.analysis_popup:
             return
-
-        logger.info("[UserAction] Analiz Raporu açılıyor.")
         self.analysis_popup = AnalysisPopup(proje_data=self.scene)
         self.analysis_popup.bind(on_dismiss=lambda *_: setattr(self, 'analysis_popup', None))
         self.analysis_popup.open()
+
+    # ========================================================
+    # PROJE DOSYA İŞLEMLERİ (JSON SAVE / LOAD)
+    # ========================================================
+
+    def action_new(self, *_):
+        """Yeni boş bir sahne başlatır."""
+        self.scene = Scene()
+        self.current_path = ""
+        self._apply_scene(self.scene)
+        self.lbl_info.text = "MODEL: YENİ SAHNE"
+        logger.info("[UserAction] Yeni temiz proje başlatıldı.")
+
+    def action_open(self, *_):
+        """Diskteki JSON dosyasını Scene.load_from_json ile okur."""
+        def on_file_selected(path: str):
+            logger.info(f"[UserAction] JSON Proje Açılıyor -> {path}")
+            self._show_loading("Model yükleniyor...")
+
+            def load_thread():
+                try:
+                    loaded_scene = Scene.load_from_json(path)
+                    Clock.schedule_once(lambda dt: self._on_project_loaded(loaded_scene, path), 0)
+                except Exception as e:
+                    logger.error(f"Proje açma hatası: {e}", exc_info=True)
+                    Clock.schedule_once(lambda dt: self._show_error(f"Dosya Açılamadı:\n{e}"), 0)
+
+            threading.Thread(target=load_thread, daemon=True).start()
+
+        self._pick_file(mode="open", filters=["*.json"], on_select=on_file_selected)
+
+    def _on_project_loaded(self, loaded_scene, path):
+        self.scene = loaded_scene
+        self.current_path = path
+        self._apply_scene(self.scene)
+        
+        filename = os.path.basename(path)
+        self.lbl_info.text = f"MODEL: {filename}"
+        self._hide_loading()
+        logger.info(f"[Main] Model başarıyla yüklendi: {path}")
+
+    def action_save(self, *_):
+        """Mevcut sahneyi doğrudan veya farklı kaydet seçeneğiyle yazar."""
+        if self.current_path:
+            try:
+                self.scene.save_to_json(self.current_path)
+                filename = os.path.basename(self.current_path)
+                self.lbl_info.text = f"MODEL: {filename} (Kaydedildi)"
+                logger.info(f"[UserAction] Proje Kaydedildi -> {self.current_path}")
+            except Exception as e:
+                logger.error(f"Kaydetme hatası: {e}", exc_info=True)
+                self._show_error(f"Kaydedilemedi:\n{e}")
+        else:
+            self.action_save_as()
+
+    def action_save_as(self, *_):
+        """Farklı kaydet seçeneği ile dosya seçiciyi açar."""
+        def on_file_selected(path: str):
+            try:
+                if not path.endswith(".json"):
+                    path += ".json"
+
+                self.scene.save_to_json(path)
+                self.current_path = path
+                filename = os.path.basename(path)
+                self.lbl_info.text = f"MODEL: {filename}"
+                logger.info(f"[UserAction] Proje Farklı Kaydedildi -> {path}")
+            except Exception as e:
+                logger.error(f"Kaydetme hatası: {e}", exc_info=True)
+                self._show_error(f"Kaydedilemedi:\n{e}")
+
+        self._pick_file(
+            mode="save", 
+            filters=["*.json"], 
+            on_select=on_file_selected, 
+            default_name="model_projesi.json"
+        )
 
     def import_s2k(self, *_):
         def on_file(path: str):
@@ -279,158 +417,59 @@ class MainApp(App):
             def load_thread():
                 try:
                     from tools.s2kloader import S2KLoader
-                    scene = S2KLoader(path).load()
-                    Clock.schedule_once(lambda dt: self._apply_scene(scene), 0)
+                    imported_scene = S2KLoader(path).load()
+                    Clock.schedule_once(lambda dt: self._apply_scene(imported_scene), 0)
                 except Exception as e:
                     logger.error(f"S2K yükleme hatası: {e}", exc_info=True)
-                    Clock.schedule_once(lambda dt: self._on_import_error(str(e)), 0)
+                    Clock.schedule_once(lambda dt: self._show_error(f"S2K Yüklenemedi:\n{e}"), 0)
             
             threading.Thread(target=load_thread, daemon=True).start()
 
         self._pick_file(mode="open", filters=["*.s2k"], on_select=on_file)
 
-    def _on_import_error(self, error_msg: str):
-        self._hide_loading()
-        self._show_error(f"S2K Yüklenemedi:\n{error_msg}")
-
-    def _apply_scene(self, scene):
+    def _apply_scene(self, new_scene):
+        """Yüklenen yeni sahneyi engine ve renderer'a entegre eder."""
         try:
-            self.scene = scene
+            self.scene = new_scene
             if self.engine:
-                self.engine.set_scene(scene)
-                # self.engine.update_geo(scene)
-                # self.engine.focus_on_model()
-                
-            logger.info("[Main] Sahne başarıyla güncellendi!")
+                self.engine.set_scene(new_scene)
+                if hasattr(self.engine, 'renderer') and self.engine.renderer:
+                    self.engine.renderer.update_geo(new_scene)
+                if hasattr(self.engine, 'focus_on_model'):
+                    self.engine.focus_on_model()
         except Exception as e:
             logger.error(f"_apply_scene hatası: {e}", exc_info=True)
         finally:
-            Clock.schedule_once(lambda dt: self._hide_loading(), 0)
+            self._hide_loading()
+
+    def _show_error(self, message: str):
+        self._hide_loading()
+        lbl = Label(
+            text=str(message),
+            font_name=FONT_DEFAULT,
+            font_size=dp(12),
+            color=(1, 0.4, 0.4, 1),
+            halign="center",
+            valign="middle"
+        )
+        popup = Popup(
+            title_text="HATA",
+            content_widget=lbl,
+            size_hint=(0.7, 0.4)
+        )
+        popup.open()
 
     # ========================================================
-    # VIEW & CAMERA
-    # ========================================================
-
-    def zoom_in(self, *_):
-        if self.engine: self.engine.zoom(1.0)
-
-    def zoom_out(self, *_):
-        if self.engine: self.engine.zoom(-1.0)
-
-    def zoom_extents(self, *_):
-        if self.engine: self.engine.focus_on_model()
-
-    def reset_camera(self, *_):
-        if self.engine: self.engine.reset()
-
-    # ========================================================
-    # EDIT & DRAW
-    # ========================================================
-
-    def delete_selected(self, *_):
-        if self.engine: self.engine.delete_selected()
-
-    def clear_selection(self, *_):
-        if self.engine: self.engine.clear()
-
-    def draw_node(self, *_): pass
-    def draw_line(self, *_): pass
-    def draw_area(self, *_): pass
-
-    def draw_polygon(self, *_):
-        if self.engine: self.engine.start()
-
-    # ========================================================
-    # FILE ACTIONS
-    # ========================================================
-
-    def action_new(self, *_):
-        manager = getattr(self.scene, "def_mgr", None)
-        if manager:
-            manager.materials.clear()
-            manager.sections.clear()
-            manager.link_props.clear()
-            manager.load_patterns.clear()
-            manager.load_cases.clear()
-            manager.modal_cases.clear()
-            manager.combinations.clear()
-            manager.spectrum_functions.clear()
-            manager.response_spectrum_cases.clear()
-            manager.auto_seismics.clear()
-            manager.mass_source_map.clear()
-
-        self.current_path = ""
-        self._on_project_data_changed()
-        if self._project_panel:
-            self._project_panel.refresh()
-
-        logger.info("[UserAction] Yeni temiz proje başlatıldı.")
-
-    def action_open(self, *_):
-        def on_file(path: str):
-            logger.info(f"[UserAction] JSON Proje Açılıyor -> {path}")
-            try:
-                from data.serializer import load_project
-                manager = getattr(self.scene, "def_mgr", None)
-                if manager is None:
-                    from domain.definition_manager import DefinitionManager
-                    manager = DefinitionManager()
-                    self.scene.def_mgr = manager
-
-                load_project(manager, path)
-                self.current_path = path
-
-                self._on_project_data_changed()
-                if self._project_panel:
-                    self._project_panel.refresh()
-
-            except Exception as e:
-                logger.error(f"Proje açma hatası: {e}", exc_info=True)
-                self._show_error(str(e))
-
-        self._pick_file(mode="open", filters=["*.json"], on_select=on_file)
-
-    def action_save(self, *_):
-        if self.current_path:
-            try:
-                from data.serializer import save_project
-                manager = getattr(self.scene, "def_mgr", None)
-                if manager:
-                    save_project(manager, self.current_path)
-                    logger.info(f"[UserAction] Proje Kaydedildi -> {self.current_path}")
-            except Exception as e:
-                logger.error(f"Kaydetme hatası: {e}", exc_info=True)
-                self._show_error(str(e))
-        else:
-            self.action_save_as()
-
-    def action_save_as(self, *_):
-        def on_file(path: str):
-            try:
-                from data.serializer import save_project
-                manager = getattr(self.scene, "def_mgr", None)
-                if manager:
-                    save_project(manager, path)
-                    self.current_path = path
-                    logger.info(f"[UserAction] Proje Farklı Kaydedildi -> {path}")
-            except Exception as e:
-                logger.error(f"Kaydetme hatası: {e}", exc_info=True)
-                self._show_error(str(e))
-
-        self._pick_file(mode="save", filters=["*.json"], on_select=on_file, default_name="project.json")
-
-    # ========================================================
-    # FILE PICKER
+    # FILE PICKER (DOSYA SEÇİCİ POPUP)
     # ========================================================
 
     def _pick_file(self, mode: str, filters: list, on_select, default_name: str = ""):
         if getattr(self, "_picker_open", False):
             return
-        
         self._picker_open = True
-        logger.info(f"[UserAction] Dosya Seçici Açıldı (Mod: {mode}, Filtre: {filters})")
 
         fc = FileChooserListView(filters=filters, path=os.getcwd())
+
         box = BoxLayout(orientation="vertical", spacing=dp(6), padding=dp(6))
         box.add_widget(fc)
 
@@ -438,101 +477,146 @@ class MainApp(App):
         if mode == "save":
             name_input = TextInput(
                 text=default_name,
-                size_hint_y=None, 
+                size_hint_y=None,
                 height=dp(40),
                 hint_text="Dosya adı girin...",
                 font_name=FONT_DEFAULT,
-                multiline=False
+                multiline=False,
             )
             box.add_widget(name_input)
 
-        # Buton Satırı
-        btn_row = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
-        
+        btn_row = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(8))
+
         ok_btn = Button(
             text="Tamam",
             font_name=FONT_DEFAULT,
             background_normal="",
-            background_color=(0.18, 0.50, 0.32, 1), # Yeşil ton
+            background_color=(0.18, 0.50, 0.32, 1),
             color=(1, 1, 1, 1),
-            bold=True
+            bold=True,
         )
         cancel_btn = Button(
             text="İptal",
             font_name=FONT_DEFAULT,
             background_normal="",
             background_color=(0.40, 0.40, 0.40, 1),
-            color=(1, 1, 1, 1)
+            color=(1, 1, 1, 1),
         )
-        
+
         btn_row.add_widget(ok_btn)
         btn_row.add_widget(cancel_btn)
         box.add_widget(btn_row)
 
-        # BaseCustomPopup parametre imzasını doğru kullanarak oluşturuyoruz
-        popup = BaseCustomPopup(
-            title_text="Dosya Seç",
-            content_widget=box,
-            size_hint=(0.90, 0.90)
+        popup = Popup(
+            title="Dosya Seç",
+            content=box,
+            size_hint=(0.85, 0.85),
+            auto_dismiss=False,
+            separator_height=0,
         )
 
         processed = [False]
 
-        def finish_and_close(selected_path=None):
+        def _finish(selection=None):
             if processed[0]:
                 return
             processed[0] = True
             self._picker_open = False
             popup.dismiss()
-            if selected_path:
-                on_select(selected_path)
+            if selection:
+                on_select(selection)
 
-        def on_ok(*_):
-            if mode == "save":
-                if not name_input or not name_input.text.strip(): 
-                    return
-                base = fc.path or os.getcwd()
-                path = os.path.join(base, name_input.text.strip())
-                finish_and_close(path)
-            else:
-                if fc.selection:
-                    finish_and_close(fc.selection[0])
+        def _on_ok(*_):
+            sel = fc.selection[0] if fc.selection else None
+            if mode == "save" and name_input is not None:
+                name = name_input.text.strip()
+                if name:
+                    folder = fc.path
+                    sel = os.path.join(folder, name)
+            if not sel:
+                return
+            _finish(sel)
 
-        def on_cancel(*_):
-            logger.info("[UserAction] Dosya seçimi iptal edildi.")
-            finish_and_close(None)
+        def _on_cancel(*_):
+            _finish(None)
 
-        ok_btn.bind(on_release=on_ok)
-        cancel_btn.bind(on_release=on_cancel)
-        fc.bind(on_submit=lambda instance, selection, touch: on_ok())
+        def _on_dismiss(*_):
+            self._picker_open = False
+            if not processed[0]:
+                processed[0] = True
 
-        # Pencere sağ üstteki [X] butonundan veya dışarıdan kapatılırsa bayrağı sıfırla
-        popup.bind(on_dismiss=lambda *_: setattr(self, '_picker_open', False))
+        ok_btn.bind(on_release=_on_ok)
+        cancel_btn.bind(on_release=_on_cancel)
+        popup.bind(on_dismiss=_on_dismiss)
 
         popup.open()
 
     def _import_from_sap(self, *_):
-        from tools.sap_connect import cSap
-        from exchange.cad4_sap_exchange import import_sap_to_scene
+        try:
+            from tools.sap_connect import cSap
+            from exchange.cad4_sap_exchange import import_sap_to_scene
 
-        sap = cSap()
-        sap.set_units(9)                    # N, mm, C
+            sap = cSap()
+            sap.set_units(9)  # N, mm, C
 
-        counts = import_sap_to_scene(
-            sap,
-            self.engine.scene,              # ← mevcut sahne
-            # selection_only=True,
-            # on_done=lambda: self._after_sap_import(),
-        )
-        print(counts)
+            counts = import_sap_to_scene(
+                sap,
+                self.engine.scene,
+            )
+            if counts and self.engine:
+                self.engine.renderer.update_geo(self.engine.scene)
+                self.engine.focus_on_model()
+        except Exception as e:
+            logger.error(f"SAP Import hatası: {e}", exc_info=True)
+            self._show_error(f"SAP2000 Bağlantı Hatası:\n{e}")
+
+    def show_visibility_panel(self, *_):
+        
+        
+        def on_changed():
+            # Görünürlük değiştiğinde OpenGL render çantasını yenile
+            if self.engine and hasattr(self.engine, 'renderer'):
+                self.engine.renderer.update_geo(self.scene)
+
+        panel = VisibilityPanel(scene=self.scene, on_visibility_changed=on_changed)
+        panel.open()
 
 
-        if counts:
-            self.engine.renderer.update_geo(self.engine.scene)
+
+    def _on_wind_done(self, count):
+        if self.engine and hasattr(self.engine, 'renderer'):
+            self.engine.renderer.update_geo(self.scene)
             self.engine.fit_view()
+        self._hide_loading()
+        logger.info(f"[Wind] {count} adet Rüzgar Zone poligonu ekrana çizildi.")
 
+    def show_wind_config_panel(self, *_):
+        from gui.panel_wind_config import WindConfigPanel
 
+        def on_confirm_run(w_dir, config):
+            self.run_wind_analysis_ui(w_dir, config)
 
+        panel = WindConfigPanel(on_run_analysis=on_confirm_run, scene = self.scene)
+        panel.open()
+
+    def run_wind_analysis_ui(self, w_dir, config):
+        from tools.wind_service import WindSceneAdapter
+
+        self._show_loading("Rüzgar bölgeleri hesaplanıyor...")
+
+        def _async_wind():
+            try:
+                created_zones = WindSceneAdapter.run_wind_analysis_and_update_scene(
+                    scene=self.scene,
+                    w_dir=w_dir,
+                    wind_config=config
+                )
+                Clock.schedule_once(lambda dt: self._on_wind_done(len(created_zones)), 0)
+            except Exception as e:
+                logger.error(f"Rüzgar analizi hatası: {e}", exc_info=True)
+                Clock.schedule_once(lambda dt: self._show_error(f"Rüzgar Hesabı Hatası:\n{e}"), 0)
+
+        threading.Thread(target=_async_wind, daemon=True).start()
 
 if __name__ == "__main__":
     MainApp().run()

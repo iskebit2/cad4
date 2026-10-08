@@ -1,3 +1,5 @@
+# structload/windcalc/wind_analyzer.py
+
 from enum import Enum, auto
 
 import numpy as np

@@ -206,3 +206,77 @@ class DefinitionManager:
             "Response Spectrum Cases": self.response_spectrum_cases,
             "Auto Seismics (TBDY 2018)": self.auto_seismics,
         }
+
+    def to_dict(self) -> dict:
+        return {
+            "materials": [
+                {
+                    "name": m.name,
+                    "mat_type": m.mat_type.name,
+                    "color": list(m.color),
+                    "E1": m.E1, "E2": m.E2, "E3": m.E3,
+                    "G12": m.G12, "G13": m.G13, "G23": m.G23,
+                    "nu12": m.nu12, "nu13": m.nu13, "nu23": m.nu23,
+                    "density": m.density
+                } for m in self.materials.values()
+            ],
+            "sections": [
+                {
+                    "name": s.name,
+                    "profile_type": s.profile_type.name if hasattr(s.profile_type, 'name') else str(s.profile_type),
+                    "profile_params": s.profile_params,
+                    "material_name": s.material.name if s.material else None,
+                    "color": list(s.color)
+                } for s in self.sections.values()
+            ],
+            "link_props": [
+                {
+                    "name": lp.name,
+                    "prop_type": lp.prop_type.name if hasattr(lp.prop_type, 'name') else str(lp.prop_type),
+                    "Ke": getattr(lp, "Ke", {}),
+                    "Ce": getattr(lp, "Ce", {}),
+                    "DOF": getattr(lp, "DOF", {})
+                } for lp in self.link_props.values()
+            ]
+        }
+
+    def from_dict(self, data: dict):
+        from domain.definition import Material, Section, SectionType, MatType, LinkPropLinear, LinkPropType
+        
+        for m_data in data.get("materials", []):
+            mat = Material(
+                name=m_data["name"],
+                mat_type=MatType[m_data["mat_type"]],
+                color=tuple(m_data.get("color", (0.8, 0.8, 0.8))),
+                E1=m_data.get("E1", 2.0e8),
+                E2=m_data.get("E2", 2.0e8),
+                E3=m_data.get("E3", 2.0e8),
+                G12=m_data.get("G12", 7.7e7),
+                G13=m_data.get("G13", 7.7e7),
+                G23=m_data.get("G23", 7.7e7),
+                nu12=m_data.get("nu12", 0.3),
+                nu13=m_data.get("nu13", 0.3),
+                nu23=m_data.get("nu23", 0.3),
+                density=m_data.get("density", 7850)
+            )
+            self.add_material(mat)
+
+        for s_data in data.get("sections", []):
+            mat = self.get_material_by_name(s_data.get("material_name"))
+            sec = Section(
+                name=s_data["name"],
+                profile_type=SectionType[s_data["profile_type"]],
+                profile_params=s_data["profile_params"],
+                material=mat,
+                color=tuple(s_data.get("color", (0.8, 0.8, 0.8)))
+            )
+            self.add_section(sec)
+
+        for lp_data in data.get("link_props", []):
+            lp = LinkPropLinear(
+                name=lp_data["name"],
+                Ke=lp_data.get("Ke"),
+                Ce=lp_data.get("Ce"),
+                DOF=lp_data.get("DOF")
+            )
+            self.add_link_prop(lp)

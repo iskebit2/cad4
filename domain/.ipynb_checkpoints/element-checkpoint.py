@@ -1,6 +1,6 @@
 # domain/element.py
 from typing import List, Optional, Dict, Any, Tuple
-from enum import Enum, auto
+from enum import Enum
 import uuid
 import math
 from logging_config import CadLogger
@@ -58,28 +58,6 @@ class Element:
             f"pick_id={self.pick_id}>"
         )
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Tüm elemanlarda ortak olan temel meta veriler"""
-        return {
-            "unique_id": self.unique_id,
-            "element_id": self.element_id,
-            "element_type": self.element_type,
-            "label": self.label,
-            "is_selected": self.is_selected,
-            "is_visible": self.is_visible
-        }
-
-    def _apply_base_dict(self, data: Dict[str, Any]):
-        """from_dict sırasında taban sınıf değişkenlerini geri yükler"""
-        if "unique_id" in data:
-            self.unique_id = data["unique_id"]
-            Element._id_counter = max(Element._id_counter, self.unique_id + 1)
-        if "element_id" in data:
-            self.element_id = data["element_id"]
-        self.is_selected = data.get("is_selected", False)
-        self.is_visible = data.get("is_visible", True)
-        self.pick_id = self.unique_id
-
 
 
 class Node(Element):
@@ -103,13 +81,44 @@ class Node(Element):
         self.x = x
         self.y = y
         self.z = z
+
+        # Fiziksel sınır şartı
         self.restraint = restraint
+
+        # Nodal mass
         self.mass = tuple(mass)
+
+        # Nodal spring stiffness
         self.spring = tuple(spring)
+
+        # Solver
         self.dof_indices: List[Optional[int]] = [None] * 6
+
+        # Bağlantılar
         self.connected: List[Tuple[ObjType, str]] = []
+
+        # Yükler
         self.loads: List[PointLoad] = []
 
+    @classmethod
+    def from_list(cls, values):
+        return cls(*values)
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        restraint_data = data.get("restraint")
+
+        restraint = None
+        if restraint_data:
+            restraint = Restraint.from_dict(restraint_data)
+
+        return cls(
+            x=data["x"],
+            y=data["y"],
+            z=data["z"],
+            label=data.get("label", ""),
+            restraint=restraint
+        )
     # -------------------------------------------------
     # GEOMETRİ
     # -------------------------------------------------
@@ -182,37 +191,6 @@ class Node(Element):
     def mark_dirty(self):
         self.needs_update = True
 
-    @classmethod
-    def from_list(cls, values):
-        return cls(*values)
-
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "x": self.x,
-            "y": self.y,
-            "z": self.z,
-            "restraint": self.restraint.as_dict() if self.restraint else None,
-            "mass": list(self.mass),
-            "spring": list(self.spring)
-        })
-        return data
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Node':
-        restraint_data = data.get("restraint")
-        restraint = Restraint.from_dict(restraint_data) if restraint_data else None
-        node = cls(
-            x=data["x"],
-            y=data["y"],
-            z=data["z"],
-            label=data.get("label", ""),
-            restraint=restraint,
-            mass=tuple(data.get("mass", (0.0,) * 6)),
-            spring=tuple(data.get("spring", ()))
-        )
-        node._apply_base_dict(data)
-        return node
 
 class Frame(Element):
     def __init__(self, node_i: Node, node_j: Node, section: Section,
@@ -234,16 +212,6 @@ class Frame(Element):
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
 
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "node_i_id": self.node_i.unique_id,
-            "node_j_id": self.node_j.unique_id,
-            "section_name": self.section.name if self.section else "",
-            "rotation_deg": self.rotation_deg
-        })
-        return data
-
 class Area(Element):
     def __init__(self, nodes: List[Node], thickness: float, label: str = ""):
         super().__init__(label)
@@ -262,15 +230,6 @@ class Area(Element):
         self.uniform_to_frame_loads: List[AreaUniformToFrameLoad] = []
         self.wind_pressures: List[AreaWindPressureLoad] = []
 
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "node_ids": [n.unique_id for n in self.nodes],
-            "thickness": self.thickness,
-            "section_name": self.section_name
-        })
-        return data
-
 class Link(Element):
     def __init__(self, node_i: Node, node_j: Node, propname: str = "LINK1", label: str = ""):
         super().__init__(label)
@@ -279,30 +238,16 @@ class Link(Element):
         self.node_j = node_j
         self.propname = propname
 
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "node_i_id": self.node_i.unique_id,
-            "node_j_id": self.node_j.unique_id,
-            "propname": self.propname
-        })
-        return data
-
-class PolygonType(Enum):
-    GENERIC = auto()       # Standart/Varsayılan poligon
-    SURFACE = auto()       # Yapısal yüzey (Duvar, Çatı döşemesi vb.)
-    ZONE = auto()          # Rüzgar/Kar vb. yük bölgeleri
-    SECTION_CUT = auto()   # Kesit tesiri alma düzlemleri
-    LOAD_AREA = auto()     # Yayılı yük etki alanları
-    
 class Polygon(Element):
-    def __init__(self, nodes: List[Node], label: str = "", poly_type: PolygonType = PolygonType.GENERIC):
+    """
+    Sadece görsel amaçlı poligon. Extrude edilmez.
+    Köşeleri Node veya Point (şimdilik sadece Node) olabilir.
+    """
+    def __init__(self, nodes: List[Node], label: str = ""):
         super().__init__(label)
         self.element_type = "Polygon"
-        self.poly_type = poly_type  # Enum tipi
-        self.nodes = list(nodes)
-        self.color = [0.8, 0.3, 0.8, 0.6]  # Default RGBA
-        self.windplane: Dict[str, Any] = {}
+        self.nodes = list(nodes)   # En az 3
+        self.color = [0.8, 0.3, 0.8]   # Mor (default)
     
     def is_valid(self) -> bool:
         return len(self.nodes) >= 3
@@ -318,29 +263,3 @@ class Polygon(Element):
     
     def __repr__(self):
         return f"<Polygon {self.label} nodes={len(self.nodes)}>"
-
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "node_ids": [n.unique_id for n in self.nodes],
-            "color": self.color,
-            "poly_type": self.poly_type.name,  # JSON kaydı için enum adını saklıyoruz
-            "windplane": self.windplane
-        })
-        return data
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any], nodes_map: Dict[int, Node]) -> 'Polygon':
-        # JSON'dan okurken Enum'a geri çevirme
-        poly_nodes = [nodes_map[nid] for nid in data.get("node_ids", []) if nid in nodes_map]
-        
-        type_str = data.get("poly_type", "GENERIC")
-        try:
-            poly_type = PolygonType[type_str]
-        except KeyError:
-            poly_type = PolygonType.GENERIC
-
-        poly = cls(nodes=poly_nodes, label=data.get("label", ""), poly_type=poly_type)
-        poly.color = data.get("color", [0.8, 0.3, 0.8, 0.6])
-        poly.windplane = data.get("windplane", {})
-        return poly
