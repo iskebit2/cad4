@@ -1,5 +1,17 @@
 ├── agac_advanced.py
+├── app/
+│   ├── __init__.py
+│   ├── file_actions.py
+│   │   └── FileActions
+│   ├── main_app.py
+│   │   └── MainApp
+│   ├── panels_controller.py
+│   │   └── PanelsController
+│   ├── scene_controller.py
+│   │   └── SceneController
+│   └── toolbar.py
 ├── assets/
+│   ├── fonts/
 │   └── icons/
 ├── core/
 │   ├── analysis/
@@ -8,10 +20,22 @@
 │   │   │   └── ModelAssembler
 │   │   ├── element.py
 │   │   ├── mass_source.py
+│   │   │   └── MassBreakdown
+│   │   ├── material_takeoff.py
+│   │   │   ├── ElementWeight
+│   │   │   ├── MaterialSummary
+│   │   │   └── TakeoffResult
+│   │   ├── modal_analysis.py
+│   │   │   ├── SpectralModeResult
+│   │   │   └── SpectralResult
 │   │   ├── solver.py
+│   │   │   ├── ModalResult
 │   │   │   └── StructuralSolver
-│   │   └── spectrum.py
-│   │       └── TBDYSpectrum
+│   │   ├── spectrum.py
+│   │   │   └── TBDYSpectrum
+│   │   └── structuralanalysis.py
+│   │       └── StructuralAnalysisResult
+│   ├── analysis_bridge.py
 │   ├── camera.py
 │   │   └── Camera
 │   ├── commands/
@@ -19,13 +43,24 @@
 │   │   ├── base.py
 │   │   │   ├── Command
 │   │   │   └── CommandManager
-│   │   └── delete.py
-│   │       └── DeleteElementsCommand
+│   │   ├── create.py
+│   │   │   └── CreateElementCommand
+│   │   ├── delete.py
+│   │   │   └── DeleteElementsCommand
+│   │   └── update.py
+│   │       └── UpdateElementCommand
 │   ├── draw_manager.py
 │   │   └── DrawManager
+│   ├── edit/
+│   │   └── edit_controller.py
+│   │       ├── EditResult
+│   │       └── EditController
+│   ├── engine_factory.py
+│   │   └── DummyEngine
 │   ├── gl_engine.py
-│   │   ├── PureKivyEngine
-│   │   └── KivyCADWidget
+│   │   └── PureKivyEngine
+│   ├── input_manager.py
+│   │   └── InputManager
 │   ├── marquee_selector.py
 │   │   └── MarqueeSelector
 │   ├── selection_manager.py
@@ -33,25 +68,66 @@
 │   └── selection_policy.py
 │       ├── SelectionMode
 │       └── SelectionPolicy
+├── data/
+│   └── serializer.py
+├── debug_lines.py
+├── defgui.py
+│   └── DefinitionKitchenApp
 ├── deprem.py
 ├── domain/
 │   ├── definition.py
+│   │   ├── PropAreaType
+│   │   ├── PropType
+│   │   ├── SymType
+│   │   ├── GeneralProjectInfo
+│   │   ├── SiteInformation
+│   │   ├── LoadPattern
+│   │   ├── StaticLoadAssignment
+│   │   ├── LoadCase
+│   │   ├── ModalCase
+│   │   ├── ComboItem
+│   │   ├── LoadCombination
+│   │   ├── SpectrumSourceType
+│   │   ├── SpectrumFunction
+│   │   ├── ResponseSpectrumLoadAssignment
+│   │   ├── ResponseSpectrumCase
+│   │   ├── AutoSeismicTSC2018
+│   │   ├── LoadType
+│   │   ├── LoadDirection
+│   │   ├── PointLoad
+│   │   ├── FramePointLoad
+│   │   ├── FrameDistributedLoad
+│   │   ├── FrameGravityLoad
+│   │   ├── FrameTemperatureLoad
+│   │   ├── AreaGravityLoad
+│   │   ├── AreaRefTemperatureLoad
+│   │   ├── AreaStrainLoad
+│   │   ├── AreaSurfacePressureLoad
+│   │   ├── AreaTemperatureLoad
+│   │   ├── AreaUniformLoad
+│   │   ├── AreaUniformToFrameLoad
+│   │   ├── AreaWindPressureLoad
 │   │   ├── MatType
 │   │   ├── SectionType
 │   │   ├── ElementType
 │   │   ├── ObjType
-│   │   ├── LinkPropType
 │   │   ├── LoadPatternType
 │   │   ├── LoadCaseType
 │   │   ├── ComboType
 │   │   ├── Material
 │   │   ├── Section
+│   │   ├── AreaSection
+│   │   ├── LinkPropType
+│   │   ├── LinkProperty
 │   │   ├── LinkProp
 │   │   ├── LinkPropLinear
-│   │   ├── LoadPattern
-│   │   ├── LoadCase
-│   │   ├── LoadCombination
 │   │   ├── Restraint
+│   │   ├── SectionCutDefinedBy
+│   │   ├── SectionCutResultType
+│   │   ├── QuadDefinition
+│   │   └── SectionCut
+│   ├── definition_manager.py
+│   │   ├── DuplicateNameError
 │   │   └── DefinitionManager
 │   ├── element.py
 │   │   ├── Element
@@ -59,10 +135,19 @@
 │   │   ├── Frame
 │   │   ├── Area
 │   │   ├── Link
+│   │   ├── PolygonType
 │   │   └── Polygon
-│   └── scene.py
-│       └── Scene
+│   ├── importer.py
+│   ├── sap_enums.py
+│   ├── scene.py
+│   │   └── Scene
+│   └── sect_mat.py
 ├── examples/
+├── exchange/
+│   ├── cad4_exchange.py
+│   │   ├── AutoCADConnector
+│   │   └── CAD4AutoCADBridge
+│   └── cad4_sap_exchange.py
 ├── geometry/
 │   ├── area_builder.py
 │   │   └── AreaBuilder
@@ -83,10 +168,45 @@
 │   └── spatialgrid.py
 │       ├── BoundingBox
 │       └── SpatialGrid
+├── gui/
+│   ├── analysis_popup.py
+│   │   ├── SectionHeader
+│   │   ├── AnalysisReportContent
+│   │   └── AnalysisPopup
+│   ├── base_panel.py
+│   │   └── BasePanel
+│   ├── basecustompopup.py
+│   │   └── BaseCustomPopup
+│   ├── definition_browser.py
+│   │   └── DefinitionBrowser
+│   ├── definition_editor.py
+│   │   └── DefinitionEditor
+│   ├── panel_inspector.py
+│   │   ├── TreeNodeWidget
+│   │   ├── ModelInspectorContent
+│   │   └── ModelInspectorPanel
+│   ├── panel_main_menu.py
+│   │   ├── MenuButton
+│   │   ├── MainMenuContent
+│   │   └── MainMenuPanel
+│   ├── panel_view_filter.py
+│   │   └── ViewFilterPanel
+│   ├── panel_visibility.py
+│   │   ├── VisibilityPanelContent
+│   │   └── VisibilityPanel
+│   ├── panel_wind_config.py
+│   │   ├── WindConfigPanelContent
+│   │   └── WindConfigPanel
+│   ├── prop_panel.py
+│   │   ├── GroupHeader
+│   │   ├── CollapsibleGroup
+│   │   └── PropertiesPanel
+│   └── property_editor.py
 ├── logging_config.py
+│   ├── _ColorFormatter
 │   └── CadLogger
+├── logs/
 ├── main.py
-│   └── CADApp
 ├── render/
 │   ├── base_renderer.py
 │   │   ├── BaseRenderer
@@ -106,14 +226,15 @@
 │   │   └── SceneRenderer
 │   ├── shaderprogram.py
 │   │   └── ShaderProgram
-│   └── shaders/
+│   ├── shaders/
+│   └── snapsquare.py
+│       └── SnapSquareRenderer
 ├── structload/
+│   ├── __init__.py
 │   ├── analysis/
 │   │   ├── __init__.py
 │   │   └── analysis_runner.py
 │   │       └── AnalysisResult
-│   ├── assets/
-│   │   └── fonts/
 │   ├── data/
 │   │   ├── __init__.py
 │   │   ├── defaults.py
@@ -177,16 +298,6 @@
 │   ├── main.py
 │   │   ├── SectionHeader
 │   │   └── StructuralAnalysisApp
-│   ├── tests/
-│   │   ├── __init__.py
-│   │   ├── test0.py
-│   │   │   ├── ProjectDataPanel
-│   │   │   └── YukAtamaApp
-│   │   ├── test2.py
-│   │   ├── test3.py
-│   │   ├── test4.py
-│   │   ├── test6.py
-│   │   └── test_spectrum.py
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── math_utils.py
@@ -221,23 +332,22 @@
 │       │   └── Zone
 │       └── zone_generator.py
 │           └── ZoneKind
-├── test_.py
 ├── tests/
+│   ├── kivy_opengl_panel_test.py
+│   │   ├── GLViewport
+│   │   ├── DemoRoot
+│   │   └── GLPanelTestApp
 │   ├── test1.py
-│   ├── test_frame.py
-│   ├── test_frame_simple.py
-│   ├── test_icon.py
-│   │   ├── IconButton
-│   │   └── IconGallery
-│   ├── test_mesnet.py
-│   ├── test_model.py
-│   │   └── TestModelBuilder
-│   ├── test_profile.py
-│   ├── test_svg.py
-│   └── testicon.py
-│       ├── IconButton
-│       └── TestApp
+│   ├── test_io.py
+│   ├── test_node_render.py
+│   │   ├── SimpleNodeRenderer
+│   │   ├── TestWidget
+│   │   └── TestApp
+│   ├── test_sap.py
+│   └── test_wind_scene.py
 ├── tools/
+│   ├── analitik.py
+│   │   └── Analitik
 │   ├── gizmo.py
 │   │   └── GizmoAxes
 │   ├── gridsystem.py
@@ -247,22 +357,32 @@
 │   │   └── S2KParser
 │   ├── loader.py
 │   │   └── ModelLoader
-│   └── s2kloader.py
-│       ├── S2KParser
-│       └── S2KLoader
-└── ui/
-    ├── command_line.py
-    │   └── CommandLine
-    ├── drawing_window.py
-    │   └── DrawingWindow
-    ├── inputmanager.py
-    │   └── InputManager
-    ├── prop_panel.py
-    │   ├── GroupHeader
-    │   ├── CollapsibleGroup
-    │   └── PropertiesPanel
-    ├── snapsquare.py
-    │   └── SnapSquareRenderer
-    └── toolbar.py
-        ├── IconTextButton
-        └── Toolbar
+│   ├── s2k/
+│   │   ├── __init__.py
+│   │   ├── builder.py
+│   │   ├── context.py
+│   │   │   └── LoadContext
+│   │   ├── dialog.py
+│   │   ├── handlers.py
+│   │   ├── parser.py
+│   │   │   └── S2KParser
+│   │   ├── router.py
+│   │   ├── units.py
+│   │   │   └── UnitConverter
+│   │   └── utils.py
+│   ├── s2kloader.py
+│   │   ├── UnitConverter
+│   │   ├── LoadContext
+│   │   ├── S2KParser
+│   │   └── S2KLoader
+│   ├── sap_connect.py
+│   │   └── cSap
+│   └── wind_service.py
+│       └── WindSceneAdapter
+├── widgets/
+│   ├── cad_widget.py
+│   │   └── KivyCADWidget
+│   ├── event_router.py
+│   │   └── EventRouter
+│   └── panel_manager.py
+│       └── PanelManager

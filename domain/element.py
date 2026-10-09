@@ -1,4 +1,5 @@
 # domain/element.py
+from turtle import color
 from typing import List, Optional, Dict, Any, Tuple
 from enum import Enum, auto
 import uuid
@@ -29,7 +30,8 @@ class Element:
                  label: str = "",
                  is_selected: bool = False,
                  is_visible: bool = True,
-                 needs_update: bool = True
+                 needs_update: bool = True,
+                 color=None
                  ):
         self.unique_id = Element._id_counter
         Element._id_counter += 1
@@ -40,6 +42,7 @@ class Element:
         self.needs_update = needs_update
         self.pick_id= self.unique_id
         self.element_type= None
+        self.color = list(color[:3]) if color is not None else [0.7, 0.7, 0.7]
         
     def toggle_selection(self):
         self.is_selected = not self.is_selected
@@ -93,9 +96,9 @@ class Node(Element):
         label: str = "",
         restraint: Optional[Restraint] = None,
         mass: Tuple[float, ...] = (0.0,) * 6,
-        spring: Tuple[float, ...] = (),
+        spring: Tuple[float, ...] = (),color=None
     ):
-        super().__init__(label)
+        super().__init__(label, color=color)
 
         self.element_type = "Node"
 
@@ -216,8 +219,10 @@ class Node(Element):
 
 class Frame(Element):
     def __init__(self, node_i: Node, node_j: Node, section: Section,
-                 rotation_deg: float = 0.0, label: str = ""):
-        super().__init__(label)
+                 rotation_deg: float = 0.0, label: str = "", color=None):
+        if color is None and section is not None and hasattr(section, 'color'):
+            color = list(section.color[:3])
+        super().__init__(label, color=color)
         self.element_type= "Frame"
         self.node_i = node_i
         self.node_j = node_j
@@ -230,6 +235,7 @@ class Frame(Element):
         self.dist_loads: List[FrameDistributedLoad] = []
         self.gravity_loads: List[FrameGravityLoad] = []
         self.temp_loads: List[FrameTemperatureLoad] = []
+
     
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
@@ -245,8 +251,10 @@ class Frame(Element):
         return data
 
 class Area(Element):
-    def __init__(self, nodes: List[Node], thickness: float, label: str = ""):
-        super().__init__(label)
+    def __init__(self, nodes: List[Node], thickness: float, label: str = "",color=None):
+        if color is None:
+            color = [0.5, 0.8, 1.0]
+        super().__init__(label, color=color)
         self.element_type= "Area"
         self.nodes = nodes
         self.thickness = thickness
@@ -272,8 +280,10 @@ class Area(Element):
         return data
 
 class Link(Element):
-    def __init__(self, node_i: Node, node_j: Node, propname: str = "LINK1", label: str = ""):
-        super().__init__(label)
+    def __init__(self, node_i: Node, node_j: Node, propname: str = "LINK1", label: str = "",color=None):
+        if color is None:
+            color = [0.5, 0.5, 0.5]
+        super().__init__(label, color=color)
         self.element_type= "Link"
         self.node_i = node_i
         self.node_j = node_j
@@ -296,8 +306,10 @@ class PolygonType(Enum):
     LOAD_AREA = auto()     # Yayılı yük etki alanları
     
 class Polygon(Element):
-    def __init__(self, nodes: List[Node], label: str = "", poly_type: PolygonType = PolygonType.GENERIC):
-        super().__init__(label)
+    def __init__(self, nodes: List[Node], label: str = "", poly_type: PolygonType = PolygonType.GENERIC, color=None):
+        if color is None:
+            color = [0.8, 0.3, 0.8, 0.6]
+        super().__init__(label, color=color)
         self.element_type = "Polygon"
         self.poly_type = poly_type  # Enum tipi
         self.nodes = list(nodes)

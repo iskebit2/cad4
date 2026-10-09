@@ -77,7 +77,7 @@ class SceneRenderer:
         self.mrt_id_texture = None
         self.mrt_depth_rbo = None
         self._create_mrt_fbo(w, h)
-        
+        logger.debug(f"[scenerenderer__INIT__] MRT FBO oluşturuldu: {w}x{h}")
         # PickPass'e ana FBO'yu bildir
         self.pick_pass.set_main_fbo(self.mrt_fbo)
         # Marquee için buffer'lar
@@ -158,7 +158,7 @@ class SceneRenderer:
                 raise RuntimeError(f"MRT FBO tamamlanamadı: {status}")
             
             glBindFramebuffer(GL_FRAMEBUFFER, 0)
-            logger.info(f"MRT FBO oluşturuldu: {w}x{h}")
+            logger.debug(f"[scenerenderer_create_mrt_fbo] MRT FBO oluşturuldu: {w}x{h}")
             
         except Exception as e:
             logger.error(f"MRT FBO oluşturma hatası: {e}")
@@ -189,6 +189,29 @@ class SceneRenderer:
     def set_snap(self, s):
         self.snap = s
 
+    def set_node_point_size(self, px: float):
+        """Simple modda node nokta boyutunu piksel cinsinden ayarla."""
+        if self.node_r:
+            self.node_r.set_point_size(px)
+
+    def set_node_size(self, size: float, rebuild: bool = True):
+        """
+        Node sembol boyutunu ayarla.
+        rebuild=True ise geometriyi yeniden üretir (scene gerekir).
+        """
+        if not self.node_r:
+            return
+        changed = self.node_r.set_node_size(size)
+        if changed and rebuild and self.scene:
+            # Sadece node renderer'ı yeniden build et — daha hızlı
+            nodes = list(self.scene.nodes.values())
+            for n in nodes:
+                n.mark_dirty()
+            self.node_r.update(nodes)
+            # Renkleri yeniden uygula (update_colors zaten CBO'yu yeniler)
+            self.node_r.update_colors(nodes, self._get_final_color)
+            self.node_r.update_simple_colors(nodes, self._get_final_color)
+
     def set_marquee(self, m): 
         self.marquee = m
     
@@ -210,6 +233,7 @@ class SceneRenderer:
         # MRT FBO'sunu yeniden boyutlandır
         self._cleanup_mrt()
         self._create_mrt_fbo(w, h)
+        logger.debug(f"[resize] çağrıldı... _create_mrt_fbo yeniden oluşturuldu: {w}x{h}")
         if self.pick_pass:
             self.pick_pass.set_main_fbo(self.mrt_fbo)
     
@@ -329,6 +353,9 @@ class SceneRenderer:
         # ---- 6. Bounds ----
         _progress(0.98, "Sınırlar hesaplanıyor...")
         self._update_bounds()
+
+        # ---- 7. Renkleri uygula (final_color_for ile) ----
+        self.update_sel()
 
         _progress(1.00, "Tamamlandı")
     
@@ -498,7 +525,7 @@ class SceneRenderer:
     def _render_simple(self, mvp, view, proj):
         if not self.simple_shader:
             return
-        glPointSize(4.0)
+        # glPointSize(1.0)
         glDisable(GL_CULL_FACE)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -528,7 +555,7 @@ class SceneRenderer:
         # 5. NODE (en üstte)
         glDisable(GL_DEPTH_TEST)
         if self.show['node'] and self.node_r:
-            self.node_r.render_simple(mvp, self.simple_shader, alpha=1.0)
+            self.node_r.render_simple(mvp, self.node_shader, alpha=1.0)
         glEnable(GL_DEPTH_TEST)
     
     def get_bounds(self):
@@ -737,3 +764,54 @@ class SceneRenderer:
             self.lighting.cleanup()
         
         self._cleanup_mrt()
+
+    def apply_plane_filter(self, camera):
+        """
+        Kamera plan filter'ına göre tüm elementleri filtrele.
+        Element.coords / nodes'a göre görünürlüğü belirle.
+        """
+        if self.scene is None:
+            return
+
+        # Node'lar
+        for node in self.scene.nodes.values():
+            visible = camera.is_element_visible_by_plane((node.x, node.y, node.z))
+            node.is_visible = visible
+
+        # Frame'ler — iki node'un ORTALAMA konumuna göre
+        for frame in self.scene.frames.values():
+            ni, nj = frame.node_i, frame.node_j
+            mx = (ni.x + nj.x) / 2
+            my = (ni.y + nj.y) / 2
+            mz = (ni.z + nj.z) / 2
+            visible = camera.is_element_visible_by_plane((mx, my, mz))
+            frame.is_visible = visible
+
+        # Area'lar — node'ların ortalaması
+        for area in self.scene.areas.values():
+            if not area.nodes:
+                continue
+            mx = sum(n.x for n in area.nodes) / len(area.nodes)
+            my = sum(n.y for n in area.nodes) / len(area.nodes)
+            mz = sum(n.z for n in area.nodes) / len(area.nodes)
+            visible = camera.is_element_visible_by_plane((mx, my, mz))
+            area.is_visible = visible
+
+        # Link'ler
+        for link in self.scene.links.values():
+            ni, nj = link.node_i, link.node_j
+            mx = (ni.x + nj.x) / 2
+            my = (ni.y + nj.y) / 2
+            mz = (ni.z + nj.z) / 2
+            visible = camera.is_element_visible_by_plane((mx, my, mz))
+            link.is_visible = visible
+
+        # Polygon'lar
+        for poly in self.scene.polygons.values():
+            if not poly.nodes:
+                continue
+            mx = sum(n.x for n in poly.nodes) / len(poly.nodes)
+            my = sum(n.y for n in poly.nodes) / len(poly.nodes)
+            mz = sum(n.z for n in poly.nodes) / len(poly.nodes)
+            visible = camera.is_element_visible_by_plane((mx, my, mz))
+            poly.is_visible = visible

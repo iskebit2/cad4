@@ -37,23 +37,23 @@ from domain.element import (
 # render/base_renderer.py
 
 def _final_color_for(element):
-    """Elementin seçim durumuna göre son rengini döndür (daima RGB)."""
+    """Elementin son rengini döndür (daima RGB)."""
     if element.is_selected:
-        return [1.0, 0.5, 0.0]  # Turuncu — seçili
+        return [1.0, 0.5, 0.0]   # Turuncu — seçili
 
-    # Polygon özel — kendi rengini kullan (ilk 3 eleman RGB)
-    if hasattr(element, 'element_type') and element.element_type == "Polygon":
-        color = element.color
-        return list(color[:3]) if len(color) >= 3 else [0.8, 0.3, 0.8]
+    # Ortak color alanı varsa onu kullan
+    if hasattr(element, 'color') and element.color:
+        c = element.color
+        return list(c[:3]) if len(c) >= 3 else [0.7, 0.7, 0.7]
 
-    # Tip bazlı varsayılan
+    # Fallback (eski tip bazlı)
     if hasattr(element, 'section') and hasattr(element.section, 'color'):
-        return list(element.section.color[:3])     # Frame
-    elif hasattr(element, 'thickness'):            # Area
+        return list(element.section.color[:3])
+    elif hasattr(element, 'thickness'):
         return [0.5, 0.8, 1.0]
-    elif hasattr(element, 'propname'):             # Link
+    elif hasattr(element, 'propname'):
         return [0.0, 1.0, 0.0]
-    else:                                           # Node
+    else:
         return [1.0, 1.0, 1.0]
 
 from logging_config import CadLogger
@@ -209,7 +209,7 @@ class BaseRenderer(ABC, Generic[T]):
                 glBindBuffer(GL_ARRAY_BUFFER, 0)
         
         # ---- Simple CBO ----
-        if self.simple_cbo and glIsBuffer(self.simple_cbo):
+        if self.simple_cbo is not None:
             simple_cols = []
             for e in self.elements:
                 if not e.is_visible:
@@ -606,17 +606,20 @@ class BaseRenderer(ABC, Generic[T]):
         if a != -1:
             glUniform1f(a, float(alpha))
         glBindVertexArray(self.simple_vao)
-        
-        # Sadece triangle modunda polygon offset uygula
+
         if self.simple_draw_mode == GL_TRIANGLES:
             glEnable(GL_POLYGON_OFFSET_FILL)
             glPolygonOffset(-1.0, -1.0)
-        
-        glDrawArrays(self.simple_draw_mode, 0, self.simple_vcount)   # ← DÜZELTME
-        
+        elif self.simple_draw_mode == GL_POINTS:
+            glEnable(GL_PROGRAM_POINT_SIZE)
+
+        glDrawArrays(self.simple_draw_mode, 0, self.simple_vcount)
+
         if self.simple_draw_mode == GL_TRIANGLES:
             glDisable(GL_POLYGON_OFFSET_FILL)
-        
+        elif self.simple_draw_mode == GL_POINTS:
+            glDisable(GL_PROGRAM_POINT_SIZE)
+
         glBindVertexArray(0)
 
     # =============================================================
@@ -650,7 +653,7 @@ class BaseRenderer(ABC, Generic[T]):
             glBindBuffer(GL_ARRAY_BUFFER, 0)
 
     def update_simple_colors(self, elements, color_func):
-        if not self.simple_cbo or not glIsBuffer(self.simple_cbo):
+        if self.simple_cbo is None:
             return
         if not self.elements:
             return
@@ -702,17 +705,14 @@ class BaseRenderer(ABC, Generic[T]):
         self.id_buffer_initialized = False
 
     def _cleanup_simple(self):
-        for buf in [self.simple_vbo, self.simple_cbo]:
+        for buf in [self.simple_vbo, self.simple_cbo, self.simple_idbo]:
             if buf and glIsBuffer(buf):
                 glDeleteBuffers(1, [int(buf)])
 
         if self.simple_vao and glIsVertexArray(self.simple_vao):
             glDeleteVertexArrays(1, [int(self.simple_vao)])
 
-        if self.simple_idbo:
-            glDeleteBuffers(1, [self.simple_idbo])
-            self.simple_idbo = None
-            
+        self.simple_idbo = None
         self.simple_vao = None
         self.simple_vbo = None
         self.simple_cbo = None
@@ -900,48 +900,62 @@ class NodeRenderer(BaseRenderer[Node]):
         self.vertex_stride = 9 * 4
         self.has_center = True
         self.simple_draw_mode = GL_POINTS
+        self.point_size = 4.0   # piksel
+
+    def set_node_size(self, size: float) -> bool:
+        """Shaded mesh boyutu (dünya birimi)."""
+        return self.builder.set_size(size)
+
+    def set_point_size(self, px: float) -> bool:
+        """Simple modda nokta boyutu (piksel)."""
+        px = float(px)
+        if px <= 0 or abs(self.point_size - px) < 1e-6:
+            return False
+        self.point_size = px
+        return True
 
     def build(self, n):
         return self.builder.build(n)
 
     def build_simple(self, n):
         v = self.builder.build_simple_points(n)
-        color = [1.0, 1.0, 0.0] if n.is_selected else [1.0, 0.0, 0.0]
-        c = np.array([color], dtype=np.float32)
+        c = np.array([_final_color_for(n)], dtype=np.float32)
         return v, c
+
+    def render_simple(self, mvp, shader, color=None, alpha=0.5):
+        if not self.simple_vao or self.simple_vcount == 0:
+            return
+        shader.use()
+
+        # Sadece node_shader'da olan uniform'ları set et
+        loc = shader.get_loc("pointSize")
+        if loc != -1:
+            glUniform1f(loc, self.point_size)
+
+        loc = shader.get_loc("mvp")
+        if loc != -1:
+            glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
+
+        # useVertexColor/alpha/objectColor'ı ARAMA — node_shader'da yok
+
+        glBindVertexArray(self.simple_vao)
+        glEnable(GL_PROGRAM_POINT_SIZE)
+        glDrawArrays(GL_POINTS, 0, self.simple_vcount)
+        glDisable(GL_PROGRAM_POINT_SIZE)
+        glBindVertexArray(0)
 
     def draw_mode(self):
         return GL_TRIANGLES
 
     def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
         self.shader.use()
-
-        loc = self.shader.get_loc("isConstantSize")
-        if loc != -1:
-            glUniform1i(loc, 1)
-
-        if view is not None:
-            v_loc = self.shader.get_loc("view")
-            if v_loc != -1:
-                glUniformMatrix4fv(v_loc, 1, GL_FALSE, glm.value_ptr(view))
-
-        if proj is not None:
-            p_loc = self.shader.get_loc("projection")
-            if p_loc != -1:
-                glUniformMatrix4fv(p_loc, 1, GL_FALSE, glm.value_ptr(proj))
-
-        ps_loc = self.shader.get_loc("pointScale")
+        ps_loc = self.shader.get_loc("pointSize")
         if ps_loc != -1:
-            glUniform1f(ps_loc, 0.01)
-
+            glUniform1f(ps_loc, self.point_size)
         a_loc = self.shader.get_loc("alpha")
         if a_loc != -1:
             glUniform1f(a_loc, 1.0)
-
         super().render(mvp, model, cam_pos, view, proj)
-
-        if loc != -1:
-            glUniform1i(loc, 0)
 
 # =================================================================
 # POLYGON

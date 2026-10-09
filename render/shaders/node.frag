@@ -1,17 +1,11 @@
 #version 460 core
 in vec3 VertexColor;
-out vec4 FragColor;
+flat in uint VertexPickId;
 
-uniform bool useVertexColor;
-uniform vec3 nodeColor;
+layout(location = 0) out vec4 FragColor;
+layout(location = 1) out uint FragID;
 
 void main() {
-    vec3 color = useVertexColor ? VertexColor : nodeColor;
-    
-    // Nokta şekli için (isteğe bağlı yuvarlak)
-    vec2 coord = gl_PointCoord - vec2(0.5);
-    if (length(coord) > 0.5)
-        discard;
-    
-    FragColor = vec4(color, 1.0);
+    FragColor = vec4(VertexColor, 1.0);
+    FragID = VertexPickId;
 }

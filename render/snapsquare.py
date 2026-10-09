@@ -1,4 +1,4 @@
-# ui/snapsquare.py
+# render/snapsquare.py
 """
 Basit snap göstergesi.
 

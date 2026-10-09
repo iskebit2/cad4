@@ -6,43 +6,6 @@ Ortak Popup iskeleti.
 - use_scroll=True/False → içerik boyutuna göre kaydırma opsiyonel
 - set_content() ile içerik değiştirilebilir
 """
-# ============================================================
-# FONT — proje kökü/assets/fonts/ altındaki tüm Roboto ailesi
-# ============================================================
-import os
-from kivy.core.text import LabelBase
-
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(_HERE)
-_FONT_DIR = os.path.join(_ROOT, "assets", "fonts")
-
-
-def _font(filename):
-    """Font dosyası varsa mutlak yolu döndür, yoksa None."""
-    path = os.path.join(_FONT_DIR, filename)
-    return path if os.path.exists(path) else None
-
-
-# Roboto ailesini tek isim altında kaydet
-# Kivy, bold/italic varyantlarını otomatik kullanır
-_REGISTERED = False
-if os.path.isdir(_FONT_DIR):
-    _regular = _font("Roboto-Regular.ttf")
-    if _regular:
-        LabelBase.register(
-            name="Roboto",
-            fn_regular=_font("Roboto-Regular.ttf"),
-            fn_bold=_font("Roboto-Bold.ttf"),
-            fn_italic=_font("Roboto-Italic.ttf"),
-            fn_bolditalic=_font("Roboto-BoldItalic.ttf"),
-        )
-        FONT_DEFAULT = "Roboto"
-        _REGISTERED = True
-
-if not _REGISTERED:
-    # Font bulunamazsa Kivy varsayılanına düş
-    FONT_DEFAULT = "Roboto"
-
 FONT_DEFAULT = "DejaVuSans"
 
 from kivy.metrics import dp
@@ -54,8 +17,6 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
 from kivy.uix.scrollview import ScrollView
 from kivy.graphics import Color, RoundedRectangle, Line
-
-from debug_lines import debug_layout
 
 # ============================================================
 # TEMA
@@ -74,7 +35,7 @@ THEME = {
     "text_secondary": (0.68, 0.72, 0.78, 1.00),
     "text_accent":    (0.30, 0.85, 0.55, 1.00),
 
-    "input_bg":     (0.16, 0.18, 0.22, 1.00),
+    "input_bg":     (1, 0, 0, 1.00),
     "input_fg":     (1.00, 1.00, 1.00, 1.00),
     "input_hint":   (0.55, 0.60, 0.68, 1.00),
     "input_cursor": (0.30, 0.85, 0.55, 1.00),
@@ -216,7 +177,7 @@ class BaseCustomPopup(Popup):
 
         self.content = root
 
-        debug_layout(self)
+        
 
     # ---- API ----
     def set_content(self, widget):

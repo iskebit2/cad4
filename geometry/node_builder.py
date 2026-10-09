@@ -14,25 +14,43 @@ class NodeBuilder:
     def __init__(self):
         # Birim şekiller (XY düzlemi, z=0, merkezde)
         self.size = 1.0  # Node boyutu
-        radius = self.size/2
         self.segments = 16
-        
+        self.shapes: Dict[str, np.ndarray] = {}
+        self._rebuild_shapes()
+
+    def _rebuild_shapes(self):
+        """self.size'a göre şekilleri yeniden üret"""
+        radius = self.size / 2
         self.shapes = {
             "triangle": np.array([
-                [0, radius, 0],        # Tepe
-                [radius, -radius, 0],   # Sağ alt
-                [-radius, -radius, 0]   # Sol alt
+                [0, radius, 0],
+                [radius, -radius, 0],
+                [-radius, -radius, 0]
             ], dtype=np.float32),
-            
+
             "square": np.array([
                 [-radius, radius, 0],
                 [radius, radius, 0],
                 [radius, -radius, 0],
                 [-radius, -radius, 0]
             ], dtype=np.float32),
-            
-            "circle": self._create_circle(radius)
+
+            "circle": self._create_circle(radius),
         }
+
+    def set_size(self, size: float) -> bool:
+        """
+        Node sembol boyutunu ayarla.
+        Returns: True -> gerçekten değişti, False -> zaten aynıydı
+        """
+        size = float(size)
+        if size <= 0:
+            return False
+        if abs(self.size - size) < 1e-6:
+            return False
+        self.size = size
+        self._rebuild_shapes()
+        return True
     
     def _create_circle(self, radius):
         """Daire oluştur - merkezde, çevre noktaları"""
@@ -128,7 +146,7 @@ class NodeBuilder:
         
         # Renkler
         vertex_count = len(verts) // 9
-        color = np.array([1, 1, 0] if node.is_selected else [1, 0, 0], dtype=np.float32)
+        color = np.array([1, 1, 0] if node.is_selected else [0.2, 0.2, 0.2], dtype=np.float32)
         colors = np.tile(color, (vertex_count, 1))
         
         return np.array(verts, dtype=np.float32), colors, np.array(idxs, dtype=np.uint32)
@@ -147,7 +165,6 @@ class NodeBuilder:
             
             if shape_name == "circle" and i == 0:
                 # Circle'ın merkez noktası
-                base_center = len(verts) // 9
                 self._add_to_verts(local_pos, [0, 0, 1], center, verts)
             elif shape_name == "circle":
                 # Circle'ın çevre noktaları

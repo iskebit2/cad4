@@ -50,6 +50,13 @@ class Camera:
     _position: Optional[glm.vec3] = None
     _view_matrix: Optional[glm.mat4] = None
     _projection_matrix: Optional[glm.mat4] = None
+
+    # ===== PLAN & VIEW FILTER =====
+    active_plane: Optional[str] = None      # None / "XY" / "XZ" / "YZ"
+    plane_offset: float = 0.0               # Düzlemin konumu (o eksende)
+    plane_direction: str = "positive"       # "positive" / "negative" — hangi taraf görünsün
+    
+    view_preset: Optional[str] = None       # None / "front" / "back" / "top" / "bottom" / "left" / "right" / "iso"
     
     def __post_init__(self):
         """İlk pozisyonu hesapla"""
@@ -267,3 +274,57 @@ class Camera:
         logger.debug(f"Model size: {self.model_size:.2f}")
         logger.debug(f"Sensitivities - Orbit: {self.orbit_sensitivity:.4f}, Pan: {self.pan_sensitivity:.4f}, Zoom: {self.zoom_sensitivity:.4f}")
         logger.debug(f"Clipping - Near: {self.near:.2f}, Far: {self.far:.2f}")
+
+    # ----------------------------------------------------------------------
+    # PLAN & VIEW FILTER
+    # ----------------------------------------------------------------------
+
+    def set_plane_filter(self, plane, offset=0.0, direction="positive"):
+        self.active_plane = plane
+        self.plane_offset = offset
+        self.plane_direction = direction
+
+    def clear_plane_filter(self):
+        self.active_plane = None
+        self.plane_offset = 0.0
+
+    def is_element_visible_by_plane(self, coords):
+        if self.active_plane is None:
+            return True
+        x, y, z = float(coords[0]), float(coords[1]), float(coords[2])
+        if self.active_plane == "XY":
+            axis_val = z
+        elif self.active_plane == "XZ":
+            axis_val = y
+        elif self.active_plane == "YZ":
+            axis_val = x
+        else:
+            return True
+        if self.plane_direction == "positive":
+            return axis_val >= self.plane_offset
+        else:
+            return axis_val <= self.plane_offset
+
+    def set_view_preset(self, preset):
+        presets = {
+            "front":  {"pitch": 0,   "yaw": -90,  "view_mode": "ORTHO"},
+            "back":   {"pitch": 0,   "yaw": 90,   "view_mode": "ORTHO"},
+            "top":    {"pitch": 89,  "yaw": -90,  "view_mode": "ORTHO"},
+            "bottom": {"pitch": -89, "yaw": -90,  "view_mode": "ORTHO"},
+            "left":   {"pitch": 0,   "yaw": 180,  "view_mode": "ORTHO"},
+            "right":  {"pitch": 0,   "yaw": 0,    "view_mode": "ORTHO"},
+            "iso":    {"pitch": 30,  "yaw": -45,  "view_mode": "PERSPECTIVE"},
+        }
+        if preset not in presets:
+            return
+        p = presets[preset]
+        self.pitch = p["pitch"]
+        self.yaw = p["yaw"]
+        self.view_mode = p["view_mode"]
+        self.view_preset = preset
+        self._update_position()
+
+    def clear_view_preset(self):
+        self.view_preset = None
+        self.view_mode = "PERSPECTIVE"
+        self._projection_matrix = None

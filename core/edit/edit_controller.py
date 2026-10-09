@@ -8,6 +8,7 @@ from core.commands import (
     CreateElementCommand,
     UpdateElementCommand,
     DeleteElementsCommand,
+    BulkUpdateCommand,
 )
 
 logger = CadLogger.get(__name__)
@@ -243,6 +244,27 @@ class EditController:
         return getattr(obj, parts[-1])
 
     def _apply_field(self, element, field: str, value):
+        # --- Renk ---
+        if field == "color":
+            if isinstance(value, (list, tuple)) and len(value) >= 3:
+                element.color = [float(v) for v in value[:3]]
+            return
+
+        # --- Görünürlük ---
+        if field == "is_visible":
+            element.is_visible = bool(value)
+            return
+
+        # --- Restraint ---
+        if field.startswith("restraint."):
+            dof = field.split(".", 1)[1]
+            if element.restraint is None:
+                from domain.definition import Restraint
+                element.restraint = Restraint()
+            setattr(element.restraint, dof, bool(value))
+            return
+
+        # --- Node referansları ---
         if field in ("node_i_id", "node_j_id"):
             node = self._resolve_node(value)
             if node is None:
@@ -251,10 +273,12 @@ class EditController:
             setattr(element, attr, node)
             return
 
+        # --- Section ---
         if field == "section_name":
             element.section = self._resolve_section(value)
             return
 
+        # --- Node listesi (Area/Polygon) ---
         if field == "nodes":
             if isinstance(value, str):
                 value = [s.strip() for s in value.split(",") if s.strip()]
@@ -264,18 +288,22 @@ class EditController:
             element.nodes = node_objs
             return
 
-        # YENİ: PolygonType Enum dönüşümü
+        # --- Polygon tipi ---
         if field == "poly_type":
             from domain.element import PolygonType
             if isinstance(value, str):
                 try:
                     setattr(element, "poly_type", PolygonType[value.strip().upper()])
                 except KeyError:
-                    raise ValueError(f"Geçersiz poligon tipi: {value!r}. Geçerli tipler: {[t.name for t in PolygonType]}")
+                    raise ValueError(
+                        f"Geçersiz poligon tipi: {value!r}. "
+                        f"Geçerli: {[t.name for t in PolygonType]}"
+                    )
             elif isinstance(value, PolygonType):
                 setattr(element, "poly_type", value)
             return
 
+        # --- Genel (nokta yolu: a.b.c) ---
         parts = field.split(".")
         obj = element
         for p in parts[:-1]:
@@ -335,3 +363,79 @@ class EditController:
             self.engine.renderer.update_geo(self.engine.scene)
         except Exception:
             logger.exception("renderer.update_geo hatası")
+
+    # ========================================================
+    # BULK UPDATE — Komut tabanlı toplu güncelleme
+    # ========================================================
+
+    def bulk_update(self, elements, changes) -> EditResult:
+        """
+        Birden fazla elemente aynı anda alan uygula.
+        Her element için before/after hesaplanır; farklı olanlar komuta girer.
+        Tek CommandManager kaydı → undo/redo tam çalışır.
+
+        changes örnek:
+            {"x": 100.0, "label": "N1", "restraint.ux": True, "color": [1,0,0]}
+        """
+        if not elements:
+            return EditResult(False, message="Eleman yok")
+
+        # 1. Her element için before/after hesapla
+        plan = []
+        for e in elements:
+            before, after = {}, {}
+            for field, raw in changes.items():
+                try:
+                    old = self._read_field_safe(e, field)
+                except Exception:
+                    old = None
+                if not self._is_same(old, raw):
+                    before[field] = old
+                    after[field] = raw
+            if after:
+                plan.append((e, before, after))
+
+        if not plan:
+            return EditResult(True, message="Değişiklik yok")
+
+        # 2. BulkUpdateCommand oluştur ve çalıştır
+        try:
+            cmd = BulkUpdateCommand(plan, setter=self._apply_field)
+            if not self.commands.execute(cmd):
+                return EditResult(False, message="Toplu güncelleme başarısız")
+        except Exception as e:
+            logger.exception("bulk_update hatası")
+            return EditResult(False, message=str(e))
+
+        return EditResult(
+            True,
+            message=f"{len(plan)} eleman güncellendi",
+        )
+
+    def _read_field_safe(self, element, field):
+        """
+        Bulk update için güvenli field okuma.
+        Özel alanlar (color, is_visible, restraint.*) burada ele alınır.
+        """
+        # Renk
+        if field == "color":
+            c = getattr(element, 'color', None)
+            return list(c[:3]) if c else None
+
+        # Görünürlük
+        if field == "is_visible":
+            return bool(getattr(element, 'is_visible', True))
+
+        # Restraint
+        if field.startswith("restraint."):
+            dof = field.split(".", 1)[1]
+            r = getattr(element, 'restraint', None)
+            if r is None:
+                return None
+            return bool(getattr(r, dof, False))
+
+        # Diğer alanlar _read_field üzerinden
+        try:
+            return self._read_field(element, field)
+        except Exception:
+            return None

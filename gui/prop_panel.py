@@ -1,7 +1,16 @@
-# ui/prop_panel.py
+# gui/prop_panel.py
+"""
+PropertiesPanel — Tek ve çoklu eleman düzenlemesi.
+
+Özellikler:
+  - Tek eleman: tam düzenleme
+  - Çoklu eleman: ortak alanlar + tipe göre filtre + tipe özel toplu edit
+  - Yeni eleman formu (tek/tekrarlı)
+  - Apply / Cancel
+"""
+
 import numpy as np
-from logging_config import CadLogger
-logger = CadLogger.get(__name__)
+from collections import Counter
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -10,12 +19,15 @@ from kivy.uix.widget import Widget
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.spinner import Spinner
 from kivy.graphics import Color, Rectangle
 from kivy.metrics import dp
 from kivy.clock import Clock
-
 from kivy.uix.behaviors import ButtonBehavior
-from kivy.properties import BooleanProperty, StringProperty
+from kivy.properties import BooleanProperty
+
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 
 # ============================================================
@@ -43,10 +55,7 @@ class GroupHeader(ButtonBehavior, Label):
 # ============================================================
 
 class CollapsibleGroup(BoxLayout):
-    """
-    Açılır/kapanır grup.
-    Her alan TextInput olarak eklenir; düzenlenebilir olabilir.
-    """
+    """Açılır/kapanır grup. Alanlar TextInput olarak eklenir."""
 
     def __init__(self, title, **kwargs):
         kwargs.setdefault('orientation', 'vertical')
@@ -56,14 +65,12 @@ class CollapsibleGroup(BoxLayout):
 
         self._title_text = title
         self._expanded = True
-        self.fields = []        # <-- YENİ: TextInput'ları topla
+        self.fields = []
 
-        # Başlık
         self.header = GroupHeader(text=self._make_header_text())
         self.header.bind(on_release=self._on_header_click)
         self.add_widget(self.header)
 
-        # İçerik
         self.content = GridLayout(
             cols=2,
             size_hint_y=None,
@@ -85,7 +92,6 @@ class CollapsibleGroup(BoxLayout):
     def toggle(self):
         self._expanded = not self._expanded
         self.header.text = self._make_header_text()
-
         if self._expanded:
             self.content.opacity = 1
             self.content.disabled = False
@@ -97,34 +103,19 @@ class CollapsibleGroup(BoxLayout):
 
     def add_field(self, key, value, field_name=None, element=None,
                   editable=False, kind="str"):
-        """
-        Gruba label-value satırı ekle.
-
-        Parameters
-        ----------
-        key : str          — gösterilecek etiket
-        value : any        — başlangıç değeri
-        field_name : str   — Apply'da hangi alan (nokta yolu destekler)
-        element : Element  — Apply'da hangi eleman (yeni eleman için None)
-        editable : bool    — TextInput düzenlenebilir mi
-        kind : str         — "str" | "float" | "int" | "bool"
-        """
+        """Gruba label-value satırı ekle."""
         lbl = Label(
             text=str(key),
-            size_hint_y=None,
-            height=dp(22),
-            halign='left',
-            valign='middle',
-            font_size=dp(11),
-            font_name="DejaVuSans.ttf",
+            size_hint_y=None, height=dp(22),
+            halign='left', valign='middle',
+            font_size=dp(11), font_name="DejaVuSans.ttf",
             color=(0.85, 0.85, 0.85, 1.0),
         )
         lbl.bind(size=lbl.setter('text_size'))
 
         val = TextInput(
             text=str(value),
-            size_hint_y=None,
-            height=dp(22),
+            size_hint_y=None, height=dp(22),
             multiline=False,
             readonly=not editable,
             font_size=dp(11),
@@ -133,8 +124,6 @@ class CollapsibleGroup(BoxLayout):
             foreground_color=(0.9, 0.9, 0.9, 1.0),
             padding=(dp(4), dp(2), dp(4), dp(2)),
         )
-
-        # Apply için metadata
         val._field_name = field_name
         val._element = element
         val._kind = kind
@@ -153,30 +142,32 @@ class PropertiesPanel(BoxLayout):
     def __init__(self, controller=None, **kwargs):
         kwargs.setdefault('orientation', 'vertical')
         kwargs.setdefault('size_hint', (None, None))
-        kwargs.setdefault('width', dp(300))
-        kwargs.setdefault('height', dp(500))
+        kwargs.setdefault('width', dp(320))
+        kwargs.setdefault('height', dp(520))
         kwargs.setdefault('padding', dp(6))
         kwargs.setdefault('spacing', dp(4))
         super().__init__(**kwargs)
 
-        # --- Controller (EditController) ---
         self.controller = controller
 
         # --- State ---
         self._current_element = None
-        self._pending_new_type = None      # YENİ: "node" | "frame" | ...
+        self._pending_new_type = None
         self._pending_new_repeat = False
+        self._selection_elements = None      # çoklu seçim listesi
+        self._type_filter = "Tümü"
 
         self._groups = []
         self._hidden = True
 
-        # Koyu arka plan
+        # Arka plan
         with self.canvas.before:
             Color(0.13, 0.15, 0.20, 0.95)
             self.bg = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._update_bg, size=self._update_bg)
 
         self._build_ui()
+        logger.info("PropertiesPanel oluşturuldu")
         self.hide()
 
     def _update_bg(self, *args):
@@ -188,29 +179,23 @@ class PropertiesPanel(BoxLayout):
     # ========================================================
 
     def _build_ui(self):
-        # --- Başlık ---
+        # Başlık
         title_row = BoxLayout(
             orientation='horizontal',
-            size_hint_y=None,
-            height=dp(30),
+            size_hint_y=None, height=dp(30),
         )
-
         self.title_label = Label(
             text="Özellikler",
-            bold=True,
-            font_size=dp(14),
+            bold=True, font_size=dp(14),
             font_name="DejaVuSans.ttf",
-            halign='left',
-            valign='middle',
+            halign='left', valign='middle',
         )
         self.title_label.bind(size=self.title_label.setter('text_size'))
 
         close_btn = Button(
             text="✕",
-            size_hint_x=None,
-            width=dp(30),
-            font_size=dp(14),
-            font_name="DejaVuSans.ttf",
+            size_hint_x=None, width=dp(30),
+            font_size=dp(14), font_name="DejaVuSans.ttf",
             background_color=(0.6, 0.2, 0.2, 1.0),
             background_normal='',
         )
@@ -220,7 +205,7 @@ class PropertiesPanel(BoxLayout):
         title_row.add_widget(close_btn)
         self.add_widget(title_row)
 
-        # --- Ayırıcı ---
+        # Ayırıcı
         sep = Widget(size_hint_y=None, height=dp(1))
         with sep.canvas:
             Color(0.4, 0.4, 0.4, 0.5)
@@ -229,33 +214,28 @@ class PropertiesPanel(BoxLayout):
                  size=lambda *_: setattr(self.sep_rect, 'size', sep.size))
         self.add_widget(sep)
 
-        # --- Scrollable içerik ---
+        # Scrollable içerik
         scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False)
-
         self.content_box = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
             spacing=dp(2),
         )
         self.content_box.bind(minimum_height=self.content_box.setter('height'))
-
         scroll.add_widget(self.content_box)
         self.add_widget(scroll)
 
-        # --- YENİ: Apply / Cancel bar ---
+        # Apply / Cancel
         btn_bar = BoxLayout(
             orientation='horizontal',
-            size_hint_y=None,
-            height=dp(36),
+            size_hint_y=None, height=dp(36),
             spacing=dp(4),
         )
-
         self.cancel_btn = Button(
             text="Cancel",
             background_normal='',
             background_color=(0.45, 0.20, 0.20, 1.0),
-            font_size=dp(12),
-            font_name="DejaVuSans.ttf",
+            font_size=dp(12), font_name="DejaVuSans.ttf",
         )
         self.cancel_btn.bind(on_release=self._on_cancel)
 
@@ -263,8 +243,7 @@ class PropertiesPanel(BoxLayout):
             text="Apply",
             background_normal='',
             background_color=(0.20, 0.55, 0.30, 1.0),
-            font_size=dp(12),
-            font_name="DejaVuSans.ttf",
+            font_size=dp(12), font_name="DejaVuSans.ttf",
             bold=True,
         )
         self.apply_btn.bind(on_release=self._on_apply)
@@ -278,6 +257,11 @@ class PropertiesPanel(BoxLayout):
     # ========================================================
 
     def _on_apply(self, *_):
+        # ---- TOPLU DÜZENLEME ----
+        if self._selection_elements:
+            self._apply_bulk()
+            return
+
         if self.controller is None:
             logger.warning("controller yok, Apply çalışmaz")
             self._flash("Controller yok", ok=False)
@@ -285,22 +269,17 @@ class PropertiesPanel(BoxLayout):
 
         values = self._collect_field_values()
 
-        # --- YENİ ELEMAN ---
+        # ---- YENİ ELEMAN ----
         if self._pending_new_type is not None:
             result = self.controller.create(self._pending_new_type, values)
             if not result.ok:
                 self._flash(result.message, ok=False)
                 return
-
             self._flash(result.message, ok=True)
 
             if self._pending_new_repeat:
-                # Çoklu ekleme: formu koru, sadece değerleri resetle
-                # (label boş bırak, konumları sıfırla vs.)
                 self._reset_form_after_create()
-                # _pending_new_type DOKUNULMAZ → sonraki Apply da create olur
             else:
-                # Tek seferlik: mevcut elemanı düzenlemeye geç
                 self._current_element = result.element
                 self._pending_new_type = None
                 self.title_label.text = (
@@ -309,7 +288,7 @@ class PropertiesPanel(BoxLayout):
                 )
             return
 
-        # --- GÜNCELLE ---
+        # ---- TEK ELEMAN GÜNCELLE ----
         if self._current_element is not None:
             result = self.controller.update(self._current_element, values)
             self._flash(result.message, ok=result.ok)
@@ -318,14 +297,15 @@ class PropertiesPanel(BoxLayout):
         self._flash("Düzenlenecek eleman yok", ok=False)
 
     def _on_cancel(self, *_):
-        # Yeni eleman modundaysa kapat
         if self._pending_new_type is not None:
             self._pending_new_type = None
             self._pending_new_repeat = False
             self.hide()
             return
-
-        # Mevcut elemanı yeniden oku
+        if self._selection_elements:
+            self._selection_elements = None
+            self.hide()
+            return
         if self._current_element is not None:
             self._build_element_content(self._current_element)
             self._flash("İptal edildi", ok=True)
@@ -333,34 +313,24 @@ class PropertiesPanel(BoxLayout):
             self.hide()
 
     def _reset_form_after_create(self):
-        """
-        Çoklu ekleme modunda formu sıfırla — label'ı temizle,
-        sayısal alanları 0 yap. İsteğe göre özelleştirilebilir.
-        """
         for group in self._groups:
             for ti in group.fields:
-                if ti._field_name is None:
-                    continue
                 fname = ti._field_name
-                kind = ti._kind
-
-                # label boş kalsın, diğerleri default
+                if fname is None:
+                    continue
                 if fname == "label":
                     ti.text = ""
-                elif kind == "float":
+                elif ti._kind == "float":
                     ti.text = "0.0"
-                elif kind == "int":
+                elif ti._kind == "int":
                     ti.text = "0"
-                elif kind == "bool":
+                elif ti._kind == "bool":
                     ti.text = "Serbest"
                 else:
                     ti.text = ""
-
-        # Başlığı güncelle
         self.title_label.text = f"YENİ: {self._pending_new_type} (çoklu)"
 
     def _collect_field_values(self):
-        """Tüm gruplardaki TextInput değerlerini {field_name: value} yap."""
         result = {}
         for group in self._groups:
             for ti in group.fields:
@@ -375,7 +345,6 @@ class PropertiesPanel(BoxLayout):
             try:
                 return float(text.replace(",", "."))
             except ValueError:
-                logger.warning(f"Geçersiz float: {text!r}")
                 return 0.0
         if kind == "int":
             try:
@@ -383,11 +352,10 @@ class PropertiesPanel(BoxLayout):
             except ValueError:
                 return 0
         if kind == "bool":
-            return text.lower() in ("1", "true", "evet", "yes", "sabit")
+            return text.lower() in ("1", "true", "evet", "yes", "sabit", "görünür")
         return text
 
     def _flash(self, msg, ok=True):
-        """Başlığı geçici olarak mesajla değiştir."""
         color = (0.4, 0.9, 0.5, 1) if ok else (1.0, 0.5, 0.5, 1)
         old_text = self.title_label.text
         old_color = self.title_label.color
@@ -401,25 +369,34 @@ class PropertiesPanel(BoxLayout):
         Clock.schedule_once(_restore, 1.5)
 
     # ========================================================
-    # ELEMAN İÇERİĞİ
+    # TEK ELEMAN İÇERİĞİ
     # ========================================================
 
     def _build_element_content(self, element):
+        self._selection_elements = None
         self.content_box.clear_widgets()
         self._groups.clear()
 
         et = getattr(element, 'element_type', '?').lower()
 
-        # ---- Genel (readonly) ----
+        # Genel
         g = CollapsibleGroup("Genel")
         g.add_field("Tip", element.element_type)
         g.add_field("Label", getattr(element, 'label', '-'),
                     field_name="label", element=element,
                     editable=True, kind="str")
         g.add_field("ID", element.unique_id)
+
+        color = getattr(element, 'color', [0.7, 0.7, 0.7])
+        color_str = ",".join(f"{float(c):.2f}" for c in color[:3])
+        g.add_field("color (R,G,B)", color_str,
+                    field_name="color", element=element,
+                    editable=True, kind="color")
+        g.add_field("Visible", "Görünür" if element.is_visible else "Gizli",
+                    field_name="is_visible", element=element,
+                    editable=True, kind="bool")
         self._add_group(g)
 
-        # ---- Tip bazlı ----
         if et == 'node':
             self._build_node_content(element)
         elif et == 'frame':
@@ -435,10 +412,7 @@ class PropertiesPanel(BoxLayout):
         self.content_box.add_widget(group)
         self._groups.append(group)
 
-    # --------------------------------------------------------
-    # NODE
-    # --------------------------------------------------------
-
+    # ---------- NODE ----------
     def _build_node_content(self, node):
         g = CollapsibleGroup("Konum")
         g.add_field("X", f"{node.x:.3f}", field_name="x",
@@ -453,19 +427,14 @@ class PropertiesPanel(BoxLayout):
         if node.restraint:
             for name in ('ux', 'uy', 'uz', 'rx', 'ry', 'rz'):
                 current = getattr(node.restraint, name, False)
-                g.add_field(
-                    name.upper(),
-                    "Sabit" if current else "Serbest",
-                    field_name=f"restraint.{name}",
-                    element=node,
-                    editable=True,
-                    kind="bool",
-                )
+                g.add_field(name.upper(),
+                            "Sabit" if current else "Serbest",
+                            field_name=f"restraint.{name}",
+                            element=node, editable=True, kind="bool")
         else:
             g.add_field("-", "Serbest")
         self._add_group(g)
 
-        # Bağlı elemanlar (readonly)
         if hasattr(node, 'connected') and node.connected:
             g = CollapsibleGroup(f"Bağlı Elemanlar ({len(node.connected)})")
             for obj_type, elem_id in node.connected[:10]:
@@ -475,70 +444,28 @@ class PropertiesPanel(BoxLayout):
             self._add_group(g)
             g.toggle()
 
-    # --------------------------------------------------------
-    # FRAME
-    # --------------------------------------------------------
-
+    # ---------- FRAME ----------
     def _build_frame_content(self, frame):
         g = CollapsibleGroup("Geometri")
-        g.add_field("Node I", frame.node_i.label,
-                    field_name="node_i_id", element=frame,
-                    editable=True, kind="str")
-        g.add_field("Node J", frame.node_j.label,
-                    field_name="node_j_id", element=frame,
-                    editable=True, kind="str")
-        g.add_field("Uzunluk", f"{frame.get_length():.2f} mm")
-        g.add_field("Rotation", f"{frame.rotation_deg:.1f}°")
+        g.add_field("Node I", frame.node_i.label)
+        g.add_field("Node J", frame.node_j.label)
+        g.add_field("Uzunluk", f"{frame.get_length():.2f}")
+        g.add_field("Rotation", f"{frame.rotation_deg:.1f}°",
+                    field_name="rotation_deg", element=frame,
+                    editable=True, kind="float")
         self._add_group(g)
 
         if frame.section:
             sec = frame.section
             g = CollapsibleGroup(f"Kesit: {sec.name}")
-            g.add_field("Ad", sec.name, field_name="section_name",
-                        element=frame, editable=True, kind="str")
-            g.add_field("Tip", str(sec.profile_type))
+            g.add_field("Ad", sec.name)
+            g.add_field("Tip", str(getattr(sec, 'profile_type', '-')))
 
-            if sec.profile_params:
+            if getattr(sec, 'profile_params', None):
                 important = ['h', 'b', 'tw', 'tf', 't', 'ro', 'ri', 'n']
                 for key in important:
                     if key in sec.profile_params:
-                        g.add_field(
-                            key,
-                            self._fmt(sec.profile_params[key]),
-                            field_name=f"section.profile_params.{key}",
-                            element=frame, editable=True, kind="float",
-                        )
-                for key in ['Area', 'J', 'I33', 'I22']:
-                    if key in sec.profile_params:
-                        g.add_field(
-                            key,
-                            self._fmt(sec.profile_params[key]),
-                            field_name=f"section.profile_params.{key}",
-                            element=frame, editable=True, kind="float",
-                        )
-            self._add_group(g)
-            g.toggle()
-
-        if frame.section and frame.section.material:
-            mat = frame.section.material
-            g = CollapsibleGroup(f"Materyal: {mat.name}")
-            g.add_field("Ad", mat.name)
-            g.add_field("Tip", mat.mat_type.name)
-            g.add_field("E1", self._fmt(mat.E1),
-                        field_name="section.material.E1",
-                        element=frame, editable=True, kind="float")
-            g.add_field("E2", self._fmt(mat.E2),
-                        field_name="section.material.E2",
-                        element=frame, editable=True, kind="float")
-            g.add_field("G12", self._fmt(mat.G12),
-                        field_name="section.material.G12",
-                        element=frame, editable=True, kind="float")
-            g.add_field("ν12", f"{mat.nu12:.3f}",
-                        field_name="section.material.nu12",
-                        element=frame, editable=True, kind="float")
-            g.add_field("Yoğunluk", f"{mat.density:.2f}",
-                        field_name="section.material.density",
-                        element=frame, editable=True, kind="float")
+                        g.add_field(key, self._fmt(sec.profile_params[key]))
             self._add_group(g)
             g.toggle()
 
@@ -560,18 +487,11 @@ class PropertiesPanel(BoxLayout):
             return f"{val:.4f}" if isinstance(val, float) else str(val)
         return str(val)
 
-    # --------------------------------------------------------
-    # LINK
-    # --------------------------------------------------------
-
+    # ---------- LINK ----------
     def _build_link_content(self, link):
         g = CollapsibleGroup("Geometri")
-        g.add_field("Node I", link.node_i.label,
-                    field_name="node_i_id", element=link,
-                    editable=True, kind="str")
-        g.add_field("Node J", link.node_j.label,
-                    field_name="node_j_id", element=link,
-                    editable=True, kind="str")
+        g.add_field("Node I", link.node_i.label)
+        g.add_field("Node J", link.node_j.label)
         self._add_group(g)
 
         g = CollapsibleGroup("Property")
@@ -580,13 +500,10 @@ class PropertiesPanel(BoxLayout):
                     editable=True, kind="str")
         self._add_group(g)
 
-    # --------------------------------------------------------
-    # AREA
-    # --------------------------------------------------------
-
+    # ---------- AREA ----------
     def _build_area_content(self, area):
         g = CollapsibleGroup("Geometri")
-        g.add_field("Kalınlık", f"{area.thickness:.2f} mm",
+        g.add_field("Kalınlık", f"{area.thickness:.2f}",
                     field_name="thickness", element=area,
                     editable=True, kind="float")
         g.add_field("Köşe sayısı", len(area.nodes))
@@ -598,85 +515,329 @@ class PropertiesPanel(BoxLayout):
                         f"{n.label}  ({n.x:.1f}, {n.y:.1f}, {n.z:.1f})")
         self._add_group(g)
 
-    # --------------------------------------------------------
-    # POLYGON
-    # --------------------------------------------------------
-
+    # ---------- POLYGON ----------
     def _build_polygon_content(self, polygon):
-        # 1. Genel / Tip Grubu
-        g_gen = CollapsibleGroup("Poligon Bilgileri")
-        
-        # Poligon Tipini Göster ve Düzenlenebilir Yap
-        current_type_name = polygon.poly_type.name if hasattr(polygon.poly_type, 'name') else str(polygon.poly_type)
-        g_gen.add_field(
-            "Poligon Tipi",
-            current_type_name,
-            field_name="poly_type",
-            element=polygon,
-            editable=True,
-            kind="str"  # GENERIC, SURFACE, ZONE, SECTION_CUT, LOAD_AREA
-        )
-        
-        g_gen.add_field("Köşe sayısı", len(polygon.nodes))
-        self._add_group(g_gen)
+        g = CollapsibleGroup("Poligon Bilgileri")
+        type_name = (polygon.poly_type.name
+                     if hasattr(polygon.poly_type, 'name')
+                     else str(polygon.poly_type))
+        g.add_field("Poligon Tipi", type_name,
+                    field_name="poly_type", element=polygon,
+                    editable=True, kind="str")
+        g.add_field("Köşe sayısı", len(polygon.nodes))
+        self._add_group(g)
 
-        # 2. Rüzgar Alanı (windplane) Verileri Varsa Ekle
         if getattr(polygon, "windplane", None):
             wp = polygon.windplane
-            g_wind = CollapsibleGroup("Rüzgar Bölgesi (TS EN 1991-1-4)")
-            
-            g_wind.add_field("Zone Etiketi", wp.get("label", "-"))
-            g_wind.add_field("Yüzey", wp.get("surface", "-"))
-            g_wind.add_field("Tablo Tipi", wp.get("table_type", "-"))
-            
-            def format_cpe(val):
+            g = CollapsibleGroup("Rüzgar Bölgesi")
+            g.add_field("Zone Etiketi", wp.get("label", "-"))
+            g.add_field("Yüzey", wp.get("surface", "-"))
+            g.add_field("Tablo Tipi", wp.get("table_type", "-"))
+
+            def fmt_cpe(val):
                 if val is None:
                     return "-"
                 if isinstance(val, (tuple, list, np.ndarray)):
-                    formatted = [f"{v:.3f}" if isinstance(v, (int, float)) else str(v) for v in val]
-                    return f"[{', '.join(formatted)}]"
+                    return "[" + ", ".join(
+                        f"{v:.3f}" if isinstance(v, (int, float)) else str(v)
+                        for v in val) + "]"
                 if isinstance(val, (int, float)):
                     return f"{val:.3f}"
                 return str(val)
 
-            if "cpe10" in wp and wp["cpe10"] is not None:
-                g_wind.add_field("Cpe,10", format_cpe(wp["cpe10"]))
-            if "cpe1" in wp and wp["cpe1"] is not None:
-                g_wind.add_field("Cpe,1", format_cpe(wp["cpe1"]))
+            if wp.get("cpe10") is not None:
+                g.add_field("Cpe,10", fmt_cpe(wp["cpe10"]))
+            if wp.get("cpe1") is not None:
+                g.add_field("Cpe,1", fmt_cpe(wp["cpe1"]))
             if "pitch" in wp:
-                g_wind.add_field("Eğim (°)", f"{wp['pitch']:.1f}")
-                
-            self._add_group(g_wind)
+                g.add_field("Eğim (°)", f"{wp['pitch']:.1f}")
+            self._add_group(g)
 
-        # 3. Köşe Listesi
-        g_nodes = CollapsibleGroup("Köşeler (salt okunur)")
+        g = CollapsibleGroup("Köşeler (salt okunur)")
         for i, n in enumerate(polygon.nodes):
-            g_nodes.add_field(f"Köşe {i+1}", f"{n.label} ({n.x:.1f}, {n.y:.1f}, {n.z:.1f})")
-        self._add_group(g_nodes)
-        g_nodes.toggle()  # Başlangıçta kapalı tut
+            g.add_field(f"Köşe {i+1}",
+                        f"{n.label} ({n.x:.1f}, {n.y:.1f}, {n.z:.1f})")
+        self._add_group(g)
+        g.toggle()
 
     # ========================================================
-    # SHOW / HIDE
+    # ÇOKLU SEÇİM — MULTI EDIT
     # ========================================================
 
-    def show_element(self, element):
-        if element is None:
-            return
-        self._current_element = element
+    def show_selection_summary(self, elements):
+        """Seçili elemanlar için ortak + tip-bazlı edit alanları."""
+        self._current_element = None
         self._pending_new_type = None
-        self.title_label.text = (
-            f"{element.element_type}: {getattr(element, 'label', '?')}"
-        )
-        self._build_element_content(element)
+        self._selection_elements = list(elements)
+        self._type_filter = "Tümü"
+
+        self._rebuild_selection_ui()
         self.show()
 
+    def _rebuild_selection_ui(self):
+        elements = self._selection_elements or []
+        self.content_box.clear_widgets()
+        self._groups.clear()
+
+        if not elements:
+            return
+
+        # Başlık + tip filtresi
+        self._build_selection_header(elements)
+
+        # Ortak alanlar
+        self._build_common_fields(elements)
+
+        # Tip dağılımı + tipe özel alanlar
+        types = Counter(getattr(e, 'element_type', '?') for e in elements)
+        filter_type = self._type_filter
+
+        if filter_type != "Tümü":
+            filtered = [e for e in elements
+                        if getattr(e, 'element_type', None) == filter_type]
+            self._build_type_specific_fields(filtered, filter_type)
+        elif len(types) == 1:
+            only = next(iter(types))
+            self._build_type_specific_fields(elements, only)
+        else:
+            g = CollapsibleGroup("Tip Dağılımı")
+            for et, count in sorted(types.items()):
+                g.add_field(et, count)
+            self._add_group(g)
+
+        self.title_label.text = f"{len(elements)} eleman seçili"
+
+    def _build_selection_header(self, elements):
+        header = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None, height=dp(30),
+            spacing=dp(6),
+        )
+
+        total_lbl = Label(
+            text=f"{len(elements)} eleman",
+            size_hint_x=0.5, font_size=dp(12),
+            halign='left', valign='middle',
+        )
+        total_lbl.bind(size=total_lbl.setter('text_size'))
+        header.add_widget(total_lbl)
+
+        types = sorted(set(getattr(e, 'element_type', '?') for e in elements))
+        values = ["Tümü"] + types
+
+        spinner = Spinner(
+            text=self._type_filter,
+            values=values,
+            size_hint_x=0.5,
+            font_size=dp(11),
+        )
+        spinner.bind(text=self._on_type_filter_changed)
+        header.add_widget(spinner)
+
+        self.content_box.add_widget(header)
+
+    def _on_type_filter_changed(self, spinner, text):
+        self._type_filter = text
+        self._rebuild_selection_ui()
+
+    def _build_common_fields(self, elements):
+        g = CollapsibleGroup("Ortak Özellikler")
+
+        # is_visible
+        vis_values = [bool(getattr(e, 'is_visible', True)) for e in elements]
+        vis_display = self._common_or_mixed(
+            vis_values, formatter=lambda v: "Görünür" if v else "Gizli")
+        g.add_field("is_visible", vis_display,
+                    field_name="_bulk.is_visible",
+                    element=None, editable=True, kind="bool")
+
+        # label
+        labels = [str(getattr(e, 'label', "")) for e in elements]
+        g.add_field("label", self._common_or_mixed(labels),
+                    field_name="_bulk.label",
+                    element=None, editable=True, kind="str")
+
+        # color
+        color_strs = []
+        for e in elements:
+            c = getattr(e, 'color', [0.7, 0.7, 0.7])
+            color_strs.append(",".join(f"{float(v):.2f}" for v in c[:3]))
+        g.add_field("color (R,G,B)", self._common_or_mixed(color_strs),
+                    field_name="_bulk.color",
+                    element=None, editable=True, kind="color")
+
+        self._add_group(g)
+
+    def _build_type_specific_fields(self, elements, element_type):
+        if element_type == "Node":
+            self._build_bulk_node_fields(elements)
+        elif element_type == "Frame":
+            self._build_bulk_frame_fields(elements)
+        elif element_type == "Area":
+            self._build_bulk_area_fields(elements)
+        elif element_type == "Polygon":
+            self._build_bulk_polygon_fields(elements)
+        elif element_type == "Link":
+            self._build_bulk_link_fields(elements)
+
+    def _build_bulk_node_fields(self, nodes):
+        g = CollapsibleGroup(f"Node Alanları ({len(nodes)} adet)")
+        for field in ('x', 'y', 'z'):
+            values = [float(getattr(n, field, 0.0)) for n in nodes]
+            display = self._common_or_mixed(values,
+                                            formatter=lambda v: f"{v:.3f}")
+            g.add_field(field, display,
+                        field_name=f"_bulk.{field}",
+                        element=None, editable=True, kind="float")
+        self._add_group(g)
+
+        g2 = CollapsibleGroup("Restraint")
+        for dof in ('ux', 'uy', 'uz', 'rx', 'ry', 'rz'):
+            values = []
+            for n in nodes:
+                if getattr(n, 'restraint', None) is not None:
+                    values.append(bool(getattr(n.restraint, dof, False)))
+                else:
+                    values.append(False)
+            display = self._common_or_mixed(
+                values, formatter=lambda v: "Sabit" if v else "Serbest")
+            g2.add_field(dof.upper(), display,
+                         field_name=f"_bulk.restraint.{dof}",
+                         element=None, editable=True, kind="bool")
+        self._add_group(g2)
+
+    def _build_bulk_frame_fields(self, frames):
+        g = CollapsibleGroup(f"Frame Alanları ({len(frames)} adet)")
+
+        sec_names = []
+        for f in frames:
+            if getattr(f, 'section', None) is not None:
+                sec_names.append(getattr(f.section, 'name', ""))
+            else:
+                sec_names.append("")
+        g.add_field("section_name", self._common_or_mixed(sec_names),
+                    field_name="_bulk.section_name",
+                    element=None, editable=True, kind="str")
+
+        rots = [float(getattr(f, 'rotation_deg', 0.0)) for f in frames]
+        g.add_field("rotation_deg",
+                    self._common_or_mixed(rots, formatter=lambda v: f"{v:.2f}"),
+                    field_name="_bulk.rotation_deg",
+                    element=None, editable=True, kind="float")
+        self._add_group(g)
+
+    def _build_bulk_area_fields(self, areas):
+        g = CollapsibleGroup(f"Area Alanları ({len(areas)} adet)")
+        ths = [float(getattr(a, 'thickness', 0.0)) for a in areas]
+        g.add_field("thickness",
+                    self._common_or_mixed(ths, formatter=lambda v: f"{v:.3f}"),
+                    field_name="_bulk.thickness",
+                    element=None, editable=True, kind="float")
+        self._add_group(g)
+
+    def _build_bulk_link_fields(self, links):
+        g = CollapsibleGroup(f"Link Alanları ({len(links)} adet)")
+        props = [str(getattr(l, 'propname', "")) for l in links]
+        g.add_field("propname", self._common_or_mixed(props),
+                    field_name="_bulk.propname",
+                    element=None, editable=True, kind="str")
+        self._add_group(g)
+
+    def _build_bulk_polygon_fields(self, polys):
+        g = CollapsibleGroup(f"Polygon Alanları ({len(polys)} adet)")
+        types_str = []
+        for p in polys:
+            t = getattr(p, 'poly_type', None)
+            types_str.append(t.name if hasattr(t, 'name') else str(t))
+        g.add_field("poly_type", self._common_or_mixed(types_str),
+                    field_name="_bulk.poly_type",
+                    element=None, editable=True, kind="str")
+        self._add_group(g)
+
+    def _common_or_mixed(self, values, formatter=None):
+        """Hepsi aynı → o değer; farklı → [KARIŞIK]."""
+        if not values:
+            return "[BOŞ]"
+        first = values[0]
+        try:
+            same = all(v == first for v in values[1:])
+        except Exception:
+            same = False
+        if same:
+            return formatter(first) if formatter else str(first)
+        return "[KARIŞIK]"
+
+    # ---------- BULK APPLY ----------
+    def _apply_bulk(self):
+        if self.controller is None:
+            self._flash("Controller yok", ok=False)
+            return
+
+        elements = list(self._selection_elements or [])
+        if self._type_filter != "Tümü":
+            elements = [e for e in elements
+                        if getattr(e, 'element_type', None) == self._type_filter]
+
+        if not elements:
+            self._flash("Filtreye uyan eleman yok", ok=False)
+            return
+
+        # Değişiklikleri topla
+        changes = {}
+        for group in self._groups:
+            for ti in group.fields:
+                fname = getattr(ti, '_field_name', None)
+                if not fname or not fname.startswith("_bulk."):
+                    continue
+                text = (ti.text or "").strip()
+                if text in ("", "[KARIŞIK]", "[BOŞ]"):
+                    continue
+                field = fname[len("_bulk."):]
+                try:
+                    changes[field] = self._parse_bulk_value(text, ti._kind, field)
+                except Exception as e:
+                    self._flash(f"Hatalı değer ({field}): {e}", ok=False)
+                    return
+
+        if not changes:
+            self._flash("Değişiklik yok", ok=False)
+            return
+
+        result = self.controller.bulk_update(elements, changes)
+        if result is None:
+            self._flash("Bulk update başarısız", ok=False)
+            return
+        if hasattr(result, 'ok') and not result.ok:
+            self._flash(result.message, ok=False)
+            return
+        self._flash(f"{len(elements)} eleman güncellendi", ok=True)
+
+        # Yeniden çiz
+        self._rebuild_selection_ui()
+
+    def _parse_bulk_value(self, text, kind, field):
+        text = text.strip()
+        if field == "color":
+            parts = [p.strip() for p in text.split(",")]
+            if len(parts) != 3:
+                raise ValueError("renk 'R,G,B' olmalı")
+            return [float(p) for p in parts]
+        if kind == "float":
+            return float(text.replace(",", "."))
+        if kind == "int":
+            return int(float(text))
+        if kind == "bool":
+            return text.lower() in (
+                "1", "true", "evet", "yes", "sabit", "görünür", "visible")
+        return text
+
+    # ========================================================
+    # YENİ ELEMAN
+    # ========================================================
+
     def show_new_element(self, element_type, defaults=None, repeat=False):
-        """
-        Boş bir form açar.
-        repeat=True → Apply'dan sonra form açık kalır, sonraki Apply
-                    yine create çağırır (ardışık ekleme).
-        """
         self._current_element = None
+        self._selection_elements = None
         self._pending_new_type = element_type
         self._pending_new_repeat = repeat
         self.title_label.text = (
@@ -695,27 +856,28 @@ class PropertiesPanel(BoxLayout):
         self.show()
 
     def _infer_kind(self, v):
-        if isinstance(v, bool):  return "bool"
-        if isinstance(v, int):   return "int"
-        if isinstance(v, float): return "float"
+        if isinstance(v, bool):
+            return "bool"
+        if isinstance(v, int):
+            return "int"
+        if isinstance(v, float):
+            return "float"
         return "str"
 
-    def show_selection_summary(self, elements):
-        self._current_element = None
+    # ========================================================
+    # SHOW / HIDE
+    # ========================================================
+
+    def show_element(self, element):
+        if element is None:
+            return
+        self._current_element = element
+        self._selection_elements = None
         self._pending_new_type = None
-        self.title_label.text = f"{len(elements)} eleman seçili"
-
-        self.content_box.clear_widgets()
-        self._groups.clear()
-
-        g = CollapsibleGroup("Özet")
-        g.add_field("Toplam", len(elements))
-
-        from collections import Counter
-        types = Counter(getattr(e, 'element_type', '?') for e in elements)
-        for et, count in types.items():
-            g.add_field(et, count)
-        self._add_group(g)
+        self.title_label.text = (
+            f"{element.element_type}: {getattr(element, 'label', '?')}"
+        )
+        self._build_element_content(element)
         self.show()
 
     def hide(self):
@@ -724,10 +886,11 @@ class PropertiesPanel(BoxLayout):
         self._current_element = None
         self._pending_new_type = None
         self._pending_new_repeat = False
+        self._selection_elements = None
         self._hidden = True
 
     def show(self):
-        self.opacity = 1.0            # <-- 0.5 DEĞİL
+        self.opacity = 1.0
         self.disabled = False
         self._hidden = False
 

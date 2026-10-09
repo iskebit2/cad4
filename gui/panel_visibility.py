@@ -12,8 +12,6 @@ from kivy.clock import Clock
 from gui.basecustompopup import BaseCustomPopup, FONT_DEFAULT
 from domain.element import PolygonType
 
-from debug_lines import debug_layout
-
 class VisibilityPanelContent(BoxLayout):
     def __init__(self, scene, on_visibility_changed=None, **kwargs):
         super().__init__(orientation="vertical", spacing=dp(8), padding=dp(8), **kwargs)
@@ -130,8 +128,6 @@ class VisibilityPanelContent(BoxLayout):
 
         # İlk dolum
         Clock.schedule_once(lambda dt: self._populate_element_list(), 0.05)
-
-        debug_layout(self)
 
     def _update_btn_style(self, btn):
         if btn.state == "down":
