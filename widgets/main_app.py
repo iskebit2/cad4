@@ -15,10 +15,10 @@ from gui.basecustompopup import FONT_DEFAULT
 from gui.prop_panel import PropertiesPanel
 from domain.scene import Scene
 
-from app.toolbar import build_toolbar
-from app.file_actions import FileActions
+from widgets.toolbar import build_toolbar
+from widgets.file_actions import FileActions
 from app.panels_controller import PanelsController
-from app.scene_controller import SceneController
+from widgets.scene_controller import SceneController
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
@@ -76,6 +76,7 @@ class MainApp(App):
             "import_sap":  self.scenes.import_from_sap,
             "visibility":  self.panels.show_visibility,
             "wind":        self.panels.show_wind_config,
+            "print":       self.print_selected_elements,
         }
         toolbar, self.lbl_info, self.btn_draw_mode = build_toolbar(callbacks)
         root.add_widget(toolbar)
@@ -193,3 +194,85 @@ class MainApp(App):
             size_hint=(0.7, 0.4),
         )
         popup.open()
+
+    def print_selected_elements(self, *_):
+        """Seçili elemanları analiz edip konsola ve yapıya yazar."""
+        eng = self.engine
+        if not eng:
+            self._show_error("Yazdırma için motor bulunamadı.")
+            return
+
+        # Seçilen elemanları SelectionManager üzerinden alıyoruz
+        selected_elements = eng.sel_mgr.get_selected() if hasattr(eng, "sel_mgr") else []
+        if not selected_elements:
+            logger.info("Seçili eleman bulunamadı.")
+            return
+
+        temp_dict = {}
+        for elem in selected_elements:
+            # element_type güvenli şekilde alınıyor
+            elem_type = getattr(elem, "element_type", elem.__class__.__name__).lower()
+            print(f"Seçili eleman ID: {getattr(elem, 'unique_id', id(elem))}, element_type: {elem_type}")
+            
+            if elem_type not in temp_dict:
+                temp_dict[elem_type] = []
+            temp_dict[elem_type].append(elem)
+
+        # Dictionary mapping
+        selected_dict = {
+            "nodes": [n.to_dict() for n in temp_dict.get("node", []) if hasattr(n, "to_dict")],
+            "frames": [f.to_dict() for f in temp_dict.get("frame", []) if hasattr(f, "to_dict")],
+            "areas": [a.to_dict() for a in temp_dict.get("area", []) if hasattr(a, "to_dict")],
+            "links": [l.to_dict() for l in temp_dict.get("link", []) if hasattr(l, "to_dict")],
+            "polygons": [p.to_dict() for p in temp_dict.get("polygon", []) if hasattr(p, "to_dict")]
+        }
+
+        
+        for frame in temp_dict.get("frame", []):
+            # Frame nesnesinin node_i ve node_j bağlantıları üzerinden ilerleyelim
+            frame_id = getattr(frame, "unique_id", id(frame))
+            node_i = getattr(frame, "node_i", None)
+            node_j = getattr(frame, "node_j", None)
+            
+            print(f"{frame_id}: [{node_i.coords if hasattr(node_i, 'coords') else str(node_i)}, {node_j.coords if hasattr(node_j, 'coords') else str(node_j)}]")
+            
+            
+            
+            
+
+        temp_zones={}
+        for poly in temp_dict.get("polygon", []):
+            poly_id = getattr(poly, "unique_id", id(poly))
+            node_in_polygons = []
+            for node in getattr(poly, "nodes", []):
+                node_in_polygons.append(node.coords if hasattr(node, "coords") else str(node))
+            
+            aa=poly.windplane if hasattr(poly, 'windplane') else {}
+            cpe10=aa.get("cpe10",[])
+            temp_zones[poly_id] = {"coords":node_in_polygons,"cpe10": cpe10}
+
+            
+            # print(f"Polygon windplane: {poly.windplane if hasattr(poly, 'windplane') else 'N/A'}")
+        print("temp_zones:", temp_zones)
+        # print(f"\nSeçili frameler: {selected_dict['frames']}")
+        # print(f"\nNode'lar framelerde: {node_in_frames}")
+        # print(f"\nSeçili polygonler: {selected_dict['polygons']}")
+        # print(f"\nNode'lar polygonlerde: {node_in_polygons}")
+        
+        # if not selected:
+        #     self._show_error("Yazdırılacak seçili eleman yok.")
+        #     return
+        # # Seçili elemanları yazdırmak için bir popup aç
+        # text = "\n".join(str(e) for e in selected)
+        # lbl = Label(
+        #     text=text, font_name=FONT_DEFAULT, font_size=dp(12),
+        #     color=(0.9, 0.9, 0.9, 1),
+        #     halign="left", valign="top",
+        # )
+        # lbl.bind(size=lbl.setter("text_size"))
+        # popup = Popup(
+        #     title_text="Seçili Elemanlar",
+        #     content_widget=lbl,
+        #     size_hint=(0.8, 0.6),
+        # )
+        # popup.open()

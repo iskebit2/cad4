@@ -193,7 +193,7 @@ class GridSystem:
         # ---- GPU'ya yükle ----
         self._upload(vertices)
 
-        logger.debug(f"size={size:.1f}, divisions={divisions}, vertices={self.vertex_count}")
+        #logger.debug(f"size={size:.1f}, divisions={divisions}, vertices={self.vertex_count}")
 
     @staticmethod
     def _line_color(coord: float, step: float, major_spacing: float) -> tuple:

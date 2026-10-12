@@ -207,10 +207,10 @@ def map_sap_to_local_params(sap_row: pd.Series) -> Tuple[SectionType, Dict[str, 
             }
         else:
             # Default to rectangle
-            # logger.debug(f"Warning: Unknown section type '{s_type}', using default rectangle")
+            # #logger.debug(f"Warning: Unknown section type '{s_type}', using default rectangle")
             return SectionType.RECT, {"h": 200.0, "b": 100.0}
     except (ValueError, KeyError) as e:
-        # logger.debug(f"Error mapping section parameters for type '{s_type}': {e}")
+        # #logger.debug(f"Error mapping section parameters for type '{s_type}': {e}")
         return SectionType.RECT, {"h": 200.0, "b": 100.0}
 
 class S2KParser:
@@ -229,10 +229,10 @@ class S2KParser:
             with open(self.file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
         except FileNotFoundError:
-            # logger.debug(f"Error: File '{self.file_path}' not found")
+            # #logger.debug(f"Error: File '{self.file_path}' not found")
             return
         except Exception as e:
-            # logger.debug(f"Error reading file: {e}")
+            # #logger.debug(f"Error reading file: {e}")
             return
         
         # Handle continuation lines
@@ -288,7 +288,7 @@ class S2KParser:
         df_a = self.get_table("FRAME SECTION ASSIGNMENTS")
 
         if df_j.empty or df_f.empty:
-            # logger.debug("Hata: Temel tablolar (Joint veya Frame) bulunamadı!")
+            # #logger.debug("Hata: Temel tablolar (Joint veya Frame) bulunamadı!")
             return
 
         # 2. Önce Noktaları (Joints) oluştur
@@ -342,6 +342,6 @@ class S2KParser:
             }
             
 
-        # logger.debug(f"Model başarıyla inşa edildi: {len(self.solids)} adet Frame elemanı oluşturuldu.")
+        # #logger.debug(f"Model başarıyla inşa edildi: {len(self.solids)} adet Frame elemanı oluşturuldu.")
 
     

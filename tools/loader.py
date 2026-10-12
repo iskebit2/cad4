@@ -23,9 +23,9 @@ class ModelLoader:
             
             if batch_data and individual_data:
                 self.load_model(batch_data, individual_data)
-                # logger.debug("Model loaded successfully.")
-            else:
-                logger.debug("No data loaded.")
+                # #logger.debug("Model loaded successfully.")
+            # else:
+                #logger.debug("No data loaded.")
                 
         except Exception as e:
             logger.debug(f"Import error: {e}")
@@ -55,7 +55,7 @@ class ModelLoader:
         # 5. Kamerayı ayarla
         self._focus_on_model(center, size_vec)
         
-        # logger.debug(f"Model yüklendi - Merkez: {center}, Boyut: {size_vec}")
+        # #logger.debug(f"Model yüklendi - Merkez: {center}, Boyut: {size_vec}")
     
     def _focus_on_model(self, center, size_vec):
         """Kamerayı modele odakla"""

@@ -161,6 +161,8 @@ class KivyCADWidget(Widget):
                     w, h,
                     active=(snap_node is not None),
                 )
+            if self.engine.active_smart_plane_mode:
+                self.engine.smart_analyzer.render()
         finally:
             glDisable(GL_SCISSOR_TEST)
             glViewport(0, 0, int(win_w), int(win_h))
@@ -214,7 +216,7 @@ class KivyCADWidget(Widget):
         if self.panels.is_any_open():
             if self.panels.collide(touch.pos):
                 return super().on_touch_move(touch)
-            return False
+            return False        
         return self.router.on_touch_move(touch)
 
     def on_touch_up(self, touch):

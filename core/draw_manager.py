@@ -117,7 +117,7 @@ class DrawManager:
             return False
         
         node = self._find_node_at(x, y)
-        logger.debug(f"[CLICK] tıklama ({x}, {y}) → node={node}")
+        #logger.debug(f"[CLICK] tıklama ({x}, {y}) → node={node}")
         if node:
             logger.debug(f"[CLICK] node label={node.label}, coords=({node.x},{node.y},{node.z})")
         else:
@@ -137,7 +137,7 @@ class DrawManager:
             return True
         
         self.points.append(node)
-        logger.debug(f"[Draw] Nokta eklendi: {node.label} ({len(self.points)} toplam)")
+        #logger.debug(f"[Draw] Nokta eklendi: {node.label} ({len(self.points)} toplam)")
         return True
 
     def _debug_nearest_nodes(self, x, y, count=5):
@@ -169,9 +169,9 @@ class DrawManager:
             distances.append((dist_sq ** 0.5, node.label, px, py))
         
         distances.sort()
-        logger.debug(f"[CLICK] En yakın {count} node:")
-        for d, label, px, py in distances[:count]:
-            logger.debug(f"  {label}: {d:.1f}px mesafe, ekran=({px:.0f},{py:.0f})")
+        #logger.debug(f"[CLICK] En yakın {count} node:")
+        # for d, label, px, py in distances[:count]:
+            #logger.debug(f"  {label}: {d:.1f}px mesafe, ekran=({px:.0f},{py:.0f})")
             
     # =========================================================
     # YARDIMCI — NODE BULMA

@@ -97,7 +97,7 @@ class AutoCADConnector:
             d_type = array.array('i', [1001, 1000])
             d_val = [app_name, str(tag_value)]
             obj.SetXData(d_type, d_val)
-            logger.debug(f"Tag atandı: {tag_value}")
+            #logger.debug(f"Tag atandı: {tag_value}")
         except Exception as e:
             logger.warning(f"Tag atanamadı: {e}")
 

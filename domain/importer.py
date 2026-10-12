@@ -625,7 +625,7 @@ def _import_frame_loads(
 
     except Exception:
         # Bazı SAP modellerinde bu API çağrısı desteklenmeyebilir.
-        logger.debug(
+        #logger.debug(
             "No frame temperature loads: %s",
             name,
             exc_info=True,
@@ -646,7 +646,7 @@ def _import_frame_loads(
             )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "Frame load-transfer import failed: %s",
             name,
             exc_info=True,
@@ -788,7 +788,7 @@ def _import_area_loads(
                 )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "No area gravity loads: %s",
             name,
             exc_info=True,
@@ -840,7 +840,7 @@ def _import_area_loads(
                 )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "No area uniform loads: %s",
             name,
             exc_info=True,
@@ -902,7 +902,7 @@ def _import_area_loads(
                 )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "No area uniform-to-frame loads: %s",
             name,
             exc_info=True,
@@ -958,7 +958,7 @@ def _import_area_loads(
                 )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "No area wind-pressure loads: %s",
             name,
             exc_info=True,
@@ -997,7 +997,7 @@ def _import_area_loads(
                 )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "No area surface-pressure loads: %s",
             name,
             exc_info=True,
@@ -1034,7 +1034,7 @@ def _import_area_loads(
                 )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "No area temperature loads: %s",
             name,
             exc_info=True,
@@ -1071,7 +1071,7 @@ def _import_area_loads(
                 )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "No area strain loads: %s",
             name,
             exc_info=True,
@@ -1096,7 +1096,7 @@ def _import_area_loads(
             )
 
     except Exception:
-        logger.debug(
+        #logger.debug(
             "No area reference temperature: %s",
             name,
             exc_info=True,

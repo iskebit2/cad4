@@ -80,10 +80,10 @@ class Camera:
         # Mesafeyi model boyutuna göre ayarla
         self.distance = self.model_size * 2.0
         
-        logger.debug(f"Model bounds güncellendi:")
-        logger.debug(f"  Center: ({center[0]:.2f}, {center[1]:.2f}, {center[2]:.2f})")
-        logger.debug(f"  Size: {size:.2f}")
-        logger.debug(f"  Distance: {self.distance:.2f}")
+        # logger.debug(f"Model bounds güncellendi:")
+        # logger.debug(f"  Center: ({center[0]:.2f}, {center[1]:.2f}, {center[2]:.2f})")
+        # logger.debug(f"  Size: {size:.2f}")
+        # logger.debug(f"  Distance: {self.distance:.2f}")
         
         self._update_position()
     
@@ -232,7 +232,7 @@ class Camera:
         """Model'e odaklan"""
         self.distance = self.model_size * 2.0
         self._update_position()
-        logger.debug(f"Focus: distance={self.distance:.2f}")
+        #logger.debug(f"Focus: distance={self.distance:.2f}")
     
     def reset(self):
         """Kamerayı varsayılan konuma getir"""
@@ -242,7 +242,7 @@ class Camera:
         self.yaw = -45.0
         self.view_mode = "PERSPECTIVE"
         self._update_position()
-        logger.debug("Reset")
+        #logger.debug("Reset")
     
     # ----------------------------------------------------------------------
     # PROJEKSİYON MODU
@@ -252,7 +252,7 @@ class Camera:
         """Perspektif/Ortho arasında geçiş yap"""
         self.view_mode = "ORTHO" if self.view_mode == "PERSPECTIVE" else "PERSPECTIVE"
         self._projection_matrix = None
-        logger.debug(f"Mode: {self.view_mode}")
+        #logger.debug(f"Mode: {self.view_mode}")
     
     def set_aspect(self, width: int, height: int):
         """En-boy oranını güncelle"""
@@ -265,15 +265,15 @@ class Camera:
     
     def print_info(self):
         """Kamera bilgilerini yazdır"""
-        logger.debug(f"\n=== CAMERA INFO ===")
-        logger.debug(f"Target: ({self.target.x:.2f}, {self.target.y:.2f}, {self.target.z:.2f})")
-        logger.debug(f"Position: ({self.position.x:.2f}, {self.position.y:.2f}, {self.position.z:.2f})")
-        logger.debug(f"Distance: {self.distance:.2f}")
-        logger.debug(f"Pitch: {self.pitch:.1f}°, Yaw: {self.yaw:.1f}°")
-        logger.debug(f"Mode: {self.view_mode}")
-        logger.debug(f"Model size: {self.model_size:.2f}")
-        logger.debug(f"Sensitivities - Orbit: {self.orbit_sensitivity:.4f}, Pan: {self.pan_sensitivity:.4f}, Zoom: {self.zoom_sensitivity:.4f}")
-        logger.debug(f"Clipping - Near: {self.near:.2f}, Far: {self.far:.2f}")
+        #logger.debug(f"\n=== CAMERA INFO ===")
+        #logger.debug(f"Target: ({self.target.x:.2f}, {self.target.y:.2f}, {self.target.z:.2f})")
+        #logger.debug(f"Position: ({self.position.x:.2f}, {self.position.y:.2f}, {self.position.z:.2f})")
+        #logger.debug(f"Distance: {self.distance:.2f}")
+        #logger.debug(f"Pitch: {self.pitch:.1f}°, Yaw: {self.yaw:.1f}°")
+        #logger.debug(f"Mode: {self.view_mode}")
+        #logger.debug(f"Model size: {self.model_size:.2f}")
+        #logger.debug(f"Sensitivities - Orbit: {self.orbit_sensitivity:.4f}, Pan: {self.pan_sensitivity:.4f}, Zoom: {self.zoom_sensitivity:.4f}")
+        #logger.debug(f"Clipping - Near: {self.near:.2f}, Far: {self.far:.2f}")
 
     # ----------------------------------------------------------------------
     # PLAN & VIEW FILTER

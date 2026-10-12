@@ -76,6 +76,8 @@ class PureKivyEngine:
         self.sel_policy = None
         self.grid = None
 
+        self.active_smart_plane_mode = False
+
         # Callback'ler (KivyCADWidget bağlar)
         self.on_hover_changed_callback = None
 
@@ -123,7 +125,13 @@ class PureKivyEngine:
         self.sel_policy = SelectionPolicy(self.input)
         self.grid = GridSystem(self.grid_s)
         self.snap = SnapSquareRenderer()
-
+        from tools.smart_plane_analysis import SmartPlaneAnalyzer
+        
+        self.smart_analyzer = SmartPlaneAnalyzer(
+                scene_controller=None,               # şimdilik None
+                scene_provider=lambda: self.scene, # ama erişim anında engine.scene
+            )
+        
         self.renderer = SceneRenderer(
             pick_s=self.pick_s,
             standard_s=self.standard_s,
@@ -197,23 +205,29 @@ class PureKivyEngine:
     # ------------------------------------------------------------------
     def start_hover_pick(self, x, y):
         if not self.renderer or not self.renderer.pick_pass:
+            #logger.debug(f"[PICK] renderer/pick_pass yok")
             return
+        
         now = time.time()
         if (now - self.last_hover_time) < self.hover_throttle:
             return
         if x == self.last_hover_x and y == self.last_hover_y:
             return
+        
         if self.renderer.pick_async(x, y):
             self.last_hover_x = x
             self.last_hover_y = y
             self.last_hover_time = now
             self.pending_pick_check = True
+        # else:
+            #logger.debug(f"[PICK] pick_async False döndü")
 
     def check_pick_result(self):
         if not self.pending_pick_check:
             return False
         try:
             pick_id, _, _ = self.renderer.check_pick()
+            #logger.debug(f"[PICK] check_pick → {pick_id}")
             if pick_id is not None:
                 self.pending_pick_check = False
                 self._update_hover(pick_id)
@@ -226,10 +240,14 @@ class PureKivyEngine:
         return False
 
     def handle_pick_from_hover(self, ctrl=False):
+        #logger.debug(f"[HOOK] hover_id={self.hover_id} ctrl={ctrl}")
         if self.hover_id > 0 and self.renderer and self.renderer.pick_pass:
             element = self.renderer.get_element_from_id(self.hover_id)
+            #logger.debug(f"[HOOK] element={type(element).__name__ if element else None}")
             if element:
                 self.sel_mgr.select(element, additive=ctrl)
+        # else:
+            #logger.debug(f"[HOOK] hover_id=0 → işlem yok")
 
     def update_world_pos(self, x, y):
         if not self.cam or not self.input:

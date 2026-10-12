@@ -182,7 +182,7 @@ def _parse_frame_assign(df: pd.DataFrame, ctx: LoadContext = None) -> Dict[str, 
                 mid_idx = len(members) // 2
                 original = sect
                 sect = members[mid_idx]
-                logger.debug(f"Frame {frame_id}: '{original}' → '{sect}' (liste ortası)")
+                #logger.debug(f"Frame {frame_id}: '{original}' → '{sect}' (liste ortası)")
         
         try:
             rotation = float(row.get('Angle', 0.0))

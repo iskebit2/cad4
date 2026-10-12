@@ -172,7 +172,7 @@ class BaseRenderer(ABC, Generic[T]):
         dirty = [e for e in self.elements if e.needs_update]
         if not dirty:
             return
-        # # logger.debug(f"{self.__class__.__name__}: {len(dirty)} dirty element - sadece renkler güncelleniyor")
+        # # #logger.debug(f"{self.__class__.__name__}: {len(dirty)} dirty element - sadece renkler güncelleniyor")
         
         # Ortak renk fonksiyonu — SceneRenderer._get_final_color ile aynı mantık
         self._refresh_colors()
@@ -246,11 +246,11 @@ class BaseRenderer(ABC, Generic[T]):
         Ana geometri + line geometri + simple geometri tek geçişte hazırlanır.
         """
         
-        logger.debug("FrameRenderer.update: %d element geldi", len(raw))
+        #logger.debug("FrameRenderer.update: %d element geldi", len(raw))
         
         self.elements = [e for e in raw if e.is_visible]
-        logger.debug(f"    → {len(self.elements)} görünür element")
-        logger.debug("→ %d görünür element",len(self.elements))
+        #logger.debug(f"    → {len(self.elements)} görünür element")
+        #logger.debug("→ %d görünür element",len(self.elements))
 
         self.elem_to_idx.clear()
         self.elem_to_vcount.clear()
@@ -374,12 +374,12 @@ class BaseRenderer(ABC, Generic[T]):
 
             self._upload_simple(sv_all, sc_all, sid_all)
 
-            logger.debug(
-                "%s: simple_vcount=%s, draw_mode=%s",
-                self.__class__.__name__,
-                self.simple_vcount,
-                self.simple_draw_mode,
-            )
+            # logger.debug(
+            #     "%s: simple_vcount=%s, draw_mode=%s",
+            #     self.__class__.__name__,
+            #     self.simple_vcount,
+            #     self.simple_draw_mode,
+            # )
         else:
             self._cleanup_simple()
 

@@ -5,6 +5,7 @@ KivyCADWidget'ı sadece glue olarak bırakır.
 """
 
 import time
+import numpy as np
 from kivy.core.window import Window
 from core.input_manager import (
     MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE,
@@ -26,7 +27,10 @@ class EventRouter:
 
         if eng and eng.input:
             eng.input.update_modifiers(modifiers)
-
+        if eng and eng.active_smart_plane_mode:
+            if eng.smart_analyzer.handle_key_press(key):
+                return True
+            
         # --- Kısayol tablosu ---
         # Format: key: (handler, pass_engine_arg)
         if key == 27:                      # ESC
@@ -51,6 +55,16 @@ class EventRouter:
             return True
         if key == 290:                     # F9 top
             eng.cam.set_view_preset("top")
+            return True
+        if key == 291:                     # F10 right
+            eng.cam.set_view_preset("right")
+            return True
+        if key == 292:                     # F11 smart plane mode toggle
+            eng.active_smart_plane_mode = not eng.active_smart_plane_mode
+            if eng.active_smart_plane_mode:
+                logger.info("Smart Plane Analysis Mode: ON")
+            else:
+                logger.info("Smart Plane Analysis Mode: OFF")
             return True
         if key == 100:                     # D — draw mode toggle
             self._toggle_draw_mode()
@@ -86,9 +100,9 @@ class EventRouter:
     def _on_escape(self):
         w = self.w
         eng = w.engine
-        if w.properties_panel and w.properties_panel.opacity > 0:
-            w.properties_panel.hide()
-            return True
+        # if w.properties_panel and w.properties_panel.opacity > 0:
+        #     w.properties_panel.hide()
+        #     return True
         if eng.draw_mgr.is_active:
             eng.draw_mgr.cancel()
             return True
@@ -122,10 +136,14 @@ class EventRouter:
 
         x = touch.x - w.x
         y = w.height - (touch.y - w.y)
-
+        pos = (x, y)
         touch.grab(w)
         eng.input.update_mouse_position(x, y)
 
+        if eng and eng.active_smart_plane_mode:
+            eng.smart_analyzer.handle_mouse_click(pos)
+            return True
+        
         if touch.button == 'scrollup':
             eng.cam.zoom(-1.0)
             touch.ungrab(w)
@@ -144,13 +162,15 @@ class EventRouter:
             self._on_left_down(x, y)
             return True
         return True
-
+            
     def on_touch_move(self, touch):
         w = self.w
         eng = w.engine
+        
         if touch.grab_current is not w or not eng:
             return False
 
+        
         x = touch.x - w.x
         y = w.height - (touch.y - w.y)
         dx, dy = touch.dx, -touch.dy
@@ -173,6 +193,7 @@ class EventRouter:
         if eng.marquee and eng.marquee.is_active:
             eng.marquee.update_selection(x, y)
             return True
+        
         eng.update_world_pos(x, y)
         eng.start_hover_pick(int(x), int(y))
         return True
@@ -201,13 +222,26 @@ class EventRouter:
     def on_global_mouse_move(self, pos):
         w = self.w
         eng = w.engine
-        if not eng or not w.collide_point(*pos):
-            return
         x = pos[0] - w.x
         y = w.height - (pos[1] - w.y)
+        local_pos = (x, y)
+        
+        if not eng or not w.collide_point(*pos):
+            return
         if eng.draw_mgr.is_active:
             eng.input.update_mouse_position(x, y)
             eng.draw_mgr.on_mouse_move(x, y)
+
+        if eng.active_smart_plane_mode:
+            eng.smart_analyzer.handle_mouse_move(
+                local_pos,
+                np.array(eng.cam.get_view_matrix(), dtype=float),
+                np.array(eng.cam.get_projection_matrix(), dtype=float),
+                (w.width, w.height),
+            )
+            return
+            
+        
 
     # ------------------------------------------------------------------
     # ALT HANDLER'LAR

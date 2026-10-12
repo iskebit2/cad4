@@ -77,7 +77,7 @@ class SceneRenderer:
         self.mrt_id_texture = None
         self.mrt_depth_rbo = None
         self._create_mrt_fbo(w, h)
-        logger.debug(f"[scenerenderer__INIT__] MRT FBO oluşturuldu: {w}x{h}")
+        #logger.debug(f"[scenerenderer__INIT__] MRT FBO oluşturuldu: {w}x{h}")
         # PickPass'e ana FBO'yu bildir
         self.pick_pass.set_main_fbo(self.mrt_fbo)
         # Marquee için buffer'lar
@@ -120,7 +120,7 @@ class SceneRenderer:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
         
         self.marquee_initialized = True
-        # logger.debug("Marquee buffer'ları oluşturuldu")
+        # #logger.debug("Marquee buffer'ları oluşturuldu")
     
     def _create_mrt_fbo(self, w, h):
         """MRT FBO'su oluştur"""
@@ -158,7 +158,7 @@ class SceneRenderer:
                 raise RuntimeError(f"MRT FBO tamamlanamadı: {status}")
             
             glBindFramebuffer(GL_FRAMEBUFFER, 0)
-            logger.debug(f"[scenerenderer_create_mrt_fbo] MRT FBO oluşturuldu: {w}x{h}")
+            #logger.debug(f"[scenerenderer_create_mrt_fbo] MRT FBO oluşturuldu: {w}x{h}")
             
         except Exception as e:
             logger.error(f"MRT FBO oluşturma hatası: {e}")
@@ -233,7 +233,7 @@ class SceneRenderer:
         # MRT FBO'sunu yeniden boyutlandır
         self._cleanup_mrt()
         self._create_mrt_fbo(w, h)
-        logger.debug(f"[resize] çağrıldı... _create_mrt_fbo yeniden oluşturuldu: {w}x{h}")
+        #logger.debug(f"[resize] çağrıldı... _create_mrt_fbo yeniden oluşturuldu: {w}x{h}")
         if self.pick_pass:
             self.pick_pass.set_main_fbo(self.mrt_fbo)
     

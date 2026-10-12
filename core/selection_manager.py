@@ -33,9 +33,9 @@ class SelectionManager:
         
     def _update_geometry_renderers(self, scene):
         """Geometriyi güncelle (eleman ekleme/silme/değiştirme için)"""
-        logger.debug("[SelectionManager] _update_geometry_renderers called")
+        #logger.debug("[SelectionManager] _update_geometry_renderers called")
         if self.r:
-            logger.debug(f"  Calling scene_renderer.update_geo()")
+            #logger.debug(f"  Calling scene_renderer.update_geo()")
             self.r.update_geo(scene)
         else:
             logger.warning("  No scene_renderer available!")
@@ -49,6 +49,7 @@ class SelectionManager:
         self.selected.clear()
     
     def select(self, element, additive=False):
+        #logger.debug(f"[SEL] select({element!r})")
         """Tek eleman seç"""
         if not additive:
             self._clear_all()
@@ -62,6 +63,10 @@ class SelectionManager:
                 self.selected.add(element.unique_id)
                 element.is_selected = True
         self._update()
+
+        if self.on_selection_changed:
+            #logger.debug(f"[SEL] callback çağrılıyor")
+            self.on_selection_changed(self.get_selected())
     
     def select_multiple(self, elements: List, mode=SelectionMode.REPLACE):
         """Çoklu eleman seç"""

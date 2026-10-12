@@ -421,11 +421,11 @@ if __name__ == "__main__":
     batch_data, individual_data = loader.load()
     nodes,frames,areas= batch_data
 
-    logger.debug("\nörnek individual_data içeriği ilk 3 data:")
-    logger.debug(individual_data[:3])
+    #logger.debug("\nörnek individual_data içeriği ilk 3 data:")
+    #logger.debug(individual_data[:3])
 
-    logger.debug(f"\nToplam eleman sayısı: {len(individual_data)}")
-    logger.debug(f"İlk 3 data: {individual_data[:3]}")
+    #logger.debug(f"\nToplam eleman sayısı: {len(individual_data)}")
+    #logger.debug(f"İlk 3 data: {individual_data[:3]}")
     
     # Model sınırlarını bul
     all_x = []
@@ -439,30 +439,30 @@ if __name__ == "__main__":
         all_y.extend(ys)
         all_z.extend(zs)
     
-    logger.debug(f"\nModel koordinat aralığı:")
-    logger.debug(f"  X: {min(all_x):.1f} - {max(all_x):.1f}")
-    logger.debug(f"  Y: {min(all_y):.1f} - {max(all_y):.1f}")
-    logger.debug(f"  Z: {min(all_z):.1f} - {max(all_z):.1f}")
+    #logger.debug(f"\nModel koordinat aralığı:")
+    #logger.debug(f"  X: {min(all_x):.1f} - {max(all_x):.1f}")
+    #logger.debug(f"  Y: {min(all_y):.1f} - {max(all_y):.1f}")
+    #logger.debug(f"  Z: {min(all_z):.1f} - {max(all_z):.1f}")
     
     # Daha uygun cell_size seçimi
     model_width = max(all_x) - min(all_x)
     cell_size = model_width / 20  # Yaklaşık 20 hücreye böl
-    logger.debug(f"\nSeçilen hücre boyutu: {cell_size:.1f}")
+    #logger.debug(f"\nSeçilen hücre boyutu: {cell_size:.1f}")
 
     grid = SpatialGrid(cell_size)
     # Tüm elemanları ekle
     elements = [(idx, v_list) for idx, (v_list, _) in enumerate(individual_data)]
     grid.add_elements_batch(elements)
 
-    logger.debug(f"\nSpatialGrid kuruldu:")
-    logger.debug(f"  - Toplam eleman: {grid.element_count}")
-    logger.debug(f"  - Aktif hücre: {len(grid.cells)}")
-    logger.debug(f"  - Hücre boyutu: {grid.cell_size:.1f}")
+    #logger.debug(f"\nSpatialGrid kuruldu:")
+    #logger.debug(f"  - Toplam eleman: {grid.element_count}")
+    #logger.debug(f"  - Aktif hücre: {len(grid.cells)}")
+    #logger.debug(f"  - Hücre boyutu: {grid.cell_size:.1f}")
     
     # TEST 1: Gerçek node'ların olduğu noktaları sorgula
-    logger.debug("\n" + "="*50)
-    logger.debug("TEST 1: Gerçek node pozisyonlarında sorgu")
-    logger.debug("="*50)
+    #logger.debug("\n" + "="*50)
+    #logger.debug("TEST 1: Gerçek node pozisyonlarında sorgu")
+    #logger.debug("="*50)
     
     test_points = [
         (9123.84, 59.66, 5063.00),  # İlk node
@@ -472,12 +472,12 @@ if __name__ == "__main__":
     
     for point in test_points:
         candidates = grid.query_pick_candidates(point, radius_cells=1)
-        logger.debug(f"Nokta {point} → {len(candidates)} aday, indeksler: {sorted(candidates)[:5]}")
+        #logger.debug(f"Nokta {point} → {len(candidates)} aday, indeksler: {sorted(candidates)[:5]}")
 
     # TEST 2: Rastgele seçilmiş elemanları sorgula
-    logger.debug("\n" + "="*50)
-    logger.debug("TEST 2: Rastgele eleman bounding box merkezleri")
-    logger.debug("="*50)
+    #logger.debug("\n" + "="*50)
+    #logger.debug("TEST 2: Rastgele eleman bounding box merkezleri")
+    #logger.debug("="*50)
     
     random_indices = random.sample(range(len(individual_data)), min(5, len(individual_data)))
     for idx in random_indices:
@@ -485,33 +485,33 @@ if __name__ == "__main__":
         if bbox:
             center = bbox.get_center()
             candidates = grid.query_pick_candidates(center, radius_cells=1)
-            logger.debug(f"Eleman {idx} merkez {center} → {len(candidates)} aday")
-            logger.debug(f"  Bbox: ({bbox.min_x:.1f}, {bbox.min_y:.1f}, {bbox.min_z:.1f}) - ({bbox.max_x:.1f}, {bbox.max_y:.1f}, {bbox.max_z:.1f})")
+            #logger.debug(f"Eleman {idx} merkez {center} → {len(candidates)} aday")
+            #logger.debug(f"  Bbox: ({bbox.min_x:.1f}, {bbox.min_y:.1f}, {bbox.min_z:.1f}) - ({bbox.max_x:.1f}, {bbox.max_y:.1f}, {bbox.max_z:.1f})")
     
     # TEST 3: Komşu hücrelerde ara
-    logger.debug("\n" + "="*50)
-    logger.debug("TEST 3: Radius=2 ile geniş sorgu")
-    logger.debug("="*50)
+    #logger.debug("\n" + "="*50)
+    #logger.debug("TEST 3: Radius=2 ile geniş sorgu")
+    #logger.debug("="*50)
     
     for point in test_points:
         candidates = grid.query_pick_candidates(point, radius_cells=2)
-        logger.debug(f"Nokta {point} → {len(candidates)} aday (radius=2)")
+        #logger.debug(f"Nokta {point} → {len(candidates)} aday (radius=2)")
     
     # TEST 4: Işın sorgusu
-    logger.debug("\n" + "="*50)
-    logger.debug("TEST 4: Işın sorgusu")
-    logger.debug("="*50)
+    #logger.debug("\n" + "="*50)
+    #logger.debug("TEST 4: Işın sorgusu")
+    #logger.debug("="*50)
     
     # Yukarıdan aşağıya doğru ışın
     ray_origin = (10000.0, 1000.0, 6000.0)
     ray_dir = (0.0, -1.0, 0.0)  # -Y yönü
     candidates = grid.query_ray(ray_origin, ray_dir, max_distance=2000)
-    logger.debug(f"Işın {ray_origin} yön {ray_dir} → {len(candidates)} aday")
+    #logger.debug(f"Işın {ray_origin} yön {ray_dir} → {len(candidates)} aday")
     
     # Grid istatistikleri
-    logger.debug("\n" + "="*50)
-    logger.debug("Grid İstatistikleri")
-    logger.debug("="*50)
+    #logger.debug("\n" + "="*50)
+    #logger.debug("Grid İstatistikleri")
+    #logger.debug("="*50)
     stats = grid.get_cell_stats()
     for key, value in stats.items():
         logger.debug(f"  {key}: {value}")

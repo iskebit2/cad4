@@ -86,4 +86,7 @@ def build_toolbar(callbacks):
     bar.add_widget(btn("zones", 105, (0.15, 0.45, 0.60, 1),
                        callbacks.get("wind")))
 
+    bar.add_widget(btn("print", 105, (0.15, 0.45, 0.60, 1),
+                           callbacks.get("print")))
+
     return bar, lbl, draw_btn

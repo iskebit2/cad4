@@ -46,7 +46,7 @@ class PickPass:
         # 1x1 FBO oluştur (yedek, asıl picking MRT'den)
         self._create_resources()
         
-        # logger.debug("PickPass başlatıldı - MRT picking modu")
+        # #logger.debug("PickPass başlatıldı - MRT picking modu")
     
     def _create_resources(self):
         """Pick kaynaklarını oluştur."""

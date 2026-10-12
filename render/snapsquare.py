@@ -27,7 +27,7 @@ class SnapSquareRenderer:
         self._init_shader()
 
         # Kare boyutu (NDC uzayında)
-        self.size = 0.025
+        self.size = 0.010
 
         # Renk — sarı
         self.color = (1.0, 0.9, 0.0, 1.0)

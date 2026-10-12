@@ -62,9 +62,9 @@ class ProfileGenerator:
             try:
                 section_type = SectionType(section_type.upper())
             except ValueError:
-                logger.debug(f"Uyarı: Bilinmeyen kesit tipi '{section_type}', RECT kullanılıyor")
+                #logger.debug(f"Uyarı: Bilinmeyen kesit tipi '{section_type}', RECT kullanılıyor")
                 section_type = SectionType.RECT
-        # logger.debug(f"[ProfileGenerator] section_type: {section_type}")
+        # #logger.debug(f"[ProfileGenerator] section_type: {section_type}")
 
         # Parametreleri doğrula
         validated_params = self._validate_params(section_type, params)
@@ -72,7 +72,7 @@ class ProfileGenerator:
         # Üretici fonksiyonu bul
         if section_type in self._generators:
             points = self._generators[section_type](validated_params)
-            # logger.debug(f"[ProfileGenerator] Üretici fonksiyonu bul: {points}")
+            # #logger.debug(f"[ProfileGenerator] Üretici fonksiyonu bul: {points}")
         else:
             # Varsayılan: RECT
             points = self._rect_profile(validated_params)

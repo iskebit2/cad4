@@ -62,7 +62,7 @@ class CommandManager:
         self._undo_stack.append(command)
         self._redo_stack.clear()
         
-        logger.debug(f"[Cmd] {command.name} uygulandı (undo={len(self._undo_stack)})")
+        #logger.debug(f"[Cmd] {command.name} uygulandı (undo={len(self._undo_stack)})")
         self._notify()
         return True
     
@@ -80,7 +80,7 @@ class CommandManager:
             return False
         
         self._redo_stack.append(cmd)
-        logger.debug(f"[Cmd] {cmd.name} geri alındı")
+        #logger.debug(f"[Cmd] {cmd.name} geri alındı")
         self._notify()
         return True
     
@@ -97,7 +97,7 @@ class CommandManager:
             return False
         
         self._undo_stack.append(cmd)
-        logger.debug(f"[Cmd] {cmd.name} yeniden yapıldı")
+        #logger.debug(f"[Cmd] {cmd.name} yeniden yapıldı")
         self._notify()
         return True
     
@@ -111,7 +111,7 @@ class CommandManager:
         """Tüm geçmişi temizle."""
         self._undo_stack.clear()
         self._redo_stack.clear()
-        logger.debug("[Cmd] Geçmiş temizlendi")
+        #logger.debug("[Cmd] Geçmiş temizlendi")
     
     # ---------------------------------------------------------
     # LISTENERS (opsiyonel — UI güncellemeleri için)

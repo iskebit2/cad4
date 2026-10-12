@@ -4,6 +4,35 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+
+class DuplicateMessageFilter(logging.Filter):
+    """Boş mesajları ve art arda tekrarlanan logları filtreler."""
+
+    def __init__(self):
+        super().__init__()
+        self._last_messages = {}
+
+    def filter(self, record):
+        # Boş mesajları engelle
+        try:
+            message = record.getMessage()
+        except Exception:
+            return True
+
+        if not message or not message.strip():
+            return False
+
+        # Logger + seviye + mesaj birlikte değerlendirilir.
+        key = (record.name, record.levelno)
+        previous = self._last_messages.get(key)
+
+        if previous == message:
+            return False
+
+        self._last_messages[key] = message
+        return True
+
+
 class _ColorFormatter(logging.Formatter):
     COLORS = {
         "DEBUG":    "\033[36m",   # cyan
@@ -46,6 +75,7 @@ class CadLogger:
             fmt="%(asctime)s [%(levelname_colored)s] %(name)s: %(message)s",
             datefmt="%H:%M:%S",
         ))
+        console.addFilter(DuplicateMessageFilter())
         root.addHandler(console)
 
         # 2) Dosya handler (opsiyonel ama faydalı)

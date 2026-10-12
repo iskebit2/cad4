@@ -97,7 +97,7 @@ class AreaBuilder:
         vc = len(verts) // 6
         colors = np.tile(color, (vc, 1)).astype(np.float32)
 
-        # logger.debug(f"AreaBuilder: {vc} vertices, {len(idxs)} indices")
+        # #logger.debug(f"AreaBuilder: {vc} vertices, {len(idxs)} indices")
 
         return (
             np.array(verts, dtype=np.float32),
