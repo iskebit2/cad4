@@ -8,6 +8,7 @@ from typing import Any, Dict
 
 from ui.schema import get_path, set_path
 
+MIXED = "__MIXED__"   # çakışmayacak bir string (nadir)
 
 # ------------------------------------------------------------------
 # NODE
@@ -145,6 +146,7 @@ def polygon_to_values(poly) -> Dict[str, Any]:
     return {
         "label": poly.label,
         "is_visible": poly.is_visible,
+        "is_temporary": getattr(poly, "is_temporary", False),
         "color": list(poly.color[:3]),
         "poly_type": pt.name if hasattr(pt, "name") else str(pt),
         "windplane": dict(getattr(poly, "windplane", {}) or {}),
@@ -155,6 +157,7 @@ def values_to_polygon(poly, v: Dict[str, Any]):
     poly.label = v.get("label", poly.label)
     poly.color = list(v.get("color", poly.color))[:3]
     poly.is_visible = bool(v.get("is_visible", poly.is_visible))
+    poly.is_temporary = bool(v.get("is_temporary", getattr(poly, "is_temporary", False)))
 
     pt = v.get("poly_type")
     if pt:
@@ -205,19 +208,12 @@ def values_to_element(element, v: Dict[str, Any]):
 
 
 def elements_to_common_values(elements):
-    """
-    Birden fazla element için ortak değerleri çıkar.
-    Değerler farklıysa "[KARIŞIK]" döner.
-    """
     if not elements:
         return {}
     if len(elements) == 1:
         return element_to_values(elements[0])
 
-    # Her elementi dict'e çevir
     dicts = [element_to_values(e) for e in elements]
-
-    # Ortak alanları topla (ilk elementin tüm anahtarları)
     def collect_keys(d, prefix=""):
         keys = set()
         for k, v in d.items():
@@ -229,8 +225,6 @@ def elements_to_common_values(elements):
         return keys
 
     all_keys = collect_keys(dicts[0])
-
-    # Her key için tüm değerleri kontrol et
     result = {}
     for key in all_keys:
         values = [get_path(d, key) for d in dicts]
@@ -238,6 +232,5 @@ def elements_to_common_values(elements):
         if all(v == first for v in values):
             set_path(result, key, first)
         else:
-            # Tip uyumlu mu? Değilse string olarak KARIŞIK
-            set_path(result, key, "[KARIŞIK]")
+            set_path(result, key, MIXED)   # ← string sentinel
     return result

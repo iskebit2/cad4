@@ -61,7 +61,7 @@ class WindSceneAdapter:
         engine_kwargs: Dict[str, Any] = None
     ) -> List[Polygon]:
         """
-        Sizin yazdığınız WindAnalyzer sınıfını doğrudan çalıştırır.
+        Sahne birimi (mm) ile rüzgar motoru birimini (m) ölçekleyerek çalıştırır.
         """
         # Eski ZONE poligonlarını temizle
         old_zone_ids = [
@@ -75,12 +75,19 @@ class WindSceneAdapter:
                     if node.label.startswith("W_NODE_") and node.unique_id in scene.nodes:
                         scene.nodes.pop(node.unique_id, None)
 
-        points, polygons = cls.extract_wind_data_from_scene(scene)
+        raw_points, polygons = cls.extract_wind_data_from_scene(scene)
+
+        # BİRİM DÖNÜŞÜMÜ: Sahne mm cinsinden ise motor için metreye (m) çevir (/ 1000.0)
+        # Eğer birimler farklıysa buradan ölçeklenebilir.
+        points = {
+            k: [coord[0] / 1000.0, coord[1] / 1000.0, coord[2] / 1000.0] 
+            for k, coord in raw_points.items()
+        }
 
         if not engine_kwargs:
             engine_kwargs = {"v_b0": 28.0, "terrain": "Kategori III"}
 
-        # DOĞRUDAN SİZİN WindAnalyzer MOTORUNUZU ÇALIŞTIRIR
+        # WindAnalyzer motorunu metre cinsindeki verilerle çalıştır
         analyzer = WindAnalyzer(
             points=points,
             polygons=polygons,
@@ -90,12 +97,28 @@ class WindSceneAdapter:
 
         zones = analyzer.analyze()
 
+        engine_results = {
+            "q_p": getattr(analyzer.engine, "q_p", 0.0),
+            "q_b": getattr(analyzer.engine, "q_b", 0.0),
+            "z_ref": getattr(analyzer.engine, "z_ref", 0.0),
+            "e": getattr(analyzer.engine, "e", 0.0),
+            "geometry": getattr(analyzer.engine, "geometry", {})
+        }
+        
+        scene.wind_analysis_results = engine_results
+
         created_polygons: List[Polygon] = []
 
         for idx, zone in enumerate(zones):
             zone_nodes: List[Node] = []
+            # Motor metre cinsinden koordinat üreteceği için tekrar sahneye (mm) geri çeviriyoruz (* 1000.0)
             for coord in zone.coords:
-                node = Node(x=float(coord[0]), y=float(coord[1]), z=float(coord[2]), label=f"W_NODE_{idx}")
+                node = Node(
+                    x=float(coord[0]) * 1000.0, 
+                    y=float(coord[1]) * 1000.0, 
+                    z=float(coord[2]) * 1000.0, 
+                    label=f"W_NODE_{idx}"
+                )
                 scene.add_node(node)
                 zone_nodes.append(node)
 
@@ -105,6 +128,7 @@ class WindSceneAdapter:
                     label=f"ZONE_{zone.label}_{zone.surface}", 
                     poly_type=PolygonType.ZONE
                 )
+                poly.is_temporary = True
                 
                 cpe10 = getattr(zone, 'cpe10', None)
                 poly.color = get_cpe_color(cpe10) if cpe10 is not None else [0.8, 0.3, 0.8, 0.5]
@@ -118,6 +142,7 @@ class WindSceneAdapter:
                     "cpe10": cpe10,
                     "cpe1": getattr(zone, 'cpe1', None),
                     "kind": str(getattr(zone, "kind", "")),
+                    "q_p": engine_results["q_p"]
                 }
 
                 scene.add_polygon(poly)

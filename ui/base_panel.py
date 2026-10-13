@@ -172,8 +172,8 @@ class BasePanel:
     # ==================================================================
     @staticmethod
     def ascii_arrow(is_open: bool) -> str:
-        """Font güvenli ok işareti."""
-        return "v" if is_open else ">"
+        """Genişletilmiş şık ok işaretleri."""
+        return "▼" if is_open else "▶"  # veya  "▾" ve "▸" 
 
     @staticmethod
     def ascii_check(checked: bool) -> str:

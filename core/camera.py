@@ -265,15 +265,15 @@ class Camera:
     
     def print_info(self):
         """Kamera bilgilerini yazdır"""
-        #logger.debug(f"\n=== CAMERA INFO ===")
-        #logger.debug(f"Target: ({self.target.x:.2f}, {self.target.y:.2f}, {self.target.z:.2f})")
-        #logger.debug(f"Position: ({self.position.x:.2f}, {self.position.y:.2f}, {self.position.z:.2f})")
-        #logger.debug(f"Distance: {self.distance:.2f}")
-        #logger.debug(f"Pitch: {self.pitch:.1f}°, Yaw: {self.yaw:.1f}°")
-        #logger.debug(f"Mode: {self.view_mode}")
-        #logger.debug(f"Model size: {self.model_size:.2f}")
-        #logger.debug(f"Sensitivities - Orbit: {self.orbit_sensitivity:.4f}, Pan: {self.pan_sensitivity:.4f}, Zoom: {self.zoom_sensitivity:.4f}")
-        #logger.debug(f"Clipping - Near: {self.near:.2f}, Far: {self.far:.2f}")
+        logger.debug(f"\n=== CAMERA INFO ===")
+        logger.debug(f"Target: ({self.target.x:.2f}, {self.target.y:.2f}, {self.target.z:.2f})")
+        logger.debug(f"Position: ({self.position.x:.2f}, {self.position.y:.2f}, {self.position.z:.2f})")
+        logger.debug(f"Distance: {self.distance:.2f}")
+        logger.debug(f"Pitch: {self.pitch:.1f}°, Yaw: {self.yaw:.1f}°")
+        logger.debug(f"Mode: {self.view_mode}")
+        logger.debug(f"Model size: {self.model_size:.2f}")
+        logger.debug(f"Sensitivities - Orbit: {self.orbit_sensitivity:.4f}, Pan: {self.pan_sensitivity:.4f}, Zoom: {self.zoom_sensitivity:.4f}")
+        logger.debug(f"Clipping - Near: {self.near:.2f}, Far: {self.far:.2f}")
 
     # ----------------------------------------------------------------------
     # PLAN & VIEW FILTER

@@ -88,7 +88,7 @@ class CollapsibleGroup(BoxLayout):
     def _make_header_text(self):
         # "   Oklar:      ►  ◄  ▲  ▼"
 
-        arrow = "V" if self._expanded else ">"
+        arrow = "V" if self._expanded else "▶"
         return f"[b]{arrow}  {self._title_text}[/b]"
 
     def _on_header_click(self, *args):

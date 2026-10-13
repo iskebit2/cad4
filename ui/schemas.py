@@ -80,6 +80,7 @@ def polygon_schema():
         GroupSpec("Genel", [
             FieldSpec("label",      "str",   "Label"),
             FieldSpec("is_visible", "bool",  "Görünür"),
+            FieldSpec("is_temporary", "bool",  "Geçici (Temp)"),
             FieldSpec("color",      "color", "Renk"),
         ]),
         GroupSpec("Poligon", [

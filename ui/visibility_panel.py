@@ -1,26 +1,14 @@
 # ui/visibility_panel.py
 """
-VisibilityPanel — sahne elemanlarını tip bazlı gruplarla listeler.
-
-Yapı:
-    ☑ Node (219)              ← grup checkbox (tümünü aç/kapa)
-       ☑ #1 N1                ← expand edilince
-       ☐ #2 N2
-    ☑ Frame (360)
-    ☑ Area (0)
-    ...
-
-- Default: tüm gruplar COLLAPSED.
-- Grup checkbox'ı: gruptaki tüm elemanları aynı duruma getirir.
-- Ok (▶) tıklanınca grup expand olur, tekil elemanlar görünür.
+VisibilityPanel — BasePanel türevi. Sahne elemanlarını tip bazlı gruplarla listeler.
 """
-from typing import Any, Dict, List, Optional
-
+from typing import Dict, List, Optional
 import imgui
-from imgui import internal as imgui_internal
+
+from ui.base_panel import BasePanel
 
 
-class VisibilityPanel:
+class VisibilityPanel(BasePanel):
 
     GROUPS = [
         ("Node",    "nodes"),
@@ -31,30 +19,24 @@ class VisibilityPanel:
     ]
 
     def __init__(self, on_apply=None):
-        self.visible = False
+        super().__init__(title="Görünürlük", width=360, height=560, pos_first_use=(800, 40))
         self.scene = None
         self.on_apply = on_apply
 
-        # Geçici değişiklikler (Apply'a kadar burada)
         self._pending: Dict[int, bool] = {}
-
-        # Açık grupların isim kümesi (default: hepsi kapalı)
         self._open_groups: set = set()
-
-        self._first_open = True
         self._filter = ""
 
-    # ------------------------------------------------------------------
-    def open(self, scene):
-        self.scene = scene
-        self.visible = True
-        self._first_open = True
+    def open(self, scene=None):
+        super().open()
+        if scene is not None:
+            self.scene = scene
         self._pending.clear()
         self._open_groups.clear()
         self._filter = ""
 
     def close(self):
-        self.visible = False
+        super().close()
         self._pending.clear()
         self._open_groups.clear()
 
@@ -77,27 +59,7 @@ class VisibilityPanel:
         if callable(self.on_apply):
             self.on_apply()
 
-    # ------------------------------------------------------------------
-    def draw(self):
-        if not self.visible:
-            return
-
-        if self._first_open:
-            io = imgui.get_io()
-            w, h = 360, 560
-            imgui.set_next_window_position(
-                io.display_size[0] - w - 400, 40,
-                condition=imgui.FIRST_USE_EVER,
-            )
-            imgui.set_next_window_size(w, h, condition=imgui.FIRST_USE_EVER)
-            self._first_open = False
-
-        expanded, opened = imgui.begin("Görünürlük", True)
-        if not opened:
-            self.visible = False
-            imgui.end()
-            return
-
+    def draw_content(self):
         # --- Filtre ---
         imgui.push_item_width(-1)
         self._filter = imgui.input_text(
@@ -137,7 +99,7 @@ class VisibilityPanel:
         imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.60, 0.28, 0.28, 1.0)
         if imgui.button("İptal", width=btn_w):
             self._pending.clear()
-            self.visible = False
+            self.close()
         imgui.pop_style_color(2)
 
         imgui.same_line()
@@ -146,12 +108,9 @@ class VisibilityPanel:
         imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.28, 0.68, 0.40, 1.0)
         if imgui.button("Apply", width=btn_w):
             self.apply_changes()
-            self.visible = False
+            self.close()
         imgui.pop_style_color(2)
 
-        imgui.end()
-
-    # ------------------------------------------------------------------
     def _draw_groups(self):
         for display_name, coll_name in self.GROUPS:
             collection = getattr(self.scene, coll_name, None)
@@ -165,19 +124,16 @@ class VisibilityPanel:
                 items = [e for e in items
                          if f in str(getattr(e, "label", "")).lower()
                          or f in str(getattr(e, "unique_id", ""))]
-                # Filtre aktifken aç
                 if items:
                     self._open_groups.add(f"grp_{coll_name}")
 
             if not items and not self._filter:
-                # Boş gruplar yine de gri gösterilsin
                 self._draw_group_header(
                     display_name, coll_name, [], force_open=False, disabled=True
                 )
                 continue
 
             if not items:
-                # Filtre var ve eşleşme yok — grubu atla
                 continue
 
             self._draw_group_header(
@@ -185,10 +141,8 @@ class VisibilityPanel:
                 force_open=False, disabled=False,
             )
 
-    # ------------------------------------------------------------------
     def _draw_group_header(self, display_name, coll_name, items,
-                        force_open=False, disabled=False):
-        # Grup durumu
+                           force_open=False, disabled=False):
         if disabled or not items:
             group_state = False
             mixed = False
@@ -205,7 +159,6 @@ class VisibilityPanel:
         key = f"grp_{coll_name}"
         is_open = force_open or (key in self._open_groups)
 
-        # --- 1) Grup checkbox'ı ---
         imgui.push_id(f"chk_{coll_name}")
         if disabled:
             imgui.push_style_var(imgui.STYLE_ALPHA, 0.5)
@@ -223,9 +176,8 @@ class VisibilityPanel:
                 uid = getattr(el, "unique_id", id(el))
                 self._pending[uid] = bool(new_state)
 
-        # --- 2) Ok + başlık (selectable ile manuel toggle) ---
         imgui.same_line()
-        arrow = "V" if is_open else ">"
+        arrow = self.ascii_arrow(is_open)
         header_label = f"{arrow}  {display_name} ({len(items)})##hdr_{coll_name}"
 
         if disabled:
@@ -241,14 +193,12 @@ class VisibilityPanel:
                 self._open_groups.add(key)
             is_open = not is_open
 
-        # --- 3) Açıksa elemanlar ---
         if is_open and not disabled:
             imgui.indent(24)
             for el in items:
                 self._draw_element_row(el)
             imgui.unindent(24)
 
-    # ------------------------------------------------------------------
     def _draw_element_row(self, el):
         uid = getattr(el, "unique_id", id(el))
         label = getattr(el, "label", "") or "?"
@@ -270,9 +220,7 @@ class VisibilityPanel:
         if changed:
             self._pending[uid] = bool(new_val)
 
-    # ------------------------------------------------------------------
     def _current_visibility(self, el) -> bool:
-        """Pending'de varsa onu, yoksa element'in kendi durumunu döner."""
         uid = getattr(el, "unique_id", id(el))
         if uid in self._pending:
             return self._pending[uid]

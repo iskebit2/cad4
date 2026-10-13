@@ -82,9 +82,33 @@ class ProfileGenerator:
         
         return points
     
-    def _validate_params(self, section_type: SectionType, params: dict) -> dict:
-        """Parametreleri doğrula ve varsayılan değerleri ekle"""
-        validated = params.copy()
+    def _validate_params(self, section_type: SectionType, params: Any) -> dict:
+        """Parametreleri doğrula ve varsayılan değerleri ekle (Güvenli Sübap)"""
+        if isinstance(params, list):
+            p_list = params
+            params = {}
+            if section_type in [SectionType.RECT, SectionType.BOX, SectionType.TUBE, SectionType.I, SectionType.T, SectionType.CHANNEL]:
+                if len(p_list) >= 2:
+                    params['b'], params['h'] = p_list[0], p_list[1]
+                if len(p_list) >= 3:
+                    params['t'] = p_list[2]
+                if len(p_list) >= 4:
+                    params['tw'], params['tf'] = p_list[2], p_list[3]
+            elif section_type == SectionType.CIRCLE:
+                if len(p_list) >= 1:
+                    params['r'] = p_list[0]
+            elif section_type == SectionType.PIPE:
+                if len(p_list) >= 2:
+                    params['ro'], params['ri'] = p_list[0], p_list[1]
+            elif section_type in [SectionType.L, SectionType.C]:
+                if len(p_list) >= 2:
+                    params['b'], params['h'] = p_list[0], p_list[1]
+                if len(p_list) >= 3:
+                    params['t'] = p_list[2]
+            elif section_type == SectionType.CUSTOM:
+                params['points'] = p_list
+
+        validated = dict(params) if isinstance(params, dict) else {}
         
         # Ortak validasyonlar
         for key in ['b', 'h', 't', 'tw', 'tf', 'r', 'ro', 'ri']:

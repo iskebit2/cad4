@@ -3,19 +3,18 @@ from typing import Dict, Optional, List
 import numpy as np
 from domain.definition_manager import DefinitionManager
 from domain.element import Node, Frame, Area, Link, Element, Polygon
-from domain.definition import ObjType
+from domain.definition import ObjType, SerializableData
 
 
-class Scene:
+class Scene(SerializableData):
     def __init__(self):
         self.nodes: Dict[int, Node] = {}
         self.frames: Dict[int, Frame] = {}
         self.areas: Dict[int, Area] = {}
         self.links: Dict[int, Link] = {}
-        self.polygons: Dict[int, Polygon] = {}   # YENİ
-        self.def_mgr = DefinitionManager()
+        self.polygons: Dict[int, Polygon] = {}
+        self.def_mgr = DefinitionManager()   # runtime kolaylık; serialize edilmez
         self.units = "N, mm, C"
-        # self.project_info = None
     
     def add_node(self, node: Node):
         self.nodes[node.unique_id] = node
@@ -302,73 +301,66 @@ class Scene:
 
         return True
 
+    # ==================================================================
+    # SERIALIZATION
+    # ==================================================================
     def to_dict(self) -> dict:
+        """Sadece sahne verisi. `definitions` Project seviyesinde tutulur."""
         return {
-            "units": self.units,
-            "definitions": self.def_mgr.to_dict(),
-            "nodes": [n.to_dict() for n in self.nodes.values()],
-            "frames": [f.to_dict() for f in self.frames.values()],
-            "areas": [a.to_dict() for a in self.areas.values()],
-            "links": [l.to_dict() for l in self.links.values()],
-            "polygons": [p.to_dict() for p in self.polygons.values()]
+            "units":    self.units,
+            "nodes":    [n.to_dict() for n in self.nodes.values()],
+            "frames":   [f.to_dict() for f in self.frames.values()],
+            "areas":    [a.to_dict() for a in self.areas.values()],
+            "links":    [l.to_dict() for l in self.links.values()],
+            "polygons": [p.to_dict() for p in self.polygons.values()],
         }
 
-    def save_to_json(self, filepath: str):
-        import json
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(self.to_dict(), f, indent=2, ensure_ascii=False)
-
     @classmethod
-    def load_from_json(cls, filepath: str) -> "Scene":
-        import json
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
+    def from_dict(cls, data: dict, definitions: DefinitionManager = None) -> "Scene":
+        """
+        Sözlükten sahneyi kurar.
+        `definitions` verilirse Frame.section eşleştirmesi için kullanılır.
+        """
         scene = cls()
         scene.units = data.get("units", "N, mm, C")
 
-        # 1. Tanımları Yükle
-        if "definitions" in data:
-            scene.def_mgr.from_dict(data["definitions"])
+        if definitions is not None:
+            scene.def_mgr = definitions
 
-        # 2. Node'ları Yükle
+        # 1) Node'lar
         for n_data in data.get("nodes", []):
-            node = Node.from_dict(n_data)
-            scene.add_node(node)
+            scene.add_node(Node.from_dict(n_data))
 
-        # 3. Frame'leri Yükle
+        # 2) Frame'ler — Frame.from_dict KULLAN (yükleri de yükler)
+        sections_map = scene.def_mgr.sections if scene.def_mgr else {}
         for f_data in data.get("frames", []):
-            node_i = scene.nodes.get(f_data["node_i_id"])
-            node_j = scene.nodes.get(f_data["node_j_id"])
-            section = scene.def_mgr.get_section_by_name(f_data.get("section_name"))
-            if node_i and node_j:
-                frame = Frame(node_i, node_j, section, f_data.get("rotation_deg", 0.0), f_data.get("label", ""))
-                frame._apply_base_dict(f_data)
+            # Fallback: section_name geçersizse ilk section'a düş
+            sec_name = f_data.get("section_name")
+            if sec_name and sec_name not in sections_map and sections_map:
+                f_data = {**f_data, "section_name": next(iter(sections_map))}
+            elif not sec_name and sections_map:
+                f_data = {**f_data, "section_name": next(iter(sections_map))}
+
+            frame = Frame.from_dict(f_data, scene.nodes, sections_map)
+            if frame.node_i and frame.node_j:
                 scene.add_frame(frame)
 
-        # 4. Area'ları Yükle
+        # 3) Area'lar — Area.from_dict KULLAN
         for a_data in data.get("areas", []):
-            area_nodes = [scene.nodes[nid] for nid in a_data.get("node_ids", []) if nid in scene.nodes]
-            if area_nodes:
-                area = Area(area_nodes, a_data.get("thickness", 0.0), a_data.get("label", ""))
-                area._apply_base_dict(a_data)
+            area = Area.from_dict(a_data, scene.nodes)
+            if area.nodes:
                 scene.add_area(area)
 
-        # 5. Link'leri Yükle
+        # 4) Link'ler — Link.from_dict KULLAN
         for l_data in data.get("links", []):
-            node_i = scene.nodes.get(l_data["node_i_id"])
-            node_j = scene.nodes.get(l_data["node_j_id"])
-            if node_i and node_j:
-                link = Link(node_i, node_j, l_data.get("propname", "LINK1"), l_data.get("label", ""))
-                link._apply_base_dict(l_data)
+            link = Link.from_dict(l_data, scene.nodes)
+            if link.node_i and link.node_j:
                 scene.add_link(link)
 
-        # 6. Polygon'ları Yükle
+        # 5) Polygon'lar — zaten doğruydu
         for p_data in data.get("polygons", []):
-            poly_nodes = [scene.nodes[nid] for nid in p_data.get("node_ids", []) if nid in scene.nodes]
-            if poly_nodes:
-                poly = Polygon(poly_nodes, p_data.get("label", ""))
-                poly._apply_base_dict(p_data)
+            poly = Polygon.from_dict(p_data, scene.nodes)
+            if poly.nodes:
                 scene.add_polygon(poly)
 
         return scene

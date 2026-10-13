@@ -24,6 +24,7 @@ KRİTİK KURAL:
   Böylece modifier "yapışması" imkânsız hale gelir.
 """
 import time
+import imgui
 import numpy as np
 import glfw
 
@@ -177,6 +178,12 @@ class EventRouter:
         return True
 
     def on_scroll(self, xoffset, yoffset):
+        try:
+            import imgui
+            io = imgui.get_io()
+            io.mouse_wheel += yoffset
+        except Exception:
+            pass
         self._pending.append(("scroll", (xoffset, yoffset)))
         return True
 
@@ -423,6 +430,7 @@ class EventRouter:
     # HANDLER — SCROLL
     # ==================================================================
     def _handle_scroll(self, xoffset, yoffset):
+        
         eng = self.engine
         if eng is None:
             return

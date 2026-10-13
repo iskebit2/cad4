@@ -13,19 +13,17 @@ _PERSISTENT_GLYPH_RANGES = None
 
 
 def _make_glyph_ranges():
-    """Türkçe + teknik semboller için birleşik glyph range."""
+    """Türkçe + ok işaretleri ve temel semboller için güvenli glyph range."""
     global _PERSISTENT_GLYPH_RANGES
     ranges = [
-    0x0020, 0x00FF,
-    0x0100, 0x017F,
-    0x2000, 0x206F,   # ← Genel noktalama
-    0x2190, 0x21FF,
-    0x25A0, 0x25FF,
-    0x25B2, 0x25C5,
-    0x2600, 0x26FF,
-    0x2700, 0x27BF,
-    0
-]
+        0x0020, 0x00FF,  # Temel Latin + Latin Eki
+        0x0100, 0x017F,  # Genişletilmiş Latin (Türkçe)
+        0x2000, 0x206F,  # Noktalama
+        0x2190, 0x21FF,  # Oklar
+        0x25A0, 0x25FF,  # Geometrik Şekiller (▲, ▼, vb.)
+        0x25B0, 0x25DF,  # ▲, ▶, ▼, ◀ ok varyasyonları ve bloklar
+        0
+    ]
     _PERSISTENT_GLYPH_RANGES = imgui.core.GlyphRanges(ranges)
     return _PERSISTENT_GLYPH_RANGES
 
@@ -38,10 +36,10 @@ def load_fonts(font_size: int = 16,
     # Font adayları
     win_fonts = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts")
     candidates = [
-        os.path.join(win_fonts, "msyh.ttc"),       # ← Testte kullandığın
-        os.path.join(win_fonts, "malgun.ttf"),
         os.path.join(win_fonts, "segoeui.ttf"),    # ← İyi alternatif
         os.path.join(win_fonts, "tahoma.ttf"),
+        os.path.join(win_fonts, "msyh.ttc"),       # ← Testte kullandığın
+        os.path.join(win_fonts, "malgun.ttf"),
         "assets/fonts/Roboto-Regular.ttf",         # ← EN SONA koy
     ]
 

@@ -3,19 +3,197 @@
 SAP2000 uyumlu tanım sınıfları
 - Material, Section, LinkProp, LoadPattern, LoadCase, Combo, Restraint
 """
+from __future__ import annotations
+
+import dataclasses
+from dataclasses import dataclass, field, asdict, fields
 from enum import Enum, IntEnum
 from typing import Optional, Dict, Any, List, Tuple, Union
-from dataclasses import dataclass, field
+import typing
 import uuid
+
+
+# ============================================================================
+# SERIALIZABLE BASE
+# ============================================================================
+class SerializableData:
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        if not data:
+            return cls()
+
+        fields_map = {f.name: f for f in dataclasses.fields(cls)}
+        filtered = {k: v for k, v in data.items() if k in fields_map}
+
+        for name, f in fields_map.items():
+            if name not in filtered:
+                continue
+            val = filtered[name]
+            if val is None:
+                continue
+
+            # Alan tipini çöz (str ise modülden getir)
+            ftype = f.type
+            if isinstance(ftype, str):
+                import sys
+                mod = sys.modules.get(cls.__module__)
+                # typing.Optional[X] vs X
+                ftype = _resolve_type(ftype, mod) if mod else None
+
+            # Enum koersiyonu
+            if isinstance(ftype, type) and issubclass(ftype, Enum):
+                if not isinstance(val, ftype):
+                    try:
+                        if isinstance(val, str):
+                            filtered[name] = ftype[val]
+                        else:
+                            filtered[name] = ftype(val)
+                    except (KeyError, ValueError):
+                        pass
+                continue
+
+            # Nested dataclass koersiyonu
+            if isinstance(ftype, type) and dataclasses.is_dataclass(ftype):
+                if isinstance(val, dict) and not isinstance(val, ftype):
+                    filtered[name] = ftype.from_dict(val)
+                continue
+
+            # List[...] içinde dataclass varsa
+            origin = typing.get_origin(ftype)
+            args = typing.get_args(ftype)
+            if origin in (list, typing.List) and args:
+                inner = args[0]
+                if isinstance(inner, str):
+                    import sys
+                    mod = sys.modules.get(cls.__module__)
+                    inner = getattr(mod, inner, None) if mod else None
+                if (isinstance(inner, type)
+                        and dataclasses.is_dataclass(inner)
+                        and isinstance(val, list)):
+                    filtered[name] = [
+                        inner.from_dict(x) if isinstance(x, dict) else x
+                        for x in val
+                    ]
+                elif (isinstance(inner, type)
+                        and issubclass(inner, Enum)
+                        and isinstance(val, list)):
+                    filtered[name] = [
+                        inner[x] if isinstance(x, str) else inner(x)
+                        for x in val
+                    ]
+
+        return cls(**filtered)
+
+
+def _resolve_type(type_str: str, mod):
+    """'WindConfig' veya 'Optional[WindConfig]' gibi string'leri çöz."""
+    type_str = type_str.strip()
+    # Optional[X] / Union[X, None] → X
+    if type_str.startswith("Optional["):
+        inner = type_str[9:-1]
+        return _resolve_type(inner, mod)
+    if type_str.startswith("Union[") and "None" in type_str:
+        # Union[X, None] → X
+        parts = type_str[6:-1].split(",")
+        for p in parts:
+            p = p.strip()
+            if p != "None" and not p.startswith("None"):
+                return _resolve_type(p, mod)
+    # Doğrudan sınıf adı
+    return getattr(mod, type_str, None)
+
+
+# ============================================================================
+# CONFIG DATACLASSES
+# ============================================================================
+@dataclass
+class WindConfig(SerializableData):
+    # TS EN 1991-1-4
+    vb0: float = 28.0
+    terrain_category: str = "III"
+    z0: float = 0.0
+    z1: float = 5.27
+    z2: float = 6.92
+    cpi_positive: float = 0.2
+    cpi_negative: float = -0.3
+
+
+@dataclass
+class SnowConfig(SerializableData):
+    # TS EN 1991-1-3
+    sk: float = 0.75
+    exposure_coefficient: float = 1.0
+    thermal_coefficient: float = 1.0
+    shape_coefficient: float = 0.8
+
+
+@dataclass
+class SeismicConfig(SerializableData):
+    # TBDY 2018
+    ss: float = 0.0
+    s1: float = 0.0
+    soil_class: str = "ZD"
+    importance_factor: float = 1.0
+    building_height_class: str = ""
+    behavior_factor: float = 8.0
+    overstrength_factor: float = 3.0
+
+
+@dataclass
+class ProjectConfig(SerializableData):
+    wind: WindConfig = field(default_factory=WindConfig)
+    snow: SnowConfig = field(default_factory=SnowConfig)
+    seismic: SeismicConfig = field(default_factory=SeismicConfig)
+
+
+@dataclass
+class ProjectInfo(SerializableData):
+    name: str = "Untitled"
+    description: str = ""
+    author: str = ""
+
+
+@dataclass
+class LoadManager(SerializableData):
+    pass
+
+
+@dataclass
+class WindDirectionResult(SerializableData):
+    w_dir: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    q_p: float = 0.0
+    q_b: float = 0.0
+    z_ref: float = 0.0
+    e: float = 0.0
+    geometry: Dict[str, Any] = field(default_factory=dict)
+    zones_data: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class WindAnalysisResult(SerializableData):
+    directions: Dict[str, WindDirectionResult] = field(default_factory=dict)
+    active_direction: Optional[Tuple[float, float, float]] = None
+
+
+@dataclass
+class AnalysisManager(SerializableData):
+    wind: WindAnalysisResult = field(default_factory=WindAnalysisResult)
+    snow: Any = None
+    seismic: Any = None
+
+
+@dataclass
+class ReportManager(SerializableData):
+    pass
 
 
 # ============================================================================
 # TBDY 2018 DEPREM TABLOLARI VE KATSAYILARI (LOOKUP TABLES)
 # ============================================================================
-
-# Tablo 2.1 – Kısa periyot bölgesi için Yerel Zemin Etki Katsayıları (Fs)
 TSC_2018_FS_TABLE = {
-    # Zemin Sınıfı: [(Ss_sınırı, Fs_değeri), ...] -> İnterpolasyon için
     "ZA": [(0.25, 0.8), (0.50, 0.8), (0.75, 0.8), (1.00, 0.8), (1.25, 0.8), (1.50, 0.8)],
     "ZB": [(0.25, 0.9), (0.50, 0.9), (0.75, 0.9), (1.00, 0.9), (1.25, 0.9), (1.50, 0.9)],
     "ZC": [(0.25, 1.3), (0.50, 1.3), (0.75, 1.2), (1.00, 1.2), (1.25, 1.2), (1.50, 1.2)],
@@ -23,7 +201,6 @@ TSC_2018_FS_TABLE = {
     "ZE": [(0.25, 2.4), (0.50, 1.7), (0.75, 1.3), (1.00, 1.1), (1.25, 0.9), (1.50, 0.8)],
 }
 
-# Tablo 2.2 – 1.0 saniye periyot için Yerel Zemin Etki Katsayıları (F1)
 TSC_2018_F1_TABLE = {
     "ZA": [(0.10, 0.8), (0.20, 0.8), (0.30, 0.8), (0.40, 0.8), (0.50, 0.8), (0.60, 0.8)],
     "ZB": [(0.10, 0.8), (0.20, 0.8), (0.30, 0.8), (0.40, 0.8), (0.50, 0.8), (0.60, 0.8)],
@@ -31,6 +208,7 @@ TSC_2018_F1_TABLE = {
     "ZD": [(0.10, 2.4), (0.20, 2.2), (0.30, 2.0), (0.40, 1.8), (0.50, 1.6), (0.60, 1.5)],
     "ZE": [(0.10, 4.2), (0.20, 3.3), (0.30, 2.8), (0.40, 2.4), (0.50, 2.2), (0.60, 2.0)],
 }
+
 
 def get_tsc2018_site_coefficients(ss: float, s1: float, site_class: str) -> Tuple[float, float]:
     """
@@ -57,10 +235,10 @@ def get_tsc2018_site_coefficients(ss: float, s1: float, site_class: str) -> Tupl
     f1 = interpolate(s1, TSC_2018_F1_TABLE[site_class])
     return fs, f1
 
+
 # ============================================================================
 # ENUMERATION'LAR
 # ============================================================================
-# SAP2000 enums
 UNIT_DEFINITIONS = {
     1: ('lb', 'in'),
     2: ('lb', 'ft'),
@@ -80,67 +258,23 @@ UNIT_DEFINITIONS = {
     16: ('Ton', 'cm')
 }
 
-# Enumerations
 LOAD_PATTERN_TYPES = {
-    1: "DEAD",
-    2: "SUPERDEAD",
-    3: "LIVE",
-    4: "REDUCELIVE",
-    5: "QUAKE",
-    6: "WIND",
-    7: "SNOW",
-    8: "OTHER",
-    9: "MOVE",
-    10: "TEMPERATURE",
-    11: "ROOFLIVE",
-    12: "NOTIONAL",
-    13: "PATTERNLIVE",
-    14: "WAVE",
-    15: "BRAKING",
-    16: "CENTRIFUGAL",
-    17: "FRICTION",
-    18: "ICE",
-    19: "WINDONLIVELOAD",
-    20: "HORIZONTALEARTHPRESSURE",
-    21: "VERTICALEARTHPRESSURE",
-    22: "EARTHSURCHARGE",
-    23: "DOWNDRAG",
-    24: "VEHICLECOLLISION",
-    25: "VESSELCOLLISION",
-    26: "TEMPERATUREGRADIENT",
-    27: "SETTLEMENT",
-    28: "SHRINKAGE",
-    29: "CREEP",
-    30: "WATERLOADPRESSURE",
-    31: "LIVELOADSURCHARGE",
-    32: "LOCKEDINFORCES",
-    33: "PEDESTRIANLL",
-    34: "PRESTRESS",
-    35: "HYPERSTATIC",
-    36: "BOUYANCY",
-    37: "STREAMFLOW",
-    38: "IMPACT",
-    39: "CONSTRUCTION"
+    1: "DEAD", 2: "SUPERDEAD", 3: "LIVE", 4: "REDUCELIVE", 5: "QUAKE", 6: "WIND", 7: "SNOW",
+    8: "OTHER", 9: "MOVE", 10: "TEMPERATURE", 11: "ROOFLIVE", 12: "NOTIONAL", 13: "PATTERNLIVE",
+    14: "WAVE", 15: "BRAKING", 16: "CENTRIFUGAL", 17: "FRICTION", 18: "ICE", 19: "WINDONLIVELOAD",
+    20: "HORIZONTALEARTHPRESSURE", 21: "VERTICALEARTHPRESSURE", 22: "EARTHSURCHARGE", 23: "DOWNDRAG",
+    24: "VEHICLECOLLISION", 25: "VESSELCOLLISION", 26: "TEMPERATUREGRADIENT", 27: "SETTLEMENT",
+    28: "SHRINKAGE", 29: "CREEP", 30: "WATERLOADPRESSURE", 31: "LIVELOADSURCHARGE",
+    32: "LOCKEDINFORCES", 33: "PEDESTRIANLL", 34: "PRESTRESS", 35: "HYPERSTATIC", 36: "BOUYANCY",
+    37: "STREAMFLOW", 38: "IMPACT", 39: "CONSTRUCTION"
 }
 
 LOAD_CASE_TYPES = {
-    1: "LinearStatic",
-    2: "NonlinearStatic",
-    3: "Modal",
-    4: "ResponseSpectrum",
-    5: "LinearHistory",           # Modal Time History
-    6: "NonlinearHistory",        # Modal Time History
-    7: "LinearDynamic",           # Direct Integration Time History
-    8: "NonlinearDynamic",        # Direct Integration Time History
-    9: "MovingLoad",
-    10: "Buckling",
-    11: "SteadyState",
-    12: "PowerSpectralDensity",
-    13: "LinearStaticMultistep",
-    14: "Hyperstatic",
-    15: "ExternalResults",
-    16: "StagedConstruction",
-    17: "NonlinearStaticMultiStep"
+    1: "LinearStatic", 2: "NonlinearStatic", 3: "Modal", 4: "ResponseSpectrum",
+    5: "LinearHistory", 6: "NonlinearHistory", 7: "LinearDynamic", 8: "NonlinearDynamic",
+    9: "MovingLoad", 10: "Buckling", 11: "SteadyState", 12: "PowerSpectralDensity",
+    13: "LinearStaticMultistep", 14: "Hyperstatic", 15: "ExternalResults",
+    16: "StagedConstruction", 17: "NonlinearStaticMultiStep"
 }
 
 LOAD_CASE_DESIGN_TYPES = {
@@ -158,34 +292,26 @@ LOAD_CASE_DESIGN_TYPES = {
 }
 
 OBJECT_TYPE_MAP = {
-    1: "Point",
-    2: "Frame",
-    3: "Cable",
-    4: "Tendon",
-    5: "Area",
-    6: "Solid",
-    7: "Link"
+    1: "Point", 2: "Frame", 3: "Cable", 4: "Tendon", 5: "Area", 6: "Solid", 7: "Link"
 }
 
 COMBOTYPE = {
-#This is 0, 1, 2, 3 or 4 indicating the load combination type.
-0 : "Linear Additive",
-1 : "Envelope",
-2 : "Absolute Additive",
-3 : "SRSS",
-4 : "Range Additive",
+    0: "Linear Additive",
+    1: "Envelope",
+    2: "Absolute Additive",
+    3: "SRSS",
+    4: "Range Additive",
 }
 
+
 class PropAreaType(IntEnum):
-    #This optional value is 0, 1, 2 or 3, indicating the type of area properties included in the name list.
     All = 0
     Shell = 1
     Plane = 2
     Asolid = 3
 
-class PropType(IntEnum):
-    """SAP2000 eFramePropType."""
 
+class PropType(IntEnum):
     I = 1
     Channel = 2
     T = 3
@@ -219,19 +345,17 @@ class PropType(IntEnum):
     Cold_Pipe = 44
     Cold_T = 45
     Trapezoidal = 46
-    
+
+
 class SymType(IntEnum):
-    """SAP2000 material directional symmetry type."""
     ISOTROPIC = 0
     ORTHOTROPIC = 1
     ANISOTROPIC = 2
     UNIAXIAL = 3
 
 
-    
-
 @dataclass
-class GeneralProjectInfo:
+class GeneralProjectInfo(SerializableData):
     company_name: str = ""
     client_name: str = ""
     project_name: str = "Test Yapısı"
@@ -246,8 +370,9 @@ class GeneralProjectInfo:
     issue_code: str = ""
     design_code: str = ""
 
+
 @dataclass
-class SiteInformation:
+class SiteInformation(SerializableData):
     live_load_factor: float = 0.3
     cadastral_info: str = "102 / 14"
     date: str = ""
@@ -259,39 +384,40 @@ class SiteInformation:
 # -------------------------------------------------------------------------
 # LOAD PATTERNS & CASES
 # -------------------------------------------------------------------------
-
 @dataclass
-class LoadPattern:
+class LoadPattern(SerializableData):
     """TABLE: LOAD PATTERN DEFINITIONS"""
-    name: str
+    name: str = ""
     design_type: str = "Dead"
     self_wt_mult: float = 0.0
 
-@dataclass
-class StaticLoadAssignment:
-    """TABLE: CASE - STATIC 1 - LOAD ASSIGNMENTS"""
-    load_type: str      # 'Load pattern', 'Accel' vb.
-    load_name: str      # Pattern adı
-    load_sf: float = 1.0  # Ölçek çarpanı
 
 @dataclass
-class LoadCase:
+class StaticLoadAssignment(SerializableData):
+    """TABLE: CASE - STATIC 1 - LOAD ASSIGNMENTS"""
+    load_type: str = "Load pattern"
+    load_name: str = ""
+    load_sf: float = 1.0
+
+
+@dataclass
+class LoadCase(SerializableData):
     """TABLE: LOAD CASE DEFINITIONS"""
-    name: str
+    name: str = ""
     case_type: str = "LinStatic"
     initial_cond: str = "Zero"
     design_type: str = "Dead"
     design_act: str = "Non-Composite"
     auto_type: str = "None"
     run_case: bool = True
-    # Statik yük atamaları listesi
     static_assignments: List[StaticLoadAssignment] = field(default_factory=list)
 
+
 @dataclass
-class ModalCase:
+class ModalCase(SerializableData):
     """TABLE: CASE - MODAL 1 - GENERAL"""
-    name: str
-    mode_type: str = "Eigen"    # Eigen / Ritz
+    name: str = ""
+    mode_type: str = "Eigen"
     max_num_modes: int = 12
     min_num_modes: int = 1
     eigen_shift: float = 0.0
@@ -299,21 +425,21 @@ class ModalCase:
     eigen_tol: float = 1e-9
     auto_shift: bool = True
 
+
 # -------------------------------------------------------------------------
 # COMBINATIONS
 # -------------------------------------------------------------------------
-
 @dataclass
-class ComboItem:
-    """Kombinasyon İçindeki Her Bir Eleman/Yükleme"""
-    case_or_pattern_name: str
+class ComboItem(SerializableData):
+    case_or_pattern_name: str = ""
     scale_factor: float = 1.0
 
+
 @dataclass
-class LoadCombination:
+class LoadCombination(SerializableData):
     """TABLE: COMBINATION DEFINITIONS"""
-    name: str
-    combo_type: str = "Linear Add"  # Linear Add, Envelope, Absolute Add, SRSS, Range Add
+    name: str = ""
+    combo_type: str = "Linear Add"
     auto_design: bool = False
     items: List[ComboItem] = field(default_factory=list)
 
@@ -321,17 +447,17 @@ class LoadCombination:
 class SpectrumSourceType(Enum):
     USER = "USER"
     FROM_FILE = "FROM_FILE"
-    TSC_2018 = "TSC_2018"  # TBDY 2018
+    TSC_2018 = "TSC_2018"
     EUROCODE = "EUROCODE"
     IBC = "IBC"
 
+
 @dataclass
-class SpectrumFunction:
+class SpectrumFunction(SerializableData):
     """Tepki Spektrumu Fonksiyon Tanımları"""
-    name: str
-    source_type: SpectrumSourceType
+    name: str = ""
+    source_type: SpectrumSourceType = SpectrumSourceType.USER
     damp: float = 0.05
-    # TBDY 2018 veya Kod Parametreleri
     ss: float = 0.0
     s1: float = 0.0
     tl: float = 6.0
@@ -342,19 +468,15 @@ class SpectrumFunction:
     d_coeff: float = 1.0
     i_coeff: float = 1.0
     spec_dir: str = "Horizontal"
-    # Dosyadan okuma / Kullanıcı tanımlı veri
     file_path: Optional[str] = None
     data_type: str = "Period vs Accel"
-    points: List[Tuple[float, float]] = field(default_factory=list) # (Periyot, İvme)
+    points: List[Tuple[float, float]] = field(default_factory=list)
 
     def __post_init__(self):
-        """Eğer TBDY 2018 seçilmişse ve points dizisi henüz boşsa noktaları üretir."""
         if self.source_type == SpectrumSourceType.TSC_2018 and not self.points:
             self.generate_tbdy2018_points()
 
     def generate_tbdy2018_points(self, num_points: int = 200):
-        """TBDY 2018 parametrelerinden T-Sa eğri noktalarını hesaplar."""
-        # Fs ve F1 zemin katsayılarını hesapla
         self.fs, self.f1 = get_tsc2018_site_coefficients(self.ss, self.s1, self.site_class)
         sds = self.ss * self.fs
         sd1 = self.s1 * self.f1
@@ -368,7 +490,6 @@ class SpectrumFunction:
 
         for i in range(num_points + 1):
             t = i * dt
-            # TBDY 2018 Denklem (2.2) - Sae(T)
             if 0 <= t < ta:
                 sae = (0.4 + 0.6 * (t / ta)) * sds if ta > 0 else sds
             elif ta <= t <= tb:
@@ -378,7 +499,6 @@ class SpectrumFunction:
             else:
                 sae = (sd1 * self.tl) / (t ** 2)
 
-            # Azaltma Katsayısı Ra(T) - Denklem (4.1)
             if t < tb:
                 ra = self.d_coeff + (self.r_coeff / self.i_coeff - self.d_coeff) * (t / tb) if tb > 0 else self.r_coeff / self.i_coeff
             else:
@@ -388,21 +508,12 @@ class SpectrumFunction:
             self.points.append((round(t, 4), round(sa_design, 6)))
 
     def get_sa(self, period: float) -> float:
-        """
-        Verilen T periyodu için points (T, Sa) listesinden doğrusal interpolasyon ile Sa değerini döndürür.
-        """
         if not self.points:
             return 0.0
-
-        # Periyot dizinin en başından küçükse ilk değeri dön
         if period <= self.points[0][0]:
             return self.points[0][1]
-
-        # Periyot dizinin en sonundan büyükse son değeri dön
         if period >= self.points[-1][0]:
             return self.points[-1][1]
-
-        # İki nokta arasında doğrusal interpolasyon (Linear Interpolation)
         for i in range(len(self.points) - 1):
             t0, sa0 = self.points[i]
             t1, sa1 = self.points[i + 1]
@@ -410,32 +521,31 @@ class SpectrumFunction:
                 if t1 == t0:
                     return sa0
                 return sa0 + (sa1 - sa0) * (period - t0) / (t1 - t0)
-
         return 0.0
 
-@dataclass
-class ResponseSpectrumLoadAssignment:
-    """CASE - RESPONSE SPECTRUM 2 - LOAD ASSIGNMENTS"""
-    load_name: str       # U1, U2, U3 vb.
-    function_name: str   # İlgili SpectrumFunction adı
-    angle: float = 0.0
-    sf: float = 9810.0   # Ölçek Katsayısı (TransAccSF - mm/s2)
 
 @dataclass
-class ResponseSpectrumCase:
-    """CASE - RESPONSE SPECTRUM 1 & 2"""
-    name: str
+class ResponseSpectrumLoadAssignment(SerializableData):
+    load_name: str = ""
+    function_name: str = ""
+    angle: float = 0.0
+    sf: float = 9810.0
+
+
+@dataclass
+class ResponseSpectrumCase(SerializableData):
+    name: str = ""
     modal_combo: str = "CQC"
     dir_combo: str = "SRSS"
     damping: float = 0.05
     eccentricity: float = 0.0
     assignments: List[ResponseSpectrumLoadAssignment] = field(default_factory=list)
 
+
 @dataclass
-class AutoSeismicTSC2018:
-    """AUTO SEISMIC - TSC-2018 (Eşdeğer Deprem Yükü)"""
-    load_pattern: str
-    direction: str          # X, Y, X+EccY vb.
+class AutoSeismicTSC2018(SerializableData):
+    load_pattern: str = ""
+    direction: str = "X"
     percent_ecc: float = 0.05
     period_calc: str = "Prog Calc"
     ct_and_x: str = "0.10m, 0.75"
@@ -449,6 +559,7 @@ class AutoSeismicTSC2018:
     fs: float = 1.3
     f1: float = 1.5
 
+
 class LoadType(Enum):
     POINT = "POINT"
     DISTRIBUTED = "DISTRIBUTED"
@@ -459,6 +570,7 @@ class LoadType(Enum):
     STRAIN = "STRAIN"
     WIND_PRESSURE = "WIND_PRESSURE"
     UNIFORM_TO_FRAME = "UNIFORM_TO_FRAME"
+
 
 class LoadDirection(Enum):
     GLOBAL_X = "GX"
@@ -471,6 +583,7 @@ class LoadDirection(Enum):
     PROJECTED_X = "PX"
     PROJECTED_Y = "PY"
     PROJECTED_Z = "PZ"
+
 
 SAP_FRAME_LOAD_DIRECTION = {
     1: LoadDirection.LOCAL_1,
@@ -485,14 +598,13 @@ SAP_FRAME_LOAD_DIRECTION = {
     10: LoadDirection.PROJECTED_Z,
 }
 
+
 # -------------------------------------------------------------------------
 # JOINT LOADS
 # -------------------------------------------------------------------------
-
 @dataclass
-class PointLoad:
-    """JOINT LOADS - FORCE"""
-    pattern_name: str
+class PointLoad(SerializableData):
+    pattern_name: str = ""
     fx: float = 0.0
     fy: float = 0.0
     fz: float = 0.0
@@ -500,108 +612,110 @@ class PointLoad:
     my: float = 0.0
     mz: float = 0.0
 
+
 # -------------------------------------------------------------------------
 # FRAME LOADS
 # -------------------------------------------------------------------------
-
 @dataclass
-class FramePointLoad:
-    pattern_name: str
-    force_or_moment: str
-    direction: LoadDirection
-    value: float
-    distance: float
+class FramePointLoad(SerializableData):
+    pattern_name: str = ""
+    force_or_moment: str = "Force"
+    direction: LoadDirection = LoadDirection.GLOBAL_Z
+    value: float = 0.0
+    distance: float = 0.0
     is_relative: bool = True
     coordinate_system: str = "GLOBAL"
 
+
 @dataclass
-class FrameDistributedLoad:
-    pattern_name: str
-    force_or_moment: str
-    direction: LoadDirection
-    p1: float
-    p2: float
-    d1: float
-    d2: float
+class FrameDistributedLoad(SerializableData):
+    pattern_name: str = ""
+    force_or_moment: str = "Force"
+    direction: LoadDirection = LoadDirection.GLOBAL_Z
+    p1: float = 0.0
+    p2: float = 0.0
+    d1: float = 0.0
+    d2: float = 0.0
     is_relative: bool = True
     coordinate_system: str = "GLOBAL"
 
+
 @dataclass
-class FrameGravityLoad:
-    """FRAME LOADS - GRAVITY"""
-    pattern_name: str
+class FrameGravityLoad(SerializableData):
+    pattern_name: str = ""
     multiplier_x: float = 0.0
     multiplier_y: float = 0.0
     multiplier_z: float = 0.0
 
+
 @dataclass
-class FrameTemperatureLoad:
-    """FRAME LOADS - TEMPERATURE"""
-    pattern_name: str
-    temp_type: str        # 'Temperature' veya 'Gradient'
-    val: float            # °C veya °C/mm
+class FrameTemperatureLoad(SerializableData):
+    pattern_name: str = ""
+    temp_type: str = "Temperature"
+    val: float = 0.0
 
 
 # -------------------------------------------------------------------------
 # AREA LOADS
 # -------------------------------------------------------------------------
-
 @dataclass
-class AreaGravityLoad:
-    """AREA LOADS - GRAVITY"""
-    pattern_name: str
+class AreaGravityLoad(SerializableData):
+    pattern_name: str = ""
     multiplier_x: float = 0.0
     multiplier_y: float = 0.0
     multiplier_z: float = 0.0
 
-@dataclass
-class AreaRefTemperatureLoad:
-    """AREA LOADS - REFERENCE TEMPERATURE"""
-    temp: float           # °C
 
 @dataclass
-class AreaStrainLoad:
-    """AREA LOADS - STRAIN"""
-    pattern_name: str
-    component: str        # 'S11', 'S22', 'S12'
-    val: float
+class AreaRefTemperatureLoad(SerializableData):
+    temp: float = 0.0
+
 
 @dataclass
-class AreaSurfacePressureLoad:
-    """AREA LOADS - SURFACE PRESSURE"""
-    pattern_name: str
-    face: str             # 'BOTTOM', 'TOP'
-    pressure: float       # N/mm2
+class AreaStrainLoad(SerializableData):
+    pattern_name: str = ""
+    component: str = "S11"
+    val: float = 0.0
+
 
 @dataclass
-class AreaTemperatureLoad:
-    """AREA LOADS - TEMPERATURE"""
-    pattern_name: str
-    temp_type: str
-    val: float
+class AreaSurfacePressureLoad(SerializableData):
+    pattern_name: str = ""
+    face: str = "BOTTOM"
+    pressure: float = 0.0
+
 
 @dataclass
-class AreaUniformLoad:
-    pattern_name: str
-    direction: LoadDirection
-    value: float
+class AreaTemperatureLoad(SerializableData):
+    pattern_name: str = ""
+    temp_type: str = "Temperature"
+    val: float = 0.0
+
+
+@dataclass
+class AreaUniformLoad(SerializableData):
+    pattern_name: str = ""
+    direction: LoadDirection = LoadDirection.GLOBAL_Z
+    value: float = 0.0
     coordinate_system: str = "GLOBAL"
 
-@dataclass
-class AreaUniformToFrameLoad:
-    pattern_name: str
-    direction: LoadDirection
-    value: float
-    dist_type: str
-    coordinate_system: str = "GLOBAL"
 
 @dataclass
-class AreaWindPressureLoad:
-    """AREA LOADS - WIND PRESSURE COEFFICIENTS"""
-    pattern_name: str
-    cp: float             # Cp katsayısı
+class AreaUniformToFrameLoad(SerializableData):
+    pattern_name: str = ""
+    direction: LoadDirection = LoadDirection.GLOBAL_Z
+    value: float = 0.0
+    dist_type: str = "To Joints"
+    coordinate_system: str = "GLOBAL"
+
+
+@dataclass
+class AreaWindPressureLoad(SerializableData):
+    pattern_name: str = ""
+    cp: float = 0.0
     windward: bool = True
     dist_type: str = "To Joints"
+
 
 class MatType(Enum):
     STEEL = 1
@@ -611,11 +725,11 @@ class MatType(Enum):
     COLDFORMED = 5
     REBAR = 6
     TENDON = 7
-    TIMBER = 8        # Ahşap
-    MASONRY = 9       # Yığma duvar
+    TIMBER = 8
+    MASONRY = 9
+
 
 class SectionType(Enum):
-    """FEA çubuk kesit tipleri"""
     RECT = "RECT"
     CIRCLE = "CIRCLE"
     I = "I"
@@ -625,7 +739,7 @@ class SectionType(Enum):
     TUBE = "TUBE"
     C = "C"
     BOX = "BOX"
-    CHANNEL = "CHANNEL"  # C ile aynı
+    CHANNEL = "CHANNEL"
     CUSTOM = "CUSTOM"
 
     def __str__(self):
@@ -634,11 +748,13 @@ class SectionType(Enum):
     def __repr__(self):
         return f"SectionType.{self.name}"
 
+
 class ElementType(Enum):
     NODE = "NODE"
     FRAME = "FRAME"
     AREA = "AREA"
     LINK = "LINK"
+
 
 class ObjType(Enum):
     FRAME = 2
@@ -655,44 +771,42 @@ class LoadPatternType(Enum):
     QUAKE = 7
     USER = 18
 
+
 class LoadCaseType(Enum):
     LIN_STATIC = 1
     NONLIN_STATIC = 4
     LIN_MODAL = 2
+
 
 class ComboType(Enum):
     LINEAR_ADD = 1
     ENVELOPE = 2
     SRSS = 4
 
+
 # ============================================================================
 # MATERIAL
 # ============================================================================
-
 @dataclass
-class Material:
+class Material(SerializableData):
     name: str = "DEFAULT"
     mat_type: MatType = MatType.STEEL
     color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
 
-    # 3 Lokal eksen elastisite modülleri (Ortotropik destekli)
     E1: float = 2.0e8
     E2: float = 2.0e8
     E3: float = 2.0e8
 
-    # 3 Düzlem kayma modülleri
     G12: float = 7.7e7
     G13: float = 7.7e7
     G23: float = 7.7e7
 
-    # Poisson oranları (U12, U13, U23)
     nu12: float = 0.3
     nu13: float = 0.3
     nu23: float = 0.3
 
     density: float = 7850
 
-    # Çubuk eleman analizlerinde (1 ekseni boyunca) geriye dönük uyumluluk için
     @property
     def E(self) -> float:
         return self.E1
@@ -705,24 +819,25 @@ class Material:
     def nu(self) -> float:
         return self.nu12
 
+
 # ============================================================================
-# SECTION (element.py'deki Section ile uyumlu)
+# SECTION
 # ============================================================================
-# Varsayılan Malzeme Nesnesi
 DEFAULT_MATERIAL = Material(
     name="DEFAULT_STEEL",
     mat_type=MatType.STEEL,
-    E1=2.1e8,       # kN/m² veya N/mm² ölçeğine göre
+    E1=2.1e8,
     G12=8.1e7,
     nu12=0.3,
     density=7850
 )
 
+
 @dataclass
-class Section:
-    name: str
-    profile_type: SectionType
-    profile_params: Dict[str, float]
+class Section(SerializableData):
+    name: str = ""
+    profile_type: SectionType = SectionType.RECT
+    profile_params: Dict[str, float] = field(default_factory=dict)
     material: Optional[Material] = None
     color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
 
@@ -730,14 +845,21 @@ class Section:
         if self.material is None:
             self.material = DEFAULT_MATERIAL
 
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["material_name"] = self.material.name if self.material else None
+        d["profile_type"] = self.profile_type.name if hasattr(self.profile_type, "name") else str(self.profile_type)
+        d.pop("material", None)   # nested Material yazma
+        return d
+
+
 @dataclass
-class AreaSection:
-    name: str
-    prop_type: PropAreaType
+class AreaSection(SerializableData):
+    name: str = ""
+    prop_type: PropAreaType = PropAreaType.Shell
     material: Optional[Material] = None
     thickness: float = 0.0
 
-    # SAP area modifiers
     membrane_f11: float = 1.0
     membrane_f22: float = 1.0
     membrane_f12: float = 1.0
@@ -752,12 +874,7 @@ class AreaSection:
     mass: float = 1.0
     weight: float = 1.0
 
-    # SAP'ye özgü ek tanımlar
-    params: Dict = None
-
-    def __post_init__(self):
-        if self.params is None:
-            self.params = {}
+    params: Dict = field(default_factory=dict)
 
     @property
     def modifiers(self):
@@ -774,6 +891,13 @@ class AreaSection:
             self.weight,
         )
     
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["material_name"] = self.material.name if self.material else None
+        d["prop_type"] = self.prop_type.name if hasattr(self.prop_type, "name") else str(self.prop_type)
+        d.pop("material", None)
+        return d
+
 # ============================================================================
 # LINK PROPERTIES
 # ============================================================================
@@ -783,11 +907,11 @@ class LinkPropType(IntEnum):
     GAP = 3
     HOOK = 4
     PLASTIC_WEN = 5
-    ISOLATOR1 = 6 #(Rubber isolator)
-    ISOLATOR2 = 7 #(Friction isolator)
+    ISOLATOR1 = 6
+    ISOLATOR2 = 7
     MULTILINEAR_ELASTIC = 8
     MULTILINEAR_PLASTIC = 9
-    ISOLATOR3 = 10 #(T/C Friction isolator)
+    ISOLATOR3 = 10
 
     @classmethod
     def from_sap(cls, sap_str: str) -> "LinkPropType":
@@ -808,10 +932,11 @@ class LinkPropType(IntEnum):
         key = sap_str.strip().upper().replace(" ", "").replace("_", "")
         return mapping.get(key, cls.LINEAR)
 
+
 @dataclass
-class LinkProperty:
-    name: str
-    prop_type: LinkPropType
+class LinkProperty(SerializableData):
+    name: str = ""
+    prop_type: LinkPropType = LinkPropType.LINEAR
 
     dof: Tuple[bool, ...] = ()
     fixed: Tuple[bool, ...] = ()
@@ -821,18 +946,20 @@ class LinkProperty:
 
     params: Dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
-class LinkProp:
+class LinkProp(SerializableData):
     name: str = "LINK1"
     prop_type: LinkPropType = LinkPropType.LINEAR
+
 
 @dataclass
 class LinkPropLinear(LinkProp):
     """Linear link property - DOF bazlı stiffness ve damping"""
     prop_type: LinkPropType = LinkPropType.LINEAR
     DOF: Dict[str, bool] = field(default_factory=lambda: {
-    "U1": True, "U2": True, "U3": True,
-    "R1": True, "R2": True, "R3": True
+        "U1": True, "U2": True, "U3": True,
+        "R1": True, "R2": True, "R3": True
     })
 
     Fixed: Dict[str, bool] = field(default_factory=dict)
@@ -849,16 +976,16 @@ class LinkPropLinear(LinkProp):
 
     def __post_init__(self):
         self.DOF = self.DOF or {"U1": True, "U2": True, "U3": True,
-                                 "R1": True, "R2": True, "R3": True}
+                                "R1": True, "R2": True, "R3": True}
         self.Fixed = self.Fixed or {}
         self.Ke = self.Ke or {"U1": 0, "U2": 0, "U3": 0,
-                               "R1": 0, "R2": 0, "R3": 0}
+                              "R1": 0, "R2": 0, "R3": 0}
         self.Ce = self.Ce or {"U1": 0, "U2": 0, "U3": 0,
-                               "R1": 0, "R2": 0, "R3": 0}
+                              "R1": 0, "R2": 0, "R3": 0}
 
 
 @dataclass
-class Restraint:
+class Restraint(SerializableData):
     ux: bool = False
     uy: bool = False
     uz: bool = False
@@ -882,7 +1009,7 @@ class Restraint:
     @classmethod
     def from_list(cls, values):
         return cls(*values)
-    
+
     def is_free(self):
         return not any(self.as_list())
 
@@ -927,12 +1054,12 @@ class SectionCutResultType(str, Enum):
 
 
 @dataclass
-class QuadDefinition:
+class QuadDefinition(SerializableData):
     points: List[Tuple[float, float, float]] = field(default_factory=list)
 
 
 @dataclass
-class SectionCut:
+class SectionCut(SerializableData):
     name: str = "DEFAULT"
     defined_by: SectionCutDefinedBy = SectionCutDefinedBy.QUAD
     group: str = "All"

@@ -1,19 +1,14 @@
 # ui/view_filter_panel.py
 """
-ViewFilterPanel — ImGui sürümü.
-
-Kullanım:
-    panel = ViewFilterPanel(on_apply=callback)
-    panel.open(camera)
-    # her frame:
-    panel.draw()
+ViewFilterPanel — BasePanel türevi. Eş zamanlı (real-time) görünüm ve düzlem filtreleme.
 """
 from typing import Callable, Optional
-
 import imgui
 
+from ui.base_panel import BasePanel
 
-class ViewFilterPanel:
+
+class ViewFilterPanel(BasePanel):
 
     VIEW_PRESETS = [
         ("Front",  "front"),
@@ -33,7 +28,7 @@ class ViewFilterPanel:
     ]
 
     def __init__(self, on_apply: Optional[Callable] = None):
-        self.visible = False
+        super().__init__(title="View & Plan Filter", width=380, height=440, pos_first_use=(800, 40))
         self.camera = None
         self.on_apply = on_apply
 
@@ -42,65 +37,35 @@ class ViewFilterPanel:
         self._sel_direction = "positive"
         self._sel_offset = 0.0
 
-        self._first_open = True
-
-    # ------------------------------------------------------------------
-    def open(self, camera):
-        self.camera = camera
-        self.visible = True
-        self._first_open = True
-
-        # Kameranın mevcut durumundan senkronize et
+    def open(self, camera=None):
+        super().open()
         if camera is not None:
+            self.camera = camera
             self._sel_preset = getattr(camera, "view_preset", None)
             self._sel_plane = getattr(camera, "active_plane", None)
             self._sel_direction = getattr(camera, "plane_direction", "positive")
             self._sel_offset = getattr(camera, "plane_offset", 0.0)
 
-    def close(self):
-        self.visible = False
-
-    # ------------------------------------------------------------------
-    def draw(self):
-        if not self.visible:
-            return
-
-        if self._first_open:
-            io = imgui.get_io()
-            w, h = 380, 480
-            imgui.set_next_window_position(
-                io.display_size[0] - w - 420, 40,
-                condition=imgui.FIRST_USE_EVER,
-            )
-            imgui.set_next_window_size(w, h, condition=imgui.FIRST_USE_EVER)
-            self._first_open = False
-
-        expanded, opened = imgui.begin("View & Plan Filter", True)
-        if not opened:
-            self.visible = False
-            imgui.end()
-            return
-
+    def draw_content(self):
         # --- VIEW ---
         imgui.text_colored("VIEW", 0.5, 0.8, 1.0, 1.0)
         imgui.separator()
 
-        # 4'lü grid — preset butonları
         for i, (label, key) in enumerate(self.VIEW_PRESETS):
             if i % 4 != 0:
                 imgui.same_line()
             active = (self._sel_preset == key)
             if active:
-                imgui.push_style_color(imgui.COLOR_BUTTON,
-                                       0.20, 0.50, 0.75, 1.0)
-                imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED,
-                                       0.28, 0.62, 0.88, 1.0)
+                imgui.push_style_color(imgui.COLOR_BUTTON, 0.20, 0.50, 0.75, 1.0)
+                imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.28, 0.62, 0.88, 1.0)
+            
             if imgui.button(label, width=85):
-                # Toggle davranışı
                 if self._sel_preset == key:
                     self._sel_preset = None
                 else:
                     self._sel_preset = key
+                self._apply()  # ← Eş zamanlı tetikle
+                
             if active:
                 imgui.pop_style_color(2)
 
@@ -116,12 +81,13 @@ class ViewFilterPanel:
                 imgui.same_line()
             active = (self._sel_plane == key)
             if active:
-                imgui.push_style_color(imgui.COLOR_BUTTON,
-                                       0.20, 0.50, 0.75, 1.0)
-                imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED,
-                                       0.28, 0.62, 0.88, 1.0)
+                imgui.push_style_color(imgui.COLOR_BUTTON, 0.20, 0.50, 0.75, 1.0)
+                imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.28, 0.62, 0.88, 1.0)
+            
             if imgui.button(label, width=85):
                 self._sel_plane = key
+                self._apply()  # ← Eş zamanlı tetikle
+                
             if active:
                 imgui.pop_style_color(2)
 
@@ -134,19 +100,18 @@ class ViewFilterPanel:
 
         dir_pos = (self._sel_direction == "positive")
         if imgui.radio_button("Positive (+)", dir_pos):
-            self._sel_direction = "positive"
+            if self._sel_direction != "positive":
+                self._sel_direction = "positive"
+                self._apply()
         imgui.same_line()
         if imgui.radio_button("Negative (-)", not dir_pos):
-            self._sel_direction = "negative"
+            if self._sel_direction != "negative":
+                self._sel_direction = "negative"
+                self._apply()
 
         # --- OFFSET SLIDER ---
-        # Model boyutundan min/max
-        if self.camera is not None:
-            size = getattr(self.camera, "model_size", 1000.0)
-        else:
-            size = 1000.0
+        size = getattr(self.camera, "model_size", 1000.0) if self.camera is not None else 1000.0
 
-        # Slider int/float farkı için iki değerli kullan
         imgui.text(f"Offset ({self._sel_offset:.2f})")
         imgui.push_item_width(-1)
         changed, new_val = imgui.slider_float(
@@ -156,23 +121,24 @@ class ViewFilterPanel:
             format="%.2f",
         )
         imgui.pop_item_width()
+        
         if changed:
             self._sel_offset = new_val
+            self._apply()  # ← Slider sürüklendikçe anlık tetikle
 
         # Hızlı offset seçenekleri
         if self.camera is not None and self._sel_plane is not None:
             imgui.spacing()
             imgui.text_colored("Hızlı:", 0.7, 0.7, 0.7, 1.0)
             if imgui.button("Merkez", width=85):
-                # Model merkezine göre offset
-                center = getattr(self.camera, "model_center",
-                                 [0, 0, 0])
+                center = getattr(self.camera, "model_center", [0, 0, 0])
                 if self._sel_plane == "XY":
                     self._sel_offset = float(center[2])
                 elif self._sel_plane == "XZ":
                     self._sel_offset = float(center[1])
                 elif self._sel_plane == "YZ":
                     self._sel_offset = float(center[0])
+                self._apply()  # ← Eş zamanlı tetikle
 
         if not plane_active:
             imgui.pop_style_var(1)
@@ -181,45 +147,28 @@ class ViewFilterPanel:
         imgui.separator()
         imgui.spacing()
 
-        # --- Alt butonlar ---
+        # --- Alt Tek Buton (Sadece Temizle / Sıfırla) ---
         avail = imgui.get_content_region_available_width()
-        btn_w = (avail - 8) * 0.5
-
-        imgui.push_style_color(imgui.COLOR_BUTTON,
-                               0.45, 0.20, 0.20, 1.0)
-        imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED,
-                               0.60, 0.28, 0.28, 1.0)
-        if imgui.button("Temizle", width=btn_w):
+        imgui.push_style_color(imgui.COLOR_BUTTON, 0.45, 0.20, 0.20, 1.0)
+        imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.60, 0.28, 0.28, 1.0)
+        
+        if imgui.button("Filtreyi Temizle", width=avail):
             self._sel_preset = None
             self._sel_plane = None
             self._sel_offset = 0.0
             self._apply()
+            
         imgui.pop_style_color(2)
 
-        imgui.same_line()
-
-        imgui.push_style_color(imgui.COLOR_BUTTON,
-                               0.20, 0.55, 0.30, 1.0)
-        imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED,
-                               0.28, 0.68, 0.40, 1.0)
-        if imgui.button("Apply", width=btn_w):
-            self._apply()
-        imgui.pop_style_color(2)
-
-        imgui.end()
-
-    # ------------------------------------------------------------------
     def _apply(self):
         if self.camera is None:
             return
 
-        # 1) View preset
         if self._sel_preset:
             self.camera.set_view_preset(self._sel_preset)
         else:
             self.camera.clear_view_preset()
 
-        # 2) Plan filter — doğrudan engine.apply_plane_filter
         if callable(self.on_apply):
             try:
                 self.on_apply(
