@@ -1,18 +1,22 @@
 # ui/toolbar.py
 """
-ImGui Toolbar — Açılır menü grubu ile sadeleştirilmiş üst şerit.
+ImGui Toolbar — Sekmeli ve kategorize edilmiş modern üst şerit.
 """
 from typing import Callable, Dict
+from domain.definition import UnitSystem
 import imgui
 
 
 class Toolbar:
-    HEIGHT = 34.0
+    HEIGHT = 32.0
 
-    def __init__(self, callbacks: Dict[str, Callable]):
+    def __init__(self, callbacks: Dict[str, Callable], panel_states: Dict[str, Callable] = None):
         self.callbacks = callbacks or {}
+        self.panel_states = panel_states or {} # Panellerin açık/kapalı durumunu dönen fonksiyonlar
+        self.current_unit = None
 
-    def draw(self, model_text: str = "MODEL: YENİ SAHNE", draw_active: bool = False):
+    def draw(self, model_text: str = "MODEL: YENİ SAHNE", draw_active: bool = False, current_unit=None):
+        self.current_unit = current_unit
         flags = (
             imgui.WINDOW_NO_SCROLLBAR
             | imgui.WINDOW_NO_SCROLL_WITH_MOUSE
@@ -31,7 +35,8 @@ class Toolbar:
         imgui.end()
 
     def _draw_content(self, model_text: str, draw_active: bool):
-        if imgui.button("←"):
+        # --- Dosya & Proje Grubu ---
+        if imgui.button("≡ Menü"):
             self._fire("menu")
         imgui.same_line()
 
@@ -40,39 +45,86 @@ class Toolbar:
         self._styled_button("Kaydet", (0.18, 0.50, 0.32, 1.00), lambda: self._fire("save"))
         imgui.same_line()
 
+        imgui.separator()
+        imgui.same_line()
+
+        # --- Çizim Modu ---
         if draw_active:
             draw_color, draw_label = (0.20, 0.60, 0.35, 1.00), "Çizim [AÇIK]"
         else:
             draw_color, draw_label = (0.22, 0.28, 0.38, 1.00), "Çiz (D)"
-
         self._styled_button(draw_label, draw_color, lambda: self._fire("draw"))
         imgui.same_line()
 
-        # --- Proje & Yönetim Açılır Menü Grubu ---
-        if imgui.begin_menu("Proje & Yönetim"):
-            if imgui.menu_item("Tanımlar (Definitions)")[0]:
+        # --- Görünüm & Araçlar (Toggle Check ile güncellendi) ---
+        if imgui.begin_menu("Görünürlük & Araçlar"):
+            # Panel durumlarını güvenli şekilde sorgula
+            vis_state = self._get_panel_state("visibility")
+            filter_state = self._get_panel_state("view_filter")
+            grid_state = self._get_panel_state("grid")
+            inspector_state = self._get_panel_state("inspector")
+
+            if imgui.menu_item("Görünürlük Paneli (Visibility)", selected=vis_state)[0]:
+                self._fire("visibility")
+            if imgui.menu_item("Görünüm Filtresi (View Filter - F6)", selected=filter_state)[0]:
+                self._fire("view_filter")
+            if imgui.menu_item("Grid Ayarları (Grid - Ctrl+G)", selected=grid_state)[0]:
+                self._fire("grid")
+            if imgui.menu_item("Grid Etiketleri", selected=self.panel_states.get("grid_labels", lambda: True)())[0]:
+                self._fire("grid_labels")
+            if imgui.menu_item("Inspector (Ctrl+P)", selected=inspector_state)[0]:
+                self._fire("inspector")
+            
+            imgui.separator()
+            
+            if imgui.menu_item("Render Modu Değiştir (F3)")[0]:
+                self._fire("render_mode")
+            if imgui.menu_item("Akıllı Düzlem Modu (F11)", selected=self._get_panel_state("smart_plane"))[0]:
+                self._fire("smart_plane")
+            imgui.end_menu()
+        imgui.same_line()
+
+        # --- Yönetim & Tanımlar ---
+        if imgui.begin_menu("Yönetim & Tanımlar"):
+            if imgui.menu_item("Tanımlar (Definitions - Ctrl+R)", selected=self._get_panel_state("definitions"))[0]:
                 self._fire("definitions")
-            if imgui.menu_item("Proje Bilgileri (Info)")[0]:
+            if imgui.menu_item("Proje Bilgileri (Info)", selected=self._get_panel_state("project_info"))[0]:
                 self._fire("project_info")
-            if imgui.menu_item("Yapılandırma (Config)")[0]:
+            if imgui.menu_item("Yapılandırma (Config)", selected=self._get_panel_state("project_config"))[0]:
                 self._fire("project_config")
-            if imgui.menu_item("Analiz (Analysis)")[0]:
+            if imgui.menu_item("Analiz (Analysis)", selected=self._get_panel_state("analysis"))[0]:
                 self._fire("analysis")
-            if imgui.menu_item("Rapor (Report)")[0]:
+            if imgui.menu_item("Rapor (Report)", selected=self._get_panel_state("report"))[0]:
                 self._fire("report")
             imgui.end_menu()
         imgui.same_line()
 
+        # --- Rüzgar & Özel Analizler ---
+        zones_open = self._get_panel_state("wind")
+        # Zones butonunu da duruma göre renklendirebiliriz veya standart bırakabiliriz
+        self._styled_button("Zones", (0.15, 0.45, 0.60, 1.00), lambda: self._fire("wind"))
+        imgui.same_line()
+
+        # --- Tek ve Kalıcı Birim Seçici ---
+        unit_label = f"Birim: {self.current_unit.name} ({self.current_unit.force_unit}, {self.current_unit.length_unit})" if self.current_unit else "Birim: N-mm"
+        
+        if imgui.begin_menu(unit_label):
+            for unit in UnitSystem:
+                is_selected = (self.current_unit == unit)
+                if imgui.menu_item(f"{unit.name} ({unit.force_unit}, {unit.length_unit})", selected=is_selected)[0]:
+                    if "on_unit_change" in self.callbacks:
+                        self.callbacks["on_unit_change"](unit)
+            imgui.end_menu()
+        imgui.same_line()
+
+        # Model Durum Bilgisi
         imgui.text_colored(model_text, 0.60, 0.65, 0.72, 1.00)
 
-        avail = imgui.get_content_region_available_width()
-        right_block = 180.0
-        if avail > right_block:
-            imgui.same_line(position=imgui.get_window_width() - right_block)
-
-        self._styled_button("VIS", (0.20, 0.40, 0.50, 1.00), lambda: self._fire("visibility"))
-        imgui.same_line()
-        self._styled_button("Zones", (0.15, 0.45, 0.60, 1.00), lambda: self._fire("wind"))
+    def _get_panel_state(self, key: str) -> bool:
+        fn = self.panel_states.get(key)
+        if callable(fn):
+            return bool(fn())
+        return False
 
     def _styled_button(self, label: str, base_color, on_click):
         hovered = tuple(min(c + 0.08, 1.0) for c in base_color[:3]) + (1.0,)

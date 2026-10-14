@@ -8,6 +8,7 @@ KivyCADWidget bu sınıfı kullanır ama bu sınıf Kivy'yi bilmez.
 import time
 from pathlib import Path
 import glm
+glm.silence(2)
 from OpenGL.GL import glGetString, GL_VERSION
 
 from render.shaderprogram import ShaderProgram
@@ -28,19 +29,19 @@ from tools.loader import ModelLoader
 from core.draw_manager import DrawManager
 from render.snapsquare import SnapSquareRenderer
 from core.edit.edit_controller import EditController
+from tools.smart_plane_analysis import SmartPlaneAnalyzer
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
-
 
 # Shader klasörü — modül seviyesinde bir kez
 _here = Path(__file__).resolve().parent
 SHADER_DIR = _here.parent / "render" / "shaders"
 
 
-class PureKivyEngine:
+class Engine:
     """Kivy'den bağımsız CAD motoru."""
-
+    
     def __init__(self, w, h):
         self.w, self.h = max(1, w), max(1, h)
         self.pending_anim = False
@@ -84,6 +85,7 @@ class PureKivyEngine:
     # ------------------------------------------------------------------
     # INIT
     # ------------------------------------------------------------------
+    
     def init_gl(self):
         """GL context hazır olunca bir kez çağrılır."""
         logger.info("GL_VERSION: %s", glGetString(GL_VERSION))
@@ -91,6 +93,7 @@ class PureKivyEngine:
         self._init_camera()
         self._init_components()
 
+    
     def _init_shaders(self):
         shader_list = ["pick", "standard", "node", "simple",
                        "2d_overlay", "preview", "grid"]
@@ -111,6 +114,7 @@ class PureKivyEngine:
         self.preview_s = self.shaders.get("preview")
         self.grid_s = self.shaders.get("grid")
 
+    
     def _init_camera(self):
         self.cam = Camera()
         self.cam.set_aspect(self.w, self.h)
@@ -119,18 +123,20 @@ class PureKivyEngine:
         self.cam.distance = 50.0
         self.cam._update_position()
 
+    
     def _init_components(self):
         self.scene = Scene()
         self.input = InputManager()
         self.sel_policy = SelectionPolicy(self.input)
         self.grid = GridSystem(self.grid_s)
         self.snap = SnapSquareRenderer()
-        from tools.smart_plane_analysis import SmartPlaneAnalyzer
+
+
         
-        self.smart_analyzer = SmartPlaneAnalyzer(
-                scene_controller=None,               # şimdilik None
-                scene_provider=lambda: self.scene, # ama erişim anında engine.scene
-            )
+        # self.smart_analyzer = SmartPlaneAnalyzer(
+        #         scene_controller=None,               # şimdilik None
+        #         scene_provider=lambda: self.scene, # ama erişim anında engine.scene
+        #     )
         
         self.renderer = SceneRenderer(
             pick_s=self.pick_s,
@@ -153,9 +159,11 @@ class PureKivyEngine:
         self.draw_mgr = DrawManager(self)
         self.edit = EditController(self)
 
+        
     # ------------------------------------------------------------------
     # PUBLIC API
     # ------------------------------------------------------------------
+    
     def resize(self, w, h):
         self.w, self.h = max(1, w), max(1, h)
         if self.cam:
@@ -165,16 +173,21 @@ class PureKivyEngine:
         if self.pick_pass:
             self.pick_pass.set_viewport(self.w, self.h)
 
+        logger.info()
+
+    
     def load_model(self, builder):
         self.scene = builder.scene
         self.renderer.update_geo(self.scene)
         self.fit_view()
 
+    
     def set_scene(self, scene):
         self.scene = scene
         self.renderer.update_geo(self.scene)
         self.fit_view()
 
+    
     def clear_scene(self):
         self.scene = Scene()
         self.renderer.set_scene(self.scene)
@@ -183,14 +196,19 @@ class PureKivyEngine:
                   self.renderer.polygon_r):
             r.elements = []
 
+    
     def fit_view(self):
         if not self.renderer:
             return
         self.renderer._update_bounds_from_nodes()
-        c, s = self.renderer.get_bounds()
+        c1, s1 = self.renderer.get_bounds()
+        c2, s2 = self.grid.get_bounds()
+        c, s = (c1, s1) if s1 >= s2 else (c2, s2)
+        
         self.cam.update_bounds(c, s)
         self.cam.focus_on_model()
 
+    
     def redraw_scene(self, full_rebuild: bool = True):
         if not self.renderer:
             return

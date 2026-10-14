@@ -1,253 +1,449 @@
 # tools/gridsystem.py
-"""
-Dinamik grid sistemi.
-
-- Model bounds'larına göre otomatik ölçeklenir.
-- Major / minor çizgi ayrımı.
-- Vertex rengi grid'den gelir, alpha shader'dan gelir.
-- Kendi shader'ını kullanır (grid.vert / grid.frag).
-"""
-
-import glm
-import numpy as np
 import ctypes
-from logging_config import CadLogger
+from typing import List, Optional
+import glm
+glm.silence(2)
+import numpy as np
 
 from OpenGL.GL import (
     glGenVertexArrays, glGenBuffers, glBindVertexArray, glBindBuffer,
-    glBufferData, glIsBuffer, glIsVertexArray, glVertexAttribPointer, glEnableVertexAttribArray,
+    glBufferData, glIsBuffer, glIsVertexArray,
+    glVertexAttribPointer, glEnableVertexAttribArray,
     glDrawArrays, glDeleteVertexArrays, glDeleteBuffers,
     glUniformMatrix4fv, glUniform1f,
     GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, GL_FALSE,
     GL_LINES,
 )
 
+from domain.definition import GridPlane, GridPlaneDef
 from logging_config import CadLogger
-
 logger = CadLogger.get(__name__)
 
+COLOR_MAJOR  = (0.55, 0.55, 0.60)
+COLOR_MINOR  = (0.25, 0.27, 0.32)
+COLOR_X_AXIS = (0.70, 0.25, 0.25)
+COLOR_Y_AXIS = (0.25, 0.70, 0.25)
+COLOR_Z_AXIS = (0.25, 0.45, 0.70)
 
-# ============================================================
-# RENK PALETİ
-# ============================================================
-
-COLOR_MAJOR  = (0.55, 0.55, 0.60)   # Ana çizgiler
-COLOR_MINOR  = (0.25, 0.27, 0.32)   # İnce çizgiler
-COLOR_X_AXIS = (0.70, 0.25, 0.25)   # X ekseni (kırmızımsı)
-COLOR_Y_AXIS = (0.25, 0.70, 0.25)   # Y ekseni (yeşilimsi)
-
-
-# ============================================================
-# GRID SYSTEM
-# ============================================================
 
 class GridSystem:
-    """
-    Model boyutuna göre otomatik ölçeklenen grid.
-
-    Kullanım:
-        grid = GridSystem(shader)
-        grid.update(glm.vec3(cx, cy, 0), size=5000)
-        grid.draw(mvp)
-    """
-
-    # Grid çizim parametreleri
-    GRID_ALPHA = 0.55          # Tüm grid için global saydamlık
-    VERTEX_FLOATS = 6          # pos3 + color3
-    VERTEX_STRIDE = VERTEX_FLOATS * 4   # 24 byte
+    GRID_ALPHA = 0.55
+    VERTEX_FLOATS = 6
+    VERTEX_STRIDE = VERTEX_FLOATS * 4
 
     def __init__(self, shader_program):
         self.shader = shader_program
 
-        self.vao = None
-        self.vbo = None
-        self.vertex_count = 0
+        # Düzlem görünürlük durumları
+        self.planes = {
+            GridPlane.XY: {"visible": True},
+            GridPlane.XZ: {"visible": False},
+            GridPlane.YZ: {"visible": False},
+        }
+        # Kullanıcı tanımlı eğik plane'ler
+        self.user_planes: List[GridPlaneDef] = []
+        # Hangisi "aktif work plane"?
+        self.active_user_plane: Optional[str] = None
 
-        # Grid durumu
-        self.center = glm.vec3(0.0, 0.0, 0.0)
-        self.size = 50.0
-        self.divisions = 20
+        # Tekla / ETABS tarzı aks koordinat listeleri (mm veya proje biriminde)
+        self.x_coords = [0.0, 3000.0, 8000.0, 11000.0]
+        self.y_coords = [0.0, 3000.0, 6000.0, 12000.0]
+        self.z_coords = [0.0, 3200.0, 6400.0]
 
-        # İlk grid'i oluştur
-        self._create_grid(self.size, self.divisions)
+        self.origin = glm.vec3(0.0, 0.0, 0.0)
+        self._gpu = {name: {"vao": None, "vbo": None, "count": 0} for name in self.planes}
 
-    # ---------------------------------------------------------
-    # PUBLIC API
-    # ---------------------------------------------------------
+    def set_origin(self, x, y, z):
+        self.origin = glm.vec3(float(x), float(y), float(z))
+        self.rebuild_all()
 
-    def update(self, center: glm.vec3, size: float):
-        """Merkez ve boyuta göre grid'i yeniden üret."""
-        self.center = center
-        self.size = size
-        self.divisions = self._optimal_divisions(size)
-        self._create_grid(size, self.divisions)
+    def set_coords(self, x_list, y_list, z_list):
+        if x_list: self.x_coords = sorted(list(set(x_list)))
+        if y_list: self.y_coords = sorted(list(set(y_list)))
+        if z_list: self.z_coords = sorted(list(set(z_list)))
+        self.rebuild_all()
 
-    def draw(self, mvp_matrix):
-        """Grid'i çiz."""
-        if not self.vao or self.vertex_count == 0 or not self.shader:
+    def set_plane(self, plane: GridPlane, visible=None):
+        if plane not in self.planes:
+            return
+        if visible is not None:
+            self.planes[plane]["visible"] = bool(visible)
+        self._rebuild_plane(plane)
+
+    def rebuild_all(self):
+        for plane in self.planes:
+            if self.planes[plane]["visible"]:
+                self._rebuild_plane(plane)
+            else:
+                self._clear_plane(plane)
+
+    def _rebuild_plane(self, plane: GridPlane):
+        if plane not in self.planes:
+            return
+        p = self.planes[plane]
+        if not p["visible"]:
+            self._clear_plane(plane)
             return
 
-        self.shader.use()
+        ox, oy, oz = self.origin.x, self.origin.y, self.origin.z
+        xs = [ox + x for x in self.x_coords]
+        ys = [oy + y for y in self.y_coords]
+        zs = [oz + z for z in self.z_coords]
 
-        # MVP
-        mvp_loc = self.shader.get_loc("mvp")
-        if mvp_loc != -1:
-            glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp_matrix))
+        if len(xs) < 2 or len(ys) < 2 or len(zs) < 2:
+            self._clear_plane(plane)
+            return
 
-        # Alpha
-        alpha_loc = self.shader.get_loc("alpha")
-        if alpha_loc != -1:
-            glUniform1f(alpha_loc, self.GRID_ALPHA)
+        vertices = []
 
-        glBindVertexArray(self.vao)
-        glDrawArrays(GL_LINES, 0, self.vertex_count)
-        glBindVertexArray(0)
+        if plane == GridPlane.XY:
+            # Sadece z=0 kotunda (origin z ile birlikte zs[0])
+            z = zs[0]
+            min_x, max_x = xs[0], xs[-1]
+            min_y, max_y = ys[0], ys[-1]
 
-    def cleanup(self):
-        """GPU kaynaklarını serbest bırak."""
-        try:
-            if self.vao is not None and glIsVertexArray(self.vao):
-                glDeleteVertexArrays(1, [int(self.vao)])
-        except Exception:
-            pass
-        try:
-            if self.vbo is not None and glIsBuffer(self.vbo):
-                glDeleteBuffers(1, [int(self.vbo)])
-        except Exception:
-            pass
+            # X eksenine paralel çizgiler (her y için bir çizgi, X boyunca)
+            for i, y in enumerate(ys):
+                color = COLOR_X_AXIS if i == 0 else COLOR_MAJOR
+                vertices.extend([min_x, y, z, *color])
+                vertices.extend([max_x, y, z, *color])
 
-        self.vao = None
-        self.vbo = None
-        self.vertex_count = 0
-        self.shader = None
+            # Y eksenine paralel çizgiler (her x için bir çizgi, Y boyunca)
+            for i, x in enumerate(xs):
+                color = COLOR_Y_AXIS if i == 0 else COLOR_MAJOR
+                vertices.extend([x, min_y, z, *color])
+                vertices.extend([x, max_y, z, *color])
 
-    # ---------------------------------------------------------
-    # OPTİMAL DEĞERLER
-    # ---------------------------------------------------------
+        elif plane == GridPlane.XZ:
+            # Sadece y=0 düzleminde
+            y = ys[0]
+            min_x, max_x = xs[0], xs[-1]
+            min_z, max_z = zs[0], zs[-1]
 
-    @staticmethod
-    def _optimal_divisions(size: float) -> int:
-        """Grid boyutuna göre optimal bölünme sayısı."""
-        if size < 10:    return 10
-        if size < 50:    return 20
-        if size < 200:   return 30
-        if size < 1000:  return 40
-        return 50
+            # X eksenine paralel (her z için)
+            for i, z in enumerate(zs):
+                color = COLOR_X_AXIS if i == 0 else COLOR_MAJOR
+                vertices.extend([min_x, y, z, *color])
+                vertices.extend([max_x, y, z, *color])
 
-    @staticmethod
-    def _major_spacing(size: float) -> float:
-        """Grid boyutuna göre ana çizgi aralığı."""
-        if size < 5:      return 0.5
-        if size < 10:     return 1.0
-        if size < 20:     return 2.0
-        if size < 50:     return 5.0
-        if size < 100:    return 10.0
-        if size < 200:    return 20.0
-        if size < 500:    return 50.0
-        if size < 1000:   return 100.0
-        if size < 2000:   return 200.0
-        if size < 5000:   return 500.0
-        if size < 10000:  return 1000.0
-        if size < 20000:  return 2000.0
-        if size < 50000:  return 5000.0
-        return 10000.0
+            # Z eksenine paralel (her x için)
+            for i, x in enumerate(xs):
+                color = COLOR_Z_AXIS if i == 0 else COLOR_MAJOR
+                vertices.extend([x, y, min_z, *color])
+                vertices.extend([x, y, max_z, *color])
 
-    # ---------------------------------------------------------
-    # GRID ÜRETİMİ
-    # ---------------------------------------------------------
+        elif plane == GridPlane.YZ:
+            # Sadece x=0 düzleminde
+            x = xs[0]
+            min_y, max_y = ys[0], ys[-1]
+            min_z, max_z = zs[0], zs[-1]
 
-    def _create_grid(self, size: float, divisions: int):
-        """Grid vertex'lerini oluştur ve GPU'ya yükle."""
-        half = size / 2
-        step = size / divisions
-        major_spacing = self._major_spacing(size)
+            # Y eksenine paralel (her z için)
+            for i, z in enumerate(zs):
+                color = COLOR_Y_AXIS if i == 0 else COLOR_MAJOR
+                vertices.extend([x, min_y, z, *color])
+                vertices.extend([x, max_y, z, *color])
 
-        sx = self.center.x - half
-        sy = self.center.y - half
-        ex = self.center.x + half
-        ey = self.center.y + half
-        z = self.center.z
+            # Z eksenine paralel (her y için)
+            for i, y in enumerate(ys):
+                color = COLOR_Z_AXIS if i == 0 else COLOR_MAJOR
+                vertices.extend([x, y, min_z, *color])
+                vertices.extend([x, y, max_z, *color])
 
-        vertices = []   # [x, y, z, r, g, b] × N
+        self._upload_plane(plane, vertices)
 
-        # ---- Dikey çizgiler (X sabit) ----
-        for i in range(divisions + 1):
-            x = sx + i * step
-            color = self._line_color(x, step, major_spacing)
-            vertices.extend([x, sy, z, *color])
-            vertices.extend([x, ey, z, *color])
+    def _upload_plane(self, plane: GridPlane, vertices: list):
+        gpu = self._gpu[plane]
+        self._delete_plane_gpu(plane)
 
-        # ---- Yatay çizgiler (Y sabit) ----
-        for i in range(divisions + 1):
-            y = sy + i * step
-            color = self._line_color(y, step, major_spacing)
-            vertices.extend([sx, y, z, *color])
-            vertices.extend([ex, y, z, *color])
-
-        # ---- Merkez eksenleri ----
-        vertices.extend([sx, 0, z, *COLOR_X_AXIS])
-        vertices.extend([ex, 0, z, *COLOR_X_AXIS])
-        vertices.extend([0, sy, z, *COLOR_Y_AXIS])
-        vertices.extend([0, ey, z, *COLOR_Y_AXIS])
-
-        # ---- GPU'ya yükle ----
-        self._upload(vertices)
-
-        #logger.debug(f"size={size:.1f}, divisions={divisions}, vertices={self.vertex_count}")
-
-    @staticmethod
-    def _line_color(coord: float, step: float, major_spacing: float) -> tuple:
-        """Koordinata göre major/minor çizgi rengi."""
-        # Major çizgi kontrolü (toleranslı)
-        remainder = abs(coord) % major_spacing
-        is_major = remainder < step / 2 or (major_spacing - remainder) < step / 2
-        return COLOR_MAJOR if is_major else COLOR_MINOR
-
-    def _upload(self, vertices: list):
-        """Vertex listesini GPU'ya yükle."""
-        # Önceki kaynakları temizle
-        self._delete_buffers()
-
-        self.vertex_count = len(vertices) // self.VERTEX_FLOATS
-        if self.vertex_count == 0:
+        count = len(vertices) // self.VERTEX_FLOATS
+        if count == 0:
             return
 
         data = np.asarray(vertices, dtype=np.float32)
-
-        self.vao = glGenVertexArrays(1)
-        self.vbo = glGenBuffers(1)
-
-        glBindVertexArray(self.vao)
-
-        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        vao = glGenVertexArrays(1)
+        vbo = glGenBuffers(1)
+        glBindVertexArray(vao)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
         glBufferData(GL_ARRAY_BUFFER, data.nbytes, data, GL_STATIC_DRAW)
 
         stride = self.VERTEX_STRIDE
-
-        # location 0: pozisyon
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(0))
-
-        # location 1: renk (RGB)
         glEnableVertexAttribArray(1)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(12))
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
 
-    def _delete_buffers(self):
-        """VAO/VBO'yu sil (yeni grid için)."""
-        try:
-            if self.vao is not None and glIsVertexArray(self.vao):
-                glDeleteVertexArrays(1, [int(self.vao)])
-        except Exception:
-            pass
-        try:
-            if self.vbo is not None and glIsBuffer(self.vbo):
-                glDeleteBuffers(1, [int(self.vbo)])
-        except Exception:
-            pass
+        gpu["vao"] = vao
+        gpu["vbo"] = vbo
+        gpu["count"] = count
 
-        self.vao = None
-        self.vbo = None
-        self.vertex_count = 0
+    def _delete_plane_gpu(self, plane: GridPlane):
+        gpu = self._gpu[plane]
+        try:
+            if gpu["vao"] and glIsVertexArray(gpu["vao"]):
+                glDeleteVertexArrays(1, [int(gpu["vao"])])
+        except Exception:
+            pass
+        try:
+            if gpu["vbo"] and glIsBuffer(gpu["vbo"]):
+                glDeleteBuffers(1, [int(gpu["vbo"])])
+        except Exception:
+            pass
+        gpu["vao"] = None
+        gpu["vbo"] = None
+        gpu["count"] = 0
+
+    def _clear_plane(self, plane: GridPlane):
+        self._delete_plane_gpu(plane)
+
+    def draw(self, mvp_matrix):
+        if not self.shader:
+            return
+        self.shader.use()
+
+        mvp_loc = self.shader.get_loc("mvp")
+        if mvp_loc != -1:
+            glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp_matrix))
+
+        alpha_loc = self.shader.get_loc("alpha")
+        if alpha_loc != -1:
+            glUniform1f(alpha_loc, self.GRID_ALPHA)
+
+        for plane, gpu in self._gpu.items():
+            if not gpu["vao"] or gpu["count"] == 0:
+                continue
+            glBindVertexArray(gpu["vao"])
+            glDrawArrays(GL_LINES, 0, gpu["count"])
+        glBindVertexArray(0)
+
+    def cleanup(self):
+        for plane in self._gpu:
+            self._delete_plane_gpu(plane)
+        self.shader = None
+
+    def info(self):
+        return {
+            "x_coords": self.x_coords,
+            "y_coords": self.y_coords,
+            "z_coords": self.z_coords,
+        }
+
+    def get_label_anchors(self):
+        """
+        Her görünür plane için label anchor noktaları döner.
+        Returns: list[dict] -> {'pos': (x,y,z), 'text': 'X1', 'axis': 'X', 'plane': GridPlane}
+        """
+        ox, oy, oz = self.origin.x, self.origin.y, self.origin.z
+        xs = [ox + x for x in self.x_coords]
+        ys = [oy + y for y in self.y_coords]
+        zs = [oz + z for z in self.z_coords]
+
+        if not xs or not ys or not zs:
+            return []
+
+        labels = []
+
+        for plane, p in self.planes.items():
+            if not p["visible"]:
+                continue
+
+            if plane == GridPlane.XY:
+                y_edge = ys[0]
+                z0 = zs[0]
+                for i, x in enumerate(xs):
+                    labels.append({
+                        "pos": (x, y_edge, z0),
+                        "text": f"X{i+1}",
+                        "axis": "X",
+                        "plane": plane,
+                    })
+                x_edge = xs[0]
+                for i, y in enumerate(ys):
+                    labels.append({
+                        "pos": (x_edge, y, z0),
+                        "text": f"Y{i+1}",
+                        "axis": "Y",
+                        "plane": plane,
+                    })
+
+            elif plane == GridPlane.XZ:
+                y_edge = ys[0]
+                z0 = zs[0]
+                for i, x in enumerate(xs):
+                    labels.append({
+                        "pos": (x, y_edge, z0),
+                        "text": f"X{i+1}",
+                        "axis": "X",
+                        "plane": plane,
+                    })
+                x_edge = xs[0]
+                for i, z in enumerate(zs):
+                    labels.append({
+                        "pos": (x_edge, y_edge, z),
+                        "text": f"Z{i+1}",
+                        "axis": "Z",
+                        "plane": plane,
+                    })
+
+            elif plane == GridPlane.YZ:
+                x_edge = xs[0]
+                z0 = zs[0]
+                for i, y in enumerate(ys):
+                    labels.append({
+                        "pos": (x_edge, y, z0),
+                        "text": f"Y{i+1}",
+                        "axis": "Y",
+                        "plane": plane,
+                    })
+                for i, z in enumerate(zs):
+                    labels.append({
+                        "pos": (x_edge, ys[0], z),
+                        "text": f"Z{i+1}",
+                        "axis": "Z",
+                        "plane": plane,
+                    })
+
+        return labels
+    
+    def get_bounds(self):
+        """Gridin min/max sınırlarını ve merkezini hesaplar."""
+        if not self.x_coords or not self.y_coords or not self.z_coords:
+            return glm.vec3(0,0,0), 1000.0
+        
+        min_x, max_x = self.x_coords[0], self.x_coords[-1]
+        min_y, max_y = self.y_coords[0], self.y_coords[-1]
+        min_z, max_z = self.z_coords[0], self.z_coords[-1]
+        
+        center = glm.vec3(
+            self.origin.x + (min_x + max_x) * 0.5,
+            self.origin.y + (min_y + max_y) * 0.5,
+            self.origin.z + (min_z + max_z) * 0.5
+        )
+        
+        size = float(max(max_x - min_x, max_y - min_y, max_z - min_z))
+        if size < 1.0:
+            size = 1000.0
+            
+        return center, size
+
+    # ------------------------------------------------------------------
+    def add_user_plane(self, pdef: GridPlaneDef):
+        # Aynı isimde varsa üzerine yaz
+        self.user_planes = [p for p in self.user_planes
+                            if p.name != pdef.name]
+        self.user_planes.append(pdef)
+        self.rebuild_user_plane(pdef)
+
+    def remove_user_plane(self, name: str):
+        pdef = self.get_user_plane(name)
+        if pdef is None:
+            return
+        self.user_planes = [p for p in self.user_planes if p.name != name]
+        key = f"user::{name}"
+        self._delete_gpu_by_key(key)
+        if self.active_user_plane == name:
+            self.active_user_plane = None
+
+    def get_user_plane(self, name: str) -> Optional[GridPlaneDef]:
+        for p in self.user_planes:
+            if p.name == name:
+                return p
+        return None
+
+    def set_active_user_plane(self, name: Optional[str]):
+        self.active_user_plane = name
+
+    def rebuild_user_plane(self, pdef: GridPlaneDef):
+        self._rebuild_user_plane(pdef)
+
+    def rebuild_all(self):
+        # Global plane'ler
+        for plane in self.planes:
+            if self.planes[plane]["visible"]:
+                self._rebuild_plane(plane)
+            else:
+                self._clear_plane(plane)
+        # User plane'ler
+        for pdef in self.user_planes:
+            self._rebuild_user_plane(pdef)
+
+    # ------------------------------------------------------------------
+    def _rebuild_user_plane(self, pdef: GridPlaneDef):
+        key = f"user::{pdef.name}"
+        if not pdef.visible:
+            self._delete_gpu_by_key(key)
+            return
+
+        origin, u, v, n = pdef.get_uv_frame()
+
+        su = pdef.spacing_u
+        sv = pdef.spacing_v
+        cu = pdef.count_u
+        cv = pdef.count_v
+
+        color = pdef.color
+        axis_u_color = (0.70, 0.25, 0.25)
+        axis_v_color = (0.25, 0.70, 0.25)
+
+        iu_min, iu_max = -cu, cu
+        iv_min, iv_max = -cv, cv
+
+        verts = []
+
+        # U yönünde çizgiler (V sabit)
+        for j in range(iv_min, iv_max + 1):
+            p_a = origin + u * (iu_min * su) + v * (j * sv)
+            p_b = origin + u * (iu_max * su) + v * (j * sv)
+            c = axis_u_color if j == 0 else color
+            verts.extend([p_a.x, p_a.y, p_a.z, *c])
+            verts.extend([p_b.x, p_b.y, p_b.z, *c])
+
+        # V yönünde çizgiler (U sabit)
+        for i in range(iu_min, iu_max + 1):
+            p_a = origin + u * (i * su) + v * (iv_min * sv)
+            p_b = origin + u * (i * su) + v * (iv_max * sv)
+            c = axis_v_color if i == 0 else color
+            verts.extend([p_a.x, p_a.y, p_a.z, *c])
+            verts.extend([p_b.x, p_b.y, p_b.z, *c])
+
+        self._upload_plane_by_key(key, verts)
+
+    def _upload_plane_by_key(self, key: str, vertices: list):
+        self._delete_gpu_by_key(key)
+        count = len(vertices) // self.VERTEX_FLOATS
+        if count == 0:
+            return
+        data = np.asarray(vertices, dtype=np.float32)
+        vao = glGenVertexArrays(1)
+        vbo = glGenBuffers(1)
+        glBindVertexArray(vao)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBufferData(GL_ARRAY_BUFFER, data.nbytes, data, GL_STATIC_DRAW)
+        stride = self.VERTEX_STRIDE
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride,
+                              ctypes.c_void_p(0))
+        glEnableVertexAttribArray(1)
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
+                              ctypes.c_void_p(12))
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+        self._gpu[key] = {"vao": vao, "vbo": vbo, "count": count}
+
+    def _delete_gpu_by_key(self, key: str):
+        gpu = self._gpu.pop(key, None)
+        if not gpu:
+            return
+        try:
+            if gpu.get("vao") and glIsVertexArray(gpu["vao"]):
+                glDeleteVertexArrays(1, [int(gpu["vao"])])
+        except Exception:
+            pass
+        try:
+            if gpu.get("vbo") and glIsBuffer(gpu["vbo"]):
+                glDeleteBuffers(1, [int(gpu["vbo"])])
+        except Exception:
+            pass

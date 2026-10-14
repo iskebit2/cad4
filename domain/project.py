@@ -8,8 +8,8 @@ from domain.element import Area, Frame, Link, Node, Polygon
 from domain.scene import Scene
 from domain.definition_manager import DefinitionManager
 from domain.definition import (
-    AnalysisManager, GeneralProjectInfo, LoadManager, ProjectConfig, ProjectInfo,
-    ReportManager, SerializableData, SiteInformation,
+    AnalysisManager, GeneralProjectInfo, GridConfig, LoadManager, ProjectConfig, ProjectInfo,
+    ReportManager, SerializableData, SiteInformation, UnitSystem
 )
 from domain.serialization import dumps_pretty
 
@@ -25,7 +25,9 @@ class Project(SerializableData):
     loads: LoadManager = field(default_factory=LoadManager)
     analysis: AnalysisManager = field(default_factory=AnalysisManager)
     report: ReportManager = field(default_factory=ReportManager)
-
+    unit_system: UnitSystem = UnitSystem.N_MM
+    grid: GridConfig = field(default_factory=GridConfig)
+    
     # ------------------------------------------------------------------
     # SERIALIZATION
     # ------------------------------------------------------------------
@@ -55,6 +57,7 @@ class Project(SerializableData):
             "loads":        _ser(self.loads),
             "analysis":     _ser(self.analysis),
             "report":       _ser(self.report),
+            "grid":         _ser(self.grid),
         }
 
     @classmethod
@@ -79,6 +82,8 @@ class Project(SerializableData):
             project.analysis = AnalysisManager.from_dict(data["analysis"])
         if data.get("report"):
             project.report = ReportManager.from_dict(data["report"])
+        if data.get("grid"):
+            project.grid = GridConfig.from_dict(data["grid"])
 
         scene_data = data.get("scene", {})
         project.scene = Scene.from_dict(scene_data, project.definitions)

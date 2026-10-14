@@ -5,9 +5,10 @@ import glfw
 from OpenGL.GL import *
 
 from app.cad_window import CadWindow
-from core.gl_engine import PureKivyEngine
+from core.gl_engine import Engine
 from app.event_router import EventRouter
 
+from domain.definition import UnitSystem
 from domain.element import PolygonType
 from ui.toolbar import Toolbar
 from ui.main_menu import MainMenuPopup
@@ -18,6 +19,7 @@ from ui.inspector_panel import InspectorPanel
 from ui.zones_panel import ZonesPanel
 from ui.definition_panel import DefinitionPanel
 from ui.project_panels import ProjectInfoPanel, ProjectConfigPanel, AnalysisManagerPanel
+from ui.grid_panel import GridPanel
 from ui.imgui_backend import UiBackend
 from domain.project import Project
 
@@ -35,6 +37,10 @@ class CadApp:
         self.hover_visual_enabled = True
 
         # Paneller
+        self.grid_panel = GridPanel(
+                                    on_change=self._on_grid_change,
+                                    on_work_plane_activate=self._on_work_plane_activate,
+                                )
         self.inspector = InspectorPanel(on_apply = self._on_inspector_apply)
         self.main_menu = MainMenuPopup(on_action = self._on_main_menu_action)
         self.visibility_panel = VisibilityPanel(on_apply=self._on_visibility_applied)
@@ -64,19 +70,46 @@ class CadApp:
         window.on_char = self.router.on_char
         window.on_focus = self.router.on_window_focus
 
-        self.toolbar = Toolbar({
-            "menu": self._on_toolbar_menu,
-            "open": self._on_toolbar_open,
-            "save": self._on_toolbar_save,
-            "draw": self._toggle_draw_mode,
-            "definitions": lambda: self.definition_panel.open(self.current_project.definitions),
-            "project_info": lambda: self.project_info_panel.open(self.current_project.info),
-            "project_config": lambda: self.project_config_panel.open(self.current_project.config),
-            "analysis": lambda: self.analysis_panel.open(self.current_project.analysis),
-            "report": lambda: self.report_panel.open(self.current_project.report),
-            "visibility": self._on_toolbar_visibility,
-            "wind": self._on_toolbar_wind,
-        })
+        self.toolbar = Toolbar(
+            callbacks={
+                "menu": self._on_toolbar_menu,
+                "open": self._on_toolbar_open,
+                "save": self._on_toolbar_save,
+                "draw": self._toggle_draw_mode,
+                
+                # --- Toggle Mantığına Uyarlanan Panel Callback'leri ---
+                "visibility": lambda: self.visibility_panel.close() if self.visibility_panel.visible else self._on_toolbar_visibility(),
+                "view_filter": self.toggle_view_filter_panel, # Bu zaten kendi içinde open/close yapıyor
+                "grid": lambda: self.grid_panel.close() if self.grid_panel.visible else self.open_grid(),
+                "grid_labels": lambda: setattr(self.engine.renderer.grid_labels, "enabled",
+                                not self.engine.renderer.grid_labels.enabled),
+                "inspector": lambda: self.inspector.close() if self.inspector.visible else self.open_inspector(),
+                
+                "render_mode": lambda: self.engine.renderer.toggle_render_mode() if self.engine and self.engine.renderer else None,
+                "smart_plane": lambda: setattr(self.engine, "active_smart_plane_mode", not self.engine.active_smart_plane_mode) if self.engine else None,
+                
+                "definitions": lambda: self.definition_panel.close() if self.definition_panel.visible else self.definition_panel.open(self.current_project.definitions),
+                "project_info": lambda: self.project_info_panel.close() if self.project_info_panel.visible else self.project_info_panel.open(self.current_project.info),
+                "project_config": lambda: self.project_config_panel.close() if self.project_config_panel.visible else self.project_config_panel.open(self.current_project.config),
+                "analysis": lambda: self.analysis_panel.close() if self.analysis_panel.visible else self.analysis_panel.open(self.current_project.analysis),
+                "report": lambda: self.report_panel.close() if self.report_panel.visible else self.report_panel.open(self.current_project.report),
+                
+                "wind": lambda: self.zones_panel.close() if self.zones_panel.visible else self._on_toolbar_wind(),
+                "on_unit_change": self.set_unit_system,
+            },
+            panel_states={
+                "visibility": lambda: self.visibility_panel.visible,
+                "view_filter": lambda: self.view_filter.visible,
+                "grid": lambda: self.grid_panel.visible,
+                "inspector": lambda: self.inspector.visible,
+                "smart_plane": lambda: getattr(self.engine, "active_smart_plane_mode", False) if self.engine else False,
+                "definitions": lambda: self.definition_panel.visible,
+                "project_info": lambda: self.project_info_panel.visible,
+                "project_config": lambda: self.project_config_panel.visible,
+                "analysis": lambda: self.analysis_panel.visible,
+                "wind": lambda: self.zones_panel.visible,
+            }
+        )
 
         import queue
         self._wind_queue = queue.Queue()
@@ -92,7 +125,7 @@ class CadApp:
             return
         try:
             logger.info("[INIT] Engine başlıyor...")
-            self.engine = PureKivyEngine(w, h)
+            self.engine = Engine(w, h)
             self.engine.init_gl()
             self.engine.on_hover_changed_callback = self._on_hover_changed
             self.engine.sel_mgr.on_selection_changed = self._on_selection_changed
@@ -102,21 +135,6 @@ class CadApp:
             logger.exception("INIT HATASI")
             self.initialized = True
 
-    def set_project(self, project: Project):
-        """Proje nesnesini sisteme uygular, verileri panellere dağıtır."""
-        self.current_project = project
-        if self.engine:
-            self.engine.set_scene(project.scene)
-        
-        # Panelleri besle
-        self.inspector.scene = project.scene
-        self.visibility_panel.scene = project.scene
-        self.definition_panel.open(project.definitions)
-        self.project_info_panel.open(project.info)
-        self.project_config_panel.open(project.config)
-        self.analysis_panel.open(project.analysis)
-
-
     def frame(self, dt):
         self._ensure_engine()
         if not self.initialized:
@@ -125,34 +143,50 @@ class CadApp:
         self.ui_backend.begin_frame()
 
         draw_active = bool(self.engine and self.engine.draw_mgr and self.engine.draw_mgr.is_active)
-        self.toolbar.draw(model_text=self._model_text, draw_active=draw_active)
+        current_unit = self.current_project.unit_system if self.current_project else None
+        self.toolbar.draw(model_text=self._model_text, draw_active=draw_active, current_unit=current_unit)
 
+
+        self.file_dialog.draw()
+        self.router.process_pending()
+        
+        # Rüzgar analizi kuyruk kontrolü
+        self._process_wind_queue()
+
+        # Sahne kirli (dirty) ise GPU'yu güncelle ve temizle
+        active_scene = self.engine.scene if self.engine else None
+        if active_scene and hasattr(active_scene, 'is_dirty') and active_scene.is_dirty():
+            if self.engine.renderer:
+                self.engine.renderer.update_geo(active_scene)
+            active_scene.clear_dirty()
+            
+        # Sahne çizimi
+        self._render_scene(dt)
+
+        # Tüm aktif/görünür panelleri tek bir metod altında yönetelim
+        self._draw_panels()
+        
+
+        self.ui_backend.end_frame()
+
+        # Pick kontrolü
+        if self.engine and self.engine.pending_pick_check:
+            self.engine.check_pick_result()
+
+    def _draw_panels(self):
+        """Sadece görünür (açık) olan panelleri render döngüsüne sokar."""
         self.main_menu.draw()
         self.visibility_panel.draw()
         self.view_filter.draw()
         self.inspector.draw()
         self.zones_panel.draw()
         
-        # Yönetim Panellerini Çiz
+        # Yönetim ve Araç Panelleri (BasePanel altındaki visible kontrolü zaten kapalıyken çizimi engeller)
         self.definition_panel.draw()
         self.project_info_panel.draw()
         self.project_config_panel.draw()
         self.analysis_panel.draw()
-
-
-        self.file_dialog.draw()
-        self.router.process_pending()
-        # Rüzgar analizi kuyruk kontrolü
-        self._process_wind_queue()
-
-        # Sahne çizimi
-        self._render_scene(dt)
-
-        self.ui_backend.end_frame()
-
-        # Pick kontrolü (Yedek koddan geri eklendi)
-        if self.engine and self.engine.pending_pick_check:
-            self.engine.check_pick_result()
+        self.grid_panel.draw()
 
     def _render_scene(self, dt):
         w, h = self.window.fb_width, self.window.fb_height
@@ -186,6 +220,29 @@ class CadApp:
             glDisable(GL_CULL_FACE)
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+    def _draw_grid_labels(self):
+        """Grid etiketlerini 2D overlay olarak çizer."""
+        if not self.engine or not self.engine.renderer:
+            return
+        if not getattr(self.engine.renderer.show, 'grid', False):
+            return
+        
+        grid = self.engine.renderer.grid
+        if grid is None:
+            return
+        
+        cam = self.engine.cam
+        if cam is None:
+            return
+        
+        # 3D grid ile aynı mvp (model_mat dahil)
+        mvp = (cam.get_projection_matrix()
+            * cam.get_view_matrix()
+            * self.engine.renderer.model_mat)
+        
+        w, h = self.window.fb_width, self.window.fb_height
+        self.engine.renderer.grid_labels.draw(grid, mvp, w, h)
 
     def _draw_snap_indicator(self, w, h):
         snap = self.engine.snap
@@ -233,19 +290,7 @@ class CadApp:
         except Exception:
             logger.exception("Proje yükleme hatası")
 
-    def _save_project(self, path: str):
-        try:
-            if self.engine and self.engine.scene:
-                self.current_project.scene = self.engine.scene
-                # Scene içerisindeki definition manager'ı project seviyesine senkronize et
-                if hasattr(self.engine.scene, "def_mgr"):
-                    self.current_project.definitions = self.engine.scene.def_mgr
-            
-            self.current_project.save(path)
-            self._model_text = f"MODEL: {os.path.basename(path)}"
-            logger.info("[File] Proje kaydedildi: %s", path)
-        except Exception:
-            logger.exception("Proje kaydetme hatası")
+    
 
     def _on_toolbar_visibility(self):
         if self.visibility_panel.visible:
@@ -385,10 +430,42 @@ class CadApp:
         if self.engine and self.engine.scene:
             self.engine.renderer.update_geo(self.engine.scene)
 
-    def _on_view_filter_apply(self, plane, offset, direction):
-        if self.engine:
-            self.engine.apply_plane_filter(plane, offset, direction)
+    def _on_view_filter_apply(self, mode, min_s, max_s):
+        """
+        mode: "off" | "range" | "before" | "after"
+        min_s, max_s: kullanıcı skalerleri (mm)
+        """
+        if not self.engine:
+            return
 
+        cam = self.engine.cam
+        grid = self.engine.grid
+
+        if mode == "off":
+            cam.clear_section_filter()
+        else:
+            # Aktif UCS: user plane varsa ondan, yoksa global XY'den
+            normal, origin = self._get_active_ucs_plane()
+            if mode == "range":
+                cam.set_section_filter(normal, origin, min_s, max_s)
+            elif mode == "before":
+                cam.set_section_filter(normal, origin, -1e30, max_s)
+            elif mode == "after":
+                cam.set_section_filter(normal, origin, min_s, 1e30)
+
+        # Sahneyi yeniden filtrele
+        self.engine.renderer.apply_plane_filter(cam)
+
+
+    def _get_active_ucs_plane(self):
+        """Aktif UCS'nin (normal, origin) döner."""
+        grid = self.engine.grid
+        if grid.active_user_plane:
+            pdef = grid.get_user_plane(grid.active_user_plane)
+            if pdef:
+                return pdef.normal, pdef.origin
+        # Varsayılan: global XY
+        return (0.0, 0.0, 1.0), (grid.origin.x, grid.origin.y, grid.origin.z)
     def _on_run_wind_analysis(self):
         pass
 
@@ -396,10 +473,14 @@ class CadApp:
         self.main_menu.open()
         logger.info("[Toolbar] Menü açılıyor")
 
-    def open_inspector(self, element):
+    def open_grid(self):
+        """Tanımlar sekmesini aç."""
+        self.grid_panel.open(self.engine.renderer.grid, self.engine.cam)
+
+    def open_inspector(self, element= None):
         """Seçilen eleman için inspector panelini aç."""
-        if element is None:
-            return
+        # if element is None:
+        #     return
         self.inspector.open_element(element)
 
     def open_definitions(self):
@@ -499,6 +580,211 @@ class CadApp:
         
         # Ekranı güncellemeyi tetikle
         self.engine.set_scene(self.current_project.scene)
+
+    # Grid ve kamera bağlantısı
+    def _on_grid_change(self):
+        """Grid değişince SADECE grid sistemini ve kamerayı yenile (sahneyi rahat bırak)."""
+        if self.engine and self.engine.grid:
+            self.engine.grid.rebuild_all()
+            if self.engine.cam and self.grid_panel.grid:
+                center, size = self.grid_panel.grid.get_bounds()
+                self.engine.cam.update_bounds(center, size)
+
+    def set_unit_system(self, unit_system: UnitSystem):
+        """Global birim sistemini değiştirir ve sistemi günceller."""
+        if self.current_project:
+            self.current_project.unit_system = unit_system
+        
+        logger.info(f"[Units] Birim sistemi değiştirildi: {unit_system.name} ({unit_system.force_unit}, {unit_system.length_unit})")
+        
+        # Grid spacing veya birim-bağımlı arayüz elemanları güncellenebilir
+        if self.engine and self.engine.grid:
+            # Örneğin birim metre tabanlıdan mm tabanlıya geçerse grid boyutları ölçeklenebilir
+            self.engine.grid.rebuild_all()
+
+    def set_project(self, project: Project):
+        """Proje nesnesini sisteme uygular, verileri panellere ve grid sistemine dağıtır."""
+        self.current_project = project
+        if self.engine:
+            self.engine.set_scene(project.scene)
+            
+            # Projedeki GridConfig verilerini OpenGL GridSystem'e aktar
+            if hasattr(project, "grid") and project.grid and self.engine.grid:
+                g_conf = project.grid
+                self.engine.grid.set_coords(g_conf.x_coords, g_conf.y_coords, g_conf.z_coords)
+                self.engine.grid.set_origin(g_conf.origin_x, g_conf.origin_y, g_conf.origin_z)
+                for plane_name, vis in g_conf.planes_visibility.items():
+                    from domain.definition import GridPlane
+                    try:
+                        self.engine.grid.set_plane(GridPlane[plane_name], visible=vis)
+                    except KeyError:
+                        pass
+                # Kamerayı yeni grid sınırlarına göre odakla
+                center, size = self.engine.grid.get_bounds()
+                self.engine.cam.update_bounds(center, size)
+                self.engine.cam.focus_on_model()
+
+        # Panelleri besle
+        self.inspector.scene = project.scene
+        self.visibility_panel.scene = project.scene
+        self.definition_panel.open(project.definitions)
+        self.project_info_panel.open(project.info)
+        self.project_config_panel.open(project.config)
+        self.analysis_panel.open(project.analysis)
+        if self.view_filter:
+            self.view_filter.ucs_name = "Global XY"
+
+    def _save_project(self, path: str):
+        try:
+            if self.engine and self.engine.scene:
+                self.current_project.scene = self.engine.scene
+                if hasattr(self.engine.scene, "def_mgr"):
+                    self.current_project.definitions = self.engine.scene.def_mgr
+                
+                # Kaydetmeden önce OpenGL GridSystem üzerindeki güncel durumu Project.grid'e kaydet
+                if self.engine.grid and hasattr(self.current_project, "grid") and self.current_project.grid:
+                    g = self.engine.grid
+                    g_conf = self.current_project.grid
+                    g_conf.x_coords = g.x_coords
+                    g_conf.y_coords = g.y_coords
+                    g_conf.z_coords = g.z_coords
+                    g_conf.origin_x = g.origin.x
+                    g_conf.origin_y = g.origin.y
+                    g_conf.origin_z = g.origin.z
+                    g_conf.planes_visibility = {plane.name: p["visible"] for plane, p in g.planes.items()}
+            
+            self.current_project.save(path)
+            self._model_text = f"MODEL: {os.path.basename(path)}"
+            logger.info("[File] Proje kaydedildi: %s", path)
+        except Exception:
+            logger.exception("Proje kaydetme hatası")
+
+    def set_work_plane_view(self, plane_def):
+        """Work plane'i aktifleştir + kamerayı ona dik getir."""
+        if not self.engine:
+            return
+
+        from domain.definition import GridPlane
+        # Aktif plane'i grid'e işle
+        self.engine.grid.set_active_user_plane(plane_def.name)
+
+        # Kamera
+        origin, u, v, n = plane_def.get_uv_frame()
+        fit_r = max(plane_def.count_u * plane_def.spacing_u,
+                    plane_def.count_v * plane_def.spacing_v) * 1.2
+        self.engine.cam.look_at_plane(origin, u, v, n, fit_radius=fit_r)
+
+        # Grid'i yenile (aktif user plane çizilsin)
+        self.engine.grid.rebuild_all()
+
+        if self.view_filter.visible:
+            self.view_filter.ucs_name = plane_def.name
+
+    def _on_work_plane_activate(self, pdef):
+        self.set_work_plane_view(pdef)
+        if self.view_filter and self.view_filter.visible:
+            self.view_filter.ucs_name = pdef.name
+            # Section filter aktifse yeniden uygula — yeni UCS'ye göre
+            if self.view_filter._section_mode != "off":
+                self._on_view_filter_apply(
+                    self.view_filter._section_mode,
+                    self.view_filter._section_min,
+                    self.view_filter._section_max,
+                )
+
+
+    def create_work_plane_from_selection(self):
+        """Seçili frame'den eğik work plane oluştur, kamera oraya hizalansın."""
+        if not self.engine or not self.engine.scene:
+            return False
+
+        selected = self.engine.scene.get_selected()
+        if not selected:
+            logger.info("[WorkPlane] Seçili eleman yok.")
+            return False
+
+        # Sadece frame kabul et (şimdilik)
+        from domain.element import Frame
+        frames = [e for e in selected if isinstance(e, Frame)]
+        if not frames:
+            logger.info("[WorkPlane] Seçili frame yok.")
+            return False
+
+        frame = frames[0]
+        return self._build_work_plane_from_frame(frame)
+
+
+    def _build_work_plane_from_frame(self, frame):
+        """Verilen frame'den GridPlaneDef üret, ekle, aktifleştir, kamerayı hizala."""
+        import glm
+        from domain.definition import GridPlaneDef
+
+        origin = frame.get_midpoint()
+        u_axis = glm.vec3(*frame.get_axis())
+
+        # Normal seçimi: U dünya Z'sine çok yakınsa (dikey çubuk) global Y kullan,
+        # değilse global Z kullan (yatay/eğik çubuk)
+        world_z = glm.vec3(0.0, 0.0, 1.0)
+        world_x = glm.vec3(1.0, 0.0, 0.0)
+
+        if abs(glm.dot(u_axis, world_z)) > 0.95:
+            # Dikey çubuk → normal olarak dünya Y'yi kullan
+            ref = glm.vec3(0.0, 1.0, 0.0)
+        else:
+            # Yatay/eğik çubuk → normal olarak dünya Z'yi kullan
+            ref = world_z
+
+        # Normal = U'ya dik, ref'e en yakın yön
+        normal = ref - u_axis * glm.dot(ref, u_axis)
+        if glm.length(normal) < 1e-6:
+            # Dejenere — yedek
+            normal = world_x - u_axis * glm.dot(world_x, u_axis)
+        normal = glm.normalize(normal)
+
+        # V ekseni = cross(normal, U) — Frame'in "yukarı" ekseni (grid'in V yönü)
+        v_axis = glm.cross(normal, u_axis)
+
+        # Grid boyutu frame uzunluğuna göre
+        length = frame.get_length() or 1000.0
+        spacing = max(100.0, length / 10.0)  # en az 100 mm, kabaca 10 hücre
+
+        pdef = GridPlaneDef(
+            name=f"FRAME-{frame.element_id}",
+            origin=(origin[0], origin[1], origin[2]),
+            normal=(normal.x, normal.y, normal.z),
+            u_axis=(u_axis.x, u_axis.y, u_axis.z),
+            spacing_u=spacing,
+            spacing_v=spacing,
+            count_u=10,
+            count_v=10,
+            visible=True,
+            color=(0.6, 0.55, 0.75),   # hafif mor — kullanıcı tanımlı olduğu belli olsun
+        )
+
+        # Grid'e ekle + aktif et
+        self.engine.grid.add_user_plane(pdef)
+        self.engine.grid.set_active_user_plane(pdef.name)
+
+        # Kamerayı düzleme dik getir
+        fit_r = max(pdef.count_u * spacing, pdef.count_v * spacing) * 1.3
+        self.engine.cam.look_at_plane(
+            origin=pdef.origin,
+            u=pdef.u_axis,
+            v=(v_axis.x, v_axis.y, v_axis.z),
+            n=pdef.normal,
+            fit_radius=fit_r,
+        )
+
+        # Grid'i yenile
+        self.engine.grid.rebuild_all()
+
+        # Panel'i bilgilendir (açıksa güncellensin)
+        if self.grid_panel.visible:
+            self.grid_panel.grid = self.engine.grid
+
+        logger.info(f"[WorkPlane] '{pdef.name}' oluşturuldu "
+                    f"(uzunluk={length:.0f}, spacing={spacing:.0f})")
+        return True
 
     def shutdown(self):
         self.ui_backend.shutdown()

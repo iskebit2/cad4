@@ -1,6 +1,6 @@
 # widgets/cad_widget.py
 """
-KivyCADWidget — Kivy ile PureKivyEngine arasında köprü.
+KivyCADWidget — Kivy ile Engine arasında köprü.
 
 Sorumluluğu SADECE:
   - Kivy widget yaşam döngüsü (init, resize, canvas)
@@ -28,7 +28,7 @@ from OpenGL.GL import (
     GL_VIEWPORT,
 )
 
-from core.gl_engine import PureKivyEngine
+from core.gl_engine import Engine
 from core.input_manager import (
     MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE,
 )
@@ -94,7 +94,7 @@ class KivyCADWidget(Widget):
 
         try:
             logger.info("[INIT] Engine başlıyor...")
-            self.engine = PureKivyEngine(int(self.width), int(self.height))
+            self.engine = Engine(int(self.width), int(self.height))
             self.engine.init_gl()
             self.engine.on_hover_changed_callback = self._on_hover_changed
             self.engine.sel_mgr.on_selection_changed = self._on_selection_changed

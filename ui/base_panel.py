@@ -173,7 +173,7 @@ class BasePanel:
     @staticmethod
     def ascii_arrow(is_open: bool) -> str:
         """Genişletilmiş şık ok işaretleri."""
-        return "▼" if is_open else "▶"  # veya  "▾" ve "▸" 
+        return "▼" if is_open else ">"  # veya  "▾" ve "▸" 
 
     @staticmethod
     def ascii_check(checked: bool) -> str:

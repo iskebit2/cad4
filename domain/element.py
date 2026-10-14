@@ -227,6 +227,25 @@ class Frame(Element):
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
 
+    def get_midpoint(self):
+        """Frame'in orta noktası."""
+        return (
+            (self.node_i.x + self.node_j.x) * 0.5,
+            (self.node_i.y + self.node_j.y) * 0.5,
+            (self.node_i.z + self.node_j.z) * 0.5,
+        )
+
+    def get_axis(self):
+        """Frame'in birim yön vektörü (node_i → node_j)."""
+        import glm
+        dx = self.node_j.x - self.node_i.x
+        dy = self.node_j.y - self.node_i.y
+        dz = self.node_j.z - self.node_i.z
+        length = (dx*dx + dy*dy + dz*dz) ** 0.5
+        if length < 1e-9:
+            return (1.0, 0.0, 0.0)
+        return (dx / length, dy / length, dz / length)
+
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
         data.update({

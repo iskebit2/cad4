@@ -1,5 +1,7 @@
 # render/scenerenderer.py
 from OpenGL.GL import *
+
+import math
 import numpy as np
 import glm
 from typing import Optional, Any, List, Dict
@@ -12,6 +14,10 @@ from tools.gridsystem import GridSystem
 from domain.scene import Scene
 from render.base_renderer import PolygonRenderer, _final_color_for, BaseRenderer, FrameRenderer, NodeRenderer, AreaRenderer, LinkRenderer
 from render.pickpass import PickPass
+from render.label_batch import LabelBatch
+from tools.font_atlas import FontAtlas
+
+
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
@@ -86,6 +92,14 @@ class SceneRenderer:
         self.marquee_vbo = None
         self.marquee_ebo_fill = None
         self.marquee_ebo_line = None
+
+        self.font_atlas = FontAtlas(
+            ttf_path= None,# "C:/Windows/Fonts/consola.ttf",
+            size=32,
+            supersample=2,
+        )
+        self.label_batch = LabelBatch(self.font_atlas)
+        self.label_batch.init_gl()
 
 
     def _init_marquee_buffers(self):
@@ -475,10 +489,107 @@ class SceneRenderer:
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0)
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target_fbo) # <-- 0 yerine target_fbo!
         glBindFramebuffer(GL_FRAMEBUFFER, target_fbo)       # <-- 0 yerine target_fbo!
-        
-        # 4. MARQUEE - renkleri düzeltilmiş
+
+        # 4. GRID LABELS
+        self._draw_grid_labels_3d(cam)
+
+        # 5. MARQUEE - renkleri düzeltilmiş
         if self.marquee and self.marquee.is_active:
             self._draw_marquee()
+
+    def _draw_grid_labels_3d(self, cam):
+        if not self.show.get('grid', True):
+            return
+        if not self.grid or not self.label_batch:
+            return
+
+        view = cam.get_view_matrix()
+        proj = cam.get_projection_matrix()
+        cam_pos = (cam.position.x, cam.position.y, cam.position.z)
+        fov_y_rad = math.radians(getattr(cam, "fov", 45.0))
+
+        self.label_batch.begin(
+            view=view,
+            proj=proj,
+            cam_pos=cam_pos,
+            screen_h=self.h,
+            fov_y_rad=fov_y_rad,
+        )
+
+        # ---- 1) GRID AKS ETİKETLERİ ----
+        anchors = self.grid.get_label_anchors()
+        if anchors:
+            n_grid = len(anchors)
+            grid_pos = np.empty((n_grid, 3), dtype=np.float32)
+            grid_texts = [""] * n_grid
+            grid_colors = np.empty((n_grid, 4), dtype=np.float32)
+
+            for i, a in enumerate(anchors):
+                grid_pos[i, 0], grid_pos[i, 1], grid_pos[i, 2] = a["pos"]
+                grid_texts[i] = a["text"]
+                r, g, b, alpha = self._axis_color(a["axis"])
+                grid_colors[i] = (r, g, b, alpha)
+
+            self.label_batch.add_many(
+                positions=grid_pos,
+                texts=grid_texts,
+                colors=grid_colors,
+                pixel_sizes=14.0,
+                anchors="center",
+            )
+
+        # ---- 2) SEÇİLİ FRAME ETİKETLERİ ----
+        sel_frames = [f for f in self.scene.frames.values() if f.is_selected]
+        if sel_frames:
+            n_f = len(sel_frames)
+            f_pos = np.empty((n_f, 3), dtype=np.float32)
+            f_off = np.empty((n_f, 3), dtype=np.float32)
+            f_texts = [""] * n_f
+            for i, f in enumerate(sel_frames):
+                mid = ((f.node_i.x + f.node_j.x) * 0.5,
+                        (f.node_i.y + f.node_j.y) * 0.5,
+                        (f.node_i.z + f.node_j.z) * 0.5)
+                f_pos[i] = mid #(f.node_i.x, f.node_i.y, f.node_i.z)
+                f_off[i] = (50.0, 50.0, 50.0)
+                f_texts[i] = f"{f.label}"
+
+                
+            self.label_batch.add_many(
+                positions=f_pos,
+                texts=f_texts,
+                colors=np.array([1.0, 1.0, 0.3, 1.0], dtype=np.float32),
+                pixel_sizes=13.0,
+                anchors="bottom-center",
+                world_offsets=f_off,
+                max_distances=50000.0,
+            )
+
+        # ---- 3) SEÇİLİ NODE ETİKETLERİ ----
+        sel_nodes = [n for n in self.scene.nodes.values() if n.is_selected]
+        if sel_nodes:
+            n_n = len(sel_nodes)
+            n_pos = np.empty((n_n, 3), dtype=np.float32)
+            n_texts = [""] * n_n
+            for i, n in enumerate(sel_nodes):
+                n_pos[i] = (n.x, n.y, n.z)
+                n_texts[i] = f"N{n.label}"
+
+            self.label_batch.add_many(
+                positions=n_pos,
+                texts=n_texts,
+                colors=np.array([0.3, 0.9, 1.0, 1.0], dtype=np.float32),
+                pixel_sizes=12.0,
+                anchors="top-center",
+            )
+
+        # ---- 4) TEK DRAW CALL ----
+        self.label_batch.flush()
+
+    def _axis_color(self, axis: str):
+        if axis == "X": return (0.95, 0.35, 0.35, 1.0)
+        if axis == "Y": return (0.35, 0.95, 0.45, 1.0)
+        if axis == "Z": return (0.40, 0.65, 1.00, 1.0)
+        return (1.0, 1.0, 1.0, 1.0)
 
     def _render_wireframe(self, mvp, view, proj):
         """Wireframe (GL_LINES/GL_POINTS) render et"""
@@ -704,22 +815,8 @@ class SceneRenderer:
     def _update_grid(self):
         if not self.scene or not self.grid:
             return
-        
-        minv = np.array([float('inf')] * 3)
-        maxv = np.array([float('-inf')] * 3)
-        
-        for f in self.scene.frames.values():
-            for node in [f.node_i, f.node_j]:
-                minv = np.minimum(minv, [node.x, node.y, node.z])
-                maxv = np.maximum(maxv, [node.x, node.y, node.z])
-        
-        for n in self.scene.nodes.values():
-            minv = np.minimum(minv, [n.x, n.y, n.z])
-            maxv = np.maximum(maxv, [n.x, n.y, n.z])
-        
-        size = max(maxv[0] - minv[0], maxv[1] - minv[1], 10.0)
-        cx, cy = minv[0] + size/2, minv[1] + size/2
-        self.grid.update(glm.vec3(cx, cy, minv[2]), size)
+        # Aks listeleri GridSystem içinde yönetildiği için burada sadece yenileme tetiklenir
+        self.grid.rebuild_all()
     
     def start_anim(self, d=2.0):
         self.anim_time = 0
@@ -766,52 +863,40 @@ class SceneRenderer:
         self._cleanup_mrt()
 
     def apply_plane_filter(self, camera):
-        """
-        Kamera plan filter'ına göre tüm elementleri filtrele.
-        Element.coords / nodes'a göre görünürlüğü belirle.
-        """
         if self.scene is None:
             return
 
-        # Node'lar
-        for node in self.scene.nodes.values():
-            visible = camera.is_element_visible_by_plane((node.x, node.y, node.z))
-            node.is_visible = visible
+        test = camera.is_element_visible_by_section
 
-        # Frame'ler — iki node'un ORTALAMA konumuna göre
+        for node in self.scene.nodes.values():
+            node.is_visible = test((node.x, node.y, node.z))
+
         for frame in self.scene.frames.values():
             ni, nj = frame.node_i, frame.node_j
-            mx = (ni.x + nj.x) / 2
-            my = (ni.y + nj.y) / 2
-            mz = (ni.z + nj.z) / 2
-            visible = camera.is_element_visible_by_plane((mx, my, mz))
-            frame.is_visible = visible
+            mx = (ni.x + nj.x) * 0.5
+            my = (ni.y + nj.y) * 0.5
+            mz = (ni.z + nj.z) * 0.5
+            frame.is_visible = test((mx, my, mz))
 
-        # Area'lar — node'ların ortalaması
         for area in self.scene.areas.values():
             if not area.nodes:
                 continue
             mx = sum(n.x for n in area.nodes) / len(area.nodes)
             my = sum(n.y for n in area.nodes) / len(area.nodes)
             mz = sum(n.z for n in area.nodes) / len(area.nodes)
-            visible = camera.is_element_visible_by_plane((mx, my, mz))
-            area.is_visible = visible
+            area.is_visible = test((mx, my, mz))
 
-        # Link'ler
         for link in self.scene.links.values():
             ni, nj = link.node_i, link.node_j
-            mx = (ni.x + nj.x) / 2
-            my = (ni.y + nj.y) / 2
-            mz = (ni.z + nj.z) / 2
-            visible = camera.is_element_visible_by_plane((mx, my, mz))
-            link.is_visible = visible
+            mx = (ni.x + nj.x) * 0.5
+            my = (ni.y + nj.y) * 0.5
+            mz = (ni.z + nj.z) * 0.5
+            link.is_visible = test((mx, my, mz))
 
-        # Polygon'lar
         for poly in self.scene.polygons.values():
             if not poly.nodes:
                 continue
             mx = sum(n.x for n in poly.nodes) / len(poly.nodes)
             my = sum(n.y for n in poly.nodes) / len(poly.nodes)
             mz = sum(n.z for n in poly.nodes) / len(poly.nodes)
-            visible = camera.is_element_visible_by_plane((mx, my, mz))
-            poly.is_visible = visible
+            poly.is_visible = test((mx, my, mz))

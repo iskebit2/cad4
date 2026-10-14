@@ -12,6 +12,8 @@ from typing import Optional, Dict, Any, List, Tuple, Union
 import typing
 import uuid
 
+import glm
+
 
 # ============================================================================
 # SERIALIZABLE BASE
@@ -239,6 +241,58 @@ def get_tsc2018_site_coefficients(ss: float, s1: float, site_class: str) -> Tupl
 # ============================================================================
 # ENUMERATION'LAR
 # ============================================================================
+class UnitSystem(IntEnum):
+    LB_IN = 1
+    LB_FT = 2
+    KIP_IN = 3
+    KIP_FT = 4
+    KN_MM = 5
+    KN_M = 6
+    KGF_MM = 7
+    KGF_M = 8
+    N_MM = 9
+    N_M = 10
+    TON_MM = 11
+    TON_M = 12
+    KN_CM = 13
+    KGF_CM = 14
+    N_CM = 15
+    TON_CM = 16
+
+    @property
+    def force_unit(self) -> str:
+        return UNIT_DEFINITIONS_MAP[self][0]
+
+    @property
+    def length_unit(self) -> str:
+        return UNIT_DEFINITIONS_MAP[self][1]
+
+
+UNIT_DEFINITIONS_MAP = {
+    UnitSystem.LB_IN: ('lb', 'in'),
+    UnitSystem.LB_FT: ('lb', 'ft'),
+    UnitSystem.KIP_IN: ('kip', 'in'),
+    UnitSystem.KIP_FT: ('kip', 'ft'),
+    UnitSystem.KN_MM: ('kN', 'mm'),
+    UnitSystem.KN_M: ('kN', 'm'),
+    UnitSystem.KGF_MM: ('kgf', 'mm'),
+    UnitSystem.KGF_M: ('kgf', 'm'),
+    UnitSystem.N_MM: ('N', 'mm'),
+    UnitSystem.N_M: ('N', 'm'),
+    UnitSystem.TON_MM: ('Ton', 'mm'),
+    UnitSystem.TON_M: ('Ton', 'm'),
+    UnitSystem.KN_CM: ('kN', 'cm'),
+    UnitSystem.KGF_CM: ('kgf', 'cm'),
+    UnitSystem.N_CM: ('N', 'cm'),
+    UnitSystem.TON_CM: ('Ton', 'cm'),
+}
+
+
+class GridPlane(IntEnum):
+    XY = 1
+    XZ = 2
+    YZ = 3
+    
 UNIT_DEFINITIONS = {
     1: ('lb', 'in'),
     2: ('lb', 'ft'),
@@ -353,6 +407,49 @@ class SymType(IntEnum):
     ANISOTROPIC = 2
     UNIAXIAL = 3
 
+
+@dataclass
+class GridPlaneDef(SerializableData):
+    """Kullanıcı tanımlı eğik grid düzlemi."""
+    name: str = ""
+    origin: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    # Düzlemin normal vektörü (birim, otomatik normalize)
+    normal: Tuple[float, float, float] = (0.0, 0.0, 1.0)
+    # Yerel U ekseni (normal'e dik, otomatik ortonormalize)
+    u_axis: Tuple[float, float, float] = (1.0, 0.0, 0.0)
+    # U ve V yönünde grid aralığı (yerel birim)
+    spacing_u: float = 1000.0
+    spacing_v: float = 1000.0
+    # Kaç çizgi çizilecek (her yönde)
+    count_u: int = 20
+    count_v: int = 20
+    # Görsel
+    visible: bool = True
+    color: Tuple[float, float, float] = (0.55, 0.55, 0.60)
+    locked: bool = False
+
+    def get_uv_frame(self):
+        """Ortonormal (origin, U, V, N) frame döner."""
+        n = glm.normalize(glm.vec3(*self.normal))
+        u = glm.vec3(*self.u_axis)
+        # U'yu N'e dik hale getir
+        u = u - n * glm.dot(u, n)
+        if glm.length(u) < 1e-6:
+            # Dejenere — dünya X kullan
+            u = glm.vec3(1, 0, 0) - n * n.x
+        u = glm.normalize(u)
+        v = glm.cross(n, u)
+        return glm.vec3(*self.origin), u, v, n
+    
+@dataclass
+class GridConfig(SerializableData):
+    x_coords: List[float] = field(default_factory=lambda: [0.0, 3000.0, 8000.0, 11000.0])
+    y_coords: List[float] = field(default_factory=lambda: [0.0, 3000.0, 6000.0, 12000.0])
+    z_coords: List[float] = field(default_factory=lambda: [0.0, 3200.0, 6400.0])
+    origin_x: float = 0.0
+    origin_y: float = 0.0
+    origin_z: float = 0.0
+    planes_visibility: Dict[str, bool] = field(default_factory=lambda: {"XY": True, "XZ": False, "YZ": False})
 
 @dataclass
 class GeneralProjectInfo(SerializableData):

@@ -501,10 +501,8 @@ class EventRouter:
         if key == glfw.KEY_F10:
             eng.cam.set_view_preset("right"); return
         if key == glfw.KEY_F11:
-            eng.active_smart_plane_mode = not eng.active_smart_plane_mode
-            logger.info("Smart Plane: %s",
-                        "ON" if eng.active_smart_plane_mode else "OFF")
-            return
+            if self.app.create_work_plane_from_selection():
+                return
 
         # --- Draw mode ---
         if key == glfw.KEY_D:
@@ -540,11 +538,15 @@ class EventRouter:
                 })
                 return
             if key == glfw.KEY_P:
-                self.app.toggle_inspector()
+                self.app.open_inspector()
                 return
 
             if key == glfw.KEY_R:
                 self.app.open_definitions()
+                return
+
+            if key == glfw.KEY_G:
+                self.app.open_grid()
                 return
 
     def _handle_key_up(self, key, scancode):
