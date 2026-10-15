@@ -15,6 +15,9 @@ class Scene(SerializableData):
         self.links: Dict[int, Link] = {}
         self.polygons: Dict[int, Polygon] = {}
         self.def_mgr = DefinitionManager()   # runtime kolaylık; serialize edilmez
+        self.show_local_axes = False              # global toggle
+        self.show_local_axes_for_selected = True  # sadece seçili mi?
+        self.show_local_axes_scale = 1.0          # axes boyut çarpanı
         self.units = "N, mm, C"
         self._is_dirty: bool = True  # Doğru öznitelik tanımı
 
@@ -289,6 +292,9 @@ class Scene(SerializableData):
     def to_dict(self) -> dict:
         return {
             "units":    self.units,
+            "show_local_axes": self.show_local_axes,
+            "show_local_axes_for_selected": self.show_local_axes_for_selected,
+            "show_local_axes_scale": self.show_local_axes_scale,
             "nodes":    [n.to_dict() for n in self.nodes.values()],
             "frames":   [f.to_dict() for f in self.frames.values()],
             "areas":    [a.to_dict() for a in self.areas.values()],
@@ -300,7 +306,9 @@ class Scene(SerializableData):
     def from_dict(cls, data: dict, definitions: DefinitionManager = None) -> "Scene":
         scene = cls()
         scene.units = data.get("units", "N, mm, C")
-
+        scene.show_local_axes = bool(data.get("show_local_axes", False))
+        scene.show_local_axes_for_selected = bool(data.get("show_local_axes_for_selected", True))
+        scene.show_local_axes_scale = float(data.get("show_local_axes_scale", 1.0))
         if definitions is not None:
             scene.def_mgr = definitions
 

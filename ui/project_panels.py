@@ -5,6 +5,15 @@ Projenin diğer temel bileşenleri (Info, Config, Analysis, Report) için BasePa
 import imgui
 from ui.base_panel import BasePanel
 
+class ReportPanel(BasePanel):
+    def __init__(self):
+        super().__init__(title="Rapor", width=460, height=520, pos_first_use=(500, 150))
+        self.log = "Report"
+
+    def open(self, rep=None):
+        super().open()
+        self.log = rep
+    
 
 class ProjectInfoPanel(BasePanel):
     def __init__(self):

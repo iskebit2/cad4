@@ -3,12 +3,13 @@ import os
 import time
 import glfw
 from OpenGL.GL import *
+import glm
 
 from app.cad_window import CadWindow
 from core.gl_engine import Engine
 from app.event_router import EventRouter
 
-from domain.definition import UnitSystem
+from domain.definition import AreaUniformToFrameLoad, DistType, LoadDirection, UnitSystem
 from domain.element import PolygonType
 from ui.toolbar import Toolbar
 from ui.main_menu import MainMenuPopup
@@ -18,9 +19,11 @@ from ui.view_filter_panel import ViewFilterPanel
 from ui.inspector_panel import InspectorPanel
 from ui.zones_panel import ZonesPanel
 from ui.definition_panel import DefinitionPanel
-from ui.project_panels import ProjectInfoPanel, ProjectConfigPanel, AnalysisManagerPanel
+from ui.project_panels import ProjectInfoPanel, ProjectConfigPanel, AnalysisManagerPanel, ReportPanel
 from ui.grid_panel import GridPanel
 from ui.imgui_backend import UiBackend
+from ui.load_assign_panel import LoadAssignPanel
+from domain.element import Polygon
 from domain.project import Project
 
 from logging_config import CadLogger
@@ -50,10 +53,12 @@ class CadApp:
                                       on_select_direction= self.on_select_wind_direction)
         
         # Yönetim Panelleri
+        self.report_panel = ReportPanel()
         self.definition_panel = DefinitionPanel()
         self.project_info_panel = ProjectInfoPanel()
         self.project_config_panel = ProjectConfigPanel()
         self.analysis_panel = AnalysisManagerPanel()
+        self.load_assign_panel = LoadAssignPanel(on_apply=self._apply_load_to_selected_polygon)
 
 
         self.ui_backend = UiBackend(window.window)
@@ -96,6 +101,13 @@ class CadApp:
                 
                 "wind": lambda: self.zones_panel.close() if self.zones_panel.visible else self._on_toolbar_wind(),
                 "on_unit_change": self.set_unit_system,
+                "assign_area_load": lambda: self._toggle_load_assign_panel(),
+                "distribute_polygon_loads": self._distribute_selected_polygon_loads,
+                "local_axes": lambda: self._toggle_local_axes(),
+                "local_axes_selected_only": self._toggle_local_axes_selected_only,
+                "align_frames_to_polygon": self._align_frames_to_selected_polygons,
+                "check_load_balance": self._check_load_balance,
+                
             },
             panel_states={
                 "visibility": lambda: self.visibility_panel.visible,
@@ -103,11 +115,15 @@ class CadApp:
                 "grid": lambda: self.grid_panel.visible,
                 "inspector": lambda: self.inspector.visible,
                 "smart_plane": lambda: getattr(self.engine, "active_smart_plane_mode", False) if self.engine else False,
+                "report": lambda: self.report_panel.visible,
                 "definitions": lambda: self.definition_panel.visible,
                 "project_info": lambda: self.project_info_panel.visible,
                 "project_config": lambda: self.project_config_panel.visible,
                 "analysis": lambda: self.analysis_panel.visible,
                 "wind": lambda: self.zones_panel.visible,
+                "assign_area_load": lambda: self.load_assign_panel.visible,
+                "local_axes": lambda: self.engine.scene.show_local_axes if self.engine and self.engine.scene else False,
+                "local_axes_selected_only": lambda: self.engine.scene.show_local_axes_for_selected if self.engine and self.engine.scene else True,
             }
         )
 
@@ -116,6 +132,7 @@ class CadApp:
         
         # Zones panel callback'i
         self.zones_panel.on_run_analysis = self._on_run_wind_analysis
+        self.show_loads = True
 
     def _ensure_engine(self):
         if self.initialized:
@@ -182,11 +199,13 @@ class CadApp:
         self.zones_panel.draw()
         
         # Yönetim ve Araç Panelleri (BasePanel altındaki visible kontrolü zaten kapalıyken çizimi engeller)
+        self.report_panel.draw()
         self.definition_panel.draw()
         self.project_info_panel.draw()
         self.project_config_panel.draw()
         self.analysis_panel.draw()
         self.grid_panel.draw()
+        self.load_assign_panel.draw()
 
     def _render_scene(self, dt):
         w, h = self.window.fb_width, self.window.fb_height
@@ -314,6 +333,16 @@ class CadApp:
                 self.engine.draw_mgr.close()
             else:
                 self.engine.draw_mgr.start()
+
+    def _toggle_local_axes(self):
+        if not self.engine or not self.engine.renderer:
+            return
+        self.engine.renderer.toggle_local_axes()
+
+    def _toggle_local_axes_selected_only(self):
+        if not self.engine or not self.engine.renderer:
+            return
+        self.engine.renderer.toggle_local_axes_selected_only()
 
     def _on_main_menu_action(self, key: str):
         """Ana menüden bir öğe seçildi."""
@@ -607,8 +636,6 @@ class CadApp:
         self.current_project = project
         if self.engine:
             self.engine.set_scene(project.scene)
-            
-            # Projedeki GridConfig verilerini OpenGL GridSystem'e aktar
             if hasattr(project, "grid") and project.grid and self.engine.grid:
                 g_conf = project.grid
                 self.engine.grid.set_coords(g_conf.x_coords, g_conf.y_coords, g_conf.z_coords)
@@ -619,18 +646,11 @@ class CadApp:
                         self.engine.grid.set_plane(GridPlane[plane_name], visible=vis)
                     except KeyError:
                         pass
-                # Kamerayı yeni grid sınırlarına göre odakla
                 center, size = self.engine.grid.get_bounds()
                 self.engine.cam.update_bounds(center, size)
                 self.engine.cam.focus_on_model()
-
-        # Panelleri besle
         self.inspector.scene = project.scene
         self.visibility_panel.scene = project.scene
-        self.definition_panel.open(project.definitions)
-        self.project_info_panel.open(project.info)
-        self.project_config_panel.open(project.config)
-        self.analysis_panel.open(project.analysis)
         if self.view_filter:
             self.view_filter.ucs_name = "Global XY"
 
@@ -641,7 +661,6 @@ class CadApp:
                 if hasattr(self.engine.scene, "def_mgr"):
                     self.current_project.definitions = self.engine.scene.def_mgr
                 
-                # Kaydetmeden önce OpenGL GridSystem üzerindeki güncel durumu Project.grid'e kaydet
                 if self.engine.grid and hasattr(self.current_project, "grid") and self.current_project.grid:
                     g = self.engine.grid
                     g_conf = self.current_project.grid
@@ -654,10 +673,20 @@ class CadApp:
                     g_conf.planes_visibility = {plane.name: p["visible"] for plane, p in g.planes.items()}
             
             self.current_project.save(path)
+            self.current_file_path = path  # <-- Aktif dosya yolunu sakla
             self._model_text = f"MODEL: {os.path.basename(path)}"
             logger.info("[File] Proje kaydedildi: %s", path)
         except Exception:
             logger.exception("Proje kaydetme hatası")
+
+    def _quick_save(self):
+        if not self.current_file_path:
+            self._on_toolbar_save()  # Yol yoksa dialog aç
+        else:
+            self._save_project(self.current_file_path)  # Üzerine yaz (overwrite)
+
+    def _save_as_project(self):
+        self._on_toolbar_save()  # Her zaman dialog aç (Save As)
 
     def set_work_plane_view(self, plane_def):
         """Work plane'i aktifleştir + kamerayı ona dik getir."""
@@ -785,6 +814,180 @@ class CadApp:
         logger.info(f"[WorkPlane] '{pdef.name}' oluşturuldu "
                     f"(uzunluk={length:.0f}, spacing={spacing:.0f})")
         return True
+
+    def _toggle_load_assign_panel(self):
+        if self.load_assign_panel.visible:
+            self.load_assign_panel.close()
+        else:
+            # Güncel load pattern isimlerini definitions içinden alıp panele verelim
+            patterns = list(self.current_project.definitions.load_patterns.keys()) if hasattr(self.current_project.definitions, "load_patterns") else ["DEAD", "LIVE"]
+            if not patterns:
+                patterns = ["DEAD", "LIVE"]
+            self.load_assign_panel.open(load_patterns=patterns)
+
+    def _apply_load_to_selected_polygon(self, pattern_name: str, value: float, direction, dist_type):
+        """Ekranda seçili olan poligona (Polygon tipindekilere) yükü assign eder."""
+        if not self.engine or not self.engine.scene:
+            logger.warning("[Assign] Aktif sahne bulunamadı.")
+            return
+
+        selected = self.engine.scene.get_selected()
+        polygons = [e for e in selected if isinstance(e, Polygon) and getattr(e, "poly_type", None) == PolygonType.SURFACE]
+        
+        if not polygons:
+            logger.info("[Assign] Seçili geçerli bir Surface Polygon bulunamadı.")
+            return
+
+        count = 0
+        for poly in polygons:
+            # Doğrudan polygon içine yükü ekliyoruz
+            poly.add_uniform_to_frame_load(
+                pattern_name=pattern_name,
+                value=value,
+                direction=direction,
+                dist_type=dist_type
+            )
+            count += 1
+
+        # Sahneyi ve renderer'ı güncelle
+        self.engine.renderer.update_geo(self.engine.scene)
+        logger.info(f"[Assign] {count} adet poligona '{pattern_name}' (Değer: {value}) yükü atandı.")
+
+    def _distribute_selected_polygon_loads(self):
+        """Ekranda seçili olan poligon üzerindeki alan yüklerini çevreleyen frame'lere dağıtır."""
+        if not self.engine or not self.engine.scene:
+            logger.warning("[Distribute] Aktif sahne bulunamadı.")
+            return
+
+        selected = self.engine.scene.get_selected()
+        from domain.element import Polygon, PolygonType
+        polygons = [e for e in selected if isinstance(e, Polygon) and getattr(e, "poly_type", None) == PolygonType.SURFACE]
+
+        if not polygons:
+            logger.info("[Distribute] Seçili geçerli bir Surface Polygon bulunamadı.")
+            return
+
+        from tools.load_distribution_service import LoadDistributionService
+        total_assigned = 0
+        for poly in polygons:
+            count = LoadDistributionService.distribute_polygon_loads(self.engine.scene, poly, target_step=200.0)
+            total_assigned += count
+
+        self.engine.renderer.update_geo(self.engine.scene)
+        logger.info(f"[Distribute] Seçili poligonlardaki yükler başarıyla {total_assigned} adet frame'e dağıtıldı.")
+
+    def _toggle_local_axes(self):
+        if not self.engine or not self.engine.scene: return
+        sc = self.engine.scene
+        sc.show_local_axes = not sc.show_local_axes
+        logger.info(f"[Axes] Local axes: {sc.show_local_axes}")
+
+    def _align_frames_to_polygon_planes(self):
+        """
+        Seçili polygon(lar) üzerindeki/çevresindeki frame'leri, 
+        poligon düzlemi normaline göre local 3-ekseni hizalar.
+        """
+        from domain.local_axes import align_frame_to_polygon, polygon_plane_axes
+        from domain.element import Polygon, PolygonType, Frame
+        
+        scene = self.engine.scene
+        selected = scene.get_selected()
+        polygons = [e for e in selected 
+                    if isinstance(e, Polygon) 
+                    and e.poly_type == PolygonType.SURFACE]
+        if not polygons:
+            logger.warning("[Align] Seçili surface polygon yok.")
+            return
+        
+        affected = 0
+        for poly in polygons:
+            u, v, n = polygon_plane_axes(poly.nodes)
+            # Poligon düzleminde olan frame'leri bul
+            for frame in scene.frames.values():
+                mid = frame.get_midpoint()
+                # Midpoint polygon düzleminde mi? (nokta-düzlem mesafesi)
+                d = glm.dot(glm.vec3(mid[0]-poly.nodes[0].x,
+                                    mid[1]-poly.nodes[0].y,
+                                    mid[2]-poly.nodes[0].z), n)
+                if abs(d) < 10.0:  # 10 mm tolerans
+                    # Frame 1-ekseni polygon düzleminde mi?
+                    e1 = glm.vec3(*frame.get_axis())
+                    if abs(glm.dot(e1, n)) < 0.99:  # düşey frame'leri atla
+                        align_frame_to_polygon(frame, poly.nodes, (u, v, n))
+                        affected += 1
+        
+        logger.info(f"[Align] {affected} frame hizalandı.")
+        self.engine.renderer.update_geo(scene)
+
+    def _align_frames_to_selected_polygons(self):
+        """
+        Seçili polygon(lar)ın düzlemindeki frame'leri poligon normaline hizalar.
+        """
+        if not self.engine or not self.engine.scene:
+            logger.warning("[Align] Aktif sahne yok.")
+            return
+
+        from domain.element import Polygon, PolygonType
+        scene = self.engine.scene
+        selected = scene.get_selected()
+
+        polygons = [
+            e for e in selected
+            if isinstance(e, Polygon) and e.poly_type == PolygonType.SURFACE
+        ]
+        if not polygons:
+            logger.info("[Align] Seçili Surface Polygon yok.")
+            return
+
+        from tools.alignment_service import AlignmentService
+        n = AlignmentService.align_frames_to_polygons(
+            scene=scene,
+            polygons=polygons,
+            tolerance=10.0,
+            skip_vertical=True,
+        )
+
+        if n > 0:
+            self.engine.renderer.update_geo(scene)
+        logger.info(f"[Align] Toplam {n} frame hizalandı.")
+
+    def _check_load_balance(self):
+        """
+        Tüm polygonlar için yük dengesini kontrol eder.
+        Log'a rapor basar, özet bilgi döner.
+        """
+        if not self.engine or not self.engine.scene:
+            logger.warning("[LoadBalance] Aktif sahne yok.")
+            return
+
+        from tools.load_balance_report import LoadBalanceReport
+
+        scene = self.engine.scene
+        failed = LoadBalanceReport.log_report(scene, tolerance_ratio=0.005)
+
+        if failed == 0:
+            logger.info("[LoadBalance] ✓ Tüm poligon yükleri dengede.")
+        else:
+            logger.warning(f"[LoadBalance] ✗ {failed} pattern başarısız — kontrol edin.")
+
+    def _toggle_selected_visibility(self):
+        if not self.engine or not self.engine.scene:
+            return
+        selected = self.engine.scene.get_selected()
+        if not selected:
+            logger.info("[Visibility] Seçili eleman yok.")
+            return
+        for el in selected:
+            el.is_visible = not getattr(el, "is_visible", True)
+        self.engine.renderer.update_geo(self.engine.scene)
+        logger.info(f"[Visibility] {len(selected)} elemanın görünürlüğü değiştirildi.")
+
+    def _toggle_loads_visibility(self):
+        self.show_loads = not self.show_loads
+        if self.engine and self.engine.renderer:
+            if hasattr(self.engine.renderer, "show_loads"):
+                self.engine.renderer.show_loads = self.show_loads
+        logger.info(f"[Loads] Yük görünürlüğü: {'Açık' if self.show_loads else 'Kapalı'}")
 
     def shutdown(self):
         self.ui_backend.shutdown()

@@ -695,6 +695,19 @@ SAP_FRAME_LOAD_DIRECTION = {
     10: LoadDirection.PROJECTED_Z,
 }
 
+SAP_FRAME_LOAD_DIRECTION = {
+    1: LoadDirection.LOCAL_1,
+    2: LoadDirection.LOCAL_2,
+    3: LoadDirection.LOCAL_3,
+    4: LoadDirection.GLOBAL_X,
+    5: LoadDirection.GLOBAL_Y,
+    6: LoadDirection.GLOBAL_Z,
+    7: LoadDirection.GRAVITY,
+    8: LoadDirection.PROJECTED_X,
+    9: LoadDirection.PROJECTED_Y,
+    10: LoadDirection.PROJECTED_Z,
+}
+
 
 # -------------------------------------------------------------------------
 # JOINT LOADS
@@ -796,15 +809,100 @@ class AreaUniformLoad(SerializableData):
     value: float = 0.0
     coordinate_system: str = "GLOBAL"
 
+class DistType(Enum):
+    """
+    SAP2000 uyumlu dağıtım tipi.
+    
+    - SAP2000'den gelen "One way" → ONE_WAY_U1 (varsayılan)
+    - SAP2000'den gelen "Two way" → TWO_WAY
+    - Bizim eklediklerimiz: ONE_WAY_U1, ONE_WAY_U2
+      SAP2000 UI'da "One-Way Distribution" + "Span Direction" kombinasyonuna
+      karşılık gelir. Enum'da birleştirdik.
+    """
+    ONE_WAY    = "One way"           # SAP uyumlu geri kalan (U1 gibi davranır)
+    TWO_WAY    = "Two way"           # SAP uyumlu
+    ONE_WAY_U1 = "One way (U1)"      # yeni — U1 yönünde taşınır
+    ONE_WAY_U2 = "One way (U2)"      # yeni — U2 yönünde taşınır
+
+    @classmethod
+    def from_input(cls, value):
+        """Esnek parse: string/enum/int/None hepsini kabul eder."""
+        if value is None:
+            return cls.ONE_WAY_U1
+
+        # Zaten enum ise
+        if isinstance(value, cls):
+            return value
+
+        # Int
+        if isinstance(value, int):
+            return cls.ONE_WAY_U1 if value == 1 else cls.TWO_WAY
+
+        val_str = str(value).strip().lower()
+
+        # Özel değerler (bizim eklediklerimiz)
+        if "u1" in val_str:
+            return cls.ONE_WAY_U1
+        if "u2" in val_str:
+            return cls.ONE_WAY_U2
+
+        # SAP uyumlu iki ana değer
+        if "two" in val_str or val_str == "2":
+            return cls.TWO_WAY
+        if "one" in val_str or val_str == "1":
+            return cls.ONE_WAY   # SAP'tan "One way" geldiyse orijinal enum
+
+        # Bilinmeyen → varsayılan
+        return cls.ONE_WAY_U1
+
+    @property
+    def is_one_way(self) -> bool:
+        return self in (DistType.ONE_WAY, DistType.ONE_WAY_U1, DistType.ONE_WAY_U2)
+
+    @property
+    def is_two_way(self) -> bool:
+        return self == DistType.TWO_WAY
+
+    @property
+    def span_direction(self) -> str:
+        """'U1' | 'U2' | 'BOTH' — hangi yönde yük akıyor."""
+        if self == DistType.ONE_WAY_U2:
+            return "U2"
+        if self == DistType.ONE_WAY_U1:
+            return "U1"
+        if self == DistType.ONE_WAY:
+            # SAP'tan gelen saf "One way" — U1 gibi davranır
+            return "U1"
+        return "BOTH"
+    
 
 @dataclass
 class AreaUniformToFrameLoad(SerializableData):
     pattern_name: str = ""
     direction: LoadDirection = LoadDirection.GLOBAL_Z
     value: float = 0.0
-    dist_type: str = "To Joints"
+    dist_type: DistType = DistType.ONE_WAY
     coordinate_system: str = "GLOBAL"
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "pattern_name": self.pattern_name,
+            "direction": self.direction.value if hasattr(self.direction, "value") else str(self.direction),
+            "value": self.value,
+            "dist_type": self.dist_type.value if hasattr(self.dist_type, "value") else str(self.dist_type),
+            "coordinate_system": self.coordinate_system,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'AreaUniformToFrameLoad':
+        raw_dist = data.get("dist_type", "One way")
+        return cls(
+            pattern_name=data.get("pattern_name", ""),
+            direction=LoadDirection(data.get("direction", "GZ")),
+            value=float(data.get("value", 0.0)),
+            dist_type=DistType.from_input(raw_dist),
+            coordinate_system=data.get("coordinate_system", "GLOBAL"),
+        )
 
 @dataclass
 class AreaWindPressureLoad(SerializableData):

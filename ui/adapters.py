@@ -56,6 +56,7 @@ def values_to_node(node, v: Dict[str, Any]):
 # ------------------------------------------------------------------
 def frame_to_values(frame) -> Dict[str, Any]:
     sec = getattr(frame, "section", None)
+    loads = getattr(frame, "dist_loads", [])
     return {
         "label": frame.label,
         "is_visible": frame.is_visible,
@@ -69,6 +70,17 @@ def frame_to_values(frame) -> Dict[str, Any]:
             "profile_params": dict(getattr(sec, "profile_params", {})
                                    if sec else {}),
         },
+        "dist_loads": [
+            {
+                "pattern_name": l.pattern_name,
+                "force_or_moment": getattr(l, "force_or_moment", "Force"),
+                "direction": l.direction.value if hasattr(l.direction, "value") else str(l.direction),
+                "p1": float(l.p1),
+                "p2": float(l.p2),
+                "coordinate_system": getattr(l, "coordinate_system", "GLOBAL"),
+            }
+            for l in loads
+        ],
     }
 
 
@@ -92,6 +104,34 @@ def values_to_frame(frame, v: Dict[str, Any]):
                 frame.section.profile_params[k] = float(val)
             except (ValueError, TypeError):
                 pass
+
+    # Dağıtılmış yükleri (dist_loads) güncelle
+    loads_v = v.get("dist_loads")
+    if isinstance(loads_v, list):
+        from domain.definition import FrameDistributedLoad, LoadDirection
+        new_loads = []
+        for l_dict in loads_v:
+            if isinstance(l_dict, dict):
+                dir_val = l_dict.get("direction", "GZ")
+                direction = LoadDirection.GLOBAL_Z
+                for d in LoadDirection:
+                    if d.value == str(dir_val) or d.name == str(dir_val):
+                        direction = d
+                        break
+
+                load_obj = FrameDistributedLoad(
+                    pattern_name=str(l_dict.get("pattern_name", "")),
+                    force_or_moment=str(l_dict.get("force_or_moment", "Force")),
+                    direction=direction,
+                    p1=float(l_dict.get("p1", 0.0)),
+                    p2=float(l_dict.get("p2", 0.0)),
+                    d1=0.0,
+                    d2=1.0,
+                    is_relative=True,
+                    coordinate_system=str(l_dict.get("coordinate_system", "GLOBAL"))
+                )
+                new_loads.append(load_obj)
+        frame.dist_loads = new_loads
 
     frame.mark_dirty()
 
@@ -143,6 +183,7 @@ def values_to_link(link, v: Dict[str, Any]):
 # ------------------------------------------------------------------
 def polygon_to_values(poly) -> Dict[str, Any]:
     pt = getattr(poly, "poly_type", None)
+    loads = getattr(poly, "uniform_to_frame_loads", [])
     return {
         "label": poly.label,
         "is_visible": poly.is_visible,
@@ -150,6 +191,17 @@ def polygon_to_values(poly) -> Dict[str, Any]:
         "color": list(poly.color[:3]),
         "poly_type": pt.name if hasattr(pt, "name") else str(pt),
         "windplane": dict(getattr(poly, "windplane", {}) or {}),
+        "uniform_to_frame_loads": [
+            {
+                "pattern_name": l.pattern_name,
+                "value": float(l.value),
+                # Enum'ın string value'sunu alıyoruz (Örn: "GRAV", "GZ" vb.)
+                "direction": l.direction.value if hasattr(l.direction, "value") else str(l.direction),
+                "dist_type": l.dist_type.value if hasattr(l.dist_type, "value") else str(l.dist_type),
+                "coordinate_system": getattr(l, "coordinate_system", "GLOBAL"),
+            }
+            for l in loads
+        ],
     }
 
 
@@ -170,6 +222,36 @@ def values_to_polygon(poly, v: Dict[str, Any]):
     wp = v.get("windplane")
     if isinstance(wp, dict):
         poly.windplane = wp
+
+    # Yükleri güncelle
+    loads_v = v.get("uniform_to_frame_loads")
+    if isinstance(loads_v, list):
+        from domain.definition import AreaUniformToFrameLoad, LoadDirection, DistType
+        new_loads = []
+        for l_dict in loads_v:
+            if isinstance(l_dict, dict):
+                dir_val = l_dict.get("direction", "GZ")
+                
+                # Gelen string değere (örn. "GRAV", "GX") göre doğru LoadDirection'ı bul
+                direction = LoadDirection.GLOBAL_Z  # varsayılan
+                for d in LoadDirection:
+                    if d.value == str(dir_val) or d.name == str(dir_val):
+                        direction = d
+                        break
+
+                # DistType parse
+                dist_raw = l_dict.get("dist_type", "One way")
+                dist_type = DistType.from_input(dist_raw)
+
+                load_obj = AreaUniformToFrameLoad(
+                    pattern_name=str(l_dict.get("pattern_name", "")),
+                    direction=direction,
+                    value=float(l_dict.get("value", 0.0)),
+                    dist_type=dist_type,
+                    coordinate_system=str(l_dict.get("coordinate_system", "GLOBAL"))
+                )
+                new_loads.append(load_obj)
+        poly.uniform_to_frame_loads = new_loads
 
     poly.mark_dirty()
 

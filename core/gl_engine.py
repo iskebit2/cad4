@@ -96,7 +96,7 @@ class Engine:
     
     def _init_shaders(self):
         shader_list = ["pick", "standard", "node", "simple",
-                       "2d_overlay", "preview", "grid"]
+                       "2d_overlay", "preview", "grid", "axes"]
         for name in shader_list:
             v = SHADER_DIR / f"{name}.vert"
             f = SHADER_DIR / f"{name}.frag"
@@ -113,6 +113,9 @@ class Engine:
         self.overlay_s = self.shaders.get("2d_overlay")
         self.preview_s = self.shaders.get("preview")
         self.grid_s = self.shaders.get("grid")
+        self.axes_s = self.shaders.get("axes")
+
+        # self.renderer.set_axes_shader(self.axes_s)
 
     
     def _init_camera(self):
@@ -144,6 +147,7 @@ class Engine:
             node_s=self.node_s,
             simple_s=self.simple_s,
             overlay_s=self.overlay_s,
+            axes_s=self.axes_s,
             w=self.w, h=self.h,
         )
         self.renderer.set_cam(self.cam)

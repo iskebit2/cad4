@@ -44,6 +44,7 @@ class Element:
         self.pick_id = self.unique_id
         self.element_type = None
         self.color = list(color[:3]) if color is not None else [0.7, 0.7, 0.7]
+        self.show_axes_override: Optional[bool] = None  # None → scene default
 
     def toggle_selection(self):
         self.is_selected = not self.is_selected
@@ -416,6 +417,12 @@ class Polygon(Element):
         self.windplane: Dict[str, Any] = {}
         self.is_temporary = False
 
+        # === YENİ: YÜK LİSTELERİ ===
+        self.uniform_to_frame_loads: List[Any] = []
+        # İleride diğer yük tiplerini de eklemek istersen buraya açabilirsin:
+        # self.uniform_loads: List[Any] = []
+        # self.gravity_loads: List[Any] = []
+
     def is_valid(self) -> bool:
         return len(self.nodes) >= 3
 
@@ -439,6 +446,7 @@ class Polygon(Element):
             "poly_type": self.poly_type.name,
             "windplane": self.windplane,
             "is_temporary": self.is_temporary,
+            "uniform_to_frame_loads": [l.to_dict() for l in self.uniform_to_frame_loads],
         })
         return data
 
@@ -455,5 +463,26 @@ class Polygon(Element):
         poly = cls(nodes=poly_nodes, label=data.get("label", ""), poly_type=poly_type)
         poly.windplane = data.get("windplane", {})
         poly.is_temporary = bool(data.get("is_temporary", False))
+        poly.uniform_to_frame_loads = [
+        AreaUniformToFrameLoad.from_dict(l) for l in data.get("uniform_to_frame_loads", [])
+        ]
         poly._apply_base_dict(data)
         return poly
+
+    def add_uniform_to_frame_load(self, pattern_name: str, value: float, direction=None, dist_type=None):
+        """Polygon üzerine load pattern bazlı uniform-to-frame yükü ekler."""
+        from domain.definition import AreaUniformToFrameLoad, LoadDirection, DistType
+        if direction is None:
+            direction = LoadDirection.GRAVITY
+        if dist_type is None:
+            dist_type = DistType.ONE_WAY
+
+        load_item = AreaUniformToFrameLoad(
+            pattern_name=pattern_name.strip(),
+            direction=direction,
+            value=value,
+            dist_type=dist_type,
+            coordinate_system="GLOBAL"
+        )
+        self.uniform_to_frame_loads.append(load_item)
+        self.mark_dirty()

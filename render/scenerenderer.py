@@ -7,6 +7,8 @@ import glm
 from typing import Optional, Any, List, Dict
 from dataclasses import dataclass
 
+from domain.local_axes import frame_local_axes, polygon_plane_axes
+from render.axes_renderer import LocalAxesRenderer
 from render.light_ubo import LightUBO
 from render.lightingsystem import LightingSystem
 from tools.gizmo import GizmoAxes
@@ -30,12 +32,14 @@ class RenderStats:
     tri: int = 0
 
 class SceneRenderer:
-    def __init__(self, pick_s, standard_s, node_s, simple_s, overlay_s, w=1024, h=768):
+    def __init__(self, pick_s, standard_s, node_s, simple_s, overlay_s, axes_s, w=1024, h=768):
         self.pick_s = pick_s
         self.standard_shader = standard_s  # İsmi netleştirelim
         self.node_shader = node_s
         self.simple_shader = simple_s
         self.overlay_shader = overlay_s
+        self.axes_shader = axes_s
+
         self.scene = self.camera = self.engine = None
         
         # Render modu: 'shaded' veya 'wireframe'
@@ -47,9 +51,6 @@ class SceneRenderer:
         self.link_r = LinkRenderer(self.standard_shader)
         self.node_r = NodeRenderer(self.standard_shader)
         self.polygon_r = PolygonRenderer(self.standard_shader)
-        
-
-        
         # PickPass - MRT'den ID okumak için
         self.pick_pass = PickPass()
         self.pick_pass.set_viewport(w, h)
@@ -100,6 +101,9 @@ class SceneRenderer:
         )
         self.label_batch = LabelBatch(self.font_atlas)
         self.label_batch.init_gl()
+        
+        self.axes_r = LocalAxesRenderer(self.axes_shader)
+        self.axes_r.init_gl()
 
 
     def _init_marquee_buffers(self):
@@ -418,6 +422,27 @@ class SceneRenderer:
         self.render_mode = modes[(idx + 1) % len(modes)]
         logger.info(f"Render modu: {self.render_mode}")
         return self.render_mode
+
+    def toggle_local_axes(self):
+        """Master toggle: tüm local eksenleri aç/kapa."""
+        if not self.scene:
+            return False
+        self.scene.show_local_axes = not self.scene.show_local_axes
+        logger.info(f"[Axes] show_local_axes = {self.scene.show_local_axes}")
+        return self.scene.show_local_axes
+
+    def toggle_local_axes_selected_only(self):
+        """Sadece seçili elemanların eksenleri mi, hepsi mi."""
+        if not self.scene:
+            return False
+        self.scene.show_local_axes_for_selected = not self.scene.show_local_axes_for_selected
+        logger.info(f"[Axes] for_selected = {self.scene.show_local_axes_for_selected}")
+        return self.scene.show_local_axes_for_selected
+
+    def set_local_axes_scale(self, scale: float):
+        """Axes boyut çarpanı."""
+        if self.scene:
+            self.scene.show_local_axes_scale = float(scale)
             
     def render(self, cam, target_fbo=0): # <-- target_fbo varsayılan 0 eklendi
         if not cam:
@@ -493,10 +518,93 @@ class SceneRenderer:
         # 4. GRID LABELS
         self._draw_grid_labels_3d(cam)
 
+        # 4.5 LOCAL AXES
+        if self.scene and getattr(self.scene, 'show_local_axes', False):
+            self._draw_local_axes(cam)
+
         # 5. MARQUEE - renkleri düzeltilmiş
         if self.marquee and self.marquee.is_active:
             self._draw_marquee()
 
+    def _draw_local_axes(self, cam):
+        
+        
+        p = cam.get_projection_matrix()
+        v = cam.get_view_matrix()
+        base_mvp = p * v
+        
+        scale = self.size * 0.025 * getattr(self.scene, 'show_local_axes_scale', 1.0)
+        only_sel = getattr(self.scene, 'show_local_axes_for_selected', True)
+        
+        glDisable(GL_DEPTH_TEST)   # overlay gibi üstte çiz
+        self.axes_shader.use()
+        
+        # --- Frame'ler ---
+        for f in self.scene.frames.values():
+            if not f.is_visible: continue
+            if only_sel and not f.is_selected: continue
+            if f.show_axes_override is False: continue
+            
+            R = frame_local_axes(f.node_i, f.node_j, f.rotation_deg)
+            origin = f.get_midpoint()
+            
+            # column-major 3x3 → 4x4
+            R3 = np.array([[R[0][0], R[1][0], R[2][0]],
+                        [R[0][1], R[1][1], R[2][1]],
+                        [R[0][2], R[1][2], R[2][2]]], dtype=np.float32)
+            Rglm = glm.mat3(glm.vec3(*R3[:,0]), glm.vec3(*R3[:,1]), glm.vec3(*R3[:,2]))
+            
+            M = glm.translate(glm.mat4(1.0), glm.vec3(*origin)) * glm.mat4(Rglm)
+            M = glm.scale(M, glm.vec3(scale))
+            mvp = base_mvp * M
+            
+            loc = self.axes_shader.get_loc("u_mvp")
+            if loc != -1:
+                glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
+            glBindVertexArray(self.axes_r.vao)
+            glDrawArrays(GL_LINES, 0, 6)     # shaft'lar
+            glDrawArrays(GL_TRIANGLES, 6, 12) # heads (3 eksen × 4 vertex)
+        
+        # --- Polygon local axes ---
+        for pg in self.scene.polygons.values():
+            if not pg.is_visible:
+                continue
+            if only_sel and not pg.is_selected:
+                continue
+            if getattr(pg, "show_axes_override", None) is False:
+                continue
+            if len(pg.nodes) < 3:
+                continue
+
+            # Polygon düzlemi için ortonormal frame
+            u, v_axis, n = polygon_plane_axes(pg.nodes)
+
+            # Rotasyon matrisi: kolonlar u, v, n (local → global)
+            # glm.mat3 column-major: mat3(col0, col1, col2)
+            R3 = glm.mat3(u, v_axis, n)
+
+            origin = pg.centroid()   # ya da poly.nodes[0] coords — aşağıda seçenek var
+
+            # Model matrisi: T(origin) · R · S(scale)
+            M = glm.mat4(1.0)
+            M = glm.translate(M, glm.vec3(*origin))
+            M = M * glm.mat4(R3)
+            M = glm.scale(M, glm.vec3(scale))
+
+            mvp = base_mvp * M
+
+            loc = self.axes_shader.get_loc("u_mvp")
+            if loc != -1:
+                glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
+
+            # Aynı VAO'yu kullan — Frame'lerle aynı ok geometrisi
+            glBindVertexArray(self.axes_r.vao)
+            glDrawArrays(GL_LINES, 0, 6)
+            glDrawArrays(GL_TRIANGLES, 6, 12)
+        
+        glEnable(GL_DEPTH_TEST)
+        glBindVertexArray(0)
+        
     def _draw_grid_labels_3d(self, cam):
         if not self.show.get('grid', True):
             return

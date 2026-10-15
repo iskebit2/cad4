@@ -12,7 +12,7 @@ class Toolbar:
 
     def __init__(self, callbacks: Dict[str, Callable], panel_states: Dict[str, Callable] = None):
         self.callbacks = callbacks or {}
-        self.panel_states = panel_states or {} # Panellerin açık/kapalı durumunu dönen fonksiyonlar
+        self.panel_states = panel_states or {}
         self.current_unit = None
 
     def draw(self, model_text: str = "MODEL: YENİ SAHNE", draw_active: bool = False, current_unit=None):
@@ -56,9 +56,43 @@ class Toolbar:
         self._styled_button(draw_label, draw_color, lambda: self._fire("draw"))
         imgui.same_line()
 
-        # --- Görünüm & Araçlar (Toggle Check ile güncellendi) ---
-        if imgui.begin_menu("Görünürlük & Araçlar"):
-            # Panel durumlarını güvenli şekilde sorgula
+        imgui.separator()
+        imgui.same_line()
+
+        # --- Assign (Yük Atama) Grubu ---
+        assign_state = self._get_panel_state("assign_area_load")
+        assign_color = (0.25, 0.45, 0.65, 1.00) if not assign_state else (0.35, 0.65, 0.45, 1.00)
+        
+        if imgui.begin_menu("Assign (Atama)"):
+            if imgui.menu_item("Assign Area Load to Frame...", selected=assign_state)[0]:
+                self._fire("assign_area_load")
+            
+            imgui.separator()
+            # Diğer yük atama butonları için yerler (Şimdilik boş/pasif)
+            if imgui.menu_item("Assign Frame Load... (Yakında)", selected=False, enabled=False)[0]:
+                pass
+            if imgui.menu_item("Assign Joint Load... (Yakında)", selected=False, enabled=False)[0]:
+                pass
+            if imgui.menu_item("Assign Area Uniform Load... (Yakında)", selected=False, enabled=False)[0]:
+                pass
+            imgui.separator()
+            if imgui.menu_item("Distribute Selected Polygon Loads")[0]:
+                self._fire("distribute_polygon_loads")
+            if imgui.menu_item("Assign Frame Load... (Yakında)", selected=False, enabled=False)[0]:
+                pass
+            imgui.separator()
+            if imgui.menu_item("Align Frames to Polygon Plane")[0]:
+                self._fire("align_frames_to_polygon")
+            imgui.separator()
+            if imgui.menu_item("Check Load Balance")[0]:
+                self._fire("check_load_balance")
+            imgui.end_menu()
+        imgui.same_line()
+
+        imgui.separator()
+        imgui.same_line()
+
+        if imgui.begin_menu("Görünüm & Araçlar"):
             vis_state = self._get_panel_state("visibility")
             filter_state = self._get_panel_state("view_filter")
             grid_state = self._get_panel_state("grid")
@@ -74,13 +108,27 @@ class Toolbar:
                 self._fire("grid_labels")
             if imgui.menu_item("Inspector (Ctrl+P)", selected=inspector_state)[0]:
                 self._fire("inspector")
-            
+
             imgui.separator()
-            
+
             if imgui.menu_item("Render Modu Değiştir (F3)")[0]:
                 self._fire("render_mode")
             if imgui.menu_item("Akıllı Düzlem Modu (F11)", selected=self._get_panel_state("smart_plane"))[0]:
                 self._fire("smart_plane")
+
+            imgui.separator()
+
+            # --- LOCAL AXES ---
+            axes_on       = self._get_panel_state("local_axes")
+            axes_sel_only = self._get_panel_state("local_axes_selected_only")
+
+            if imgui.menu_item("Local Axes Göster (E)", selected=axes_on)[0]:
+                self._fire("local_axes")
+            if imgui.menu_item("  └ Sadece Seçililerde",
+                            selected=axes_sel_only,
+                            enabled=axes_on)[0]:
+                self._fire("local_axes_selected_only")
+
             imgui.end_menu()
         imgui.same_line()
 
@@ -100,8 +148,6 @@ class Toolbar:
         imgui.same_line()
 
         # --- Rüzgar & Özel Analizler ---
-        zones_open = self._get_panel_state("wind")
-        # Zones butonunu da duruma göre renklendirebiliriz veya standart bırakabiliriz
         self._styled_button("Zones", (0.15, 0.45, 0.60, 1.00), lambda: self._fire("wind"))
         imgui.same_line()
 
@@ -142,7 +188,7 @@ class Toolbar:
 
         if clicked and callable(on_click):
             on_click()
-
+    
     def _fire(self, key: str):
         fn = self.callbacks.get(key)
         if callable(fn):

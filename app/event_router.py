@@ -517,7 +517,18 @@ class EventRouter:
             deleted, rejected = eng.sel_mgr.delete_selected()
             logger.info("Silindi: %s, Reddedildi: %s", deleted, rejected)
             return
+        # --- H Tuşu: Seçili elemanları gizle/göster ---
+        if key == glfw.KEY_H and not eng.input.is_ctrl_pressed():
+            self.app._toggle_selected_visibility()
+            return
 
+        # --- L Tuşu: Yükleri göster/gizle ---
+        if key == glfw.KEY_L and not eng.input.is_ctrl_pressed():
+            self.app._toggle_loads_visibility()
+            return
+
+        
+            
         # --- Ctrl kombinasyonları ---
         if eng.input.is_ctrl_pressed():
             if key == glfw.KEY_Z:
@@ -548,6 +559,17 @@ class EventRouter:
             if key == glfw.KEY_G:
                 self.app.open_grid()
                 return
+
+            if key == glfw.KEY_S:
+                if eng.input.is_shift_pressed():
+                    self.app._save_as_project()
+                else:
+                    self.app._quick_save()
+                return
+            if key == glfw.KEY_O:
+                self.app._on_toolbar_open()
+                return
+            
 
     def _handle_key_up(self, key, scancode):
         eng = self.engine

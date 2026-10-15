@@ -45,6 +45,15 @@ def frame_schema():
             FieldSpec("section.profile_params.b", "float", "b",
                       step=1.0, format="%.1f"),
         ]),
+        GroupSpec("Yükler (Distributed Loads)", [
+            FieldSpec("dist_loads", "list_object", "Yayılı Yükler",
+                      item_schema=[
+                          FieldSpec("pattern_name", "str", "Load Pattern"),
+                          FieldSpec("p1", "float", "Değer (p1) [kN/m]"),
+                          FieldSpec("direction", "enum", "Yön", 
+                                    choices=["GX", "GY", "GZ", "1", "2", "3", "GRAV", "PX", "PY", "PZ"]),
+                      ]),
+        ]),
     ]
 
 
@@ -78,15 +87,26 @@ def link_schema():
 def polygon_schema():
     return [
         GroupSpec("Genel", [
-            FieldSpec("label",      "str",   "Label"),
-            FieldSpec("is_visible", "bool",  "Görünür"),
+            FieldSpec("label",        "str",   "Label"),
+            FieldSpec("is_visible",   "bool",  "Görünür"),
             FieldSpec("is_temporary", "bool",  "Geçici (Temp)"),
-            FieldSpec("color",      "color", "Renk"),
+            FieldSpec("color",        "color", "Renk"),
         ]),
         GroupSpec("Poligon", [
             FieldSpec("poly_type", "enum", "Tip",
                       choices=["GENERIC", "SURFACE", "ZONE",
                                "SECTION_CUT", "LOAD_AREA"]),
+        ]),
+        GroupSpec("Yükler (Uniform to Frame)", [
+            FieldSpec("uniform_to_frame_loads", "list_object", "Yük Tanımları",
+                      item_schema=[
+                          FieldSpec("pattern_name", "str", "Load Pattern"),
+                          FieldSpec("value", "float", "Değer (kN/m²)"),
+                          FieldSpec("direction", "enum", "Yön", 
+                                    choices=["GX", "GY", "GZ", "1", "2", "3", "GRAV", "PX", "PY", "PZ"]),
+                          FieldSpec("dist_type", "enum", "Dağıtım Tipi", 
+                                    choices=["One way", "Two way"]),
+                      ]),
         ]),
     ]
 

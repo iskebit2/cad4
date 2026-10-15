@@ -193,6 +193,62 @@ class InspectorPanel(BasePanel):
                     set_path(self.current_values, f.key, int(newv))
                 return
 
+            if f.kind == "list_object":
+                imgui.text(label)
+                items = get_path(self.current_values, f.key) or []
+                
+                imgui.indent(10)
+                for idx, item in enumerate(items):
+                    imgui.push_id(f"{f.key}_{idx}")
+                    try:
+                        pat_name = item.get("pattern_name", "Load")
+                        val = item.get("value", 0.0)
+                        
+                        if imgui.collapsing_header(f"[{idx+1}] {pat_name} (Val: {val})"):
+                            imgui.indent(10)
+                            if f.item_schema:
+                                for sub_f in f.item_schema:
+                                    sub_key = f"{f.key}.{idx}.{sub_f.key}"
+                                    sub_cur = get_path(self.current_values, sub_key)
+                                    
+                                    if sub_f.kind == "float":
+                                        imgui.align_text_to_frame_padding()
+                                        imgui.text(sub_f.label or sub_f.key)
+                                        imgui.same_line(position=120)
+                                        imgui.set_next_item_width(-1)
+                                        new_v, changed = _unpack(imgui.input_float(f"##{sub_f.key}", float(sub_cur or 0.0), step=sub_f.step, format=sub_f.format))
+                                        if changed and new_v is not None:
+                                            set_path(self.current_values, sub_key, float(new_v))
+                                            
+                                    elif sub_f.kind == "enum":
+                                        choices = sub_f.choices or []
+                                        imgui.align_text_to_frame_padding()
+                                        imgui.text(sub_f.label or sub_f.key)
+                                        imgui.same_line(position=120)
+                                        imgui.set_next_item_width(-1)
+                                        
+                                        curr_idx = 0
+                                        if str(sub_cur) in choices:
+                                            curr_idx = choices.index(str(sub_cur))
+                                            
+                                        new_idx, changed = _unpack(imgui.combo(f"##{sub_f.key}", curr_idx, choices))
+                                        if changed and new_idx is not None:
+                                            set_path(self.current_values, sub_key, choices[new_idx])
+                                            
+                                    else:
+                                        imgui.align_text_to_frame_padding()
+                                        imgui.text(sub_f.label or sub_f.key)
+                                        imgui.same_line(position=120)
+                                        imgui.set_next_item_width(-1)
+                                        new_v, changed = _unpack(imgui.input_text(f"##{sub_f.key}", str(sub_cur or ""), 256))
+                                        if changed and new_v is not None:
+                                            set_path(self.current_values, sub_key, str(new_v))
+                            imgui.unindent(10)
+                    finally:
+                        imgui.pop_id()
+                imgui.unindent(10)
+                return
+
             imgui.align_text_to_frame_padding()
             imgui.text(label)
             imgui.same_line(position=140)

@@ -1,6 +1,6 @@
 # tools/s2k_utils.py
 
-from domain.definition import AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, AutoSeismicTSC2018, ComboItem, FrameDistributedLoad, FrameGravityLoad, GeneralProjectInfo, LinkProp, LinkPropLinear, LinkPropType, LoadCase, LoadCombination, LoadDirection, LoadPattern, MatType, Material, ModalCase, PointLoad, QuadDefinition, ResponseSpectrumCase, ResponseSpectrumLoadAssignment, Section, SectionCut, SectionCutDefinedBy, SectionCutResultType, SectionType, SiteInformation, SpectrumFunction, SpectrumSourceType, StaticLoadAssignment
+from domain.definition import AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, AutoSeismicTSC2018, ComboItem, DistType, FrameDistributedLoad, FrameGravityLoad, GeneralProjectInfo, LinkProp, LinkPropLinear, LinkPropType, LoadCase, LoadCombination, LoadDirection, LoadPattern, MatType, Material, ModalCase, PointLoad, QuadDefinition, ResponseSpectrumCase, ResponseSpectrumLoadAssignment, Section, SectionCut, SectionCutDefinedBy, SectionCutResultType, SectionType, SiteInformation, SpectrumFunction, SpectrumSourceType, StaticLoadAssignment
 from typing import Optional, Callable, List, Tuple, Dict
 from dataclasses import dataclass, field
 from domain.scene import Scene
@@ -594,23 +594,13 @@ def _load_area_loads(ctx: LoadContext, area_map: Dict[str, Area]):
     if df_utf is not None and not df_utf.empty:
         for _, r in df_utf.iterrows():
             if area := area_map.get(str(r.get('Area', '')).strip()):
+                raw_dist = r.get('DistType', 'One way')
                 area.uniform_to_frame_loads.append(AreaUniformToFrameLoad(
                     pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
                     direction=_parse_direction(str(r.get('Dir', 'Gravity'))),
                     value=ctx.units.area_w(safe_float(r, 'UnifLoad', 0.0)),
-                    dist_type=str(r.get('DistType', 'One way')).strip(),
-                ))
-
-    df_w = ctx.df_area_wind
-    if df_w is not None and not df_w.empty:
-        for _, r in df_w.iterrows():
-            if area := area_map.get(str(r.get('Area', '')).strip()):
-                is_ww = str(r.get('Windward', 'Yes')).strip().upper() == 'YES'
-                area.wind_pressures.append(AreaWindPressureLoad(
-                    pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
-                    cp=safe_float(r, 'Cp'),
-                    windward=is_ww,
-                    dist_type=str(r.get('DistType', 'To Joints')).strip(),
+                    dist_type=DistType.from_input(raw_dist),
+                    coordinate_system=str(r.get('CoordSys', 'GLOBAL')).strip(),
                 ))
 
 
