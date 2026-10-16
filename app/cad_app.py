@@ -9,8 +9,8 @@ from app.cad_window import CadWindow
 from core.gl_engine import Engine
 from app.event_router import EventRouter
 
-from domain.definition import AreaUniformToFrameLoad, DistType, LoadDirection, UnitSystem
-from domain.element import PolygonType
+from domain.definition import AreaUniformToFrameLoad, DistType, FrameDistributedLoad, LoadDirection, UnitSystem
+from domain.element import Frame, PolygonType
 from ui.toolbar import Toolbar
 from ui.main_menu import MainMenuPopup
 from ui.file_dialog import ImGuiFileDialog
@@ -23,8 +23,11 @@ from ui.project_panels import ProjectInfoPanel, ProjectConfigPanel, AnalysisMana
 from ui.grid_panel import GridPanel
 from ui.imgui_backend import UiBackend
 from ui.load_assign_panel import LoadAssignPanel
+from ui.frame_load_panel import FrameLoadPanel
 from domain.element import Polygon
 from domain.project import Project
+from tools.frame_load_service import FrameLoadService
+from ui.load_display_panel import LoadDisplayPanel
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
@@ -49,8 +52,17 @@ class CadApp:
         self.visibility_panel = VisibilityPanel(on_apply=self._on_visibility_applied)
         self.file_dialog = ImGuiFileDialog()
         self.view_filter = ViewFilterPanel(on_apply=self._on_view_filter_apply)
-        self.zones_panel = ZonesPanel(on_run_analysis=self._on_run_wind_analysis,
-                                      on_select_direction= self.on_select_wind_direction)
+        self.zones_panel = ZonesPanel(
+                                        on_run_analysis=self._on_run_wind_analysis,
+                                        on_select_direction=self.on_select_wind_direction,
+                                        on_distribute=self._distribute_wind_zones_to_frames,   # ← YENİ
+                                    )
+
+        self.load_display_panel = LoadDisplayPanel(
+                                                    on_change=self._on_load_display_change,
+                                                    on_clear_loads=self._clear_loads_from_selected,
+                                                    on_clear_all=self._clear_loads_from_scene,
+                                                )
         
         # Yönetim Panelleri
         self.report_panel = ReportPanel()
@@ -59,7 +71,7 @@ class CadApp:
         self.project_config_panel = ProjectConfigPanel()
         self.analysis_panel = AnalysisManagerPanel()
         self.load_assign_panel = LoadAssignPanel(on_apply=self._apply_load_to_selected_polygon)
-
+        self.frame_load_panel = FrameLoadPanel(on_apply=self._apply_frame_distributed_load)
 
         self.ui_backend = UiBackend(window.window)
         self.ui_backend.setup()
@@ -107,6 +119,10 @@ class CadApp:
                 "local_axes_selected_only": self._toggle_local_axes_selected_only,
                 "align_frames_to_polygon": self._align_frames_to_selected_polygons,
                 "check_load_balance": self._check_load_balance,
+                "assign_frame_distributed_load": lambda: self._toggle_frame_load_panel(),
+                "distribute_wind_zones": self._distribute_wind_zones_to_frames,
+                "toggle_show_loads": self._toggle_show_loads,
+                "toggle_load_display_panel": lambda: self._toggle_load_display_panel(),
                 
             },
             panel_states={
@@ -124,6 +140,9 @@ class CadApp:
                 "assign_area_load": lambda: self.load_assign_panel.visible,
                 "local_axes": lambda: self.engine.scene.show_local_axes if self.engine and self.engine.scene else False,
                 "local_axes_selected_only": lambda: self.engine.scene.show_local_axes_for_selected if self.engine and self.engine.scene else True,
+                "assign_frame_distributed_load": lambda: self.frame_load_panel.visible,
+                "show_loads": lambda: getattr(self.engine.renderer, "show_loads", True) if self.engine and self.engine.renderer else True,
+                "load_display_panel": lambda: self.load_display_panel.visible,
             }
         )
 
@@ -206,6 +225,8 @@ class CadApp:
         self.analysis_panel.draw()
         self.grid_panel.draw()
         self.load_assign_panel.draw()
+        self.frame_load_panel.draw()
+        self.load_display_panel.draw()
 
     def _render_scene(self, dt):
         w, h = self.window.fb_width, self.window.fb_height
@@ -988,6 +1009,149 @@ class CadApp:
             if hasattr(self.engine.renderer, "show_loads"):
                 self.engine.renderer.show_loads = self.show_loads
         logger.info(f"[Loads] Yük görünürlüğü: {'Açık' if self.show_loads else 'Kapalı'}")
+
+    def _toggle_frame_load_panel(self):
+        if self.frame_load_panel.visible:
+            self.frame_load_panel.close()
+        else:
+            self._refresh_frame_load_targets()
+            patterns = list(self.current_project.definitions.load_patterns.keys()) \
+                    if hasattr(self.current_project.definitions, "load_patterns") else []
+            if not patterns:
+                patterns = ["DEAD", "LIVE", "WIND", "SNOW", "EQ"]
+            self.frame_load_panel.on_refresh_targets = self._refresh_frame_load_targets
+            self.frame_load_panel.open(
+                patterns=patterns,
+                target_frames=self._get_selected_frames(),
+            )
+
+    def _get_selected_frames(self):
+        if not self.engine or not self.engine.scene:
+            return []
+        return [e for e in self.engine.scene.get_selected()
+                if isinstance(e, Frame)]
+
+    def _refresh_frame_load_targets(self):
+        """Seçili frame'leri panel'e yeniden bildir."""
+        self.frame_load_panel.set_target_frames(self._get_selected_frames())
+
+    def _apply_frame_distributed_load(self, frames, load_set):
+        """Segment set'ini frame'lere uygular ve kalıcı olarak saklar."""
+
+        for frame in frames:
+            FrameLoadService.assign_distributed_load_set(frame, load_set)
+
+        # Sahneyi güncelle
+        if self.engine and self.engine.scene:
+            self.engine.scene.mark_dirty()
+            self.engine.renderer.update_geo(self.engine.scene)
+
+        logger.info(f"[FrameLoad] {len(frames)} frame'e '{load_set.pattern_name}' "
+                    f"({len(load_set.segments)} segment) yüklendi.")
+
+    def _distribute_wind_zones_to_frames(self, kind: str = "CPE10") -> int:
+        """Zones panelden çağrılır."""
+        if not self.engine or not self.engine.scene:
+            logger.warning("[WindZone] Aktif sahne yok.")
+            return 0
+
+        from tools.wind_zone_distribution_service import WindZoneDistributionService
+
+        cfg = self.current_project.config.wind
+        n = WindZoneDistributionService.distribute(
+            self.engine.scene,
+            definitions=self.current_project.definitions,
+            kind=kind,
+            cpi_positive=cfg.cpi_positive,
+            cpi_negative=cfg.cpi_negative,
+            clear_existing=True,
+        )
+
+        if n > 0:
+            self.engine.scene.mark_dirty()
+            self.engine.renderer.update_geo(self.engine.scene)
+            logger.info(f"[WindZone] {kind}: {n} segment atandı.")
+        else:
+            logger.info("[WindZone] Atama yapılmadı.")
+
+        return n
+
+    def _toggle_show_loads(self):
+        if self.engine and self.engine.renderer:
+            if hasattr(self.engine.renderer, "show_loads"):
+                self.engine.renderer.show_loads = not self.engine.renderer.show_loads
+                logger.info(f"[Loads] Yük görünürlüğü: {self.engine.renderer.show_loads}")
+
+    def _on_load_display_change(self):
+        """Panelde bir ayar değiştiğinde çağrılır."""
+        if self.engine and self.engine.scene:
+            self.engine.renderer.update_geo(self.engine.scene)
+
+    def _clear_loads_from_selected(self, pattern: str) -> int:
+        """Seçili elemanlardan verilen pattern'ı sil."""
+        if not self.engine or not self.engine.scene:
+            return 0
+
+        from tools.frame_load_service import FrameLoadService
+        selected = self.engine.scene.get_selected()
+        frames = [e for e in selected if e.element_type == "Frame"]
+
+        if not frames:
+            logger.info("[Loads] Seçili frame yok.")
+            return 0
+
+        count = 0
+        for f in frames:
+            sets = getattr(f, "dist_load_sets", {})
+            if pattern in sets:
+                del sets[pattern]
+                # dist_loads'tan da temizle
+                f.dist_loads = [
+                    dl for dl in getattr(f, "dist_loads", [])
+                    if dl.pattern_name != pattern
+                ]
+                f.mark_dirty()
+                count += 1
+
+        if count:
+            self.engine.scene.mark_dirty()
+            self.engine.renderer.update_geo(self.engine.scene)
+
+        logger.info(f"[Loads] {count} frame'den '{pattern}' silindi.")
+        return count
+
+    def _clear_loads_from_scene(self, pattern: str) -> int:
+        """Tüm sahnedeki frame'lerden verilen pattern'ı sil."""
+        if not self.engine or not self.engine.scene:
+            return 0
+
+        count = 0
+        for f in self.engine.scene.frames.values():
+            sets = getattr(f, "dist_load_sets", {})
+            if pattern in sets:
+                del sets[pattern]
+                f.dist_loads = [
+                    dl for dl in getattr(f, "dist_loads", [])
+                    if dl.pattern_name != pattern
+                ]
+                f.mark_dirty()
+                count += 1
+
+        if count:
+            self.engine.scene.mark_dirty()
+            self.engine.renderer.update_geo(self.engine.scene)
+
+        logger.info(f"[Loads] Tüm sahnede {count} frame'den '{pattern}' silindi.")
+        return count
+
+    def _toggle_load_display_panel(self):
+        if self.load_display_panel.visible:
+            self.load_display_panel.close()
+        else:
+            self.load_display_panel.open(
+                scene=self.engine.scene if self.engine else None,
+                renderer=self.engine.renderer if self.engine else None,
+            )
 
     def shutdown(self):
         self.ui_backend.shutdown()

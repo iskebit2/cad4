@@ -78,14 +78,18 @@ class Toolbar:
             imgui.separator()
             if imgui.menu_item("Distribute Selected Polygon Loads")[0]:
                 self._fire("distribute_polygon_loads")
-            if imgui.menu_item("Assign Frame Load... (Yakında)", selected=False, enabled=False)[0]:
-                pass
+            if imgui.menu_item("Assign Frame Distributed Load", 
+                   selected=self._get_panel_state("assign_frame_distributed_load"))[0]:
+                self._fire("assign_frame_distributed_load")
             imgui.separator()
             if imgui.menu_item("Align Frames to Polygon Plane")[0]:
                 self._fire("align_frames_to_polygon")
             imgui.separator()
             if imgui.menu_item("Check Load Balance")[0]:
                 self._fire("check_load_balance")
+
+            if imgui.menu_item("Distribute Wind Zones to Frames")[0]:
+                self._fire("distribute_wind_zones")
             imgui.end_menu()
         imgui.same_line()
 
@@ -128,6 +132,12 @@ class Toolbar:
                             selected=axes_sel_only,
                             enabled=axes_on)[0]:
                 self._fire("local_axes_selected_only")
+
+            imgui.separator()
+            loads_on = self._get_panel_state("show_loads")
+            if imgui.menu_item("Yük Görüntüleme Paneli",
+                   selected=self._get_panel_state("load_display_panel"))[0]:
+                self._fire("toggle_load_display_panel")
 
             imgui.end_menu()
         imgui.same_line()

@@ -26,6 +26,7 @@ def node_schema():
     ]
 
 
+# ui/schemas.py
 def frame_schema():
     return [
         GroupSpec("Genel", [
@@ -45,15 +46,22 @@ def frame_schema():
             FieldSpec("section.profile_params.b", "float", "b",
                       step=1.0, format="%.1f"),
         ]),
-        GroupSpec("Yükler (Distributed Loads)", [
-            FieldSpec("dist_loads", "list_object", "Yayılı Yükler",
+        GroupSpec("Yayılı Yük Setleri (Segment Bazlı)", [
+            FieldSpec("dist_load_sets_list", "list_object",
+                      "Pattern → Segment Seti",
                       item_schema=[
-                          FieldSpec("pattern_name", "str", "Load Pattern"),
-                          FieldSpec("p1", "float", "Değer (p1) [kN/m]"),
-                          FieldSpec("direction", "enum", "Yön", 
-                                    choices=["GX", "GY", "GZ", "1", "2", "3", "GRAV", "PX", "PY", "PZ"]),
+                          FieldSpec("pattern_name", "str",   "Pattern"),
+                          FieldSpec("coord_sys",    "enum",  "CoordSys",
+                                    choices=["Local", "Global"]),
+                          FieldSpec("load_dir",     "enum",  "Yön",
+                                    choices=["1","2","3","4","5","6",
+                                             "7","8","9","10"]),
+                          FieldSpec("mode",         "enum",  "Mode",
+                                    choices=["REPLACE", "ADD"]),
+                          FieldSpec("is_relative",  "bool",  "Relative"),
+                          FieldSpec("segments_text", "str",  "Segmentler (x1,x2,q1,q2 | ...)"),
                       ]),
-        ]),
+        ], default_open=True),
     ]
 
 

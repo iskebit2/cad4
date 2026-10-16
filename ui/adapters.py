@@ -54,9 +54,75 @@ def values_to_node(node, v: Dict[str, Any]):
 # ------------------------------------------------------------------
 # FRAME
 # ------------------------------------------------------------------
+def _segments_to_text(segments) -> str:
+    """Segment listesini 'x1,x2,q1,q2 | x1,x2,q1,q2' formatına çevir."""
+    parts = []
+    for s in segments:
+        parts.append(f"{s.x1:.4f},{s.x2:.4f},{s.q1:.4f},{s.q2:.4f}")
+    return " | ".join(parts)
+
+
+def _text_to_segments(text: str):
+    """Metni LoadSegment listesine çevir. Hatalı parçaları atlar."""
+    from domain.definition import LoadSegment
+    segs = []
+    if not text:
+        return segs
+    for chunk in text.split("|"):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        nums = [p.strip() for p in chunk.replace(";", ",").split(",") if p.strip()]
+        if len(nums) != 4:
+            continue
+        try:
+            x1, x2, q1, q2 = (float(n) for n in nums)
+        except ValueError:
+            continue
+        # Sıralama ve sınır kontrolü
+        x1 = max(0.0, min(1.0, x1))
+        x2 = max(0.0, min(1.0, x2))
+        if x2 <= x1:
+            x2 = min(1.0, x1 + 0.001)
+        segs.append(LoadSegment(x1=x1, x2=x2, q1=q1, q2=q2))
+    segs.sort(key=lambda s: s.x1)
+    return segs
+
+
 def frame_to_values(frame) -> Dict[str, Any]:
     sec = getattr(frame, "section", None)
-    loads = getattr(frame, "dist_loads", [])
+    sets = getattr(frame, "dist_load_sets", {}) or {}
+
+    # Her set'i liste olarak dışa aktar (inspector list_object sever)
+    sets_list = []
+    for pat_name, s in sets.items():
+        sets_list.append({
+            "pattern_name":  s.pattern_name or pat_name,
+            "coord_sys":     s.coord_sys,
+            "load_dir":      str(s.load_dir),
+            "mode":          s.mode,
+            "is_relative":   bool(getattr(s, "is_relative", True)),
+            "segments_text": _segments_to_text(s.segments),
+        })
+
+    # Eğer frame'in dist_loads'u var ama dist_load_sets'i yoksa,
+    # dist_loads'tan reconstruct edip göster (read-only hissi)
+    if not sets_list and getattr(frame, "dist_loads", None):
+        from domain.definition import FrameDistributedLoadSet
+        by_pattern: Dict[str, list] = {}
+        for dl in frame.dist_loads:
+            by_pattern.setdefault(dl.pattern_name, []).append(dl)
+        for pat_name, dls in by_pattern.items():
+            s = FrameDistributedLoadSet.from_sap_loads(dls)
+            sets_list.append({
+                "pattern_name":  s.pattern_name,
+                "coord_sys":     s.coord_sys,
+                "load_dir":      str(s.load_dir),
+                "mode":          s.mode,
+                "is_relative":   bool(getattr(s, "is_relative", True)),
+                "segments_text": _segments_to_text(s.segments),
+            })
+
     return {
         "label": frame.label,
         "is_visible": frame.is_visible,
@@ -70,17 +136,8 @@ def frame_to_values(frame) -> Dict[str, Any]:
             "profile_params": dict(getattr(sec, "profile_params", {})
                                    if sec else {}),
         },
-        "dist_loads": [
-            {
-                "pattern_name": l.pattern_name,
-                "force_or_moment": getattr(l, "force_or_moment", "Force"),
-                "direction": l.direction.value if hasattr(l.direction, "value") else str(l.direction),
-                "p1": float(l.p1),
-                "p2": float(l.p2),
-                "coordinate_system": getattr(l, "coordinate_system", "GLOBAL"),
-            }
-            for l in loads
-        ],
+        # Inspector için tek sanal alan
+        "dist_load_sets_list": sets_list,
     }
 
 
@@ -90,6 +147,7 @@ def values_to_frame(frame, v: Dict[str, Any]):
     frame.is_visible = bool(v.get("is_visible", frame.is_visible))
     frame.rotation_deg = float(v.get("rotation_deg", frame.rotation_deg))
 
+    # Kesit
     sec_v = v.get("section", {})
     if frame.section is not None:
         pt = sec_v.get("profile_type")
@@ -105,33 +163,43 @@ def values_to_frame(frame, v: Dict[str, Any]):
             except (ValueError, TypeError):
                 pass
 
-    # Dağıtılmış yükleri (dist_loads) güncelle
-    loads_v = v.get("dist_loads")
-    if isinstance(loads_v, list):
-        from domain.definition import FrameDistributedLoad, LoadDirection
-        new_loads = []
-        for l_dict in loads_v:
-            if isinstance(l_dict, dict):
-                dir_val = l_dict.get("direction", "GZ")
-                direction = LoadDirection.GLOBAL_Z
-                for d in LoadDirection:
-                    if d.value == str(dir_val) or d.name == str(dir_val):
-                        direction = d
-                        break
+    # --- Segment bazlı yük setleri ---
+    sets_v = v.get("dist_load_sets_list")
+    if isinstance(sets_v, list):
+        from domain.definition import FrameDistributedLoadSet
 
-                load_obj = FrameDistributedLoad(
-                    pattern_name=str(l_dict.get("pattern_name", "")),
-                    force_or_moment=str(l_dict.get("force_or_moment", "Force")),
-                    direction=direction,
-                    p1=float(l_dict.get("p1", 0.0)),
-                    p2=float(l_dict.get("p2", 0.0)),
-                    d1=0.0,
-                    d2=1.0,
-                    is_relative=True,
-                    coordinate_system=str(l_dict.get("coordinate_system", "GLOBAL"))
-                )
-                new_loads.append(load_obj)
-        frame.dist_loads = new_loads
+        if not hasattr(frame, "dist_load_sets"):
+            frame.dist_load_sets = {}
+
+        # Yeni setleri oluştur
+        new_sets: Dict[str, FrameDistributedLoadSet] = {}
+        for item in sets_v:
+            if not isinstance(item, dict):
+                continue
+            pat = str(item.get("pattern_name", "")).strip()
+            if not pat:
+                continue
+            segs = _text_to_segments(item.get("segments_text", ""))
+
+            s = FrameDistributedLoadSet(
+                pattern_name=pat,
+                coord_sys=str(item.get("coord_sys", "Local")),
+                load_dir=str(item.get("load_dir", "7")),
+                mode=str(item.get("mode", "REPLACE")),
+                is_relative=bool(item.get("is_relative", True)),
+                segments=segs,
+            )
+            new_sets[pat] = s
+
+        frame.dist_load_sets = new_sets
+
+        # dist_loads'u (SAP satırları) senkronize et
+        if not hasattr(frame, "dist_loads"):
+            frame.dist_loads = []
+        # Tüm eski satırları temizle, setlerden yeniden üret
+        frame.dist_loads = []
+        for s in new_sets.values():
+            frame.dist_loads.extend(s.to_sap_loads())
 
     frame.mark_dirty()
 

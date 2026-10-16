@@ -531,14 +531,42 @@ class ComboItem(SerializableData):
     case_or_pattern_name: str = ""
     scale_factor: float = 1.0
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "ComboItem":
+        if isinstance(data, ComboItem):
+            return data
+        if not data:
+            return cls()
+        return cls(
+            case_or_pattern_name=str(data.get("case_or_pattern_name", "")),
+            scale_factor=float(data.get("scale_factor", 1.0)),
+        )
+
 
 @dataclass
 class LoadCombination(SerializableData):
-    """TABLE: COMBINATION DEFINITIONS"""
     name: str = ""
     combo_type: str = "Linear Add"
     auto_design: bool = False
     items: List[ComboItem] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LoadCombination":
+        if not data:
+            return cls()
+        raw_items = data.get("items") or []
+        items = []
+        for it in raw_items:
+            if isinstance(it, ComboItem):
+                items.append(it)
+            elif isinstance(it, dict):
+                items.append(ComboItem.from_dict(it))
+        return cls(
+            name=str(data.get("name", "")),
+            combo_type=str(data.get("combo_type", "Linear Add")),
+            auto_design=bool(data.get("auto_design", False)),
+            items=items,
+        )
 
 
 class SpectrumSourceType(Enum):
@@ -682,30 +710,39 @@ class LoadDirection(Enum):
     PROJECTED_Z = "PZ"
 
 
+# SAP2000 frame distributed load direction kodları
 SAP_FRAME_LOAD_DIRECTION = {
-    1: LoadDirection.LOCAL_1,
-    2: LoadDirection.LOCAL_2,
-    3: LoadDirection.LOCAL_3,
-    4: LoadDirection.GLOBAL_X,
-    5: LoadDirection.GLOBAL_Y,
-    6: LoadDirection.GLOBAL_Z,
-    7: LoadDirection.GRAVITY,
-    8: LoadDirection.PROJECTED_X,
-    9: LoadDirection.PROJECTED_Y,
+    1:  LoadDirection.LOCAL_1,
+    2:  LoadDirection.LOCAL_2,
+    3:  LoadDirection.LOCAL_3,
+    4:  LoadDirection.GLOBAL_X,
+    5:  LoadDirection.GLOBAL_Y,
+    6:  LoadDirection.GLOBAL_Z,
+    7:  LoadDirection.GRAVITY,
+    8:  LoadDirection.PROJECTED_X,
+    9:  LoadDirection.PROJECTED_Y,
     10: LoadDirection.PROJECTED_Z,
 }
 
-SAP_FRAME_LOAD_DIRECTION = {
-    1: LoadDirection.LOCAL_1,
-    2: LoadDirection.LOCAL_2,
-    3: LoadDirection.LOCAL_3,
-    4: LoadDirection.GLOBAL_X,
-    5: LoadDirection.GLOBAL_Y,
-    6: LoadDirection.GLOBAL_Z,
-    7: LoadDirection.GRAVITY,
-    8: LoadDirection.PROJECTED_X,
-    9: LoadDirection.PROJECTED_Y,
-    10: LoadDirection.PROJECTED_Z,
+# Panel ve export için görünen isimler
+SAP_DIR_LABELS = {
+    "1":  "1  - Local 1",
+    "2":  "2  - Local 2",
+    "3":  "3  - Local 3",
+    "4":  "4  - Global X",
+    "5":  "5  - Global Y",
+    "6":  "6  - Global Z",
+    "7":  "7  - Gravity (GRAV)",
+    "8":  "8  - Projected X",
+    "9":  "9  - Projected Y",
+    "10": "10 - Projected Z",
+}
+
+# Kısa kod (s2k export için)
+SAP_DIR_CODES = {
+    "1": "Local1",  "2": "Local2",  "3": "Local3",
+    "4": "GlobalX", "5": "GlobalY", "6": "GlobalZ",
+    "7": "Gravity", "8": "ProjX",   "9": "ProjY",  "10": "ProjZ",
 }
 
 
@@ -736,18 +773,111 @@ class FramePointLoad(SerializableData):
     is_relative: bool = True
     coordinate_system: str = "GLOBAL"
 
+@dataclass
+class LoadSegment(SerializableData):
+    x1: float = 0.0
+    x2: float = 1.0
+    q1: float = 0.0
+    q2: float = 0.0
+
+    def to_points(self):
+        return [(self.x1, self.q1), (self.x2, self.q2)]
+
+
+@dataclass
+class FrameDistributedLoadSet(SerializableData):
+    pattern_name: str = ""
+    coord_sys: str = "Local"
+    load_dir: str = "7"
+    mode: str = "REPLACE"
+    is_relative: bool = True
+    segments: List[LoadSegment] = field(default_factory=list)
+
+    # ------------------------------------------------------------------
+    # EXPLICIT DESERIALIZATION — iç listeyi LoadSegment'e çevir
+    # ------------------------------------------------------------------
+    @classmethod
+    def from_dict(cls, data: dict) -> "FrameDistributedLoadSet":
+        if not data:
+            return cls()
+
+        segs_data = data.get("segments") or []
+        segs: List[LoadSegment] = []
+        for s in segs_data:
+            if isinstance(s, LoadSegment):
+                segs.append(s)
+            elif isinstance(s, dict):
+                segs.append(LoadSegment(
+                    x1=float(s.get("x1", 0.0)),
+                    x2=float(s.get("x2", 1.0)),
+                    q1=float(s.get("q1", 0.0)),
+                    q2=float(s.get("q2", 0.0)),
+                ))
+
+        return cls(
+            pattern_name=str(data.get("pattern_name", "")),
+            coord_sys=str(data.get("coord_sys", "Local")),
+            load_dir=str(data.get("load_dir", "7")),
+            mode=str(data.get("mode", "REPLACE")),
+            is_relative=bool(data.get("is_relative", True)),
+            segments=segs,
+        )
+
+    def add_segment(self, x1: float, x2: float, q1: float, q2: float):
+        self.segments.append(LoadSegment(x1, x2, q1, q2))
+        self.segments.sort(key=lambda s: s.x1)
+
+    def clear(self):
+        self.segments.clear()
+
+    def to_sap_loads(self):
+        out = []
+        for seg in self.segments:
+            out.append(FrameDistributedLoad(
+                pattern_name=self.pattern_name,
+                points=[(seg.x1, seg.q1), (seg.x2, seg.q2)],
+                coord_sys=self.coord_sys,
+                load_dir=self.load_dir,
+                mode=self.mode,
+                is_relative=self.is_relative,
+            ))
+        return out
+
+    @classmethod
+    def from_sap_loads(cls, loads):
+        if not loads:
+            return cls()
+        first = loads[0]
+        s = cls(
+            pattern_name=first.pattern_name,
+            coord_sys=first.coord_sys,
+            load_dir=first.load_dir,
+            mode=first.mode,
+            is_relative=getattr(first, "is_relative", True),
+        )
+        for ld in loads:
+            pts = list(ld.points)
+            if len(pts) >= 2:
+                s.add_segment(pts[0][0], pts[1][0], pts[0][1], pts[1][1])
+        return s
 
 @dataclass
 class FrameDistributedLoad(SerializableData):
     pattern_name: str = ""
+    points: List[Tuple[float, float]] = None  # Maksimum 4 adet (mesafe, yük) ikilisi
+    coord_sys: str = "Local"
+    load_dir: str = "2"
+    mode: str = "REPLACE"
     force_or_moment: str = "Force"
     direction: LoadDirection = LoadDirection.GLOBAL_Z
-    p1: float = 0.0
-    p2: float = 0.0
-    d1: float = 0.0
-    d2: float = 0.0
     is_relative: bool = True
     coordinate_system: str = "GLOBAL"
+
+    def __post_init__(self):
+        if self.points is None:
+            self.points = []
+        else:
+            self.points = self.points[:4]  # En fazla 4 nokta
 
 
 @dataclass

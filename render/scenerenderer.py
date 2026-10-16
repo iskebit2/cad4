@@ -18,7 +18,7 @@ from render.base_renderer import PolygonRenderer, _final_color_for, BaseRenderer
 from render.pickpass import PickPass
 from render.label_batch import LabelBatch
 from tools.font_atlas import FontAtlas
-
+from render.load_renderer import LoadRenderer
 
 
 from logging_config import CadLogger
@@ -63,7 +63,8 @@ class SceneRenderer:
         self.show = {
                         'grid': True, 'axes': True, 'area': True,
                         'frame': True, 'link': True, 'node': True,
-                        'polygon': True,     # ← YENİ
+                        'polygon': True,
+                        'loads': True,
                     }
         self.use_lights = True
         
@@ -105,6 +106,7 @@ class SceneRenderer:
         self.axes_r = LocalAxesRenderer(self.axes_shader)
         self.axes_r.init_gl()
 
+        self.load_renderer = LoadRenderer()
 
     def _init_marquee_buffers(self):
         """Marquee için kalıcı buffer'ları oluştur"""
@@ -376,6 +378,14 @@ class SceneRenderer:
         self.update_sel()
 
         _progress(1.00, "Tamamlandı")
+
+        # ---- 8. Yükleri güncelle ----
+        if hasattr(self, "load_renderer"):
+            try:
+                cam_scale = self._compute_cam_scale()
+                self.load_renderer.update(scene, camera_scale=cam_scale)
+            except Exception as e:
+                logger.exception("Load renderer update hatası: %s", e)
     
     def update_sel(self):
         """Seçim renklerini güncelle - hem main hem simple CBO'ları"""
@@ -522,10 +532,42 @@ class SceneRenderer:
         if self.scene and getattr(self.scene, 'show_local_axes', False):
             self._draw_local_axes(cam)
 
+        # 4.7 LOADS (yük görselleri)
+        if self.show.get('loads', True):
+            self._draw_loads(cam)
+
         # 5. MARQUEE - renkleri düzeltilmiş
         if self.marquee and self.marquee.is_active:
             self._draw_marquee()
 
+    def _draw_loads(self, cam):
+        """Frame yüklerini overlay olarak çiz."""
+        if not self.scene or not self.load_renderer:
+            return
+        if not self.load_renderer.enabled:
+            return
+        if not self.show.get('loads', True):
+            return
+
+        p = cam.get_projection_matrix()
+        v = cam.get_view_matrix()
+        mvp = p * v * self.model_mat
+
+        # Yükleri her şeyin üstünde göster
+        glDisable(GL_DEPTH_TEST)
+        glDisable(GL_CULL_FACE)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        try:
+            self.load_renderer.render(mvp)
+        except Exception as e:
+            logger.exception("Load render hatası: %s", e)
+        finally:
+            # Depth ve blend'i eski haline döndür
+            glEnable(GL_DEPTH_TEST)
+            glDisable(GL_BLEND)
+            
     def _draw_local_axes(self, cam):
         
         
@@ -950,7 +992,9 @@ class SceneRenderer:
             self.animating = False
 
     def cleanup(self):
-        for r in [self.frame_r, self.node_r, self.area_r, self.link_r, self.polygon_r, self.grid, self.pick_pass, self.snap]:
+        for r in [self.frame_r, self.node_r, self.area_r, self.link_r,
+              self.polygon_r, self.grid, self.pick_pass, self.snap,
+              self.load_renderer]:   # ← ekle
             if r and hasattr(r, 'cleanup'):
                 r.cleanup()
         
@@ -1008,3 +1052,15 @@ class SceneRenderer:
             my = sum(n.y for n in poly.nodes) / len(poly.nodes)
             mz = sum(n.z for n in poly.nodes) / len(poly.nodes)
             poly.is_visible = test((mx, my, mz))
+
+    def _compute_cam_scale(self):
+        """Kameranın uzaklığına göre yük profili ölçeği."""
+        if not self.camera:
+            return 1.0
+        try:
+            # Kamera target'a olan uzaklık
+            d = float(np.linalg.norm(np.array(self.camera.position) - np.array(self.center)))
+            # 10.000 mm referans
+            return max(0.6, min(2.5, d / 10000.0))
+        except Exception:
+            return 1.0

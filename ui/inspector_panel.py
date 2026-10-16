@@ -211,7 +211,15 @@ class InspectorPanel(BasePanel):
                                     sub_key = f"{f.key}.{idx}.{sub_f.key}"
                                     sub_cur = get_path(self.current_values, sub_key)
                                     
-                                    if sub_f.kind == "float":
+                                    if sub_f.kind == "bool":
+                                        imgui.align_text_to_frame_padding()
+                                        imgui.text(sub_f.label or sub_f.key)
+                                        imgui.same_line(position=120)
+                                        new_v, changed = _unpack(imgui.checkbox(f"##{sub_f.key}", bool(sub_cur)))
+                                        if changed and new_v is not None:
+                                            set_path(self.current_values, sub_key, bool(new_v))
+                                            
+                                    elif sub_f.kind == "float":
                                         imgui.align_text_to_frame_padding()
                                         imgui.text(sub_f.label or sub_f.key)
                                         imgui.same_line(position=120)

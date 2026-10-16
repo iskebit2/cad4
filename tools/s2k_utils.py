@@ -537,6 +537,7 @@ def _load_joint_loads(ctx: LoadContext, node_map: Dict[str, Node]):
 
 
 def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
+    # --- 1. Frame gravity loads (aynı kalır) ---
     df_g = ctx.df_frame_gravity
     if df_g is not None and not df_g.empty:
         for _, r in df_g.iterrows():
@@ -549,34 +550,112 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
                     multiplier_z=safe_float(r, 'MultiplierZ'),
                 ))
 
+    # --- 2. Frame distributed loads ---
     df_d = ctx.df_frame_distributed
-    if df_d is not None and not df_d.empty:
-        for _, r in df_d.iterrows():
-            frame = frame_map.get(str(r.get('Frame', '')).strip())
-            if not frame:
-                continue
+    if df_d is None or df_d.empty:
+        return
 
-            ftype = str(r.get('Type', 'Force')).upper()
-            is_rel = "REL" in str(r.get('DistType', 'RelDist')).upper()
+    # SAP Dir → bizim load_dir string
+    def _sap_dir_to_our(dir_str: str) -> str:
+        d = str(dir_str).strip()
+        mapping = {
+            "1": "1", "2": "2", "3": "3",
+            "X": "4", "Y": "5", "Z": "6",
+            "Global X": "4", "Global Y": "5", "Global Z": "6",
+            "Gravity": "7", "GRAV": "7",
+            "ProjectedX": "8", "ProjectedY": "9", "ProjectedZ": "10",
+            "Proj X": "8", "Proj Y": "9", "Proj Z": "10",
+        }
+        if d in mapping:
+            return mapping[d]
+        # Case-insensitive fallback
+        for k, v in mapping.items():
+            if k.lower() == d.lower():
+                return v
+        return "2"
 
-            d1 = safe_float(r, 'RelDistA') if is_rel else ctx.units.L(safe_float(r, 'AbsDistA'))
-            d2 = safe_float(r, 'RelDistB') if is_rel else ctx.units.L(safe_float(r, 'AbsDistB'))
+    # Her frame için pattern bazlı gruplama
+    from collections import defaultdict
+    per_frame: Dict[str, list] = defaultdict(list)
 
-            p1_raw = safe_float(r, 'FOverLA')
-            p2_raw = safe_float(r, 'FOverLB', default=p1_raw)
+    for _, r in df_d.iterrows():
+        frame_id = str(r.get('Frame', '')).strip()
+        if not frame_id or frame_id not in frame_map:
+            continue
 
-            if ftype == 'FORCE':
-                p1, p2 = ctx.units.w(p1_raw), ctx.units.w(p2_raw)
-            else:
-                p1 = ctx.units.M(p1_raw) / ctx.units.length_scale
-                p2 = ctx.units.M(p2_raw) / ctx.units.length_scale
+        # SAP alanları
+        pattern = str(r.get('LoadPat', 'DEFAULT')).strip()
+        csys = str(r.get('CoordSys', 'Local')).strip()   # "Local" veya "GLOBAL"
+        dir_sap = str(r.get('Dir', 'Gravity')).strip()
+        our_load_dir = _sap_dir_to_our(dir_sap)
+        is_rel = "REL" in str(r.get('DistType', 'RelDist')).upper()
 
-            frame.dist_loads.append(FrameDistributedLoad(
-                pattern_name=str(r.get('LoadPat', 'DEFAULT')).strip(),
-                force_or_moment=ftype,
-                direction=_parse_direction(str(r.get('Dir', 'Gravity'))),
-                p1=p1, p2=p2, d1=d1, d2=d2, is_relative=is_rel,
-            ))
+        # Segment sınırları
+        if is_rel:
+            x1 = safe_float(r, 'RelDistA', 0.0)
+            x2 = safe_float(r, 'RelDistB', 1.0)
+        else:
+            # AbsDist → relative'e çevir (basitçe kabul et, unit-scale belirsiz)
+            x1 = safe_float(r, 'RelDistA', 0.0)
+            x2 = safe_float(r, 'RelDistB', 1.0)
+
+        # Yük değerleri
+        ftype = str(r.get('Type', 'Force')).upper()
+        v1 = safe_float(r, 'FOverLA', 0.0)
+        v2 = safe_float(r, 'FOverLB', default=v1)
+
+        if ftype == 'FORCE':
+            v1 = ctx.units.w(v1)
+            v2 = ctx.units.w(v2)
+
+        per_frame[frame_id].append({
+            "pattern": pattern,
+            "csys": csys,
+            "load_dir": our_load_dir,
+            "is_rel": is_rel,
+            "x1": x1, "x2": x2,
+            "v1": v1, "v2": v2,
+        })
+
+    # Frame başına FrameDistributedLoadSet oluştur
+    from domain.definition import FrameDistributedLoadSet
+
+    for frame_id, rows in per_frame.items():
+        frame = frame_map[frame_id]
+
+        # Pattern bazlı grupla
+        by_pattern: Dict[str, list] = defaultdict(list)
+        for row in rows:
+            by_pattern[row["pattern"]].append(row)
+
+        for pattern, items in by_pattern.items():
+            # İlk item'dan coord_sys ve load_dir al
+            first = items[0]
+            csys_norm = "Global" if first["csys"].lower().startswith("g") else "Local"
+
+            load_set = FrameDistributedLoadSet(
+                pattern_name=pattern,
+                coord_sys=csys_norm,
+                load_dir=first["load_dir"],     # ← DOĞRU DEĞER!
+                mode="REPLACE",
+                is_relative=first["is_rel"],
+                segments=[],
+            )
+
+            for it in items:
+                load_set.add_segment(
+                    x1=float(it["x1"]),
+                    x2=float(it["x2"]),
+                    q1=float(it["v1"]),
+                    q2=float(it["v2"]),
+                )
+
+            # Set'i frame'e ata
+            frame.dist_load_sets[pattern] = load_set
+
+            # Export/legacy için dist_loads'a da yaz
+            for sap_load in load_set.to_sap_loads():
+                frame.dist_loads.append(sap_load)
 
 
 def _load_area_loads(ctx: LoadContext, area_map: Dict[str, Area]):

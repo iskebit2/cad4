@@ -13,6 +13,7 @@ import glm
 from domain.definition import (
     FrameDistributedLoad, DistType, LoadDirection
 )
+from domain.element import PolygonType
 from domain.local_axes import (
     polygon_plane_axes, polygon_plane_frame,
     classify_load_direction, point_to_segment_distance_3d,
@@ -21,7 +22,161 @@ from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
+import numpy as np
+import glm
+from domain.definition import FrameDistributedLoad, LoadDirection
 
+class PreciseLoadDistributionService:
+    """
+    Kirişlerin rüzgar zone poligonları ile kesişimlerini (interval clipping) bularak 
+    SAP2000 uyumlu parçalı (trapezoidal) yayılı yükler üreten servis.
+    """
+
+    @staticmethod
+    def compute_line_polygon_intersections(line_p1, line_p2, poly_nodes_2d):
+        """
+        2D düzlemde bir çizgi segmenti (line_p1 -> line_p2) ile kapalı poligon 
+        arasındaki kesişim aralıklarını (t_start, t_end) t (0 ile 1 arası) cinsinden bulur.
+        """
+        # Çizgiyi parametrik ifade et: P(t) = P1 + t * (P2 - P1), t in [0, 1]
+        p1 = np.array(line_p1[:2])
+        p2 = np.array(line_p2[:2])
+        d = p2 - p1
+        length_sq = np.dot(d, d)
+        if length_sq < 1e-12:
+            return []
+
+        # Poligon kenarlarıyla kesişim testleri
+        intersections = [0.0, 1.0] # Başlangıç ve bitiş noktaları da sınır potansiyelidir
+        n = len(poly_nodes_2d)
+        
+        for i in range(n):
+            a = np.array(poly_nodes_2d[i][:2])
+            b = np.array(poly_nodes_2d[(i + 1) % n][:2])
+            
+            # Doğru-Doğru kesişim denklemi (Cramer kuralı veya parametrik çözüm)
+            # A + s*(B - A) = P1 + t*(P2 - P1)
+            v = b - a
+            cross = d[0] * v[1] - d[1] * v[0]
+            if abs(cross) < 1e-12:
+                continue # Paralel
+                
+            delta = a - p1
+            t = (delta[0] * v[1] - delta[1] * v[0]) / cross
+            s = (delta[0] * d[1] - delta[1] * d[0]) / cross
+            
+            if 0.0 <= t <= 1.0 and 0.0 <= s <= 1.0:
+                intersections.append(float(t))
+
+        # Benzersiz hale getir ve sırala
+        intersections = sorted(list(set(intersections)))
+        
+        # Aralarındaki alt segmentleri (t_start, t_end) çiftleri olarak oluştur
+        intervals = []
+        for i in range(len(intersections) - 1):
+            t_start = intersections[i]
+            t_end = intersections[i + 1]
+            t_mid = (t_start + t_end) / 2.0
+            
+            # Orta nokta poligonun içinde mi test et (Ray casting 2D)
+            mid_point = p1 + t_mid * d
+            if PreciseLoadDistributionService._is_point_inside_2d(mid_point, poly_nodes_2d):
+                intervals.append((t_start, t_end))
+                
+        return intervals
+
+    @staticmethod
+    def _is_point_inside_2d(pt, poly_nodes):
+        x, y = pt[0], pt[1]
+        inside = False
+        n = len(poly_nodes)
+        j = n - 1
+        for i in range(n):
+            xi, yi = poly_nodes[i][0], poly_nodes[i][1]
+            xj, yj = poly_nodes[j][0], poly_nodes[j][1]
+            if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi):
+                inside = not inside
+            j = i
+        return inside
+
+    @classmethod
+    def distribute_loads_with_intersections(cls, scene, target_polygons):
+        """
+        Sahnedeki frame'leri tarar, her bir zone poligonu ile kesişim aralıklarını 
+        birebir hesaplayarak SAP standardında FrameDistributedLoad üretir.
+        """
+        assigned_count = 0
+
+        for poly_id, poly in scene.polygons.items():
+            # Sadece ZONE tipi poligonları ele alalım
+            if getattr(poly, "poly_type", None) != PolygonType.ZONE and not poly.label.startswith("ZONE_"):
+                continue
+
+            windplane = getattr(poly, "windplane", {})
+            cpe10 = windplane.get("cpe10", 0.0)
+            if isinstance(cpe10, (list, tuple)):
+                cpe_val = float(cpe10[0]) # En kritik cpe değerini al
+            else:
+                cpe_val = float(cpe10)
+
+            q_p = float(windplane.get("q_p", 0.5)) # Referans rüzgar basıncı
+            pattern_name = f"WIND_{windplane.get('label', 'ZONE')}"
+            
+            # Zone poligon nodes 2D projeksiyonu (X-Y veya lokal düzlem)
+            poly_nodes_2d = [(n.x, n.y, n.z) for n in poly.nodes]
+
+            for fid, frame in scene.frames.items():
+                if not frame.node_i or not frame.node_j:
+                    continue
+
+                p1 = (frame.node_i.x, frame.node_i.y, frame.node_i.z)
+                p2 = (frame.node_j.x, frame.node_j.y, frame.node_j.z)
+
+                # 1. Kiriş ile Zone Poligonu Kesişim Aralıklarını Bul (t: 0.0 -> 1.0)
+                intervals = cls.compute_line_polygon_intersections(p1, p2, poly_nodes_2d)
+                if not intervals:
+                    continue
+
+                L_m = frame.get_length() * 1e-3 # mm -> m
+                if L_m < 1e-9:
+                    continue
+
+                # Tributary width veya varsayılan yayış katsayısı ile yük şiddeti (kN/m) hesapla
+                # q = cpe * q_p * etki_genişliği (örneğin 1..0 metre şerit kabulü)
+                tributary_width = 1.0 
+                q_magnitude = abs(cpe_val * q_p * tributary_width)
+
+                # 2. Her kesişim aralığı için FrameDistributedLoad oluştur
+                for idx, (t_start, t_end) in enumerate(intervals):
+                    # SAP formatı için mutlak veya göreceli mesafe noktaları
+                    # points dizisi: [(x_start, q), (x_end, q)] şeklinde trapezoidal tanım
+                    abs_start = t_start * L_m
+                    abs_end = t_end * L_m
+
+                    points = [
+                        (abs_start, q_magnitude),
+                        (abs_end, q_magnitude)
+                    ]
+
+                    load_mode = "REPLACE" if idx == 0 and not hasattr(frame, "_wind_assigned") else "ADD"
+
+                    load_obj = FrameDistributedLoad(
+                        pattern_name=pattern_name,
+                        points=points,
+                        coord_sys="Local",
+                        load_dir="2", # Yerel 2 yönü (düşey/normal)
+                        mode=load_mode
+                    )
+
+                    # Servis üzerinden frame'e ata
+                    from tools.frame_load_service import FrameLoadService
+                    FrameLoadService.assign_distributed_load(frame, load_obj)
+                    assigned_count += 1
+
+                frame._wind_assigned = True
+
+        return assigned_count
+    
 class GeneralLoadDistributor:
     """
     Grid örnekleme ile yük dağıtımı.

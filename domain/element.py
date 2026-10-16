@@ -4,7 +4,7 @@ from enum import Enum, auto
 import uuid
 import math
 
-from domain.definition import AreaGravityLoad, AreaStrainLoad, AreaSurfacePressureLoad, AreaTemperatureLoad, AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, FrameDistributedLoad, FrameGravityLoad, FramePointLoad, FrameTemperatureLoad, PointLoad, Restraint, Section, ObjType, SerializableData
+from domain.definition import AreaGravityLoad, AreaStrainLoad, AreaSurfacePressureLoad, AreaTemperatureLoad, AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, FrameDistributedLoad, FrameDistributedLoadSet, FrameGravityLoad, FramePointLoad, FrameTemperatureLoad, PointLoad, Restraint, Section, ObjType, SerializableData
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -224,6 +224,7 @@ class Frame(Element):
         self.dist_loads: List[Any] = []
         self.gravity_loads: List[Any] = []
         self.temp_loads: List[Any] = []
+        self.dist_load_sets: Dict[str, FrameDistributedLoadSet] = {}
 
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
@@ -259,6 +260,7 @@ class Frame(Element):
             "dist_loads":    [l.to_dict() for l in self.dist_loads],
             "gravity_loads": [l.to_dict() for l in self.gravity_loads],
             "temp_loads":    [l.to_dict() for l in self.temp_loads],
+            "dist_load_sets": {k: v.to_dict() for k, v in self.dist_load_sets.items()},
         })
         return data
 
@@ -292,6 +294,13 @@ class Frame(Element):
         frame.temp_loads = [
             FrameTemperatureLoad.from_dict(l) for l in data.get("temp_loads", [])
         ]
+        raw_sets = data.get("dist_load_sets", {}) or {}
+        frame.dist_load_sets = {}
+        for k, v in raw_sets.items():
+            if isinstance(v, FrameDistributedLoadSet):
+                frame.dist_load_sets[k] = v
+            elif isinstance(v, dict):
+                frame.dist_load_sets[k] = FrameDistributedLoadSet.from_dict(v)
         return frame
 
 
@@ -355,6 +364,7 @@ class Area(Element):
         area.uniform_loads          = [AreaUniformLoad.from_dict(l) for l in data.get("uniform_loads", [])]
         area.uniform_to_frame_loads = [AreaUniformToFrameLoad.from_dict(l) for l in data.get("uniform_to_frame_loads", [])]
         area.wind_pressures         = [AreaWindPressureLoad.from_dict(l) for l in data.get("wind_pressures", [])]
+
         return area
 
 
