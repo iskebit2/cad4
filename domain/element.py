@@ -1,10 +1,13 @@
 # domain/element.py
+from dataclasses import field
 from typing import List, Optional, Dict, Any, Tuple
-from enum import Enum, auto
 import uuid
 import math
+import glm
 
-from domain.definition import AreaGravityLoad, AreaStrainLoad, AreaSurfacePressureLoad, AreaTemperatureLoad, AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, FrameDistributedLoad, FrameDistributedLoadSet, FrameGravityLoad, FramePointLoad, FrameTemperatureLoad, PointLoad, Restraint, Section, ObjType, SerializableData
+from domain import definition as D
+from data import enums as E
+
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -52,34 +55,7 @@ class Element:
     def mark_dirty(self):
         self.needs_update = True
 
-    def __repr__(self):
-        return (
-            f"<{self.__class__.__name__} "
-            f"id={self.unique_id}, "
-            f"label={self.label!r}, "
-            f"selected={self.is_selected}, "
-            f"visible={self.is_visible}, "
-            f"element_type={self.element_type}, "
-            f"pick_id={self.pick_id}>"
-        )
-
-    # ------------------------------------------------------------------
-    # SERIALIZATION
-    # ------------------------------------------------------------------
-    def to_dict(self) -> Dict[str, Any]:
-        """Tüm elemanlarda ortak olan temel meta veriler."""
-        return {
-            "unique_id": self.unique_id,
-            "element_id": self.element_id,
-            "element_type": self.element_type,
-            "label": self.label,
-            "is_selected": self.is_selected,
-            "is_visible": self.is_visible,
-            "color": list(self.color),
-        }
-
     def _apply_base_dict(self, data: Dict[str, Any]):
-        """from_dict sırasında taban sınıf değişkenlerini geri yükler."""
         if "unique_id" in data:
             self.unique_id = int(data["unique_id"])
             Element._id_counter = max(Element._id_counter, self.unique_id + 1)
@@ -104,7 +80,7 @@ class Node(Element):
         y: float,
         z: float,
         label: str = "",
-        restraint: Optional[Restraint] = None,
+        restraint: Optional[D.Restraint] = None,
         mass: Tuple[float, ...] = (0.0,) * 6,
         spring: Tuple[float, ...] = (),
         color=None
@@ -119,7 +95,7 @@ class Node(Element):
         self.mass = tuple(mass)
         self.spring = tuple(spring)
         self.dof_indices: List[Optional[int]] = [None] * 6
-        self.connected: List[Tuple[ObjType, str]] = []
+        self.connected: List[Tuple[E.ObjType, str]] = []
         self.loads: List[Any] = []
 
     @property
@@ -162,52 +138,18 @@ class Node(Element):
 
     def add_connection(self, element):
         if isinstance(element, Frame):
-            self.connected.append((ObjType.FRAME, element.element_id))
+            self.connected.append((E.ObjType.FRAME, element.element_id))
         elif isinstance(element, Area):
-            self.connected.append((ObjType.AREA, element.element_id))
+            self.connected.append((E.ObjType.AREA, element.element_id))
         elif isinstance(element, Link):
-            self.connected.append((ObjType.LINK, element.element_id))
-
-    # ------------------------------------------------------------------
-    # SERIALIZATION
-    # ------------------------------------------------------------------
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "x": self.x,
-            "y": self.y,
-            "z": self.z,
-            "restraint": self.restraint.as_dict() if self.restraint else None,
-            "mass": list(self.mass),
-            "spring": list(self.spring),
-            "loads": [l.to_dict() for l in self.loads],
-        })
-        return data
-
-    @classmethod
-    def from_dict(cls, data: dict) -> 'Node':
-        restraint_data = data.get("restraint")
-        restraint = Restraint.from_dict(restraint_data) if restraint_data else None
-        node = cls(
-            x=data.get("x", 0.0),
-            y=data.get("y", 0.0),
-            z=data.get("z", 0.0),
-            label=data.get("label", ""),
-            restraint=restraint,
-            mass=tuple(data.get("mass", (0.0,) * 6)),
-            spring=tuple(data.get("spring", ())),
-            
-        )
-        node._apply_base_dict(data)
-        node.loads = [PointLoad.from_dict(l) for l in data.get("loads", [])]
-        return node
+            self.connected.append((E.ObjType.LINK, element.element_id))
 
 
 # ============================================================================
-# FRAME
+# FRAME (Yerel Eksen ve Matris Hesaplamaları Dahil)
 # ============================================================================
 class Frame(Element):
-    def __init__(self, node_i: Node, node_j: Node, section: Section,
+    def __init__(self, node_i: Node, node_j: Node, section: D.Section,
                  rotation_deg: float = 0.0, label: str = "", color=None):
         if color is None and section is not None and hasattr(section, 'color'):
             color = list(section.color[:3])
@@ -224,13 +166,12 @@ class Frame(Element):
         self.dist_loads: List[Any] = []
         self.gravity_loads: List[Any] = []
         self.temp_loads: List[Any] = []
-        self.dist_load_sets: Dict[str, FrameDistributedLoadSet] = {}
+        self.dist_load_sets: Dict[str, D.FrameDistributedLoadSet] = {}
 
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
 
     def get_midpoint(self):
-        """Frame'in orta noktası."""
         return (
             (self.node_i.x + self.node_j.x) * 0.5,
             (self.node_i.y + self.node_j.y) * 0.5,
@@ -238,8 +179,6 @@ class Frame(Element):
         )
 
     def get_axis(self):
-        """Frame'in birim yön vektörü (node_i → node_j)."""
-        import glm
         dx = self.node_j.x - self.node_i.x
         dy = self.node_j.y - self.node_i.y
         dz = self.node_j.z - self.node_i.z
@@ -248,60 +187,71 @@ class Frame(Element):
             return (1.0, 0.0, 0.0)
         return (dx / length, dy / length, dz / length)
 
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "node_i_id": self.node_i.unique_id if self.node_i else None,
-            "node_j_id": self.node_j.unique_id if self.node_j else None,
-            "section_name": self.section.name if self.section else "",
-            "rotation_deg": self.rotation_deg,
-            # === YENİ: YÜKLER ===
-            "point_loads":   [l.to_dict() for l in self.point_loads],
-            "dist_loads":    [l.to_dict() for l in self.dist_loads],
-            "gravity_loads": [l.to_dict() for l in self.gravity_loads],
-            "temp_loads":    [l.to_dict() for l in self.temp_loads],
-            "dist_load_sets": {k: v.to_dict() for k, v in self.dist_load_sets.items()},
-        })
-        return data
+    def get_local_axes(self) -> glm.mat3:
+        """
+        Frame için 3x3 dönüşüm matrisi döner (global → local).
+        SAP2000 konvansiyonu:
+          - 1-ekseni: i → j yönü
+          - 2-ekseni: başlangıçta global Z'ye dik, XY düzleminde
+          - 3-ekseni: sağ el kuralı (cross product)
+          - rotation_deg: 1-eksen etrafında saat yönü tersi dönme
+        """
+        dx = self.node_j.x - self.node_i.x
+        dy = self.node_j.y - self.node_i.y
+        dz = self.node_j.z - self.node_i.z
+        L = math.sqrt(dx*dx + dy*dy + dz*dz)
+        if L < 1e-9:
+            return glm.mat3(1.0)
+        e1 = glm.vec3(dx/L, dy/L, dz/L)
+        
+        ref = glm.vec3(0, 0, 1) if abs(e1.z) < 0.9999 else glm.vec3(1, 0, 0)
+        e2 = glm.normalize(ref - e1 * glm.dot(ref, e1))
+        e3 = glm.cross(e1, e2)
+        
+        if abs(self.rotation_deg) > 1e-9:
+            a = math.radians(self.rotation_deg)
+            ca, sa = math.cos(a), math.sin(a)
+            e2_new = e2 * ca + e3 * sa
+            e3_new = -e2 * sa + e3 * ca
+            e2, e3 = glm.normalize(e2_new), glm.normalize(e3_new)
+        
+        return glm.mat3(e1, e2, e3)
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any],
-                  nodes_map: Dict[int, Node],
-                  sections_map: Dict[str, Section]) -> 'Frame':
-        ni = nodes_map.get(data.get("node_i_id"))
-        nj = nodes_map.get(data.get("node_j_id"))
-        sec_name = data.get("section_name", "")
-        section = sections_map.get(sec_name) if sections_map else None
+    def align_to_polygon_plane(self, polygon_nodes):
+        """
+        Frame'in Local 2 eksenini poligon normaline hizalar.
+        Böylece LOAD_DIR='2' yükü düzleme dik olur.
+        """
+        if len(polygon_nodes) < 3:
+            return 0.0
 
-        frame = cls(
-            node_i=ni,
-            node_j=nj,
-            section=section,
-            rotation_deg=data.get("rotation_deg", 0.0),
-            label=data.get("label", ""),
-        )
-        frame._apply_base_dict(data)
-        # === YENİ: YÜKLERİ GERİ YÜKLE ===
-        frame.point_loads = [
-            FramePointLoad.from_dict(l) for l in data.get("point_loads", [])
-        ]
-        frame.dist_loads = [
-            FrameDistributedLoad.from_dict(l) for l in data.get("dist_loads", [])
-        ]
-        frame.gravity_loads = [
-            FrameGravityLoad.from_dict(l) for l in data.get("gravity_loads", [])
-        ]
-        frame.temp_loads = [
-            FrameTemperatureLoad.from_dict(l) for l in data.get("temp_loads", [])
-        ]
-        raw_sets = data.get("dist_load_sets", {}) or {}
-        frame.dist_load_sets = {}
-        for k, v in raw_sets.items():
-            if isinstance(v, FrameDistributedLoadSet):
-                frame.dist_load_sets[k] = v
-            elif isinstance(v, dict):
-                frame.dist_load_sets[k] = FrameDistributedLoadSet.from_dict(v)
-        return frame
+        _, _, n_poly = Polygon.calculate_plane_axes(polygon_nodes)
+        e1 = glm.vec3(*self.get_axis())
+        L = glm.length(e1)
+        if L < 1e-9:
+            return 0.0
+        e1 = e1 / L
+
+        if abs(glm.dot(e1, n_poly)) > 0.999:
+            return 0.0
+
+        # Doğal e2 (rotation_deg=0 için)
+        R0 = Frame(self.node_i, self.node_j, self.section, rotation_deg=0.0).get_local_axes()
+        e2_natural = glm.vec3(R0[1][0], R0[1][1], R0[1][2])
+
+        # e2'yi n_poly'ye hizala
+        dot = max(-1.0, min(1.0, glm.dot(e2_natural, n_poly)))
+        angle_rad = math.acos(dot)
+        cross = glm.cross(e2_natural, n_poly)
+        sign = 1.0 if glm.dot(cross, e1) >= 0.0 else -1.0
+
+        angle_deg = math.degrees(angle_rad) * sign
+        while angle_deg > 180.0: angle_deg -= 360.0
+        while angle_deg < -180.0: angle_deg += 360.0
+
+        self.rotation_deg = angle_deg
+        self.mark_dirty()
+        return angle_deg
 
 
 # ============================================================================
@@ -327,46 +277,6 @@ class Area(Element):
         self.uniform_to_frame_loads: List[Any] = []
         self.wind_pressures: List[Any] = []
 
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "node_ids": [n.unique_id for n in self.nodes],
-            "thickness": self.thickness,
-            "section_name": self.section_name,
-            # === YENİ ===
-            "gravity_loads":          [l.to_dict() for l in self.gravity_loads],
-            "ref_temp":               self.ref_temp,
-            "strain_loads":           [l.to_dict() for l in self.strain_loads],
-            "surface_pressures":      [l.to_dict() for l in self.surface_pressures],
-            "temp_loads":             [l.to_dict() for l in self.temp_loads],
-            "uniform_loads":          [l.to_dict() for l in self.uniform_loads],
-            "uniform_to_frame_loads": [l.to_dict() for l in self.uniform_to_frame_loads],
-            "wind_pressures":         [l.to_dict() for l in self.wind_pressures],
-        })
-        return data
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any], nodes_map: Dict[int, Node]) -> 'Area':
-        area_nodes = [nodes_map[nid] for nid in data.get("node_ids", []) if nid in nodes_map]
-        area = cls(
-            nodes=area_nodes,
-            thickness=data.get("thickness", 0.0),
-            label=data.get("label", ""),
-        )
-        area.section_name = data.get("section_name", "")
-        area._apply_base_dict(data)
-        # === YENİ ===
-        area.gravity_loads          = [AreaGravityLoad.from_dict(l) for l in data.get("gravity_loads", [])]
-        area.ref_temp               = data.get("ref_temp")
-        area.strain_loads           = [AreaStrainLoad.from_dict(l) for l in data.get("strain_loads", [])]
-        area.surface_pressures      = [AreaSurfacePressureLoad.from_dict(l) for l in data.get("surface_pressures", [])]
-        area.temp_loads             = [AreaTemperatureLoad.from_dict(l) for l in data.get("temp_loads", [])]
-        area.uniform_loads          = [AreaUniformLoad.from_dict(l) for l in data.get("uniform_loads", [])]
-        area.uniform_to_frame_loads = [AreaUniformToFrameLoad.from_dict(l) for l in data.get("uniform_to_frame_loads", [])]
-        area.wind_pressures         = [AreaWindPressureLoad.from_dict(l) for l in data.get("wind_pressures", [])]
-
-        return area
-
 
 # ============================================================================
 # LINK
@@ -381,43 +291,14 @@ class Link(Element):
         self.node_j = node_j
         self.propname = propname
 
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "node_i_id": self.node_i.unique_id if self.node_i else None,
-            "node_j_id": self.node_j.unique_id if self.node_j else None,
-            "propname": self.propname,
-        })
-        return data
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any], nodes_map: Dict[int, Node]) -> 'Link':
-        ni = nodes_map.get(data.get("node_i_id"))
-        nj = nodes_map.get(data.get("node_j_id"))
-        link = cls(
-            node_i=ni,
-            node_j=nj,
-            propname=data.get("propname", "LINK1"),
-            label=data.get("label", ""),
-        )
-        link._apply_base_dict(data)
-        return link
-
 
 # ============================================================================
-# POLYGON
+# POLYGON (Düzlem, Normal ve Yön Sınıflandırma Metotları Dahil)
 # ============================================================================
-class PolygonType(Enum):
-    GENERIC = auto()
-    SURFACE = auto()
-    ZONE = auto()
-    SECTION_CUT = auto()
-    LOAD_AREA = auto()
-
 
 class Polygon(Element):
     def __init__(self, nodes: List[Node], label: str = "",
-                 poly_type: PolygonType = PolygonType.GENERIC, color=None):
+                 poly_type: E.PolygonType = E.PolygonType.GENERIC, color=None):
         if color is None:
             color = [0.8, 0.3, 0.8, 0.6]
         super().__init__(label, color=color)
@@ -426,17 +307,13 @@ class Polygon(Element):
         self.nodes = list(nodes)
         self.windplane: Dict[str, Any] = {}
         self.is_temporary = False
-
-        # === YENİ: YÜK LİSTELERİ ===
         self.uniform_to_frame_loads: List[Any] = []
-        # İleride diğer yük tiplerini de eklemek istersen buraya açabilirsin:
-        # self.uniform_loads: List[Any] = []
-        # self.gravity_loads: List[Any] = []
+        associated_frame_ids: List[int] = field(default_factory=list)
 
     def is_valid(self) -> bool:
         return len(self.nodes) >= 3
 
-    def centroid(self):
+    def centroid(self) -> Tuple[float, float, float]:
         n = len(self.nodes)
         if n == 0:
             return (0.0, 0.0, 0.0)
@@ -446,44 +323,89 @@ class Polygon(Element):
             sum(nd.z for nd in self.nodes) / n,
         )
 
-    def __repr__(self):
-        return f"<Polygon {self.label} nodes={len(self.nodes)} type={self.poly_type.name}>"
+    @staticmethod
+    def calculate_normal(nodes: List[Node], use_newell: bool = True) -> glm.vec3:
+        """Newell metodu ile polygon normal vektörü."""
+        n = glm.vec3(0, 0, 0)
+        if use_newell:
+            N = len(nodes)
+            for i in range(N):
+                a = nodes[i]
+                b = nodes[(i + 1) % N]
+                n.x += (a.y - b.y) * (a.z + b.z)
+                n.y += (a.z - b.z) * (a.x + b.x)
+                n.z += (a.x - b.x) * (a.y + b.y)
+        else:
+            if len(nodes) < 3: return glm.vec3(0, 0, 1)
+            v1 = glm.vec3(nodes[1].x-nodes[0].x, nodes[1].y-nodes[0].y, nodes[1].z-nodes[0].z)
+            v2 = glm.vec3(nodes[2].x-nodes[0].x, nodes[2].y-nodes[0].y, nodes[2].z-nodes[0].z)
+            n = glm.cross(v1, v2)
+        L = glm.length(n)
+        return n / L if L > 1e-9 else glm.vec3(0, 0, 1)
 
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data.update({
-            "node_ids": [n.unique_id for n in self.nodes],
-            "poly_type": self.poly_type.name,
-            "windplane": self.windplane,
-            "is_temporary": self.is_temporary,
-            "uniform_to_frame_loads": [l.to_dict() for l in self.uniform_to_frame_loads],
-        })
-        return data
+    @staticmethod
+    def calculate_plane_axes(nodes: List[Node]) -> Tuple[glm.vec3, glm.vec3, glm.vec3]:
+        """Polygon düzlemi için (e_u, e_v, n) ortonormal frame."""
+        N = Polygon.calculate_normal(nodes)
+        u = glm.vec3(nodes[1].x-nodes[0].x, nodes[1].y-nodes[0].y, nodes[1].z-nodes[0].z)
+        u = u - N * glm.dot(u, N)
+        if glm.length(u) < 1e-6:
+            u = glm.vec3(1, 0, 0) - N * N.x
+        u = glm.normalize(u)
+        v = glm.normalize(glm.cross(N, u))
+        return u, v, N
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any], nodes_map: Dict[int, Node]) -> 'Polygon':
-        poly_nodes = [nodes_map[nid] for nid in data.get("node_ids", []) if nid in nodes_map]
+    def get_plane_frame(self):
+        """Polygon düzlem eksenlerini (origin, u, v, n) olarak döner."""
+        if len(self.nodes) < 3:
+            return glm.vec3(0), glm.vec3(1, 0, 0), glm.vec3(0, 1, 0), glm.vec3(0, 0, 1)
+        u, v, n = self.calculate_plane_axes(self.nodes)
+        cx, cy, cz = self.centroid()
+        return glm.vec3(cx, cy, cz), u, v, n
 
-        type_str = data.get("poly_type", "GENERIC")
-        try:
-            poly_type = PolygonType[type_str]
-        except KeyError:
-            poly_type = PolygonType.GENERIC
+    def classify_load_direction(self, load_dir_enum: E.LoadDirection, cos_threshold: float = 0.85):
+        """Poligon yükünün yönünü sınıflandırır."""
+        u, v_ax, n = self.calculate_plane_axes(self.nodes)
 
-        poly = cls(nodes=poly_nodes, label=data.get("label", ""), poly_type=poly_type)
-        poly.windplane = data.get("windplane", {})
-        poly.is_temporary = bool(data.get("is_temporary", False))
-        poly.uniform_to_frame_loads = [
-        AreaUniformToFrameLoad.from_dict(l) for l in data.get("uniform_to_frame_loads", [])
-        ]
-        poly._apply_base_dict(data)
-        return poly
+        if load_dir_enum == E.LoadDirection.GLOBAL_X: world_v = glm.vec3(1, 0, 0)
+        elif load_dir_enum == E.LoadDirection.GLOBAL_Y: world_v = glm.vec3(0, 1, 0)
+        elif load_dir_enum == E.LoadDirection.GLOBAL_Z: world_v = glm.vec3(0, 0, 1)
+        elif load_dir_enum == E.LoadDirection.GRAVITY: world_v = glm.vec3(0, 0, -1)
+        elif load_dir_enum == E.LoadDirection.LOCAL_1: world_v = u
+        elif load_dir_enum == E.LoadDirection.LOCAL_2: world_v = v_ax
+        elif load_dir_enum == E.LoadDirection.LOCAL_3: world_v = n
+        elif load_dir_enum == E.LoadDirection.PROJECTED_X: world_v = glm.vec3(1, 0, 0)
+        elif load_dir_enum == E.LoadDirection.PROJECTED_Y: world_v = glm.vec3(0, 1, 0)
+        elif load_dir_enum == E.LoadDirection.PROJECTED_Z: world_v = glm.vec3(0, 0, 1)
+        else: return "UNKNOWN", glm.vec3(0, 0, -1)
+
+        vec = glm.normalize(world_v) if glm.length(world_v) > 1e-9 else world_v
+
+        dots = {
+            "NORMAL": abs(glm.dot(vec, n)),
+            "U":      abs(glm.dot(vec, u)),
+            "V":      abs(glm.dot(vec, v_ax)),
+        }
+        best = max(dots, key=dots.get)
+        if dots[best] >= cos_threshold:
+            return best, vec
+
+        world_dots = {
+            "GX": abs(vec.x),
+            "GY": abs(vec.y),
+            "GZ": abs(vec.z),
+            "GRAV": abs(-vec.z),
+        }
+        best_w = max(world_dots, key=world_dots.get)
+        if world_dots[best_w] >= cos_threshold:
+            return best_w, vec
+
+        return "UNKNOWN", vec
 
     def add_uniform_to_frame_load(self, pattern_name: str, value: float, direction=None, dist_type=None):
-        """Polygon üzerine load pattern bazlı uniform-to-frame yükü ekler."""
-        from domain.definition import AreaUniformToFrameLoad, LoadDirection, DistType
+        from domain.definition import AreaUniformToFrameLoad, DistType
         if direction is None:
-            direction = LoadDirection.GRAVITY
+            direction = E.LoadDirection.GRAVITY
         if dist_type is None:
             dist_type = DistType.ONE_WAY
 
@@ -496,3 +418,29 @@ class Polygon(Element):
         )
         self.uniform_to_frame_loads.append(load_item)
         self.mark_dirty()
+
+
+# ============================================================================
+# GENEL GEOMETRİ YARDIMCILARI (Bağımsız Fonksiyonlar)
+# ============================================================================
+def project_point_to_plane(point, plane_origin, plane_normal):
+    p = glm.vec3(*point) if not isinstance(point, glm.vec3) else point
+    diff = p - plane_origin
+    d = glm.dot(diff, plane_normal)
+    proj = p - plane_normal * d
+    return proj, d
+
+
+def point_to_segment_distance_3d(p, a, b):
+    pa = glm.vec3(*a) if not isinstance(a, glm.vec3) else a
+    pb = glm.vec3(*b) if not isinstance(b, glm.vec3) else b
+    pp = glm.vec3(*p) if not isinstance(p, glm.vec3) else p
+
+    ab = pb - pa
+    L2 = glm.dot(ab, ab)
+    if L2 < 1e-12:
+        return glm.length(pp - pa)
+    t = glm.dot(pp - pa, ab) / L2
+    t = max(0.0, min(1.0, t))
+    proj = pa + ab * t
+    return glm.length(pp - proj)

@@ -105,27 +105,23 @@ class EventRouter:
     def _mouse_over_ui(self) -> bool:
         """Fare bir ImGui panelinin üstünde mi veya widget yakalıyor mu?"""
         try:
-            import imgui
-            if imgui.get_io().want_capture_mouse:
-                return True
-            for panel in self.app._all_panels():
-                if getattr(panel, "is_hovered", False):
-                    return True
+            return imgui.get_io().want_capture_mouse
         except Exception:
-            pass
-        return False
+            return False
 
     def _keyboard_captured_by_ui(self) -> bool:
         try:
-            import imgui
-            if imgui.get_io().want_capture_keyboard:
-                return True
-            for panel in self.app._all_panels():
-                if getattr(panel, "is_focused", False):
-                    return True
+            return imgui.get_io().want_capture_keyboard
+        except Exception:
+            return False
+
+    def on_char(self, codepoint):
+        try:
+            io = imgui.get_io()
+            io.add_input_character(codepoint)
         except Exception:
             pass
-        return False
+        return True
 
     # ==================================================================
     # GLFW CALLBACK'LERİ → KUYRUĞA
@@ -156,18 +152,7 @@ class EventRouter:
         self._pending.append(("key_up", (key, scancode)))
         return True
 
-    def on_char(self, codepoint):
-        
-        try:
-            import imgui
-            io = imgui.get_io()
-            # Mevcut input chars
-            
-            io.add_input_character(codepoint)
-            
-        except Exception as e:
-            print(f"[ROUTER_CHAR] HATA: {e}")
-        return True
+    
 
     def on_mouse_button(self, button, action, mods):
         self._pending.append(("button", (button, action, mods)))
@@ -526,6 +511,12 @@ class EventRouter:
         if key == glfw.KEY_L and not eng.input.is_ctrl_pressed():
             self.app._toggle_loads_visibility()
             return
+
+        # --- P Tuşu: Yükleri göster/gizle ---
+        if key == glfw.KEY_P and not eng.input.is_ctrl_pressed():
+            self.app.print_()
+            return
+        
 
         
             

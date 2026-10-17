@@ -101,6 +101,7 @@ class BaseRenderer(ABC, Generic[T]):
         self.elem_to_idx: Dict[str, Tuple[int, int]] = {}
         self.elem_to_vcount: Dict[str, int] = {}
         self.elem_to_inst: Dict[str, int] = {}
+        self.elem_to_cbo_offset: Dict[str, int] = {}
 
         self.vcount = 0
         self.icount = 0
@@ -179,6 +180,29 @@ class BaseRenderer(ABC, Generic[T]):
         
         for e in dirty:
             e.needs_update = False
+            
+    def update_single_element_color(self, element, color_getter):
+        """Tüm CBO'yu yenilemek yerine sadece tek bir elemanın rengini GPU'da günceller."""
+        if not hasattr(element, 'element_id') or element.element_id not in self.elem_to_cbo_offset:
+            return
+        
+        vc = self.elem_to_vcount.get(element.element_id, 0)
+        if vc == 0:
+            return
+            
+        byte_offset = self.elem_to_cbo_offset[element.element_id]
+        
+        raw_color = color_getter(element)
+        rgb_color = np.array(raw_color[:3], dtype=np.float32)
+        
+        # Bu elemana ait tüm vertex'lerin renklerini tile et
+        new_colors = np.tile(rgb_color, (vc, 1)).astype(np.float32)
+        
+        # Main CBO güncellemesi (glBufferSubData ile nokta atışı yazar)
+        if hasattr(self, 'cbo') and self.cbo and glIsBuffer(self.cbo):
+            glBindBuffer(GL_ARRAY_BUFFER, self.cbo)
+            glBufferSubData(GL_ARRAY_BUFFER, byte_offset, new_colors.nbytes, new_colors)
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
 
     def _refresh_colors(self):
         """
@@ -256,6 +280,7 @@ class BaseRenderer(ABC, Generic[T]):
         self.elem_to_vcount.clear()
         self.elem_to_inst.clear()
         self.elem_to_simple_vcount.clear()
+        self.elem_to_cbo_offset.clear()
 
         # --- Boş sahne -------------------------------------------------
         if not self.elements:
@@ -293,6 +318,7 @@ class BaseRenderer(ABC, Generic[T]):
                 self.elem_to_idx[e.element_id] = (ioff, ic)
                 self.elem_to_vcount[e.element_id] = vc
                 self.elem_to_inst[e.element_id] = inst_idx
+                self.elem_to_cbo_offset[e.element_id] = voff * 3 * 4
 
                 pos = v.reshape(-1, stride_floats)[:, :3]
                 self.bounds_min = np.minimum(self.bounds_min, pos.min(axis=0))

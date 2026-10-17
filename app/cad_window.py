@@ -164,6 +164,7 @@ class CadWindow:
             frame_callback(dt)
             self.swap_buffers()
 
+            # CPU'yu boşuna yormamak ve akıcılığı korumak için esnek uyku
             elapsed = time.time() - now
             if elapsed < target_dt:
                 time.sleep(target_dt - elapsed)

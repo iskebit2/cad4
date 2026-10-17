@@ -4,7 +4,8 @@ from typing import Dict, List, Tuple, Any
 import numpy as np
 
 from domain.scene import Scene
-from domain.element import Node, Polygon, PolygonType
+from data.enums import PolygonType
+from domain.element import Node, Polygon
 from structload.windcalc.wind_analyzer import WindAnalyzer
 
 
@@ -37,19 +38,19 @@ class WindSceneAdapter:
 
         if hasattr(scene, 'nodes') and scene.nodes:
             for nid, n in scene.nodes.items():
-                points[f"N_{n.unique_id}"] = [float(n.x), float(n.y), float(n.z)]
+                points[n.unique_id] = [float(n.x), float(n.y), float(n.z)]
 
         surface_polys = [
             p for p in scene.polygons.values() 
-            if getattr(p, "poly_type", None) == PolygonType.SURFACE
+            if getattr(p, "poly_type", None) in [PolygonType.SURFACE_ONEWAY, PolygonType.SURFACE_TWOWAY]
         ] if hasattr(scene, 'polygons') else []
 
         target_polys = surface_polys if surface_polys else (list(scene.polygons.values()) if hasattr(scene, 'polygons') else [])
 
         for poly in target_polys:
-            p_key = f"POLY_{poly.unique_id}"
-            node_keys = [f"N_{n.unique_id}" for n in poly.nodes]
-            polygons[p_key] = node_keys
+            
+            node_keys = [n.unique_id for n in poly.nodes]
+            polygons[poly.unique_id] = node_keys
 
         return points, polygons
 

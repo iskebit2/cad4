@@ -1,7 +1,7 @@
 # ui/schemas.py
 """Her element tipi için hazır şemalar."""
 from ui.schema import FieldSpec, GroupSpec
-
+from data.enums import PolygonType
 
 def node_schema():
     return [
@@ -102,9 +102,11 @@ def polygon_schema():
         ]),
         GroupSpec("Poligon", [
             FieldSpec("poly_type", "enum", "Tip",
-                      choices=["GENERIC", "SURFACE", "ZONE",
-                               "SECTION_CUT", "LOAD_AREA"]),
+                    choices=[t.name for t in PolygonType]),
         ]),
+        GroupSpec("İlişkili Frame'ler", [
+            FieldSpec("associated_frame_ids", "list", "İlişkili Frame ID'leri"),
+        ], default_open=False),
         GroupSpec("Yükler (Uniform to Frame)", [
             FieldSpec("uniform_to_frame_loads", "list_object", "Yük Tanımları",
                       item_schema=[

@@ -617,8 +617,8 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
             "v1": v1, "v2": v2,
         })
 
-    # Frame başına FrameDistributedLoadSet oluştur
-    from domain.definition import FrameDistributedLoadSet
+    # Frame başına FrameDistributedLoad oluştur
+    from domain.definition import FrameDistributedLoad
 
     for frame_id, rows in per_frame.items():
         frame = frame_map[frame_id]
@@ -633,10 +633,10 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
             first = items[0]
             csys_norm = "Global" if first["csys"].lower().startswith("g") else "Local"
 
-            load_set = FrameDistributedLoadSet(
+            load_set = FrameDistributedLoad(
                 pattern_name=pattern,
                 coord_sys=csys_norm,
-                load_dir=first["load_dir"],     # ← DOĞRU DEĞER!
+                load_dir=first["load_dir"],
                 mode="REPLACE",
                 is_relative=first["is_rel"],
                 segments=[],

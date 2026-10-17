@@ -1,21 +1,9 @@
 # tools/alignment_service.py
-"""
-Seçili poligon düzlemine, o düzlemde bulunan frame'leri hizalar.
-
-Kullanım:
-    from tools.alignment_service import AlignmentService
-    n = AlignmentService.align_frames_to_polygons(
-        scene, polygons, tolerance=10.0
-    )
-"""
 from __future__ import annotations
-
-from typing import List, Tuple
-
-import glm
-
-from domain.element import Frame, Polygon
-from domain.local_axes import align_frame_to_polygon_plane, polygon_plane_axes
+import numpy as np
+from typing import List
+from domain.plane import Plane
+from data.enums import UnitSystem, PolygonType
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -24,77 +12,127 @@ logger = CadLogger.get(__name__)
 class AlignmentService:
 
     @staticmethod
-    def align_frames_to_polygons(scene,
-                                 polygons: List[Polygon],
-                                 tolerance: float = 10.0,
-                                 skip_vertical: bool = True) -> int:
+    def _tolerance_mm_to_units(project_or_scene, mm: float) -> float:
+        us = getattr(project_or_scene, "unit_system", UnitSystem.N_MM)
+        if us in (UnitSystem.KN_M, UnitSystem.TON_M):
+            return mm / 1000.0
+        if us in (UnitSystem.KN_CM, UnitSystem.KGF_CM):
+            return mm / 10.0
+        return float(mm)
+
+    @staticmethod
+    def align_frames_to_polygons(scene, polygons: List, project=None,
+                                  skip_vertical: bool = True,
+                                  tolerance_mm: float = 50.0) -> int:
         """
-        Seçili poligonların düzleminde bulunan tüm frame'leri hizalar.
+        Frame'leri poly'lere bağlar.
 
-        Parametreler
-        ------------
-        scene : Scene
-        polygons : List[Polygon]
-            Hedef poligon(lar).
-        tolerance : float
-            Frame midpoint ile poligon düzlemi arasındaki maksimum mesafe (mm).
-            Bu mesafeden yakın olan frame'ler hizalanır.
-        skip_vertical : bool
-            True ise poligon normal'ine paralel (düşey) frame'ler atlanır.
-
-        Döner
-        -----
-        int : hizalanan frame sayısı.
+        Filtreleme, poly.poly_type'a göre otomatik yapılır:
+            SURFACE_ONEWAY / GENERIC → sadece primary yöndeki frame'ler
+            SURFACE_TWOWAY           → her iki yöndeki frame'ler
         """
         if not polygons:
             return 0
 
-        aligned_count = 0
-        seen = set()  # aynı frame'i iki kez hizalamamak için
+        tolerance = AlignmentService._tolerance_mm_to_units(
+            project or scene, tolerance_mm
+        )
+        matched = 0
+        aligned = 0
 
         for poly in polygons:
             if len(poly.nodes) < 3:
                 continue
 
+            # Poly tipi
+            poly_type = getattr(poly, "poly_type", PolygonType.GENERIC)
+            is_two_way = (poly_type == PolygonType.SURFACE_TWOWAY)
+            is_one_way = (poly_type in (PolygonType.SURFACE_ONEWAY,
+                                        PolygonType.GENERIC))
+
+            # ZONE / SECTION_CUT / LOAD_AREA için frame bağlama
+            if poly_type in (PolygonType.SECTION_CUT, PolygonType.LOAD_AREA):
+                continue
+            # ZONE'lar ayrı bir akışta ele alınır (wind analysis)
+
             try:
-                _, _, n = polygon_plane_axes(poly.nodes)
-            except Exception:
-                logger.exception("[Align] polygon normal hesaplanamadı")
+                plane = Plane.from_polygon(poly)
+            except ValueError as e:
+                logger.warning(f"[Align] poly {getattr(poly,'unique_id','?')}: {e}")
                 continue
 
-            origin = glm.vec3(poly.nodes[0].x, poly.nodes[0].y, poly.nodes[0].z)
+            n_np = np.asarray(plane.normal, dtype=float)
+            u_np = np.asarray(plane.u, dtype=float)
+            v_np = np.asarray(plane.v, dtype=float)
+
+            # Poly'nin 2D boyutları
+            poly_2d = plane.polygon_to_2d(poly)
+            us = [p[0] for p in poly_2d]
+            vs = [p[1] for p in poly_2d]
+            u_length = max(us) - min(us)
+            v_length = max(vs) - min(vs)
+
+            # Primary yön (one-way için): kısa doğrultu
+            primary_is_u = (u_length <= v_length)
+
+            logger.info(f"[Align] poly={getattr(poly,'unique_id','?')} "
+                        f"type={poly_type.name} {plane} "
+                        f"u_len={u_length:.1f} v_len={v_length:.1f} "
+                        f"primary={'u' if primary_is_u else 'v'} "
+                        f"two_way={is_two_way}")
+
+            poly.associated_frame_ids = []
 
             for frame in scene.frames.values():
-                if frame.unique_id in seen:
-                    continue
-                if not frame.is_visible:
+                if not frame.is_visible or not frame.node_i or not frame.node_j:
                     continue
 
-                mid = frame.get_midpoint()
-                mid_v = glm.vec3(mid[0] - origin.x,
-                                 mid[1] - origin.y,
-                                 mid[2] - origin.z)
+                ni = (frame.node_i.x, frame.node_i.y, frame.node_i.z)
+                nj = (frame.node_j.x, frame.node_j.y, frame.node_j.z)
 
-                # Nokta-düzlem signed distance
-                dist = abs(glm.dot(mid_v, n))
-                if dist > tolerance:
+                # 1. Her iki uç da düzlemde mi?
+                if plane.distance_abs(ni) > tolerance:
+                    continue
+                if plane.distance_abs(nj) > tolerance:
                     continue
 
-                # Frame poligon düzlemine paralel mi?
-                e1 = glm.vec3(*frame.get_axis())
-                L = glm.length(e1)
+                # 2. Frame'in boyu düzleme dik mi?
+                ax = frame.get_axis()
+                e1_np = np.asarray(ax, dtype=float)
+                L = float(np.linalg.norm(e1_np))
                 if L < 1e-9:
                     continue
-                e1 = e1 / L
+                e1_np = e1_np / L
 
-                if skip_vertical and abs(glm.dot(e1, n)) > 0.999:
+                e1_dot_n = abs(float(np.dot(e1_np, n_np)))
+                if e1_dot_n > 0.99:
+                    # Kiriş düzleme dik → yük almaz
                     continue
 
-                angle = align_frame_to_polygon_plane(frame, poly.nodes)
-                if abs(angle) > 1e-6:
-                    aligned_count += 1
-                    seen.add(frame.unique_id)
+                # 3. One-way ise primary yön filtresi
+                if is_one_way and not is_two_way:
+                    e1_proj = e1_np - np.dot(e1_np, n_np) * n_np
+                    e1_proj_len = float(np.linalg.norm(e1_proj))
+                    if e1_proj_len < 1e-6:
+                        continue
+                    e1_proj = e1_proj / e1_proj_len
 
-        logger.info(f"[Align] {aligned_count} frame hizalandı "
-                    f"({len(polygons)} poligon, tolerance={tolerance} mm)")
-        return aligned_count
+                    cu = abs(float(np.dot(e1_proj, u_np)))
+                    cv = abs(float(np.dot(e1_proj, v_np)))
+                    frame_is_u = cu > cv
+
+                    if primary_is_u != frame_is_u:
+                        continue   # primary yön dışı → atla
+
+                # 4. Bağla
+                if frame.unique_id not in poly.associated_frame_ids:
+                    poly.associated_frame_ids.append(frame.unique_id)
+                    matched += 1
+
+                # 5. Hizalama
+                angle = frame.align_to_polygon_plane(poly.nodes)
+                if abs(angle) > 1e-6:
+                    aligned += 1
+
+        logger.info(f"[Align] {matched} bağlandı, {aligned} hizalandı")
+        return matched

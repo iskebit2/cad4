@@ -4,9 +4,9 @@ from typing import Callable, Optional
 import glm
 import imgui
 
+from data.enums import GridPlane
+from domain.definition import GridPlaneDef
 from ui.base_panel import BasePanel
-from domain.definition import GridPlane, GridPlaneDef
-
 
 class GridPanel(BasePanel):
     PLANES = [GridPlane.XY, GridPlane.XZ, GridPlane.YZ]

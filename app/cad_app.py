@@ -1,7 +1,7 @@
 # app/cad_app.py
 import os
-import time
-import glfw
+import queue
+import threading
 from OpenGL.GL import *
 import glm
 
@@ -9,8 +9,15 @@ from app.cad_window import CadWindow
 from core.gl_engine import Engine
 from app.event_router import EventRouter
 
-from domain.definition import AreaUniformToFrameLoad, DistType, FrameDistributedLoad, LoadDirection, UnitSystem
-from domain.element import Frame, PolygonType
+from data.enums import UnitSystem, GridPlane, PolygonType
+from domain.definition import GridPlaneDef
+from domain.element import Frame
+from tools.alignment_service import AlignmentService
+from tools.load_balance_report import LoadBalanceReport
+from tools.s2kloader import S2KLoader
+from tools.wind_service import WindSceneAdapter
+from tools.wind_zone_distribution_service import WindZoneDistributionService
+from ui.adapters import values_to_element
 from ui.toolbar import Toolbar
 from ui.main_menu import MainMenuPopup
 from ui.file_dialog import ImGuiFileDialog
@@ -28,6 +35,7 @@ from domain.element import Polygon
 from domain.project import Project
 from tools.frame_load_service import FrameLoadService
 from ui.load_display_panel import LoadDisplayPanel
+from ui.polygon_edit_panel import PolygonEditPanel
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
@@ -72,6 +80,13 @@ class CadApp:
         self.analysis_panel = AnalysisManagerPanel()
         self.load_assign_panel = LoadAssignPanel(on_apply=self._apply_load_to_selected_polygon)
         self.frame_load_panel = FrameLoadPanel(on_apply=self._apply_frame_distributed_load)
+
+        self.polygon_edit_panel = PolygonEditPanel(
+                            on_align=self._on_polygon_edit_align,
+                            on_distribute=self._on_polygon_edit_distribute,
+                            on_mesh=self._on_polygon_edit_mesh,
+                            on_apply_assoc=self._on_polygon_edit_assoc,
+                        )
 
         self.ui_backend = UiBackend(window.window)
         self.ui_backend.setup()
@@ -123,6 +138,9 @@ class CadApp:
                 "distribute_wind_zones": self._distribute_wind_zones_to_frames,
                 "toggle_show_loads": self._toggle_show_loads,
                 "toggle_load_display_panel": lambda: self._toggle_load_display_panel(),
+                "polygon_edit": lambda: self.polygon_edit_panel.close() 
+                      if self.polygon_edit_panel.visible 
+                      else self._open_polygon_edit_panel(),
                 
             },
             panel_states={
@@ -146,7 +164,7 @@ class CadApp:
             }
         )
 
-        import queue
+        
         self._wind_queue = queue.Queue()
         
         # Zones panel callback'i
@@ -227,6 +245,7 @@ class CadApp:
         self.load_assign_panel.draw()
         self.frame_load_panel.draw()
         self.load_display_panel.draw()
+        self.polygon_edit_panel.draw()
 
     def _render_scene(self, dt):
         w, h = self.window.fb_width, self.window.fb_height
@@ -404,7 +423,7 @@ class CadApp:
         merge_to_current=True ise mevcut projeye ekler, False ise yeni proje başlatır.
         """
         try:
-            from tools.s2kloader import S2KLoader
+            
             logger.info("[S2K] Yükleniyor: %s (Merge: %s)", path, merge_to_current)
 
             loader = S2KLoader(path)
@@ -463,11 +482,17 @@ class CadApp:
         else:
             self.inspector.clear()
 
+        # Poly edit panel açıksa, seçili poly'yi güncelle
+        if self.polygon_edit_panel.visible:
+            polygons = [e for e in selected_elements if isinstance(e, Polygon)]
+            if polygons:
+                self.polygon_edit_panel.set_polygon(polygons[0])
+
     def _on_hover_changed(self, element):
         pass
 
     def _on_inspector_apply(self, target, values):
-        from ui.adapters import values_to_element
+        
         if isinstance(target, list):
             for el in target:
                 values_to_element(el, values)
@@ -545,8 +570,7 @@ class CadApp:
             self.view_filter.open(self.engine.cam if self.engine else None)
     def _on_run_wind_analysis(self):
         """Rüzgar analizi asenkron tetikleyici."""
-        import threading
-        from tools.wind_service import WindSceneAdapter
+        
 
         logger.info("[Zones] Rüzgar analizi başlatılıyor...")
         # İsteğe bağlı bir yüklenme durumu veya log gösterilebilir
@@ -573,7 +597,7 @@ class CadApp:
 
     def _process_wind_queue(self):
         """Thread'den gelen rüzgar analizi sonuçlarını ana thread'de (frame içinde) işle."""
-        import queue
+        
         try:
             while True:
                 msg_type, data = self._wind_queue.get_nowait()
@@ -605,12 +629,6 @@ class CadApp:
         wind_res.active_direction = w_dir
         
         dir_key = str(w_dir)
-        
-        # Eğer bu yön için daha önce hesaplanmış sonuçlar varsa onları yükle,
-        # yoksa o an bu yön için rüzgar analizini çalıştırıp sonuçları kaydet.
-        from tools.wind_service import WindSceneAdapter
-        
-        # Sahnedeki eski rüzgar zone poligonlarını ve node'larını temizle
         old_zone_ids = [
             pid for pid, poly in self.current_project.scene.polygons.items() 
             if getattr(poly, "poly_type", None) == PolygonType.ZONE or poly.label.startswith("ZONE_")
@@ -662,7 +680,6 @@ class CadApp:
                 self.engine.grid.set_coords(g_conf.x_coords, g_conf.y_coords, g_conf.z_coords)
                 self.engine.grid.set_origin(g_conf.origin_x, g_conf.origin_y, g_conf.origin_z)
                 for plane_name, vis in g_conf.planes_visibility.items():
-                    from domain.definition import GridPlane
                     try:
                         self.engine.grid.set_plane(GridPlane[plane_name], visible=vis)
                     except KeyError:
@@ -714,7 +731,7 @@ class CadApp:
         if not self.engine:
             return
 
-        from domain.definition import GridPlane
+        
         # Aktif plane'i grid'e işle
         self.engine.grid.set_active_user_plane(plane_def.name)
 
@@ -754,7 +771,7 @@ class CadApp:
             return False
 
         # Sadece frame kabul et (şimdilik)
-        from domain.element import Frame
+        
         frames = [e for e in selected if isinstance(e, Frame)]
         if not frames:
             logger.info("[WorkPlane] Seçili frame yok.")
@@ -766,8 +783,7 @@ class CadApp:
 
     def _build_work_plane_from_frame(self, frame):
         """Verilen frame'den GridPlaneDef üret, ekle, aktifleştir, kamerayı hizala."""
-        import glm
-        from domain.definition import GridPlaneDef
+       
 
         origin = frame.get_midpoint()
         u_axis = glm.vec3(*frame.get_axis())
@@ -876,26 +892,27 @@ class CadApp:
 
     def _distribute_selected_polygon_loads(self):
         """Ekranda seçili olan poligon üzerindeki alan yüklerini çevreleyen frame'lere dağıtır."""
-        if not self.engine or not self.engine.scene:
-            logger.warning("[Distribute] Aktif sahne bulunamadı.")
-            return
+        pass
+        # if not self.engine or not self.engine.scene:
+        #     logger.warning("[Distribute] Aktif sahne bulunamadı.")
+        #     return
 
-        selected = self.engine.scene.get_selected()
-        from domain.element import Polygon, PolygonType
-        polygons = [e for e in selected if isinstance(e, Polygon) and getattr(e, "poly_type", None) == PolygonType.SURFACE]
+        # selected = self.engine.scene.get_selected()
+        
+        # polygons = [e for e in selected if isinstance(e, Polygon) and getattr(e, "poly_type", None) == PolygonType.SURFACE]
 
-        if not polygons:
-            logger.info("[Distribute] Seçili geçerli bir Surface Polygon bulunamadı.")
-            return
+        # if not polygons:
+        #     logger.info("[Distribute] Seçili geçerli bir Surface Polygon bulunamadı.")
+        #     return
 
-        from tools.load_distribution_service import LoadDistributionService
-        total_assigned = 0
-        for poly in polygons:
-            count = LoadDistributionService.distribute_polygon_loads(self.engine.scene, poly, target_step=200.0)
-            total_assigned += count
+        
+        # total_assigned = 0
+        # for poly in polygons:
+        #     count = LoadDistributionService.distribute_polygon_loads(self.engine.scene, poly, target_step=200.0)
+        #     total_assigned += count
 
-        self.engine.renderer.update_geo(self.engine.scene)
-        logger.info(f"[Distribute] Seçili poligonlardaki yükler başarıyla {total_assigned} adet frame'e dağıtıldı.")
+        # self.engine.renderer.update_geo(self.engine.scene)
+        # logger.info(f"[Distribute] Seçili poligonlardaki yükler başarıyla {total_assigned} adet frame'e dağıtıldı.")
 
     def _toggle_local_axes(self):
         if not self.engine or not self.engine.scene: return
@@ -908,8 +925,8 @@ class CadApp:
         Seçili polygon(lar) üzerindeki/çevresindeki frame'leri, 
         poligon düzlemi normaline göre local 3-ekseni hizalar.
         """
-        from domain.local_axes import align_frame_to_polygon, polygon_plane_axes
-        from domain.element import Polygon, PolygonType, Frame
+        
+        
         
         scene = self.engine.scene
         selected = scene.get_selected()
@@ -922,7 +939,8 @@ class CadApp:
         
         affected = 0
         for poly in polygons:
-            u, v, n = polygon_plane_axes(poly.nodes)
+            
+            u, v, n = Polygon.calculate_plane_axes(poly.nodes)
             # Poligon düzleminde olan frame'leri bul
             for frame in scene.frames.values():
                 mid = frame.get_midpoint()
@@ -934,43 +952,38 @@ class CadApp:
                     # Frame 1-ekseni polygon düzleminde mi?
                     e1 = glm.vec3(*frame.get_axis())
                     if abs(glm.dot(e1, n)) < 0.99:  # düşey frame'leri atla
-                        align_frame_to_polygon(frame, poly.nodes, (u, v, n))
+                        # Doğrudan frame üzerinden çağrılıyor:
+                        frame.align_to_polygon_plane(poly.nodes)
                         affected += 1
         
         logger.info(f"[Align] {affected} frame hizalandı.")
         self.engine.renderer.update_geo(scene)
 
     def _align_frames_to_selected_polygons(self):
-        """
-        Seçili polygon(lar)ın düzlemindeki frame'leri poligon normaline hizalar.
-        """
         if not self.engine or not self.engine.scene:
-            logger.warning("[Align] Aktif sahne yok.")
+            logger.warning("[Align] Aktif sahne veya engine bulunamadı.")
             return
 
-        from domain.element import Polygon, PolygonType
-        scene = self.engine.scene
-        selected = scene.get_selected()
-
-        polygons = [
-            e for e in selected
-            if isinstance(e, Polygon) and e.poly_type == PolygonType.SURFACE
-        ]
-        if not polygons:
-            logger.info("[Align] Seçili Surface Polygon yok.")
+        # SelectionManager üzerinden seçili poligonları alıyoruz
+        selected_elements = self.engine.sel_mgr.get_selected()
+        selected_polygons = [e for e in selected_elements if getattr(e, "element_type", None) == "Polygon"]
+        
+        if not selected_polygons:
+            logger.warning("[Align] Seçili poligon yok.")
             return
 
-        from tools.alignment_service import AlignmentService
+        # AlignmentService ile hem ilişkiyi kur (associated_frame_ids) hem de hizala
         n = AlignmentService.align_frames_to_polygons(
-            scene=scene,
-            polygons=polygons,
-            tolerance=10.0,
-            skip_vertical=True,
+            self.engine.scene,
+            selected_polygons,
+            project=self.current_project
         )
-
-        if n > 0:
-            self.engine.renderer.update_geo(scene)
-        logger.info(f"[Align] Toplam {n} frame hizalandı.")
+        
+        # Sahne kirli işaretlenip GPU geometrisi güncellenmeli
+        self.engine.scene.mark_dirty()
+        self.engine.renderer.update_geo(self.engine.scene)
+        
+        logger.info(f"[Align] Toplam {n} işlem tamamlandı ve sahne güncellendi.")
 
     def _check_load_balance(self):
         """
@@ -981,7 +994,7 @@ class CadApp:
             logger.warning("[LoadBalance] Aktif sahne yok.")
             return
 
-        from tools.load_balance_report import LoadBalanceReport
+       
 
         scene = self.engine.scene
         failed = LoadBalanceReport.log_report(scene, tolerance_ratio=0.005)
@@ -1049,21 +1062,22 @@ class CadApp:
         logger.info(f"[FrameLoad] {len(frames)} frame'e '{load_set.pattern_name}' "
                     f"({len(load_set.segments)} segment) yüklendi.")
 
-    def _distribute_wind_zones_to_frames(self, kind: str = "CPE10") -> int:
+    def _distribute_wind_zones_to_frames(self, kind: str = "CPE10", dist_type="one_way") -> int:
         """Zones panelden çağrılır."""
         if not self.engine or not self.engine.scene:
             logger.warning("[WindZone] Aktif sahne yok.")
             return 0
 
-        from tools.wind_zone_distribution_service import WindZoneDistributionService
+        
 
         cfg = self.current_project.config.wind
         n = WindZoneDistributionService.distribute(
             self.engine.scene,
-            definitions=self.current_project.definitions,
+            project=self.current_project,
             kind=kind,
             cpi_positive=cfg.cpi_positive,
             cpi_negative=cfg.cpi_negative,
+            tributary_width=1.0,
             clear_existing=True,
         )
 
@@ -1092,7 +1106,7 @@ class CadApp:
         if not self.engine or not self.engine.scene:
             return 0
 
-        from tools.frame_load_service import FrameLoadService
+        
         selected = self.engine.scene.get_selected()
         frames = [e for e in selected if e.element_type == "Frame"]
 
@@ -1153,5 +1167,80 @@ class CadApp:
                 renderer=self.engine.renderer if self.engine else None,
             )
 
+    def print_(self):
+        selected_elements = self.engine.sel_mgr.get_selected()
+        selected_polygons = [e for e in selected_elements if getattr(e, "element_type", None) == "Polygon"]
+        selected_frames = [e for e in selected_elements if getattr(e, "element_type", None) == "Frame"]
+        selected_nodes = [e for e in selected_elements if getattr(e, "element_type", None) == "Node"]
+        selected_areas = [e for e in selected_elements if getattr(e, "element_type", None) == "Area"]
+        selected_links = [e for e in selected_elements if getattr(e, "element_type", None) == "Link"]
+
+        logger.debug(f"selected frames: len= {len(selected_frames)}")
+
+    def _open_polygon_edit_panel(self):
+        """Seçili poly ile paneli aç."""
+        if not self.engine or not self.engine.scene:
+            return
+        selected = self.engine.scene.get_selected()
+        polygons = [e for e in selected if isinstance(e, Polygon)]
+        if polygons:
+            poly = polygons[0]
+            self.polygon_edit_panel.open(
+                scene=self.engine.scene,
+                poly=poly,
+            )
+        else:
+            self.polygon_edit_panel.open(scene=self.engine.scene)
+
+    def _on_polygon_edit_align(self, polygons):
+        """Panelden align çağrısı."""
+        n = AlignmentService.align_frames_to_polygons(
+            self.engine.scene,
+            polygons,
+            project=self.current_project,
+        )
+        self.engine.scene.mark_dirty()
+        self.engine.renderer.update_geo(self.engine.scene)
+        logger.info(f"[PolyEdit] {n} frame hizalandı.")
+
+    def _on_polygon_edit_distribute(self, poly):
+        """Panelden dağıtım çağrısı."""
+        if getattr(poly, "poly_type", None) in (
+            PolygonType.SURFACE_ONEWAY, PolygonType.SURFACE_TWOWAY
+        ):
+            # Surface için wind distribution değil, uniform_to_frame
+            # (mevcut _distribute_selected_polygon_loads'a yönlendir)
+            pass
+        elif getattr(poly, "poly_type", None) == PolygonType.ZONE:
+            # Zone → wind distribution
+            n = self._distribute_wind_zones_to_frames("CPE10")
+            logger.info(f"[PolyEdit] {n} segment atandı.")
+
+    def _on_polygon_edit_mesh(self, poly):
+        """Mesh — Faz 3."""
+        logger.info(f"[PolyEdit] Mesh henüz uygulanmadı (poly={poly.unique_id})")
+
+    def _on_polygon_edit_assoc(self, action, payload):
+        """Panel assoc aksiyonları."""
+        if action == "model_add":
+            # Sahne 3D'de seçim modunu başlat, seçimi poly'ye ekle
+            self._start_polygon_frame_add_mode()
+        elif action == "model_replace":
+            self._start_polygon_frame_replace_mode()
+        elif action == "focus":
+            # Seçili frame'e kamera odakla
+            self._focus_frame(payload)
+        elif action == "isolate":
+            # Sadece o frame'i göster
+            self._isolate_frame(payload)
+
+    def _start_polygon_frame_add_mode(self):
+        """
+        Sahneden frame seçim modu. Seçim bitince mevcut poly'ye ekle.
+        (Bu bir sonraki fazda detaylandırılacak)
+        """
+        logger.info("[PolyEdit] Modelden ekleme modu başlatıldı")
+        # TODO: Sahne seçim callback'i bağla, seçimi tamamla, poly'ye ekle
+        
     def shutdown(self):
         self.ui_backend.shutdown()

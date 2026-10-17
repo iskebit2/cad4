@@ -10,11 +10,9 @@ Her polygon için, her pattern için:
 from __future__ import annotations
 
 from typing import Dict, List, Optional
-
 import glm
 
 from domain.definition import LoadDirection
-from domain.local_axes import polygon_plane_frame, frame_local_axes
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -149,7 +147,7 @@ def expected_polygon_totals(polygon) -> Dict[str, Dict[str, float]]:
     if len(polygon.nodes) < 3:
         return {}
 
-    _, u, v, n = polygon_plane_frame(polygon.nodes)
+    _, u, v, n = polygon.polygon_plane_frame(polygon.nodes)
     area_m2 = polygon_area_m2(polygon.nodes)
 
     totals: Dict[str, Dict[str, float]] = {}
@@ -176,7 +174,7 @@ def _frames_on_polygon_plane(scene, polygon, tolerance=15.0):
     if len(polygon.nodes) < 3:
         return {}
 
-    origin, _, _, n = polygon_plane_frame(polygon.nodes)
+    origin, _, _, n = polygon.polygon_plane_frame(polygon.nodes)
     result = {}
     for fid, frame in scene.frames.items():
         if not frame.node_i or not frame.node_j:
@@ -196,11 +194,11 @@ def actual_frame_totals(scene, polygon, pattern_name) -> Dict[str, float]:
     """
     totals = {"fx": 0.0, "fy": 0.0, "fz": 0.0}
 
-    _, u, v, n = polygon_plane_frame(polygon.nodes)
+    _, u, v, n = polygon.polygon_plane_frame(polygon.nodes)
     frames = _frames_on_polygon_plane(scene, polygon)
 
     for fid, frame in frames.items():
-        R = frame_local_axes(frame.node_i, frame.node_j, frame.rotation_deg)
+        R = frame.get_local_axes()
         L_m = frame.get_length() * 1e-3
 
         for dl in frame.dist_loads:
@@ -264,14 +262,14 @@ class LoadBalanceReport:
 
         # Sadece 1 poligonu örnek olarak incele
         poly = next(iter(scene.polygons.values()))
-        from domain.local_axes import polygon_plane_frame
-        origin, u, v, n = polygon_plane_frame(poly.nodes)
+        
+        origin, u, v, n = poly.polygon_plane_frame(poly.nodes)
         logger.info(f"[DEBUG] Polygon '{poly.label}' normal = {n}")
 
         # İlk frame
         f = next(iter(scene.frames.values()))
-        from domain.local_axes import frame_local_axes
-        R = frame_local_axes(f.node_i, f.node_j, f.rotation_deg)
+        
+        R = f.get_local_axes()
         logger.info(f"[DEBUG] Frame '{f.label}' axis={f.get_axis()}, rot={f.rotation_deg}")
         logger.info(f"[DEBUG] Frame R[0]={R[0]}, R[1]={R[1]}, R[2]={R[2]}")
         logger.info(f"[DEBUG] Frame local 1={R[0]}, local 2={R[1]}, local 3={R[2]}")

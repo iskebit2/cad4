@@ -176,8 +176,7 @@ class Engine:
             self.renderer.resize(self.w, self.h)
         if self.pick_pass:
             self.pick_pass.set_viewport(self.w, self.h)
-
-        logger.info()
+        logger.debug("[Engine] Pencere boyutu değiştirildi: %dx%d", self.w, self.h)
 
     
     def load_model(self, builder):
@@ -227,7 +226,6 @@ class Engine:
     # ------------------------------------------------------------------
     def start_hover_pick(self, x, y):
         if not self.renderer or not self.renderer.pick_pass:
-            #logger.debug(f"[PICK] renderer/pick_pass yok")
             return
         
         now = time.time()
@@ -241,8 +239,6 @@ class Engine:
             self.last_hover_y = y
             self.last_hover_time = now
             self.pending_pick_check = True
-        # else:
-            #logger.debug(f"[PICK] pick_async False döndü")
 
     def check_pick_result(self):
         if not self.pending_pick_check:

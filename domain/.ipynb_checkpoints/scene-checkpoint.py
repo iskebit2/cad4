@@ -1,169 +1,117 @@
 # domain/scene.py
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 import numpy as np
-from domain.definition_manager import DefinitionManager
+from data.enums import ObjType
 from domain.element import Node, Frame, Area, Link, Element, Polygon
-from domain.definition import ObjType
 
 
 class Scene:
-    def __init__(self):
+    def __init__(self, project: Any = None):
         self.nodes: Dict[int, Node] = {}
         self.frames: Dict[int, Frame] = {}
         self.areas: Dict[int, Area] = {}
         self.links: Dict[int, Link] = {}
-        self.polygons: Dict[int, Polygon] = {}   # YENİ
-        self.def_mgr = DefinitionManager()
+        self.polygons: Dict[int, Polygon] = {}
+        self.project = project  # Üst proje referansı
+        
+        self.show_local_axes = False
+        self.show_local_axes_for_selected = True
+        self.show_local_axes_scale = 1.0
         self.units = "N, mm, C"
-        # self.project_info = None
-    
+        self._is_dirty: bool = True
+
+    def mark_dirty(self):
+        self._is_dirty = True
+
+    def is_dirty(self) -> bool:
+        return self._is_dirty
+
+    def clear_dirty(self):
+        self._is_dirty = False
+        
     def add_node(self, node: Node):
         self.nodes[node.unique_id] = node
+        self.mark_dirty()
     
     def add_frame(self, frame: Frame):
         self.frames[frame.unique_id] = frame
-        frame.node_i.add_connection(frame)
-        frame.node_j.add_connection(frame)
+        if frame.node_i: frame.node_i.add_connection(frame)
+        if frame.node_j: frame.node_j.add_connection(frame)
+        self.mark_dirty()
     
     def add_area(self, area: Area):
         self.areas[area.unique_id] = area
         for node in area.nodes:
             node.add_connection(area)
+        self.mark_dirty()
     
     def add_link(self, link: Link):
         self.links[link.unique_id] = link
-        link.node_i.add_connection(link)
-        link.node_j.add_connection(link)
+        if link.node_i: link.node_i.add_connection(link)
+        if link.node_j: link.node_j.add_connection(link)
+        self.mark_dirty()
 
     def add_polygon(self, polygon: Polygon):
         self.polygons[polygon.unique_id] = polygon
+        self.mark_dirty()
 
-    def can_remove(self, element) -> tuple:
-        """
-        Eleman silinebilir mi?
-        Returns: (bool, reason_str)
-        """
-        # Node sadece bağlantısı yoksa silinebilir
-        if isinstance(element, Node):
-            if element.connected:
-                return False, f"Node bağlı {len(element.connected)} eleman var"
+    def can_remove(self, element: Element) -> tuple[bool, str]:
+        if isinstance(element, Node) and element.connected:
+            return False, f"Node'a bağlı {len(element.connected)} eleman var."
         return True, ""
 
-
-    def remove_element(self, element) -> bool:
-        """
-        Elementi scene'den çıkar. Başarılıysa True.
-        Bağlı Node'ların 'connected' listesini de temizler.
-        """
+    def remove_element(self, element: Element) -> bool:
         ok, _ = self.can_remove(element)
         if not ok:
             return False
         
-        if isinstance(element, Node):
-            if element.unique_id not in self.nodes:
-                return False
-            del self.nodes[element.unique_id]
-            return True
-        
-        if isinstance(element, Frame):
-            if element.unique_id not in self.frames:
-                return False
-            # Node'lardan referansı sil
-            for n in (element.node_i, element.node_j):
-                n.connected = [
-                    (t, eid) for (t, eid) in n.connected
-                    if eid != element.element_id
-                ]
-            del self.frames[element.unique_id]
-            return True
-        
-        if isinstance(element, Link):
-            if element.unique_id not in self.links:
-                return False
-            for n in (element.node_i, element.node_j):
-                n.connected = [
-                    (t, eid) for (t, eid) in n.connected
-                    if eid != element.element_id
-                ]
-            del self.links[element.unique_id]
-            return True
-        
-        if isinstance(element, Area):
-            if element.unique_id not in self.areas:
-                return False
-            for n in element.nodes:
-                n.connected = [
-                    (t, eid) for (t, eid) in n.connected
-                    if eid != element.element_id
-                ]
-            del self.areas[element.unique_id]
-            return True
-        
-        if isinstance(element, Polygon):
-            if element.unique_id not in self.polygons:
-                return False
-            del self.polygons[element.unique_id]
-            return True
-        
-        return False
+        bucket = self._bucket(element)
+        if bucket is None or element.unique_id not in bucket:
+            return False
 
-
-    def restore_element(self, element):
-        """
-        Silinen elementi geri koy.
-        Node'ların 'connected' listesini yeniden inşa eder.
-        """
-        if isinstance(element, Node):
-            self.nodes[element.unique_id] = element
-        
-        elif isinstance(element, Frame):
-            self.frames[element.unique_id] = element
-            # Node'lara geri bağla
+        if isinstance(element, (Frame, Link)):
             for n in (element.node_i, element.node_j):
-                if (ObjType.FRAME, element.element_id) not in n.connected:
-                    n.connected.append((ObjType.FRAME, element.element_id))
-        
-        elif isinstance(element, Link):
-            self.links[element.unique_id] = element
-            for n in (element.node_i, element.node_j):
-                if (ObjType.LINK, element.element_id) not in n.connected:
-                    n.connected.append((ObjType.LINK, element.element_id))
-        
+                if n:
+                    n.connected = [(t, eid) for (t, eid) in n.connected if eid != element.element_id]
         elif isinstance(element, Area):
-            self.areas[element.unique_id] = element
             for n in element.nodes:
-                if (ObjType.AREA, element.element_id) not in n.connected:
-                    n.connected.append((ObjType.AREA, element.element_id))
-        
-        elif isinstance(element, Polygon):
-            self.polygons[element.unique_id] = element
+                n.connected = [(t, eid) for (t, eid) in n.connected if eid != element.element_id]
+
+        del bucket[element.unique_id]
+        self.mark_dirty()
+        return True
+
+    def restore_element(self, element: Element):
+        bucket = self._bucket(element)
+        if bucket is not None:
+            bucket[element.unique_id] = element
+            if isinstance(element, (Frame, Link)):
+                for n in (element.node_i, element.node_j):
+                    if n and (ObjType.FRAME if isinstance(element, Frame) else ObjType.LINK, element.element_id) not in n.connected:
+                        n.connected.append((ObjType.FRAME if isinstance(element, Frame) else ObjType.LINK, element.element_id))
+            elif isinstance(element, Area):
+                for n in element.nodes:
+                    if (ObjType.AREA, element.element_id) not in n.connected:
+                        n.connected.append((ObjType.AREA, element.element_id))
+            self.mark_dirty()
 
     def mark_dirty_from_node(self, node: Node):
-        """Node değişince bağlı tüm elemanları dirty yap"""
-        for obj_type, elem_id in node.connected:
-            # elem_id → unique_id (int). Ama unique_id değil,
-            # element_id (str) tutuluyor olabilir — kontrol et
-            elem = None
-
-            # Önce unique_id olarak dene
-            try:
-                elem = self.get_element_by_unique_id(int(elem_id))
-            except (ValueError, TypeError):
-                pass
-
-            # Bulamazsa element_id (UUID) olarak dene
-            if elem is None:
-                elem = self.get_element_by_id(str(elem_id))
-
+        for _, elem_id in node.connected:
+            elem = self.get_element_by_id(str(elem_id)) or self.get_element_by_unique_id(int(elem_id) if str(elem_id).isdigit() else -1)
             if elem:
                 elem.mark_dirty()
+        self.mark_dirty()
     
-    # ===== YARDIMCI =====
     def get_element_by_id(self, element_id: str) -> Optional[Element]:
-        """element_id (UUID) ile element bul"""
         for elem in self.all_elements.values():
             if elem.element_id == element_id:
                 return elem
+        return None
+
+    def get_element_by_unique_id(self, unique_id: int) -> Optional[Element]:
+        for bucket in (self.frames, self.nodes, self.areas, self.links, self.polygons):
+            if unique_id in bucket:
+                return bucket[unique_id]
         return None
 
     @property
@@ -173,97 +121,36 @@ class Scene:
         elements.update(self.frames)
         elements.update(self.areas)
         elements.update(self.links)
-        elements.update(self.polygons)     # YENİ
+        elements.update(self.polygons)
         return elements
     
     def get_selected(self) -> List[Element]:
-        selected = []
-        for e in self.frames.values():
-            if e.is_selected:
-                selected.append(e)
-        for e in self.nodes.values():
-            if e.is_selected:
-                selected.append(e)
-        for e in self.areas.values():
-            if e.is_selected:
-                selected.append(e)
-        for e in self.links.values():
-            if e.is_selected:
-                selected.append(e)
-        for e in self.polygons.values():
-            if e.is_selected:
-                selected.append(e)
-        return selected
+        return [e for e in self.all_elements.values() if e.is_selected]
     
     def clear_selections(self) -> int:
         count = 0
-        for e in self.frames.values():
-            if e.is_selected:
-                e.is_selected = False
-                count += 1
-        for e in self.nodes.values():
-            if e.is_selected:
-                e.is_selected = False
-                count += 1
-        for e in self.areas.values():
-            if e.is_selected:
-                e.is_selected = False
-                count += 1
-        for e in self.links.values():
-            if e.is_selected:
-                e.is_selected = False
-                count += 1
-        for e in self.polygons.values():
+        for e in self.all_elements.values():
             if e.is_selected:
                 e.is_selected = False
                 count += 1
         return count
     
-    def get_bounds(self):
-        points = []
-        for n in self.nodes.values():
-            points.append([n.x, n.y, n.z])
+    def get_bounds(self) -> tuple[np.ndarray, float]:
+        points = [n.coords for n in self.nodes.values()]
         for f in self.frames.values():
-            points.append([f.node_i.x, f.node_i.y, f.node_i.z])
-            points.append([f.node_j.x, f.node_j.y, f.node_j.z])
+            if f.node_i and f.node_j:
+                points.extend([f.node_i.coords, f.node_j.coords])
         
         if not points:
-            return np.array([0,0,0]), 1.0
+            return np.array([0.0, 0.0, 0.0]), 1.0
         
         pts = np.array(points)
-        min_p = pts.min(axis=0)
-        max_p = pts.max(axis=0)
+        min_p, max_p = pts.min(axis=0), pts.max(axis=0)
         center = (min_p + max_p) * 0.5
-        size = np.linalg.norm(max_p - min_p)
+        size = float(np.linalg.norm(max_p - min_p))
         return center, size
-    
-    def get_element_by_unique_id(self, unique_id: int) -> Optional[Element]:
-        """unique_id'den elementi bul"""
-        element = self.frames.get(unique_id)
-        if element:
-            return element
-        element = self.nodes.get(unique_id)
-        if element:
-            return element
-        element = self.areas.get(unique_id)
-        if element:
-            return element
-        element = self.links.get(unique_id)
-        if element:
-            return element
-        element = self.polygons.get(unique_id)
-        if element:
-            return element
-        return None
 
-    # domain/scene.py — Scene sınıfına EKLE
-
-    # ========================================================
-    # ELEMENT DISPATCH (Command sistemi için)
-    # ========================================================
-
-    def _bucket(self, element):
-        """Element tipine göre (dict, key) döndürür."""
+    def _bucket(self, element: Element) -> Optional[Dict]:
         if isinstance(element, Node):     return self.nodes
         if isinstance(element, Frame):    return self.frames
         if isinstance(element, Area):     return self.areas
@@ -271,33 +158,18 @@ class Scene:
         if isinstance(element, Polygon):  return self.polygons
         return None
 
-    def is_element_added(self, element) -> bool:
-        """Bu eleman scene'de mi?"""
+    def is_element_added(self, element: Element) -> bool:
         bucket = self._bucket(element)
-        if bucket is None:
-            return False
-        return element.unique_id in bucket
+        return bucket is not None and element.unique_id in bucket
 
-    def add_element(self, element) -> bool:
-        """
-        Tip-bazlı dispatch: doğru add_* metodu çağırır.
-        Bağlantılar otomatik kurulur (add_frame/add_link/add_area gibi).
-        Zaten ekliyse tekrar eklemez (idempotent).
-        """
+    def add_element(self, element: Element) -> bool:
         if self.is_element_added(element):
             return False
-
-        if isinstance(element, Node):
-            self.add_node(element)
-        elif isinstance(element, Frame):
-            self.add_frame(element)
-        elif isinstance(element, Area):
-            self.add_area(element)
-        elif isinstance(element, Link):
-            self.add_link(element)
-        elif isinstance(element, Polygon):
-            self.add_polygon(element)
-        else:
-            return False
-
+        
+        if isinstance(element, Node):     self.add_node(element)
+        elif isinstance(element, Frame):  self.add_frame(element)
+        elif isinstance(element, Area):   self.add_area(element)
+        elif isinstance(element, Link):   self.add_link(element)
+        elif isinstance(element, Polygon):self.add_polygon(element)
+        else: return False
         return True

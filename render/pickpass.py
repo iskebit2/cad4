@@ -43,10 +43,14 @@ class PickPass:
         self.pick_half = self.pick_size // 2
         self.pick_bytes = self.pick_size * self.pick_size * 4
         
+        # --- OPTİMİZASYON: 7x7 alan için dx, dy ve kare mesafeleri önceden hesapla ---
+        rows, cols = np.indices((self.pick_size, self.pick_size))
+        self._dx = (cols - self.pick_half).flatten()
+        self._dy = (rows - self.pick_half).flatten()
+        self._dist2 = self._dx**2 + self._dy**2
+        
         # 1x1 FBO oluştur (yedek, asıl picking MRT'den)
         self._create_resources()
-        
-        # #logger.debug("PickPass başlatıldı - MRT picking modu")
     
     def _create_resources(self):
         """Pick kaynaklarını oluştur."""
@@ -305,142 +309,58 @@ class PickPass:
 
             return False
 
-    # def check_pick(self):
-    #     """Pick sonucunu kontrol et - 0 döndürebilir!"""
-    #     if not self.pending_pick:
-    #         return None, None, None
-
-    #     try:
-    #         read_pbo = self.pbos[self.read_pbo]
-    #         glBindBuffer(GL_PIXEL_PACK_BUFFER, read_pbo)
-            
-    #         ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)
-    #         if ptr:
-    #             char_ptr = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_uint32))
-    #             pick_id = int(char_ptr[0])
-    #             glUnmapBuffer(GL_PIXEL_PACK_BUFFER)
-    #         else:
-    #             pick_id = 0
-                
-    #         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
-
-    #         self.pending_pick = False
-    #         self.last_pick_id = pick_id
-            
-    #         # 0 döndürebiliriz - bu boşluk demek
-    #         return pick_id, self.pending_x, self.pending_y
-
-    #     except Exception as e:
-    #         logger.error(f"check_pick hatası: {e}")
-    #         self.pending_pick = False
-    #         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
-    #         return None, None, None
-
     def check_pick(self):
         """
-        PBO'dan 7x7 pick alanını okur.
-
-        Fare merkezine en yakın sıfır olmayan ID seçilir.
+        PBO'dan 7x7 pick alanını numpy vektörel işlemlerle hızlıca okur.
+        Python döngüsü yerine np.argmin kullanarak CPU yükünü sıfıra yaklaştırır.
         """
-
         if not self.pending_pick:
             return None, None, None
 
         try:
             pbo = self.pbos[self.read_pbo]
-
-            glBindBuffer(
-                GL_PIXEL_PACK_BUFFER,
-                pbo,
-            )
-
-            ptr = glMapBuffer(
-                GL_PIXEL_PACK_BUFFER,
-                GL_READ_ONLY,
-            )
-
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo)
+            
+            ptr = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY)
             if not ptr:
-                glBindBuffer(
-                    GL_PIXEL_PACK_BUFFER,
-                    0,
-                )
-
+                glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
                 self.pending_pick = False
-
                 return 0, self.pending_x, self.pending_y
 
             count = self.pick_size * self.pick_size
-
             array_type = ctypes.c_uint32 * count
-
-            data = ctypes.cast(
-                ptr,
-                ctypes.POINTER(array_type),
-            ).contents
-
-            ids = np.frombuffer(
-                data,
-                dtype=np.uint32,
-            ).copy()
-
-            glUnmapBuffer(
-                GL_PIXEL_PACK_BUFFER
-            )
-
-            glBindBuffer(
-                GL_PIXEL_PACK_BUFFER,
-                0,
-            )
+            data = ctypes.cast(ptr, ctypes.POINTER(array_type)).contents
+            
+            # Veriyi numpy dizisine kopyala ve belleği hemen unmap et (GPU kilitlenmesini önler)
+            ids = np.frombuffer(data, dtype=np.uint32).copy()
+            
+            glUnmapBuffer(GL_PIXEL_PACK_BUFFER)
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
 
             # -----------------------------------------------------
-            # En yakın ID'yi bul
+            # Vektörel En Yakın ID Bulma (Döngüsüz / Hızlı)
             # -----------------------------------------------------
-            center = self.pick_half
+            valid_mask = ids != 0
+            if not np.any(valid_mask):
+                best_id = 0
+            else:
+                valid_ids = ids[valid_mask]
+                valid_dist2 = self._dist2[valid_mask]
+                
+                # Merkeze en yakın olan elemanın index'ini bul
+                min_idx = np.argmin(valid_dist2)
+                best_id = int(valid_ids[min_idx])
 
-            best_id = 0
-            best_dist = float("inf")
-
-            for index, pick_id in enumerate(ids):
-
-                if pick_id == 0:
-                    continue
-
-                row = index // self.pick_size
-                col = index % self.pick_size
-
-                dx = col - center
-                dy = row - center
-
-                dist2 = dx * dx + dy * dy
-
-                if dist2 < best_dist:
-                    best_dist = dist2
-                    best_id = int(pick_id)
-
-            # -----------------------------------------------------
-            # Sonuç
-            # -----------------------------------------------------
             self.pending_pick = False
             self.last_pick_id = best_id
 
-            return (
-                best_id,
-                self.pending_x,
-                self.pending_y,
-            )
+            return best_id, self.pending_x, self.pending_y
 
         except Exception as e:
-            logger.error(
-                f"check_pick hatası: {e}"
-            )
-
+            logger.error(f"check_pick hatası: {e}")
             self.pending_pick = False
-
-            return (
-                0,
-                self.pending_x,
-                self.pending_y,
-            )
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, 0)
+            return 0, self.pending_x, self.pending_y
     
     def cleanup(self):
         """Kaynakları temizle"""

@@ -49,12 +49,27 @@ class SelectionManager:
         self.selected.clear()
     
     def select(self, element, additive=False):
-        #logger.debug(f"[SEL] select({element!r})")
-        """Tek eleman seç"""
+        """Tek eleman seç - Kısmi renk güncellemesiyle optimize edilmiş."""
+        if not self.r or not self.r.scene:
+            return
+
+        changed_elements = [element]
+
         if not additive:
-            self._clear_all()
-            self.selected.add(element.unique_id)
-            element.is_selected = True
+            # Eskiden seçili olanları düşür
+            old_selected = list(self.get_selected())
+            for e in old_selected:
+                if e.unique_id != element.unique_id:
+                    e.is_selected = False
+                    self.selected.discard(e.unique_id)
+                    changed_elements.append(e)
+            
+            if element.unique_id in self.selected:
+                if additive: # additive değilse zaten temizlendi
+                    pass
+            else:
+                self.selected.add(element.unique_id)
+                element.is_selected = True
         else:
             if element.unique_id in self.selected:
                 self.selected.remove(element.unique_id)
@@ -62,12 +77,29 @@ class SelectionManager:
             else:
                 self.selected.add(element.unique_id)
                 element.is_selected = True
-        self._update()
+
+        # Sadece değişen elemanların renklerini GPU'da kısmi güncelle!
+        self._update_partial(changed_elements)
 
         if self.on_selection_changed:
-            #logger.debug(f"[SEL] callback çağrılıyor")
             self.on_selection_changed(self.get_selected())
-    
+
+    def _update_partial(self, elements):
+        """Tüm sahneyi yenilemek yerine sadece listedeki elemanların renklerini günceller."""
+        if not self.r or not hasattr(self.r, 'update_element_color'):
+            # Eğer renderer henüz partial update desteklemiyorsa güvenli fallback:
+            self._update()
+            return
+
+        for el in elements:
+            self.r.update_element_color(el)
+
+        if self.on_selection_changed:
+            try:
+                self.on_selection_changed(list(self.get_selected()))
+            except Exception as e:
+                logger.error(f"selection_changed callback hatası: {e}")
+                
     def select_multiple(self, elements: List, mode=SelectionMode.REPLACE):
         """Çoklu eleman seç"""
         if mode == SelectionMode.REPLACE:

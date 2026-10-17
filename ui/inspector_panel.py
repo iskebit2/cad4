@@ -151,7 +151,20 @@ class InspectorPanel(BasePanel):
             if cur == MIXED:
                 self._draw_mixed_field(f, label)
                 return
-
+            if f.kind == "list":
+                imgui.align_text_to_frame_padding()
+                imgui.text(label)
+                items = get_path(self.current_values, f.key) or []
+                imgui.text(f"({len(items)} adet eleman bağlı)")
+                imgui.indent(10)
+                # Kalabalık yapmaması için küçük bir child pencerede veya metin olarak listeleyelim
+                for item_id in items[:50]:  # Performans için ilk 50 tanesini göster
+                    imgui.bullet_text(str(item_id))
+                if len(items) > 50:
+                    imgui.text_colored(f"...ve {len(items) - 50} tane daha", 0.6, 0.6, 0.6, 1.0)
+                imgui.unindent(10)
+                return
+            
             if f.kind == "bool":
                 imgui.align_text_to_frame_padding()
                 imgui.text(label)

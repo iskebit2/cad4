@@ -7,7 +7,6 @@ import glm
 from typing import Optional, Any, List, Dict
 from dataclasses import dataclass
 
-from domain.local_axes import frame_local_axes, polygon_plane_axes
 from render.axes_renderer import LocalAxesRenderer
 from render.light_ubo import LightUBO
 from render.lightingsystem import LightingSystem
@@ -386,25 +385,58 @@ class SceneRenderer:
                 self.load_renderer.update(scene, camera_scale=cam_scale)
             except Exception as e:
                 logger.exception("Load renderer update hatası: %s", e)
-    
+
+    def update_element_color(self, element):
+        """Tek bir elemanın rengini bularak sadece onun buffer'ını günceller."""
+        if not element:
+            return
+        
+        # Eleman tipine göre ilgili renderer'ı seç
+        renderer = None
+        el_type = getattr(element, 'element_type', '').lower()
+        if el_type == 'frame': renderer = self.frame_r
+        elif el_type == 'node': renderer = self.node_r
+        elif el_type == 'area': renderer = self.area_r
+        elif el_type == 'link': renderer = self.link_r
+        elif el_type == 'polygon': renderer = self.polygon_r
+
+        if renderer and hasattr(renderer, 'update_single_element_color'):
+            renderer.update_single_element_color(element, self._get_final_color)
+        else:
+            # Fallback: Eğer alt renderer desteklemiyorsa genel update'e düş
+            self.update_sel()
+            
     def update_sel(self):
-        """Seçim renklerini güncelle - hem main hem simple CBO'ları"""
+        """
+        Seçim renklerini optimize edilmiş şekilde günceller.
+        Tüm sahneyi körü körüne işlemek yerine, aktif renderers üzerinden 
+        ve gereksiz liste kopyalamalarından kaçınarak çalışır.
+        """
         if not self.scene:
             return
         
-        renderers_and_elements = [
-            (self.frame_r, list(self.scene.frames.values())),
-            (self.node_r, list(self.scene.nodes.values())),
-            (self.area_r, list(self.scene.areas.values())),
-            (self.link_r, list(self.scene.links.values())),
-            (self.polygon_r, list(self.scene.polygons.values())),   # ← YENİ
-        ]
+        # Sözlükleri tekrar tekrar list() ile kopyalamak yerine 
+        # doğrudan .values() iteratörünü kullanarak bellek ve CPU yükünü azaltıyoruz.
+        renderers_and_elements = (
+            (self.frame_r, self.scene.frames.values()),
+            (self.node_r, self.scene.nodes.values()),
+            (self.area_r, self.scene.areas.values()),
+            (self.link_r, self.scene.links.values()),
+            (self.polygon_r, self.scene.polygons.values()),
+        )
+        
+        get_color = self._get_final_color
         
         for renderer, elements in renderers_and_elements:
-            if renderer and renderer.icount > 0:
-                renderer.update_colors(elements, self._get_final_color)
-            if renderer and renderer.simple_vao is not None:
-                renderer.update_simple_colors(elements, self._get_final_color)
+            if not renderer or renderer.icount <= 0:
+                continue
+            
+            # Eğer renderer alt seviyede tüm array'i baştan yazıyorsa,
+            # en azından Python tarafındaki iterasyon maliyetini minimuma indiriyoruz.
+            renderer.update_colors(elements, get_color)
+            
+            if renderer.simple_vao is not None:
+                renderer.update_simple_colors(elements, get_color)
                 
     def _get_final_color(self, element):
         """Ortak _final_color_for'a delege et (tek kaynak)"""
@@ -587,7 +619,7 @@ class SceneRenderer:
             if only_sel and not f.is_selected: continue
             if f.show_axes_override is False: continue
             
-            R = frame_local_axes(f.node_i, f.node_j, f.rotation_deg)
+            R = f.get_local_axes()
             origin = f.get_midpoint()
             
             # column-major 3x3 → 4x4
@@ -619,7 +651,7 @@ class SceneRenderer:
                 continue
 
             # Polygon düzlemi için ortonormal frame
-            u, v_axis, n = polygon_plane_axes(pg.nodes)
+            u, v_axis, n = pg.calculate_plane_axes(pg.nodes)
 
             # Rotasyon matrisi: kolonlar u, v, n (local → global)
             # glm.mat3 column-major: mat3(col0, col1, col2)
@@ -701,7 +733,7 @@ class SceneRenderer:
                         (f.node_i.z + f.node_j.z) * 0.5)
                 f_pos[i] = mid #(f.node_i.x, f.node_i.y, f.node_i.z)
                 f_off[i] = (50.0, 50.0, 50.0)
-                f_texts[i] = f"{f.label}"
+                f_texts[i] = f"{f.unique_id}"
 
                 
             self.label_batch.add_many(

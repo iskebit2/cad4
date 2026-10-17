@@ -1,7 +1,8 @@
 # geometry/node_builder.py
 import numpy as np
 from typing import Tuple, Dict, Optional
-from domain.element import Node, Restraint
+from domain.definition import Restraint
+from domain.element import Node
 import math
 
 def normalize(v):

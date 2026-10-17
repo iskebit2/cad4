@@ -93,36 +93,44 @@ class BasePanel:
             return
 
         self._position_window()
-        self._push_title_colors()
-
-        expanded, opened = imgui.begin(self.title, self.closable,
-                                       self.window_flags)
-
-        self._pop_title_colors()
-
-        if not opened:
-            # Kullanıcı X'e bastı
-            self._want_close = True
-            self.close()
-            imgui.end()
-            return
-
-        self._want_close = False
-
-        # --- İçerik (alt sınıf) ---
+        
+        pushed_colors = False
         try:
+            self._push_title_colors()
+            pushed_colors = True
+
+            expanded, opened = imgui.begin(self.title, self.closable,
+                                           self.window_flags)
+
+            self._pop_title_colors()
+            pushed_colors = False
+
+            if not opened:
+                # Kullanıcı X'e bastı
+                self._want_close = True
+                self.close()
+                imgui.end()
+                return
+
+            self._want_close = False
+
+            # --- İçerik (alt sınıf) ---
             self.draw_content()
+
+            # --- Focus state (end'den önce) ---
+            self.is_hovered = imgui.is_window_hovered()
+            self.is_focused = imgui.is_window_focused()
+
+            imgui.end()
+
         except Exception:
+            if pushed_colors:
+                try:
+                    self._pop_title_colors()
+                except Exception:
+                    pass
             import traceback
             traceback.print_exc()
-            imgui.text_colored("İçerik hatası (konsola bak)",
-                               1.0, 0.4, 0.4, 1.0)
-
-        # --- Focus state (end'den önce) ---
-        self.is_hovered = imgui.is_window_hovered()
-        self.is_focused = imgui.is_window_focused()
-
-        imgui.end()
 
     # ==================================================================
     # Alt sınıf override eder

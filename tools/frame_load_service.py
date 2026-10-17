@@ -1,13 +1,11 @@
 # tools/frame_load_service.py
 from domain.definition import FrameDistributedLoad
 
-# services/frame_load_service.py
-from domain.definition import FrameDistributedLoad, FrameDistributedLoadSet
-
 
 class FrameLoadService:
     @staticmethod
-    def assign_distributed_load_set(frame_obj, load_set):
+    def assign_distributed_load_set(frame_obj, load_set: FrameDistributedLoad):
+        """Artık doğrudan güçlendirilmiş FrameDistributedLoad nesnesini set olarak kullanır."""
         if not hasattr(frame_obj, "dist_load_sets"):
             frame_obj.dist_load_sets = {}
         if not hasattr(frame_obj, "dist_loads"):
@@ -28,7 +26,7 @@ class FrameLoadService:
 
     @staticmethod
     def assign_distributed_load(frame_obj, new_load: FrameDistributedLoad):
-        """Eski API - tek satır yük atar (geriye dönük uyumluluk)."""
+        """Tekil veya eski API yük atma (geriye dönük uyumluluk)."""
         if not hasattr(frame_obj, "dist_loads"):
             frame_obj.dist_loads = []
 

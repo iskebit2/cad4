@@ -2,6 +2,9 @@
 import ctypes
 from typing import List, Optional
 import glm
+
+from data.enums import GridPlane
+from domain.definition import GridPlaneDef
 glm.silence(2)
 import numpy as np
 
@@ -15,7 +18,6 @@ from OpenGL.GL import (
     GL_LINES,
 )
 
-from domain.definition import GridPlane, GridPlaneDef
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 

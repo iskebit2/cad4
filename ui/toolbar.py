@@ -3,8 +3,9 @@
 ImGui Toolbar — Sekmeli ve kategorize edilmiş modern üst şerit.
 """
 from typing import Callable, Dict
-from domain.definition import UnitSystem
 import imgui
+
+from data.enums import UnitSystem
 
 
 class Toolbar:
@@ -90,6 +91,8 @@ class Toolbar:
 
             if imgui.menu_item("Distribute Wind Zones to Frames")[0]:
                 self._fire("distribute_wind_zones")
+
+            
             imgui.end_menu()
         imgui.same_line()
 
@@ -161,6 +164,12 @@ class Toolbar:
         self._styled_button("Zones", (0.15, 0.45, 0.60, 1.00), lambda: self._fire("wind"))
         imgui.same_line()
 
+        # --- YENİ: Polygon Edit ---
+        poly_edit_state = self._get_panel_state("polygon_edit")
+        poly_edit_color = (0.35, 0.65, 0.45, 1.00) if poly_edit_state else (0.25, 0.40, 0.55, 1.00)
+        self._styled_button("⬡ Poly Edit", poly_edit_color, lambda: self._fire("polygon_edit"))
+        imgui.same_line()
+        
         # --- Tek ve Kalıcı Birim Seçici ---
         unit_label = f"Birim: {self.current_unit.name} ({self.current_unit.force_unit}, {self.current_unit.length_unit})" if self.current_unit else "Birim: N-mm"
         

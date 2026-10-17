@@ -8,12 +8,9 @@ Frame Distributed Load Atama Paneli - Segment Bazlı (v2)
 """
 import imgui
 import math
-from typing import List, Optional, Callable, Dict
-
-from domain.definition import (
-    FrameDistributedLoadSet, LoadSegment,
-    SAP_FRAME_LOAD_DIRECTION, SAP_DIR_LABELS,
-)
+from typing import List, Optional, Callable
+from data.enums import SAP_DIR_LABELS
+from domain.definition import FrameDistributedLoad, LoadSegment
 from domain.element import Frame
 
 
@@ -43,7 +40,7 @@ class FrameLoadPanel:
         self.mode = "REPLACE"
         self.is_relative = True
 
-        self.active_set: FrameDistributedLoadSet = FrameDistributedLoadSet()
+        self.active_set: FrameDistributedLoad = FrameDistributedLoad()
         self.target_frames: List[Frame] = []
 
         self.selected_segment_idx: Optional[int] = None
@@ -97,8 +94,7 @@ class FrameLoadPanel:
             existing = [dl for dl in getattr(first, "dist_loads", [])
                         if dl.pattern_name == self.pattern_name]
             if existing:
-                from domain.definition import FrameDistributedLoadSet
-                self.active_set = FrameDistributedLoadSet.from_sap_loads(existing)
+                self.active_set = FrameDistributedLoad.from_sap_loads(existing)
                 self.coord_sys = self.active_set.coord_sys
                 self.load_dir = self.active_set.load_dir
                 self.mode = self.active_set.mode
@@ -109,13 +105,31 @@ class FrameLoadPanel:
         self._update_q_range()
 
     def _ensure_set_type(self, raw):
-        """dict gelirse FrameDistributedLoadSet'e çevir + segment'leri düzelt."""
-        from domain.definition import FrameDistributedLoadSet, LoadSegment
-
-        if isinstance(raw, FrameDistributedLoadSet):
+        """dict gelirse FrameDistributedLoad'a çevir + segment'leri düzelt."""
+        if isinstance(raw, FrameDistributedLoad):
             s = raw
         elif isinstance(raw, dict):
-            s = FrameDistributedLoadSet.from_dict(raw)
+            s = FrameDistributedLoad(
+                pattern_name=raw.get("pattern_name", self.pattern_name),
+                coord_sys=raw.get("coord_sys", "Local"),
+                load_dir=raw.get("load_dir", "2"),
+                mode=raw.get("mode", "REPLACE"),
+                is_relative=raw.get("is_relative", True),
+            )
+            raw_segs = raw.get("segments", [])
+            fixed = []
+            for seg in raw_segs:
+                if isinstance(seg, LoadSegment):
+                    fixed.append(seg)
+                elif isinstance(seg, dict):
+                    fixed.append(LoadSegment(
+                        x1=float(seg.get("x1", 0.0)),
+                        x2=float(seg.get("x2", 1.0)),
+                        q1=float(seg.get("q1", 0.0)),
+                        q2=float(seg.get("q2", 0.0)),
+                    ))
+            s.segments = fixed
+            return s
         else:
             return self._new_empty_set()
 
@@ -135,7 +149,7 @@ class FrameLoadPanel:
         return s
 
     def _new_empty_set(self):
-        return FrameDistributedLoadSet(
+        return FrameDistributedLoad(
             pattern_name=self.pattern_name,
             coord_sys=self.coord_sys,
             load_dir=self.load_dir,
@@ -466,7 +480,6 @@ class FrameLoadPanel:
             return
         qs = []
         for s in segs:
-            # dict veya LoadSegment olabilir — ikisini de tolere et
             q1 = getattr(s, "q1", None)
             q2 = getattr(s, "q2", None)
             if q1 is None and isinstance(s, dict):
@@ -480,15 +493,12 @@ class FrameLoadPanel:
         self.min_q = min(0.0, min(qs))
 
     # ------------------------------------------------------------------
-    # SEGMENT TABLOSU (yeni kompakt tasarım)
+    # SEGMENT TABLOSU
     # ------------------------------------------------------------------
     def _draw_segment_table(self):
-        """Komakt tablo — pencere genişliğine yayılır, +/- küçük butonlar."""
-        # Başlık satırı + butonlar
         imgui.text_colored("Segment Listesi:", 0.8, 0.8, 0.6, 1.0)
         imgui.same_line()
 
-        # Küçük ikon butonları
         if imgui.small_button("+##add"):
             self._add_segment_after_selected()
         if imgui.is_item_hovered():
@@ -512,10 +522,8 @@ class FrameLoadPanel:
         imgui.text_colored(f"({len(self.active_set.segments)} segment)",
                            0.6, 0.6, 0.7, 1.0)
 
-        # Tablo
         imgui.begin_child("seg_list", 0, 0, True)
 
-        # Sütun genişlikleri — pencere genişliğine oranlı
         avail = imgui.get_content_region_available_width()
         col_idx_w = 32
         col_x_w = (avail - col_idx_w - 40) * 0.22
@@ -528,7 +536,6 @@ class FrameLoadPanel:
         imgui.set_column_width(3, col_q_w)
         imgui.set_column_width(4, col_q_w)
 
-        # Başlıklar
         imgui.text("#"); imgui.next_column()
         imgui.text("x1 (rel)"); imgui.next_column()
         imgui.text("x2 (rel)"); imgui.next_column()
@@ -541,42 +548,28 @@ class FrameLoadPanel:
             if i == self.selected_segment_idx:
                 imgui.push_style_color(imgui.COLOR_TEXT, 0.4, 1.0, 0.5, 1.0)
 
-            # # sütunu — tıklanabilir seçim
             if imgui.selectable(f"{i+1}", i == self.selected_segment_idx,
                                 width=col_idx_w - 4)[0]:
                 self.selected_segment_idx = i
             imgui.next_column()
 
-            # x1
-            imgui.push_item_width(-1)
-            ch1, v1 = imgui.input_float(
-                "##x1", seg.x1, 0.01, 0.05, "%.3f"
-            )
+            ch1, v1 = imgui.input_float("##x1", seg.x1, 0.01, 0.05, "%.3f")
             if ch1:
                 seg.x1 = max(0.0, min(seg.x2 - 0.001, v1))
             imgui.next_column()
 
-            # x2
-            ch2, v2 = imgui.input_float(
-                "##x2", seg.x2, 0.01, 0.05, "%.3f"
-            )
+            ch2, v2 = imgui.input_float("##x2", seg.x2, 0.01, 0.05, "%.3f")
             if ch2:
                 seg.x2 = max(seg.x1 + 0.001, min(1.0, v2))
             imgui.next_column()
 
-            # q1
-            cq1, w1 = imgui.input_float(
-                "##q1", seg.q1, 0.1, 1.0, "%.3f"
-            )
+            cq1, w1 = imgui.input_float("##q1", seg.q1, 0.1, 1.0, "%.3f")
             if cq1:
                 seg.q1 = w1
                 self._update_q_range()
             imgui.next_column()
 
-            # q2
-            cq2, w2 = imgui.input_float(
-                "##q2", seg.q2, 0.1, 1.0, "%.3f"
-            )
+            cq2, w2 = imgui.input_float("##q2", seg.q2, 0.1, 1.0, "%.3f")
             if cq2:
                 seg.q2 = w2
                 self._update_q_range()
@@ -621,7 +614,6 @@ class FrameLoadPanel:
     def _draw_actions(self):
         can_apply = bool(self.target_frames) and len(self.active_set.segments) > 0
 
-        # Büyük UYGULA butonu
         if not can_apply:
             imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1.0)
 
@@ -649,7 +641,6 @@ class FrameLoadPanel:
             if callable(self.on_refresh_targets):
                 self.on_refresh_targets()
 
-        # Durum
         imgui.spacing()
         if not self.target_frames:
             imgui.text_colored("⚠ Seçili frame yok — sahne üzerinden seçin",

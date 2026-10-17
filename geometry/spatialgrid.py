@@ -1,12 +1,9 @@
 #geometry/spatialgrid.py
 
-from typing import Dict, List, Tuple, Set, Optional, Union
+from typing import Dict, List, Tuple, Set, Optional
 import numpy as np
 from dataclasses import dataclass
-from enum import Enum
-
-from domain.definition import ElementType
-from logging_config import CadLogger
+from data.enums import ElementType
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)

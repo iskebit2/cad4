@@ -5,7 +5,7 @@ Element ↔ dict dönüşümleri.
 Ana uygulama bu modülü çağırır; ImGui tarafında sadece dict dolaşır.
 """
 from typing import Any, Dict
-
+from data.enums import PolygonType
 from ui.schema import get_path, set_path
 
 MIXED = "__MIXED__"   # çakışmayacak bir string (nadir)
@@ -58,7 +58,20 @@ def _segments_to_text(segments) -> str:
     """Segment listesini 'x1,x2,q1,q2 | x1,x2,q1,q2' formatına çevir."""
     parts = []
     for s in segments:
-        parts.append(f"{s.x1:.4f},{s.x2:.4f},{s.q1:.4f},{s.q2:.4f}")
+        # Eğer s bir dict ise (serileştirme/yükleme sonrasında kalmış olabilir)
+        if isinstance(s, dict):
+            x1 = float(s.get("x1", 0.0))
+            x2 = float(s.get("x2", 1.0))
+            q1 = float(s.get("q1", 0.0))
+            q2 = float(s.get("q2", 0.0))
+        else:
+            # Nesneyse doğrudan özniteliklerini al
+            x1 = float(getattr(s, "x1", 0.0))
+            x2 = float(getattr(s, "x2", 1.0))
+            q1 = float(getattr(s, "q1", 0.0))
+            q2 = float(getattr(s, "q2", 0.0))
+            
+        parts.append(f"{x1:.4f},{x2:.4f},{q1:.4f},{q2:.4f}")
     return " | ".join(parts)
 
 
@@ -259,6 +272,7 @@ def polygon_to_values(poly) -> Dict[str, Any]:
         "color": list(poly.color[:3]),
         "poly_type": pt.name if hasattr(pt, "name") else str(pt),
         "windplane": dict(getattr(poly, "windplane", {}) or {}),
+        "associated_frame_ids": list(getattr(poly, "associated_frame_ids", [])),
         "uniform_to_frame_loads": [
             {
                 "pattern_name": l.pattern_name,
@@ -278,10 +292,12 @@ def values_to_polygon(poly, v: Dict[str, Any]):
     poly.color = list(v.get("color", poly.color))[:3]
     poly.is_visible = bool(v.get("is_visible", poly.is_visible))
     poly.is_temporary = bool(v.get("is_temporary", getattr(poly, "is_temporary", False)))
-
+    ids = v.get("associated_frame_ids")
+    if isinstance(ids, list):
+        poly.associated_frame_ids = list(ids)
     pt = v.get("poly_type")
     if pt:
-        from domain.element import PolygonType
+        
         try:
             poly.poly_type = PolygonType[pt]
         except KeyError:
