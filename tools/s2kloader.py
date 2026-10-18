@@ -16,9 +16,19 @@ logger = CadLogger.get(__name__)
 
 def build_scene_into_project(ctx: LoadContext, project: Project) -> Project:
     logger.info("[S2KLoader Debug] Sahne inşası başlatılıyor...")
-    builder = SceneBuilder(project)
+    
+    # --- 0. GRID LINES VE KRİTİK VERİLERİ ÖNCEDEN AKTAR ---
+    if hasattr(ctx, 'grid_lines') and ctx.grid_lines:
+        project.grid_lines = list(ctx.grid_lines)
+        project.sync_grid_from_s2k_lines()
+        logger.info(f"[S2KLoader Debug] -> {len(ctx.grid_lines)} adet Grid Line erken aşamada projeye işlendi.")
 
+    if hasattr(ctx, 'joint_constraints') and ctx.joint_constraints:
+        project.joint_constraints = dict(ctx.joint_constraints)
+
+    builder = SceneBuilder(project)
     _register_definitions(project, ctx)
+    
     node_map = _create_nodes(builder, ctx)
     logger.info(f"[S2KLoader Debug] -> Oluşturulan düğüm (node) sayısı: {len(node_map)}")
 
@@ -39,8 +49,26 @@ def build_scene_into_project(ctx: LoadContext, project: Project) -> Project:
     scene.units = str(ctx.units)
     project.scene = scene
 
-    # Section cuts
-    if hasattr(ctx, 'section_cuts'):
+    # --- EKSİK OLAN ATAMALAR VE SENRONİZASYONLAR ---
+    
+    # 1. Grid Lines ve Grid Senkronizasyonu
+    if hasattr(ctx, 'grid_lines') and ctx.grid_lines:
+        project.grid_lines = ctx.grid_lines
+        project.sync_grid_from_s2k_lines() # Project içine eklediğimiz akıllı senkronizasyon
+        logger.info(f"[S2KLoader Debug] -> {len(ctx.grid_lines)} adet Grid Line yüklendi ve projeye işlendi.")
+
+    # 2. Joint Constraints Atamaları
+    if hasattr(ctx, 'joint_constraints') and ctx.joint_constraints:
+        project.joint_constraints = dict(ctx.joint_constraints)
+        logger.info(f"[S2KLoader Debug] -> {len(ctx.joint_constraints)} adet Joint Constraint ataması aktarıldı.")
+
+    # 3. Link Property Linear ve Diğerleri
+    if hasattr(ctx, 'link_props') and ctx.link_props:
+        for lp_name, lp_obj in ctx.link_props.items():
+            project.add_link_prop(lp_obj)
+
+    # 4. Section cuts
+    if hasattr(ctx, 'section_cuts') and ctx.section_cuts:
         project.section_cuts = ctx.section_cuts
         logger.info(f"[S2KLoader Debug] -> {len(ctx.section_cuts)} adet Section Cut yüklendi.")
 
@@ -118,6 +146,8 @@ class S2KParser:
         raw_tables = re.split(r'TABLE:\s*"*', content)
         logger.info(f"[Parser Debug] Toplam {len(raw_tables)} ham tablo bloğu ayrıştırıldı.")
 
+        # Optimize edilmiş satır parse döngüsü
+        parsed_tables = {}
         for raw in raw_tables:
             if not raw.strip():
                 continue
@@ -132,18 +162,14 @@ class S2KParser:
                     continue
                 pairs = self.PAIR_PATTERN.findall(line)
                 if pairs:
-                    row = {}
-                    for k, v in pairs:
-                        if v.startswith('"') and v.endswith('"'):
-                            v = v[1:-1]
-                        row[k] = v
+                    row = {k: (v[1:-1] if v.startswith('"') and v.endswith('"') else v) for k, v in pairs}
                     rows.append(row)
 
             if rows:
-                self.tables[table_name] = pd.DataFrame(rows)
+                parsed_tables[table_name] = pd.DataFrame(rows)
 
+        self.tables = parsed_tables
         logger.info(f"[Parser Debug] Başarıyla DataFrame'e çevrilen tablo sayısı: {len(self.tables)}")
-        logger.info(f"[Parser Debug] Bulunan Tablo İsimleri: {list(self.tables.keys())}")
 
     def get_table(self, name: str) -> pd.DataFrame:
         return self.tables.get(name, pd.DataFrame())
@@ -177,24 +203,22 @@ class S2KLoader:
         router = build_router()
         processed_tables = set()
 
-        # Sıralı Router İşlemleri
+        # Sıralı Router İşlemleri (Öncelikli tablolar önce işlenir)
         for table_name, handler in build_sorted_router():
             if table_name not in tables:
-                logger.debug(f"[Loader Debug] Tablo atlandı (Dosyada yok): {table_name}")
                 continue
 
             df = tables[table_name]
             processed_tables.add(table_name)
 
             if df.empty:
-                logger.warning(f"[Loader Debug] Tablo boş, işlenmedi: {table_name}")
                 continue
 
             try:
                 handler(ctx, df)
-                logger.info(f"[Loader Debug] ✅ Tablo işlendi (Sıralı): {table_name} ({len(df)} satır)")
+                logger.debug(f"[Loader Debug] Tablo işlendi (Sıralı): {table_name}")
             except Exception as e:
-                logger.error(f"[Loader Debug] ❌ '{table_name}' handler hatası: {e}", exc_info=True)
+                logger.error(f"[Loader Debug] '{table_name}' handler hatası: {e}", exc_info=True)
 
         # Kalan Tablolar
         for table_name, df in tables.items():
@@ -205,13 +229,11 @@ class S2KLoader:
             if handler:
                 try:
                     handler(ctx, df)
-                    logger.info(f"[Loader Debug] ✅ Tablo işlendi (Kalanlar): {table_name} ({len(df)} satır)")
+                    logger.debug(f"[Loader Debug] Tablo işlendi (Kalan): {table_name}")
                 except Exception as e:
-                    logger.error(f"[Loader Debug] ❌ '{table_name}' handler hatası: {e}", exc_info=True)
-            else:
-                logger.warning(f"[Loader Debug] ⚠️ Tanımsız tablo (Router'da handler yok): {table_name}")
+                    logger.error(f"[Loader Debug] '{table_name}' handler hatası: {e}", exc_info=True)
 
         self.units = ctx.units
         project = build_scene_into_project(ctx, project)
-        logger.info("[Loader Debug] Model yükleme ve Inşa süreci tamamlandı.")
+        logger.info("[Loader Debug] Model yükleme ve inşa süreci tamamlandı.")
         return project

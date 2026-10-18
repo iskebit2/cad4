@@ -335,9 +335,9 @@ class GridPlaneDef:
     
 @dataclass
 class GridConfig:
-    x_coords: List[float] = field(default_factory=lambda: [0.0, 3000.0, 8000.0, 11000.0])
-    y_coords: List[float] = field(default_factory=lambda: [0.0, 3000.0, 6000.0, 12000.0])
-    z_coords: List[float] = field(default_factory=lambda: [0.0, 3200.0, 6400.0])
+    x_coords: List[float] = field(default_factory=lambda: [0.0, 1000.0])
+    y_coords: List[float] = field(default_factory=lambda: [0.0, 1000.0])
+    z_coords: List[float] = field(default_factory=lambda: [0.0, 1000.0])
     origin_x: float = 0.0
     origin_y: float = 0.0
     origin_z: float = 0.0

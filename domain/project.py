@@ -12,9 +12,11 @@ from domain.definition import (
     AnalysisManager, GeneralProjectInfo, GridConfig, LoadManager, ProjectConfig, ProjectInfo,
     ReportManager, SiteInformation,
     Material, Section, LinkProp, LoadPattern, LoadCase, ModalCase,
-    LoadCombination, SpectrumFunction, ResponseSpectrumCase, AutoSeismicTSC2018,
+    LoadCombination, SpectrumFunction, ResponseSpectrumCase, AutoSeismicTSC2018, SectionCut, QuadDefinition,
     SpectrumSourceType, get_tsc2018_site_coefficients
 )
+from domain.plane import Plane
+from domain.plane_manager import PlaneManager
 
 from data.serializer import save_project_file, load_project_file
 
@@ -31,6 +33,7 @@ class Project:
     report: ReportManager = field(default_factory=ReportManager)
     unit_system: UnitSystem = UnitSystem.N_MM
     grid: GridConfig = field(default_factory=GridConfig)
+    planes: Dict[str, Plane] = field(default_factory=dict)
 
     # --- ESKİ DEFINITION MANAGER MİRASI (Doğrudan Project'e monte edildi) ---
     materials: Dict[str, Material] = field(default_factory=dict)
@@ -44,6 +47,13 @@ class Project:
     response_spectrum_cases: Dict[str, ResponseSpectrumCase] = field(default_factory=dict)
     auto_seismics: Dict[str, AutoSeismicTSC2018] = field(default_factory=dict)
     mass_source_map: Dict[str, float] = field(default_factory=dict)
+    section_cuts: Dict[str, SectionCut] = field(default_factory=dict)
+    diaphragms: Dict[str, dict] = field(default_factory=dict)
+    grid_lines: List[Dict[str, Any]] = field(default_factory=list)
+    joint_constraints: Dict[str, str] = field(default_factory=dict)
+    frame_modifiers: Dict[str, dict] = field(default_factory=dict)
+    frame_design_procs: Dict[str, str] = field(default_factory=dict)
+    frame_auto_mesh: Dict[str, dict] = field(default_factory=dict)
 
     def __post_init__(self):
         # Scene, projeye referans versin ki kendi içinden malzemelere/kesitlere ulaşabilsin
@@ -59,10 +69,35 @@ class Project:
     def add_spectrum_function(self, spec: SpectrumFunction): self.spectrum_functions[spec.name] = spec
     def add_response_spectrum_case(self, rs: ResponseSpectrumCase): self.response_spectrum_cases[rs.name] = rs
     def add_auto_seismic(self, a: AutoSeismicTSC2018): self.auto_seismics[a.load_pattern] = a
+    def add_section_cut(self, sc: SectionCut): 
+        self.section_cuts[sc.name] = sc
 
+    def get_section_cut(self, name: str) -> Optional[SectionCut]: 
+        return self.section_cuts.get(name)
     def get_section_by_name(self, name: str) -> Optional[Section]:     return self.sections.get(name)
     def get_material_by_name(self, name: str) -> Optional[Material]:   return self.materials.get(name)
     def get_link_prop_by_name(self, name: str) -> Optional[LinkProp]:  return self.link_props.get(name)
+    def add_plane(self, plane: Plane):
+        self.planes[plane.name] = plane
+
+    # ---- Plane CRUD (PlaneManager'a delege) ----
+    @property
+    def plane_mgr(self) -> PlaneManager:
+        # Lazy — her erişimde yeni sarmalayıcı (hafif)
+        return PlaneManager(self)
+
+    def add_plane(self, plane: Plane) -> Plane:
+        return self.plane_mgr.add(plane)
+
+    def get_plane(self, name: str) -> Optional[Plane]:
+        return self.planes.get(name)
+
+    def remove_plane(self, name: str) -> bool:
+        return self.plane_mgr.remove(name)
+
+    def plane_names(self) -> List[str]:
+        return self.plane_mgr.names()
+
 
     def create_tbdy2018_spectrum(
         self, name, ss, s1, site_class="ZC",
@@ -103,6 +138,8 @@ class Project:
     # FILE I/O (Serializer'a delege edilir)
     # ==================================================================
     def save(self, filepath: str):
+        print("self.grid:", self.grid)
+        print("self.grid_lines:", self.grid_lines)
         path = Path(filepath)
         if path.suffix != ".cd4":
             path = path.with_suffix(".cd4")
@@ -114,3 +151,29 @@ class Project:
         if not path.exists():
             return cls()
         return load_project_file(path)
+
+    def sync_grid_from_s2k_lines(self):
+        """S2K'dan gelen ham grid_lines verilerini CAD4 GridConfig yapısına senkronize eder."""
+        if not self.grid_lines:
+            return
+
+        xs, ys, zs = [], [], []
+
+        for gl in self.grid_lines:
+            axis_dir = str(gl.get('axis_dir', gl.get('line_type', 'X'))).upper()
+            ordinate = float(gl.get('ordinate', 0.0))
+            
+            # AxisDir değerine göre doğru koordinat listesine atıyoruz
+            if 'X' in axis_dir:
+                xs.append(ordinate)
+            elif 'Y' in axis_dir or 'V' in axis_dir:
+                ys.append(ordinate)
+            elif 'Z' in axis_dir:
+                zs.append(ordinate)
+
+        if xs:
+            self.grid.x_coords = sorted(list(set(xs)))
+        if ys:
+            self.grid.y_coords = sorted(list(set(ys)))
+        if zs:
+            self.grid.z_coords = sorted(list(set(zs)))

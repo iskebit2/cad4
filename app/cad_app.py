@@ -4,20 +4,24 @@ import queue
 import threading
 from OpenGL.GL import *
 import glm
+import glfw
+import numpy as np
 
 from app.cad_window import CadWindow
 from core.gl_engine import Engine
-from app.event_router import EventRouter
 
 from data.enums import UnitSystem, GridPlane, PolygonType
 from domain.definition import GridPlaneDef
-from domain.element import Frame
+from domain.element import Frame, Polygon
+from domain.project import Project
 from tools.alignment_service import AlignmentService
 from tools.load_balance_report import LoadBalanceReport
 from tools.s2kloader import S2KLoader
 from tools.wind_service import WindSceneAdapter
 from tools.wind_zone_distribution_service import WindZoneDistributionService
+from tools.frame_load_service import FrameLoadService
 from ui.adapters import values_to_element
+from ui.plane_plot_panel import PlanePlotPanel
 from ui.toolbar import Toolbar
 from ui.main_menu import MainMenuPopup
 from ui.file_dialog import ImGuiFileDialog
@@ -31,146 +35,345 @@ from ui.grid_panel import GridPanel
 from ui.imgui_backend import UiBackend
 from ui.load_assign_panel import LoadAssignPanel
 from ui.frame_load_panel import FrameLoadPanel
-from domain.element import Polygon
-from domain.project import Project
-from tools.frame_load_service import FrameLoadService
 from ui.load_display_panel import LoadDisplayPanel
 from ui.polygon_edit_panel import PolygonEditPanel
+from ui.plane_manager_panel import PlaneManagerPanel
+from ui.s2k_import_panel import S2KImportPanel
+
+from core.input_manager import (
+    MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE,
+)
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
 
 class CadApp:
+    """
+    CadApp — Tek Merkezli Event, Panel ve Komut Mimarisi.
+    EventRouter ve dağınık callback/panel yönetimini tek bir PANEL_REGISTRY altında toplar.
+    """
+
+    MIDDLE_DOUBLE_CLICK_INTERVAL = 0.25
+    MIDDLE_DOUBLE_CLICK_MAX_DRAG = 4.0
+
     def __init__(self, window: CadWindow):
         self.window = window
         self.engine = None
         self.initialized = False
         self._model_text = "MODEL: YENİ SAHNE"
-        self.current_project = Project()  # Bütünsel Proje Nesnesi
+        self.current_project = Project()
+        self.current_file_path = None
         self.hover_visual_enabled = True
+        self.show_loads = True
+        self._wind_queue = queue.Queue()
 
-        # Paneller
-        self.grid_panel = GridPanel(
-                                    on_change=self._on_grid_change,
-                                    on_work_plane_activate=self._on_work_plane_activate,
-                                )
-        self.inspector = InspectorPanel(on_apply = self._on_inspector_apply)
-        self.main_menu = MainMenuPopup(on_action = self._on_main_menu_action)
-        self.visibility_panel = VisibilityPanel(on_apply=self._on_visibility_applied)
-        self.file_dialog = ImGuiFileDialog()
-        self.view_filter = ViewFilterPanel(on_apply=self._on_view_filter_apply)
-        self.zones_panel = ZonesPanel(
-                                        on_run_analysis=self._on_run_wind_analysis,
-                                        on_select_direction=self.on_select_wind_direction,
-                                        on_distribute=self._distribute_wind_zones_to_frames,   # ← YENİ
-                                    )
+        # Mouse / Event durum takibi (Eski EventRouter'dan taşındı)
+        self._pending = []
+        self._mouse_pressed = set()
+        self._last_middle_click_time = 0.0
+        self._middle_press_pos = (0.0, 0.0)
+        self._middle_dragged = False
 
-        self.load_display_panel = LoadDisplayPanel(
-                                                    on_change=self._on_load_display_change,
-                                                    on_clear_loads=self._clear_loads_from_selected,
-                                                    on_clear_all=self._clear_loads_from_scene,
-                                                )
-        
-        # Yönetim Panelleri
-        self.report_panel = ReportPanel()
-        self.definition_panel = DefinitionPanel()
-        self.project_info_panel = ProjectInfoPanel()
-        self.project_config_panel = ProjectConfigPanel()
-        self.analysis_panel = AnalysisManagerPanel()
-        self.load_assign_panel = LoadAssignPanel(on_apply=self._apply_load_to_selected_polygon)
-        self.frame_load_panel = FrameLoadPanel(on_apply=self._apply_frame_distributed_load)
+        # --- 1. MERKEZİ PANEL VE KOMUT KAYIT SÖZLÜĞÜ ---
+        self.panels = {}
+        self._init_registry()
 
-        self.polygon_edit_panel = PolygonEditPanel(
-                            on_align=self._on_polygon_edit_align,
-                            on_distribute=self._on_polygon_edit_distribute,
-                            on_mesh=self._on_polygon_edit_mesh,
-                            on_apply_assoc=self._on_polygon_edit_assoc,
-                        )
-
+        logger.debug(f"panels: {self.panels.keys()}")
+        # UI Backend ve Pencere Callback Bağlantıları
         self.ui_backend = UiBackend(window.window)
         self.ui_backend.setup()
         window._wire_callbacks()
 
-        self.router = EventRouter(self)
-        window.on_key_down = self.router.on_key_down
-        window.on_key_up = self.router.on_key_up
-        window.on_mouse_button = self.router.on_mouse_button
-        window.on_mouse_move = self.router.on_mouse_move
-        window.on_scroll = self.router.on_scroll
+        window.on_key_down = self.on_key_down
+        window.on_key_up = self.on_key_up
+        window.on_mouse_button = self.on_mouse_button
+        window.on_mouse_move = self.on_mouse_move
+        window.on_scroll = self.on_scroll
         window.on_resize = self._on_resize
-        window.on_char = self.router.on_char
-        window.on_focus = self.router.on_window_focus
+        window.on_char = self.on_char
+        window.on_focus = self.on_window_focus
 
+        # Toolbar'ı merkezi kayıttan üretilen komut ve durumlarla başlat
         self.toolbar = Toolbar(
-            callbacks={
-                "menu": self._on_toolbar_menu,
-                "open": self._on_toolbar_open,
-                "save": self._on_toolbar_save,
-                "draw": self._toggle_draw_mode,
-                
-                # --- Toggle Mantığına Uyarlanan Panel Callback'leri ---
-                "visibility": lambda: self.visibility_panel.close() if self.visibility_panel.visible else self._on_toolbar_visibility(),
-                "view_filter": self.toggle_view_filter_panel, # Bu zaten kendi içinde open/close yapıyor
-                "grid": lambda: self.grid_panel.close() if self.grid_panel.visible else self.open_grid(),
-                "grid_labels": lambda: setattr(self.engine.renderer.grid_labels, "enabled",
-                                not self.engine.renderer.grid_labels.enabled),
-                "inspector": lambda: self.inspector.close() if self.inspector.visible else self.open_inspector(),
-                
-                "render_mode": lambda: self.engine.renderer.toggle_render_mode() if self.engine and self.engine.renderer else None,
-                "smart_plane": lambda: setattr(self.engine, "active_smart_plane_mode", not self.engine.active_smart_plane_mode) if self.engine else None,
-                
-                "definitions": lambda: self.definition_panel.close() if self.definition_panel.visible else self.definition_panel.open(self.current_project.definitions),
-                "project_info": lambda: self.project_info_panel.close() if self.project_info_panel.visible else self.project_info_panel.open(self.current_project.info),
-                "project_config": lambda: self.project_config_panel.close() if self.project_config_panel.visible else self.project_config_panel.open(self.current_project.config),
-                "analysis": lambda: self.analysis_panel.close() if self.analysis_panel.visible else self.analysis_panel.open(self.current_project.analysis),
-                "report": lambda: self.report_panel.close() if self.report_panel.visible else self.report_panel.open(self.current_project.report),
-                
-                "wind": lambda: self.zones_panel.close() if self.zones_panel.visible else self._on_toolbar_wind(),
-                "on_unit_change": self.set_unit_system,
-                "assign_area_load": lambda: self._toggle_load_assign_panel(),
-                "distribute_polygon_loads": self._distribute_selected_polygon_loads,
-                "local_axes": lambda: self._toggle_local_axes(),
-                "local_axes_selected_only": self._toggle_local_axes_selected_only,
-                "align_frames_to_polygon": self._align_frames_to_selected_polygons,
-                "check_load_balance": self._check_load_balance,
-                "assign_frame_distributed_load": lambda: self._toggle_frame_load_panel(),
-                "distribute_wind_zones": self._distribute_wind_zones_to_frames,
-                "toggle_show_loads": self._toggle_show_loads,
-                "toggle_load_display_panel": lambda: self._toggle_load_display_panel(),
-                "polygon_edit": lambda: self.polygon_edit_panel.close() 
-                      if self.polygon_edit_panel.visible 
-                      else self._open_polygon_edit_panel(),
-                
-            },
-            panel_states={
-                "visibility": lambda: self.visibility_panel.visible,
-                "view_filter": lambda: self.view_filter.visible,
-                "grid": lambda: self.grid_panel.visible,
-                "inspector": lambda: self.inspector.visible,
-                "smart_plane": lambda: getattr(self.engine, "active_smart_plane_mode", False) if self.engine else False,
-                "report": lambda: self.report_panel.visible,
-                "definitions": lambda: self.definition_panel.visible,
-                "project_info": lambda: self.project_info_panel.visible,
-                "project_config": lambda: self.project_config_panel.visible,
-                "analysis": lambda: self.analysis_panel.visible,
-                "wind": lambda: self.zones_panel.visible,
-                "assign_area_load": lambda: self.load_assign_panel.visible,
-                "local_axes": lambda: self.engine.scene.show_local_axes if self.engine and self.engine.scene else False,
-                "local_axes_selected_only": lambda: self.engine.scene.show_local_axes_for_selected if self.engine and self.engine.scene else True,
-                "assign_frame_distributed_load": lambda: self.frame_load_panel.visible,
-                "show_loads": lambda: getattr(self.engine.renderer, "show_loads", True) if self.engine and self.engine.renderer else True,
-                "load_display_panel": lambda: self.load_display_panel.visible,
-            }
+            commands=self._build_toolbar_commands(),
+            panel_states=self._build_panel_states(),
         )
 
-        
-        self._wind_queue = queue.Queue()
-        
-        # Zones panel callback'i
-        self.zones_panel.on_run_analysis = self._on_run_wind_analysis
-        self.show_loads = True
+        # Modüler ek bileşenler (Menü, Dialog vb.)
+        self.main_menu = MainMenuPopup()
+        self.file_dialog = ImGuiFileDialog()
 
+        # Özel referans kolaylıkları (Registry'den hızlı erişim için)
+        self.inspector = self.panels["inspector"]["instance"]
+        self.visibility_panel = self.panels["visibility"]["instance"]
+        self.view_filter = self.panels["view_filter"]["instance"]
+        self.grid_panel = self.panels["grid"]["instance"]
+        self.zones_panel = self.panels["wind"]["instance"]
+        self.definition_panel = self.panels["definitions"]["instance"]
+        self.project_info_panel = self.panels["project_info"]["instance"]
+        self.project_config_panel = self.panels["project_config"]["instance"]
+        self.analysis_panel = self.panels["analysis"]["instance"]
+        self.report_panel = self.panels["report"]["instance"]
+        self.load_assign_panel = self.panels["assign_area_load"]["instance"]
+        self.frame_load_panel = self.panels["assign_frame_distributed_load"]["instance"]
+        self.load_display_panel = self.panels["load_display_panel"]["instance"]
+        self.plane_plot = self.panels["plane_plot"]["instance"]
+        self.plane_manager_panel  = self.panels["plane_manager"]["instance"]
+
+        # Panel özel callback bağlantıları
+        # self.grid_panel.on_change = self._on_grid_change
+        # self.grid_panel.on_work_plane_activate = self._on_work_plane_activate
+        # self.inspector.on_apply = self._on_inspector_apply
+        # self.visibility_panel.on_apply = self._on_visibility_applied
+        # self.view_filter.on_apply = self._on_view_filter_apply
+        # self.zones_panel.on_run_analysis = self._on_run_wind_analysis
+        # self.zones_panel.on_select_direction = self.on_select_wind_direction
+        # self.zones_panel.on_distribute = self._distribute_wind_zones_to_frames
+        # self.load_assign_panel.on_apply = self._apply_load_to_selected_polygon
+
+        
+        
+
+    # ==================================================================
+    # MERKEZİ PANEL KAYIT SİSTEMİ (PANEL_REGISTRY)
+    # ==================================================================
+    def _init_registry(self):
+        """Tüm panellerin ve komutların tek merkezden yönetildiği kayıt sözlüğü."""
+        registry_def = {
+            "s2k_import": {
+                "class": S2KImportPanel,
+                "title": "S2K İçe Aktarma",
+                "toolbar": False,
+                "shortcut": None,
+                "visible": False,
+                "category": "tools",
+                "command": lambda: self.toggle_panel("s2k_import"),
+            },
+            "grid": {
+                "class": GridPanel,
+                "title": "Grid Ayarları",
+                "toolbar": True,
+                "shortcut": "CTRL+G",
+                "visible": False,
+                "category": "view",
+                "command": lambda: self.toggle_panel("grid"),
+            },
+            "inspector": {
+                "class": InspectorPanel,
+                "title": "Özellikler (Inspector)",
+                "toolbar": True,
+                "shortcut": "CTRL+P",
+                "visible": False,
+                "category": "view",
+                "command": lambda: self.toggle_panel("inspector"),
+            },
+            "visibility": {
+                "class": VisibilityPanel,
+                "title": "Görünürlük Paneli",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "view",
+                "command": lambda: self.toggle_panel("visibility"),
+            },
+            "view_filter": {
+                "class": ViewFilterPanel,
+                "title": "Görünüm Filtresi",
+                "toolbar": True,
+                "shortcut": "F6",
+                "visible": False,
+                "category": "view",
+                "command": lambda: self.toggle_panel("view_filter"),
+            },
+            "wind": {
+                "class": ZonesPanel,
+                "title": "Rüzgar Bölgeleri (Zones)",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "analysis",
+                "command": lambda: self.toggle_panel("wind"),
+            },
+            "definitions": {
+                "class": DefinitionPanel,
+                "title": "Tanımlar (Definitions)",
+                "toolbar": True,
+                "shortcut": "CTRL+R",
+                "visible": False,
+                "category": "management",
+                "command": lambda: self.toggle_panel("definitions"),
+            },
+            "project_info": {
+                "class": ProjectInfoPanel,
+                "title": "Proje Bilgileri",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "management",
+                "command": lambda: self.toggle_panel("project_info"),
+            },
+            "project_config": {
+                "class": ProjectConfigPanel,
+                "title": "Proje Yapılandırması",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "management",
+                "command": lambda: self.toggle_panel("project_config"),
+            },
+            "analysis": {
+                "class": AnalysisManagerPanel,
+                "title": "Analiz Yöneticisi",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "management",
+                "command": lambda: self.toggle_panel("analysis"),
+            },
+            "report": {
+                "class": ReportPanel,
+                "title": "Raporlar",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "management",
+                "command": lambda: self.toggle_panel("report"),
+            },
+            "assign_area_load": {
+                "class": LoadAssignPanel,
+                "title": "Alan Yükü Atama",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "loads",
+                "command": lambda: self.toggle_panel("assign_area_load"),
+            },
+            "assign_frame_distributed_load": {
+                "class": FrameLoadPanel,
+                "title": "Çubuk Yayılı Yük Atama",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "loads",
+                "command": lambda: self.toggle_panel("assign_frame_distributed_load"),
+            },
+            "load_display_panel": {
+                "class": LoadDisplayPanel,
+                "title": "Yük Görüntüleme Paneli",
+                "toolbar": True,
+                "shortcut": None,
+                "visible": False,
+                "category": "loads",
+                "command": lambda: self.toggle_panel("load_display_panel"),
+            },
+            "plane_plot": {
+                            "class": PlanePlotPanel,
+                            "title": "Plane Plot (2D)",
+                            "toolbar": False,
+                            "shortcut": None,
+                            "visible": False,
+                            "category": "tools",
+                            "command": lambda: self.toggle_panel("plane_plot"),
+                        },
+            "plane_manager": {
+                            "class": PlaneManagerPanel,
+                            "title": "Plane Manager",
+                            "toolbar": True,
+                            "shortcut": "F12",
+                            "visible": False,
+                            "category": "tools",
+                            "command": lambda: self.toggle_panel("plane_manager"),
+                        },
+
+        }
+
+        # Panel nesnelerini güvenli biçimde başlatıp sakla
+        for name, cfg in registry_def.items():
+            try:
+                cls = cfg["class"]
+                instance = cls()
+                instance.app = self
+                self.panels[name] = {
+                    "instance": instance,
+                    "title": cfg["title"],
+                    "toolbar": cfg["toolbar"],
+                    "shortcut": cfg.get("shortcut"),
+                    "command": cfg["command"],
+                }
+            except Exception:
+                logger.exception("Panel başlatılamadı: %s", name)
+
+    def toggle_panel(self, name: str):
+        """Kayıtlı bir paneli açar veya kapatır."""
+        if name not in self.panels:
+            return
+        panel = self.panels[name]["instance"]
+        if getattr(panel, "visible", False):
+            panel.close()
+        else:
+            if hasattr(panel, "open"):
+                panel.open()
+
+    def _build_toolbar_commands(self) -> dict:
+        """Toolbar butonları için merkezi kayıt komutlarını derler."""
+        cmds = {
+            "menu": lambda: self.main_menu.open() if hasattr(self, "main_menu") and self.main_menu else None,
+            "open": lambda: self.file_dialog.open(mode="open", filters=[".cd4"], title="Proje Aç (.cd4)", initial_dir=os.getcwd(), on_select=self._load_project),
+            "save": lambda: self.file_dialog.open(mode="save", filters=[".cd4"], title="Projeyi Kaydet (.cd4)", initial_dir=os.getcwd(), default_name="model_projesi.cd4", on_select=self._save_project),
+            "draw": self._toggle_draw_mode,
+            "on_unit_change": self.set_unit_system,
+            
+            # Kayıtlı panellerin komutları (Doğrudan PANEL_REGISTRY içindeki command'leri tetikler)
+            "grid": self.panels["grid"]["command"],
+            "inspector": self.panels["inspector"]["command"],
+            "visibility": self.panels["visibility"]["command"],
+            "view_filter": self.panels["view_filter"]["command"],
+            "wind": self.panels["wind"]["command"],
+            "definitions": self.panels["definitions"]["command"],
+            "project_info": self.panels["project_info"]["command"],
+            "project_config": self.panels["project_config"]["command"],
+            "analysis": self.panels["analysis"]["command"],
+            "report": self.panels["report"]["command"],
+            "assign_area_load": self.panels["assign_area_load"]["command"],
+            "assign_frame_distributed_load": self.panels["assign_frame_distributed_load"]["command"],
+            "toggle_load_display_panel": self.panels["load_display_panel"]["command"],
+            "plane_plot": self.panels["plane_plot"]["command"],
+            "plane_manager": self.panels["plane_manager"]["command"],
+
+            # Uygulama seviyesi ek komutlar
+            
+        }
+        return cmds
+
+    def _build_panel_states(self) -> dict:
+        """Toolbar görünürlük ve durum lambaları için state sorguları."""
+        states = {
+            "grid": lambda: self.panels["grid"]["instance"].visible,
+            "inspector": lambda: self.panels["inspector"]["instance"].visible,
+            "visibility": lambda: self.panels["visibility"]["instance"].visible,
+            "view_filter": lambda: self.panels["view_filter"]["instance"].visible,
+            "wind": lambda: self.panels["wind"]["instance"].visible,
+            "definitions": lambda: self.panels["definitions"]["instance"].visible,
+            "project_info": lambda: self.panels["project_info"]["instance"].visible,
+            "project_config": lambda: self.panels["project_config"]["instance"].visible,
+            "analysis": lambda: self.panels["analysis"]["instance"].visible,
+            "report": lambda: self.panels["report"]["instance"].visible,
+            "assign_area_load": lambda: self.panels["assign_area_load"]["instance"].visible,
+            "assign_frame_distributed_load": lambda: self.panels["assign_frame_distributed_load"]["instance"].visible,
+            "load_display_panel": lambda: self.panels["load_display_panel"]["instance"].visible,
+            "plane_plot": lambda: self.panels["plane_plot"]["instance"].visible,
+            "smart_plane": lambda: getattr(self.engine, "active_smart_plane_mode", False) if self.engine else False,
+            "local_axes": lambda: self.engine.scene.show_local_axes if self.engine and self.engine.scene else False,
+            "local_axes_selected_only": lambda: self.engine.scene.show_local_axes_for_selected if self.engine and self.engine.scene else True,
+            "show_loads": lambda: getattr(self.engine.renderer, "show_loads", True) if self.engine and self.engine.renderer else True,
+            "plane_manager": lambda: self.panels["plane_manager"]["instance"].visible,
+        }
+        return states
+
+    # ==================================================================
+    # ENGINE BAŞLATMA VE FRAME DÖNGÜSÜ
+    # ==================================================================
     def _ensure_engine(self):
         if self.initialized:
             return
@@ -185,6 +388,10 @@ class CadApp:
             self.engine.sel_mgr.on_selection_changed = self._on_selection_changed
             self.initialized = True
             logger.info("Engine ilklendirildi.")
+
+            if os.path.exists("test_proje2.cd4"):
+                self._load_project("test_proje2.cd4")
+
         except Exception:
             logger.exception("INIT HATASI")
             self.initialized = True
@@ -198,54 +405,43 @@ class CadApp:
 
         draw_active = bool(self.engine and self.engine.draw_mgr and self.engine.draw_mgr.is_active)
         current_unit = self.current_project.unit_system if self.current_project else None
-        self.toolbar.draw(model_text=self._model_text, draw_active=draw_active, current_unit=current_unit)
-
-
-        self.file_dialog.draw()
-        self.router.process_pending()
         
-        # Rüzgar analizi kuyruk kontrolü
-        self._process_wind_queue()
+        # 1. Toolbar ve Ana Arayüz
+        self.toolbar.draw(model_text=self._model_text, draw_active=draw_active, current_unit=current_unit)
+        self.file_dialog.draw()
 
-        # Sahne kirli (dirty) ise GPU'yu güncelle ve temizle
+        # 2. Bekleyen Event'lerin İşlenmesi
+        self.process_pending()
+        
+        # 3. Rüzgar Analizi Kuyruk Kontrolü
+        # self._process_wind_queue()
+
+        # 4. Sahne Güncelleme (Dirty Kontrolü)
         active_scene = self.engine.scene if self.engine else None
         if active_scene and hasattr(active_scene, 'is_dirty') and active_scene.is_dirty():
             if self.engine.renderer:
                 self.engine.renderer.update_geo(active_scene)
             active_scene.clear_dirty()
             
-        # Sahne çizimi
+        # 5. Sahne Çizimi
         self._render_scene(dt)
 
-        # Tüm aktif/görünür panelleri tek bir metod altında yönetelim
+        # 6. Kayıtlı Panellerin Otomatik Döngüyle Çizilmesi
         self._draw_panels()
-        
 
         self.ui_backend.end_frame()
 
-        # Pick kontrolü
+        # 7. Bekleyen Pick Sonucu Kontrolü
         if self.engine and self.engine.pending_pick_check:
             self.engine.check_pick_result()
 
     def _draw_panels(self):
-        """Sadece görünür (açık) olan panelleri render döngüsüne sokar."""
+        """Tüm kayıtlı panelleri ve menüleri güvenle çizer."""
         self.main_menu.draw()
-        self.visibility_panel.draw()
-        self.view_filter.draw()
-        self.inspector.draw()
-        self.zones_panel.draw()
-        
-        # Yönetim ve Araç Panelleri (BasePanel altındaki visible kontrolü zaten kapalıyken çizimi engeller)
-        self.report_panel.draw()
-        self.definition_panel.draw()
-        self.project_info_panel.draw()
-        self.project_config_panel.draw()
-        self.analysis_panel.draw()
-        self.grid_panel.draw()
-        self.load_assign_panel.draw()
-        self.frame_load_panel.draw()
-        self.load_display_panel.draw()
-        self.polygon_edit_panel.draw()
+        for p_info in self.panels.values():
+            panel = p_info["instance"]
+            if hasattr(panel, "draw"):
+                panel.draw()
 
     def _render_scene(self, dt):
         w, h = self.window.fb_width, self.window.fb_height
@@ -259,12 +455,10 @@ class CadApp:
             self.engine.renderer.set_dt(dt)
             self.engine.renderer.render(self.engine.cam)
             
-            # Snap ve Hover göstergeleri (Yedek koddan geri eklendi)
             self._draw_snap_indicator(w, h)
 
             if self.engine.draw_mgr.is_active:
-                mvp = (self.engine.cam.get_projection_matrix()
-                       @ self.engine.cam.get_view_matrix())
+                mvp = (self.engine.cam.get_projection_matrix() @ self.engine.cam.get_view_matrix())
                 self.engine.draw_mgr.render_preview(mvp, self.engine.preview_s)
 
             if self.engine.active_smart_plane_mode:
@@ -280,63 +474,416 @@ class CadApp:
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-    def _draw_grid_labels(self):
-        """Grid etiketlerini 2D overlay olarak çizer."""
-        if not self.engine or not self.engine.renderer:
+    # ==================================================================
+    # EVENT YÖNETİMİ & EVENTROUTER ENTEGRASYONU
+    # ==================================================================
+    def _mods_to_dict(self, glfw_mods: int) -> dict:
+        return {
+            "shift": bool(glfw_mods & glfw.MOD_SHIFT),
+            "ctrl":  bool(glfw_mods & glfw.MOD_CONTROL),
+            "alt":   bool(glfw_mods & glfw.MOD_ALT),
+        }
+
+    def _read_mods_from_glfw(self) -> dict:
+        w = self.window.window
+        mods = 0
+        if (glfw.get_key(w, glfw.KEY_LEFT_SHIFT) == glfw.PRESS or glfw.get_key(w, glfw.KEY_RIGHT_SHIFT) == glfw.PRESS):
+            mods |= glfw.MOD_SHIFT
+        if (glfw.get_key(w, glfw.KEY_LEFT_CONTROL) == glfw.PRESS or glfw.get_key(w, glfw.KEY_RIGHT_CONTROL) == glfw.PRESS):
+            mods |= glfw.MOD_CONTROL
+        if (glfw.get_key(w, glfw.KEY_LEFT_ALT) == glfw.PRESS or glfw.get_key(w, glfw.KEY_RIGHT_ALT) == glfw.PRESS):
+            mods |= glfw.MOD_ALT
+        return self._mods_to_dict(mods)
+
+    def _sync_modifiers(self):
+        eng = self.engine
+        if eng is None or eng.input is None:
             return
-        if not getattr(self.engine.renderer.show, 'grid', False):
+        eng.input.update_modifiers(self._read_mods_from_glfw())
+
+    def _mouse_over_ui(self) -> bool:
+        try:
+            import imgui
+            return imgui.get_io().want_capture_mouse
+        except Exception:
+            return False
+
+    def _keyboard_captured_by_ui(self) -> bool:
+        try:
+            import imgui
+            return imgui.get_io().want_capture_keyboard
+        except Exception:
+            return False
+
+    def on_char(self, codepoint):
+        try:
+            import imgui
+            io = imgui.get_io()
+            io.add_input_character(codepoint)
+        except Exception:
+            pass
+        return True
+
+    def on_key_down(self, key, scancode, mods):
+        try:
+            import imgui
+            io = imgui.get_io()
+            io.keys_down[key] = True
+        except Exception:
+            pass
+        self._pending.append(("key_down", (key, scancode, mods)))
+        return True
+
+    def on_key_up(self, key, scancode):
+        try:
+            import imgui
+            io = imgui.get_io()
+            io.keys_down[key] = False
+        except Exception:
+            pass
+        self._pending.append(("key_up", (key, scancode)))
+        return True
+
+    def on_mouse_button(self, button, action, mods):
+        self._pending.append(("button", (button, action, mods)))
+        return True
+
+    def on_mouse_move(self, x, y):
+        self._pending.append(("move", (x, y)))
+        return True
+
+    def on_scroll(self, xoffset, yoffset):
+        try:
+            import imgui
+            io = imgui.get_io()
+            io.mouse_wheel += yoffset
+        except Exception:
+            pass
+        self._pending.append(("scroll", (xoffset, yoffset)))
+        return True
+
+    def on_window_focus(self, focused: bool):
+        if not focused:
+            eng = self.engine
+            if eng and eng.input:
+                eng.input.clear_modifiers()
+
+    def process_pending(self):
+        if not self._pending:
+            return
+        events = self._pending
+        self._pending = []
+        for kind, args in events:
+            try:
+                if kind == "move":
+                    self._handle_move(*args)
+                elif kind == "button":
+                    self._handle_button(*args)
+                elif kind == "scroll":
+                    self._handle_scroll(*args)
+                elif kind == "key_down":
+                    self._handle_key_down(*args)
+                elif kind == "key_up":
+                    self._handle_key_up(*args)
+            except Exception:
+                logger.exception("Event işleme hatası: %s %s", kind, args)
+
+    def _sync_from_glfw_mods(self, mods: int):
+        eng = self.engine
+        if eng and eng.input:
+            eng.input.update_modifiers(self._mods_to_dict(mods))
+
+    def _handle_button(self, button, action, mods):
+        eng = self.engine
+        if eng is None:
+            return
+        self._sync_from_glfw_mods(mods)
+        if self._mouse_over_ui():
+            return
+
+        x, y = self.window.get_mouse_pos()
+        if button == glfw.MOUSE_BUTTON_LEFT:
+            kivy_btn, name = MOUSE_BUTTON_LEFT, "left"
+        elif button == glfw.MOUSE_BUTTON_RIGHT:
+            kivy_btn, name = MOUSE_BUTTON_RIGHT, "right"
+        elif button == glfw.MOUSE_BUTTON_MIDDLE:
+            kivy_btn, name = MOUSE_BUTTON_MIDDLE, "middle"
+        else:
+            return
+
+        if eng.input:
+            eng.input.update_mouse_position(x, y)
+            eng.input.set_button_state(kivy_btn, action == glfw.PRESS)
+
+        if action == glfw.PRESS:
+            self._mouse_pressed.add(name)
+            self._on_down(name, x, y)
+        elif action == glfw.RELEASE:
+            self._mouse_pressed.discard(name)
+            self._on_up(name, x, y)
+
+    def _on_down(self, name, x, y):
+        eng = self.engine
+        if eng.active_smart_plane_mode:
+            eng.smart_analyzer.handle_mouse_click((x, y))
+            return
+
+        if name == "middle":
+            self._middle_down(x, y)
+        elif name == "right":
+            self._right_down()
+        elif name == "left":
+            self._left_down(x, y)
+
+    def _on_up(self, name, x, y):
+        eng = self.engine
+        if name == "left":
+            self._left_up(x, y)
+        elif name == "right":
+            eng.pending_pick_check = False
+        elif name == "middle":
+            eng.pending_pick_check = False
+            eng.clear_hover()
+
+    def _left_down(self, x, y):
+        eng = self.engine
+        if eng.draw_mgr.is_active:
+            eng.draw_mgr.on_mouse_click(x, y)
+            return
+        if eng.input.is_shift_pressed():
+            return
+        eng.marquee.start_selection(x, y)
+        eng.update_world_pos(x, y)
+        eng.start_hover_pick(int(x), int(y))
+
+    def _left_up(self, x, y):
+        eng = self.engine
+        if eng.draw_mgr.is_active or eng.input.is_shift_pressed():
+            return
+        if eng.marquee.is_active:
+            was_drag = eng.marquee.end_selection()
+            if not was_drag:
+                ctrl = eng.input.is_ctrl_pressed()
+                eng.handle_pick_from_hover(ctrl)
+
+    def _right_down(self):
+        eng = self.engine
+        element = eng.renderer.get_element_from_id(eng.hover_id) if eng.hover_id > 0 else None
+        if element:
+            self.open_inspector(element)
+        else:
+            self.inspector.close()
+
+    def _middle_down(self, x, y):
+        eng = self.engine
+        eng.pending_pick_check = False
+        eng.clear_hover()
+
+        now = glfw.get_time() if hasattr(glfw, "get_time") else threading.time()
+        import time
+        now = time.time()
+        if now - self._last_middle_click_time < self.MIDDLE_DOUBLE_CLICK_INTERVAL:
+            self._last_middle_click_time = 0.0
+            eng.fit_view()
+            return
+        self._last_middle_click_time = now
+        self._middle_press_pos = (x, y)
+        self._middle_dragged = False
+
+    def _handle_move(self, x, y):
+        eng = self.engine
+        if eng is None or self._mouse_over_ui():
+            return
+
+        if eng.input:
+            eng.input.update_mouse_position(x, y)
+        dx = eng.input.mouse_delta.x if eng.input else 0
+        dy = eng.input.mouse_delta.y if eng.input else 0
+
+        self._sync_modifiers()
+
+        if "middle" in self._mouse_pressed:
+            self._middle_move(dx, dy, x, y)
+            return
+        if "left" in self._mouse_pressed and eng.input.is_shift_pressed():
+            eng.cam.orbit(dx, dy)
+            if eng.hover_id != 0:
+                eng.clear_hover()
+            return
+        if eng.draw_mgr.is_active:
+            eng.draw_mgr.on_mouse_move(x, y)
+            return
+        if "right" in self._mouse_pressed:
+            return
+        if eng.marquee and eng.marquee.is_active:
+            eng.marquee.update_selection(x, y)
+            return
+
+        eng.update_world_pos(x, y)
+        eng.start_hover_pick(int(x), int(y))
+
+        if eng.active_smart_plane_mode:
+            view = np.array(eng.cam.get_view_matrix(), dtype=float)
+            proj = np.array(eng.cam.get_projection_matrix(), dtype=float)
+            eng.smart_analyzer.handle_mouse_move((x, y), view, proj, (self.window.fb_width, self.window.fb_height))
+
+    def _middle_move(self, dx, dy, x, y):
+        eng = self.engine
+        if not self._middle_dragged:
+            px, py = self._middle_press_pos
+            if ((x - px) ** 2 + (y - py) ** 2) ** 0.5 > self.MIDDLE_DOUBLE_CLICK_MAX_DRAG:
+                self._middle_dragged = True
+                self._last_middle_click_time = 0.0
+
+        if eng.input.is_ctrl_pressed():
+            eng.cam.orbit(dx, dy)
+        else:
+            eng.cam.pan(dx, dy)
+        eng.pending_pick_check = False
+        eng.clear_hover()
+
+    def _handle_scroll(self, xoffset, yoffset):
+        eng = self.engine
+        if eng is None or self._mouse_over_ui():
+            return
+        if yoffset > 0:
+            eng.cam.zoom(1.0)
+        elif yoffset < 0:
+            eng.cam.zoom(-1.0)
+
+    def _handle_key_down(self, key, scancode, mods):
+        eng = self.engine
+        if eng is None:
+            return
+        self._sync_from_glfw_mods(mods)
+
+        if self._keyboard_captured_by_ui():
+            if key == glfw.KEY_ESCAPE:
+                self._on_escape()
+            return
+
+        if eng.input:
+            eng.input.handle_key_down(key)
+        if eng.active_smart_plane_mode and eng.smart_analyzer.handle_key_press(key):
+            return
+
+        self._dispatch_key(key, eng)
+
+    def _dispatch_key(self, key, eng):
+        if key == glfw.KEY_ESCAPE:
+            self._on_escape()
             return
         
-        grid = self.engine.renderer.grid
-        if grid is None:
+        if key == glfw.KEY_F3:
+            if eng.renderer:
+                eng.renderer.toggle_render_mode()
             return
-        
-        cam = self.engine.cam
-        if cam is None:
+        if key == glfw.KEY_F4:
+            eng.renderer.set_node_point_size(1.0); return
+        if key == glfw.KEY_F5:
+            eng.renderer.set_node_point_size(8.0); return
+        if key == glfw.KEY_F6:
+            self.toggle_panel("view_filter"); return
+        if key == glfw.KEY_F7:
+            eng.apply_plane_filter(None); return
+        if key == glfw.KEY_F8:
+            eng.cam.set_view_preset("front"); return
+        if key == glfw.KEY_F9:
+            eng.cam.set_view_preset("top"); return
+        if key == glfw.KEY_F10:
+            eng.cam.set_view_preset("right"); return
+        if key == glfw.KEY_F11:
+            if self._import_s2k():
+                return
+        if key == glfw.KEY_F12:
+            self.toggle_panel("plane_manager")
             return
-        
-        # 3D grid ile aynı mvp (model_mat dahil)
-        mvp = (cam.get_projection_matrix()
-            * cam.get_view_matrix()
-            * self.engine.renderer.model_mat)
-        
-        w, h = self.window.fb_width, self.window.fb_height
-        self.engine.renderer.grid_labels.draw(grid, mvp, w, h)
+        if key == glfw.KEY_D:
+            self._toggle_draw_mode(); return
+        if key == glfw.KEY_C and eng.draw_mgr.is_active:
+            eng.draw_mgr.close(); return
+        if key == glfw.KEY_DELETE:
+            deleted, rejected = eng.sel_mgr.delete_selected()
+            logger.info("Silindi: %s, Reddedildi: %s", deleted, rejected)
+            return
+        if key == glfw.KEY_H and not eng.input.is_ctrl_pressed():
+            self._toggle_selected_visibility(); return
+        if key == glfw.KEY_L and not eng.input.is_ctrl_pressed():
+            self._toggle_loads_visibility(); return
+        if key == glfw.KEY_P and not eng.input.is_ctrl_pressed():
+            self.print_(); return
+
+        # Ctrl Kombinasyonları (Registry destekli kısayollar)
+        if eng.input.is_ctrl_pressed():
+            if key == glfw.KEY_Z:
+                eng.sel_mgr.undo(); return
+            if key == glfw.KEY_Y:
+                eng.sel_mgr.redo(); return
+            if key == glfw.KEY_N:
+                self.open_new_element_dialog("node", defaults={"label": "N", "x": 0.0, "y": 0.0, "z": 0.0}, repeat=True) if hasattr(self, "open_new_element_dialog") else None
+                return
+            if key == glfw.KEY_F:
+                return
+            if key == glfw.KEY_P:
+                self.toggle_panel("inspector"); return
+            if key == glfw.KEY_R:
+                self.toggle_panel("definitions"); return
+            if key == glfw.KEY_G:
+                self.toggle_panel("grid"); return
+            if key == glfw.KEY_S:
+                if eng.input.is_shift_pressed():
+                    self._save_as_project()
+                else:
+                    self._quick_save()
+                return
+            if key == glfw.KEY_O:
+                self._on_toolbar_open()
+                return
+
+    def _handle_key_up(self, key, scancode):
+        eng = self.engine
+        if eng is None:
+            return
+        if eng.input:
+            eng.input.handle_key_up(key)
+        self._sync_modifiers()
+
+    def _on_escape(self):
+        eng = self.engine
+        if eng is None:
+            return
+        if eng.draw_mgr.is_active:
+            eng.draw_mgr.cancel()
+            return
+        if eng.marquee and eng.marquee.is_active:
+            eng.marquee.cancel_selection()
+            eng.clear_hover()
+            return
+        eng.pending_pick_check = False
+        eng.clear_hover()
+        eng.sel_mgr.clear()
+
+    # ==================================================================
+    # YARDIMCI METOTLAR VE İŞLEM SERVİSLERİ
+    # ==================================================================
+    def _toggle_draw_mode(self):
+        if self.engine and self.engine.draw_mgr:
+            if self.engine.draw_mgr.is_active:
+                self.engine.draw_mgr.close()
+            else:
+                self.engine.draw_mgr.start()
 
     def _draw_snap_indicator(self, w, h):
         snap = self.engine.snap
-        if snap is None:
+        if snap is None or not getattr(self.engine, "hover_visual_enabled", True):
             return
-        if not getattr(self.engine, "hover_visual_enabled", True):
-            return
-
-        inp = self.engine.input
-        mx = inp.mouse_pos.x
-        my = inp.mouse_pos.y
-
-        if self.engine.draw_mgr.is_active:
-            snap.draw_snap(mx, my, w, h, active=True)
-            return
-
-        if self.engine.hover_id > 0:
+        mx, my = self.engine.input.mouse_pos.x, self.engine.input.mouse_pos.y
+        if self.engine.draw_mgr.is_active or self.engine.hover_id > 0:
             snap.draw_snap(mx, my, w, h, active=True)
 
     def _on_resize(self, w, h):
         if self.engine:
             self.engine.resize(max(1, w), max(1, h))
-
-    def _on_toolbar_open(self):
-        self.file_dialog.open(
-            mode="open", filters=[".cd4"], title="Proje Aç (.cd4)",
-            initial_dir=os.getcwd(), on_select=self._load_project
-        )
-
-    def _on_toolbar_save(self):
-        self.file_dialog.open(
-            mode="save", filters=[".cd4"], title="Projeyi Kaydet (.cd4)",
-            initial_dir=os.getcwd(), default_name="model_projesi.cd4",
-            on_select=self._save_project
-        )
 
     def _load_project(self, path: str):
         try:
@@ -345,130 +892,62 @@ class CadApp:
             if self.engine:
                 self.engine.fit_view()
             self._model_text = f"MODEL: {os.path.basename(path)}"
+            self.current_file_path = path
             logger.info("[File] Proje yüklendi: %s", path)
         except Exception:
             logger.exception("Proje yükleme hatası")
 
-    
+    def set_unit_system(self, unit_system: UnitSystem):
+        if self.current_project:
+            self.current_project.unit_system = unit_system
+        logger.info(f"[Units] Birim sistemi değiştirildi: {unit_system.name}")
+        if self.engine and self.engine.grid:
+            self.engine.grid.rebuild_all()
 
-    def _on_toolbar_visibility(self):
-        if self.visibility_panel.visible:
-            self.visibility_panel.close()
-        else:
-            scene = self.engine.scene if self.engine else (self.current_project.scene if self.current_project else None)
-            self.visibility_panel.open(scene)
-
-    def _on_toolbar_wind(self):
-        if self.zones_panel.visible:
-            self.zones_panel.close()
-        else:
-            scene = self.engine.scene if self.engine else (self.current_project.scene if self.current_project else None)
-            # Rüzgar analiz yöneticisini (WindAnalysisResult) panele bağlıyoruz ki ağlamasın :)
-            wind_analysis_data = self.current_project.analysis.wind
-            self.zones_panel.open(scene=scene, wind_analysis=wind_analysis_data)
-
-    def _toggle_draw_mode(self):
-        if self.engine and self.engine.draw_mgr:
-            if self.engine.draw_mgr.is_active:
-                self.engine.draw_mgr.close()
-            else:
-                self.engine.draw_mgr.start()
-
-    def _toggle_local_axes(self):
-        if not self.engine or not self.engine.renderer:
-            return
-        self.engine.renderer.toggle_local_axes()
-
-    def _toggle_local_axes_selected_only(self):
-        if not self.engine or not self.engine.renderer:
-            return
-        self.engine.renderer.toggle_local_axes_selected_only()
-
-    def _on_main_menu_action(self, key: str):
-        """Ana menüden bir öğe seçildi."""
-        logger.info("[Menu] Aksiyon: %s", key)
-
-        dispatch = {
-            "inspector":    self.inspector.open_element,
-            # "analysis":     self._menu_open_analysis,
-            "new_project":  self._menu_new_project,
-            "open_project": self._on_toolbar_open,
-            "save_project": self._on_toolbar_save,
-            "import_s2k":   self._menu_import_s2k,
-            "visibility":   self._on_toolbar_visibility,
-        }
-        fn = dispatch.get(key)
-        if callable(fn):
-            fn()
-
-    def _menu_import_s2k(self):
-        """S2K import — ImGui dosya seçici ile."""
-        self.file_dialog.open(
-            mode="open",
-            filters=[".s2k", ".S2K", ".$2k"],
-            title="S2K İçe Aktar",
-            initial_dir=os.getcwd(),
-            on_select=self._import_s2k,
-        )
-
-    def _menu_new_project(self):
-        """Yepyeni boş bir proje başlatır."""
-        self.set_project(Project())
-        self._model_text = "MODEL: YENİ SAHNE"
-        logger.info("[Project] Yeni proje oluşturuldu.")
-
-    def _import_s2k(self, path, merge_to_current=False):
-        """
-        Seçilen S2K dosyasını yükler. 
-        merge_to_current=True ise mevcut projeye ekler, False ise yeni proje başlatır.
-        """
-        try:
-            
-            logger.info("[S2K] Yükleniyor: %s (Merge: %s)", path, merge_to_current)
-
-            loader = S2KLoader(path)
-            if merge_to_current and self.current_project and self.current_project.scene:
-                # Mevcut projeye yükleme yapmak için geçici bir proje açıp loader'a veriyoruz
-                temp_project = Project()
-                loaded_project = loader.load(temp_project)
+    def set_project(self, project: Project):
+        self.current_project = project
+        if self.engine:
+            self.engine.set_scene(project.scene)
+            if hasattr(project, "grid") and project.grid and self.engine.grid:
                 
-                if loaded_project and loaded_project.scene:
-                    current_scene = self.current_project.scene
-                    
-                    # Elemanları mevcut sahneye aktar
-                    for n_id, node in loaded_project.scene.nodes.items():
-                        current_scene.nodes[n_id] = node
-                    for f_id, frame in loaded_project.scene.frames.items():
-                        current_scene.frames[f_id] = frame
-                    for a_id, area in loaded_project.scene.areas.items():
-                        current_scene.areas[a_id] = area
-                        
-                    if self.engine:
-                        self.engine.renderer.update_geo(current_scene)
-                    logger.info("[S2K] Mevcut projeye elemanlar başarıyla eklendi.")
-            else:
-                # Yepyeni proje olarak yükle (S2KLoader zaten Project döndürüyor)
-                loaded_project = loader.load()
-                if loaded_project is None or not loaded_project.scene:
-                    logger.warning("[S2K] Yüklenen proje boş")
-                    return
+                g_conf = project.grid
+                
+                self.engine.grid.set_coords(g_conf.x_coords, g_conf.y_coords, g_conf.z_coords)
+                self.engine.grid.set_origin(g_conf.origin_x, g_conf.origin_y, g_conf.origin_z)
+                for plane_name, vis in g_conf.planes_visibility.items():
+                    try:
+                        self.engine.grid.set_plane(GridPlane[plane_name], visible=vis)
+                    except KeyError:
+                        pass
+                center, size = self.engine.grid.get_bounds()
+                self.engine.cam.update_bounds(center, size)
+                self.engine.cam.focus_on_model()
+        self.inspector.scene = project.scene
+        self.visibility_panel.scene = project.scene
 
-                # Sahne toplam eleman kontrolü
-                scene = loaded_project.scene
-                total = sum(len(getattr(scene, coll, {}) or {})
-                            for coll in ("nodes", "frames", "areas", "links", "polygons"))
-                logger.info("[S2K] Proje yüklendi. Toplam eleman: %d", total)
-
-                if total == 0:
-                    logger.warning("[S2K] Dosya boş, sahne değiştirilmedi")
-                    return
-
-                # Merkezi set_project metodu ile tüm panelleri ve engine'i besle
-                self.set_project(loaded_project)
+    def _save_project(self, path: str):
+        try:
+            if self.current_project:
+                self.current_project.save(path)
+                self.current_file_path = path
                 self._model_text = f"MODEL: {os.path.basename(path)}"
-
+                logger.info("[File] Proje kaydedildi: %s", path)
         except Exception:
-            logger.exception("[S2K] Yükleme/İçe aktarma hatası: %s", path)
+            logger.exception("Proje kaydetme hatası")
+
+    def _quick_save(self):
+        if not self.current_file_path:
+            self._on_toolbar_save()
+        else:
+            self._save_project(self.current_file_path)
+
+    def _save_as_project(self):
+        self._on_toolbar_save()
+
+    def _get_selected_frames(self):
+        if not self.engine or not self.engine.scene:
+            return []
+        return [e for e in self.engine.scene.get_selected() if isinstance(e, Frame)]
 
     def _on_selection_changed(self, selected_elements):
         if self.engine and self.engine.renderer:
@@ -482,7 +961,6 @@ class CadApp:
         else:
             self.inspector.clear()
 
-        # Poly edit panel açıksa, seçili poly'yi güncelle
         if self.polygon_edit_panel.visible:
             polygons = [e for e in selected_elements if isinstance(e, Polygon)]
             if polygons:
@@ -491,756 +969,33 @@ class CadApp:
     def _on_hover_changed(self, element):
         pass
 
-    def _on_inspector_apply(self, target, values):
-        
-        if isinstance(target, list):
-            for el in target:
-                values_to_element(el, values)
-        else:
-            values_to_element(target, values)
-        if self.engine and self.engine.scene:
-            self.engine.renderer.update_geo(self.engine.scene)
-
-    def _on_visibility_applied(self):
-        if self.engine and self.engine.scene:
-            self.engine.renderer.update_geo(self.engine.scene)
-
-    def _on_view_filter_apply(self, mode, min_s, max_s):
-        """
-        mode: "off" | "range" | "before" | "after"
-        min_s, max_s: kullanıcı skalerleri (mm)
-        """
-        if not self.engine:
-            return
-
-        cam = self.engine.cam
-        grid = self.engine.grid
-
-        if mode == "off":
-            cam.clear_section_filter()
-        else:
-            # Aktif UCS: user plane varsa ondan, yoksa global XY'den
-            normal, origin = self._get_active_ucs_plane()
-            if mode == "range":
-                cam.set_section_filter(normal, origin, min_s, max_s)
-            elif mode == "before":
-                cam.set_section_filter(normal, origin, -1e30, max_s)
-            elif mode == "after":
-                cam.set_section_filter(normal, origin, min_s, 1e30)
-
-        # Sahneyi yeniden filtrele
-        self.engine.renderer.apply_plane_filter(cam)
-
-
-    def _get_active_ucs_plane(self):
-        """Aktif UCS'nin (normal, origin) döner."""
-        grid = self.engine.grid
-        if grid.active_user_plane:
-            pdef = grid.get_user_plane(grid.active_user_plane)
-            if pdef:
-                return pdef.normal, pdef.origin
-        # Varsayılan: global XY
-        return (0.0, 0.0, 1.0), (grid.origin.x, grid.origin.y, grid.origin.z)
-    def _on_run_wind_analysis(self):
-        pass
-
-    def _on_toolbar_menu(self):
-        self.main_menu.open()
-        logger.info("[Toolbar] Menü açılıyor")
-
-    def open_grid(self):
-        """Tanımlar sekmesini aç."""
-        self.grid_panel.open(self.engine.renderer.grid, self.engine.cam)
-
-    def open_inspector(self, element= None):
-        """Seçilen eleman için inspector panelini aç."""
-        # if element is None:
-        #     return
-        self.inspector.open_element(element)
-
-    def open_definitions(self):
-        """Tanımlar sekmesini aç."""
-        self.definition_panel.open()
-
-    def toggle_view_filter_panel(self):
-        """View filter panelini aç/kapa."""
-        if self.view_filter.visible:
-            self.view_filter.close()
-        else:
-            self.view_filter.open(self.engine.cam if self.engine else None)
-    def _on_run_wind_analysis(self):
-        """Rüzgar analizi asenkron tetikleyici."""
-        
-
-        logger.info("[Zones] Rüzgar analizi başlatılıyor...")
-        # İsteğe bağlı bir yüklenme durumu veya log gösterilebilir
-        
-        def _async():
-            try:
-                scene = self.engine.scene if self.engine else self.current_project.scene
-                if not scene:
-                    self._wind_queue.put(("error", "Analiz için aktif sahne bulunamadı."))
-                    return
-                    
-                zones = WindSceneAdapter.run_wind_analysis_and_update_scene(
-                    scene=scene,
-                    w_dir= [1,0,0],      # Varsayılan rüzgar yönü veya ayarlardan alınabilir
-                    engine_kwargs={},
-                    
-                )
-                self._wind_queue.put(("done", len(zones)))
-            except Exception as e:
-                logger.error(f"Rüzgar analizi hatası: {e}", exc_info=True)
-                self._wind_queue.put(("error", str(e)))
-
-        threading.Thread(target=_async, daemon=True).start()
-
-    def _process_wind_queue(self):
-        """Thread'den gelen rüzgar analizi sonuçlarını ana thread'de (frame içinde) işle."""
-        
-        try:
-            while True:
-                msg_type, data = self._wind_queue.get_nowait()
-                if msg_type == "done":
-                    zone_count = data
-                    logger.info(f"{zone_count} adet rüzgar bölgesi oluşturuldu")
-                    if self.engine and self.engine.renderer:
-                        scene = self.engine.scene
-                        if scene:
-                            self.engine.renderer.update_geo(scene)
-                            # Paneli güncel sahne ile tazele
-                            self.zones_panel.open(scene)
-                elif msg_type == "error":
-                    logger.error(f"Rüzgar Hesabı Hatası: {data}")
-                self._wind_queue.task_done()
-        except queue.Empty:
-            pass
-
-    def on_select_wind_direction(self, w_dir: tuple):
-        """
-        Kullanıcı rüzgar yönleri panelinden bir yön seçtiğinde tetiklenir.
-        O yöne ait sonuçları sahneye yansıtır, yoksa analizi çalıştırır.
-        """
-        if not self.current_project or not self.engine:
-            return
-
-        # 1. Projedeki rüzgar analiz sonuçlarında bu yön var mı kontrol et
-        wind_res = self.current_project.analysis.wind
-        wind_res.active_direction = w_dir
-        
-        dir_key = str(w_dir)
-        old_zone_ids = [
-            pid for pid, poly in self.current_project.scene.polygons.items() 
-            if getattr(poly, "poly_type", None) == PolygonType.ZONE or poly.label.startswith("ZONE_")
-        ]
-        for pid in old_zone_ids:
-            poly = self.current_project.scene.polygons.pop(pid, None)
-            if poly:
-                for node in poly.nodes:
-                    if node.label.startswith("W_NODE_") and node.unique_id in self.current_project.scene.nodes:
-                        self.current_project.scene.nodes.pop(node.unique_id, None)
-
-        # Seçilen yön için adapter üzerinden analizi çalıştır ve sahneye/projelere işle
-        WindSceneAdapter.run_wind_analysis_and_update_scene(
-            scene=self.current_project.scene,
-            w_dir=w_dir
-        )
-        
-        # Ekranı güncellemeyi tetikle
-        self.engine.set_scene(self.current_project.scene)
-
-    # Grid ve kamera bağlantısı
-    def _on_grid_change(self):
-        """Grid değişince SADECE grid sistemini ve kamerayı yenile (sahneyi rahat bırak)."""
-        if self.engine and self.engine.grid:
-            self.engine.grid.rebuild_all()
-            if self.engine.cam and self.grid_panel.grid:
-                center, size = self.grid_panel.grid.get_bounds()
-                self.engine.cam.update_bounds(center, size)
-
-    def set_unit_system(self, unit_system: UnitSystem):
-        """Global birim sistemini değiştirir ve sistemi günceller."""
-        if self.current_project:
-            self.current_project.unit_system = unit_system
-        
-        logger.info(f"[Units] Birim sistemi değiştirildi: {unit_system.name} ({unit_system.force_unit}, {unit_system.length_unit})")
-        
-        # Grid spacing veya birim-bağımlı arayüz elemanları güncellenebilir
-        if self.engine and self.engine.grid:
-            # Örneğin birim metre tabanlıdan mm tabanlıya geçerse grid boyutları ölçeklenebilir
-            self.engine.grid.rebuild_all()
-
-    def set_project(self, project: Project):
-        """Proje nesnesini sisteme uygular, verileri panellere ve grid sistemine dağıtır."""
-        self.current_project = project
-        if self.engine:
-            self.engine.set_scene(project.scene)
-            if hasattr(project, "grid") and project.grid and self.engine.grid:
-                g_conf = project.grid
-                self.engine.grid.set_coords(g_conf.x_coords, g_conf.y_coords, g_conf.z_coords)
-                self.engine.grid.set_origin(g_conf.origin_x, g_conf.origin_y, g_conf.origin_z)
-                for plane_name, vis in g_conf.planes_visibility.items():
-                    try:
-                        self.engine.grid.set_plane(GridPlane[plane_name], visible=vis)
-                    except KeyError:
-                        pass
-                center, size = self.engine.grid.get_bounds()
-                self.engine.cam.update_bounds(center, size)
-                self.engine.cam.focus_on_model()
-        self.inspector.scene = project.scene
-        self.visibility_panel.scene = project.scene
-        if self.view_filter:
-            self.view_filter.ucs_name = "Global XY"
-
-    def _save_project(self, path: str):
-        try:
-            if self.engine and self.engine.scene:
-                self.current_project.scene = self.engine.scene
-                if hasattr(self.engine.scene, "def_mgr"):
-                    self.current_project.definitions = self.engine.scene.def_mgr
-                
-                if self.engine.grid and hasattr(self.current_project, "grid") and self.current_project.grid:
-                    g = self.engine.grid
-                    g_conf = self.current_project.grid
-                    g_conf.x_coords = g.x_coords
-                    g_conf.y_coords = g.y_coords
-                    g_conf.z_coords = g.z_coords
-                    g_conf.origin_x = g.origin.x
-                    g_conf.origin_y = g.origin.y
-                    g_conf.origin_z = g.origin.z
-                    g_conf.planes_visibility = {plane.name: p["visible"] for plane, p in g.planes.items()}
-            
-            self.current_project.save(path)
-            self.current_file_path = path  # <-- Aktif dosya yolunu sakla
-            self._model_text = f"MODEL: {os.path.basename(path)}"
-            logger.info("[File] Proje kaydedildi: %s", path)
-        except Exception:
-            logger.exception("Proje kaydetme hatası")
-
-    def _quick_save(self):
-        if not self.current_file_path:
-            self._on_toolbar_save()  # Yol yoksa dialog aç
-        else:
-            self._save_project(self.current_file_path)  # Üzerine yaz (overwrite)
-
-    def _save_as_project(self):
-        self._on_toolbar_save()  # Her zaman dialog aç (Save As)
-
-    def set_work_plane_view(self, plane_def):
-        """Work plane'i aktifleştir + kamerayı ona dik getir."""
-        if not self.engine:
-            return
-
-        
-        # Aktif plane'i grid'e işle
-        self.engine.grid.set_active_user_plane(plane_def.name)
-
-        # Kamera
-        origin, u, v, n = plane_def.get_uv_frame()
-        fit_r = max(plane_def.count_u * plane_def.spacing_u,
-                    plane_def.count_v * plane_def.spacing_v) * 1.2
-        self.engine.cam.look_at_plane(origin, u, v, n, fit_radius=fit_r)
-
-        # Grid'i yenile (aktif user plane çizilsin)
-        self.engine.grid.rebuild_all()
-
-        if self.view_filter.visible:
-            self.view_filter.ucs_name = plane_def.name
-
-    def _on_work_plane_activate(self, pdef):
-        self.set_work_plane_view(pdef)
-        if self.view_filter and self.view_filter.visible:
-            self.view_filter.ucs_name = pdef.name
-            # Section filter aktifse yeniden uygula — yeni UCS'ye göre
-            if self.view_filter._section_mode != "off":
-                self._on_view_filter_apply(
-                    self.view_filter._section_mode,
-                    self.view_filter._section_min,
-                    self.view_filter._section_max,
-                )
-
-
-    def create_work_plane_from_selection(self):
-        """Seçili frame'den eğik work plane oluştur, kamera oraya hizalansın."""
-        if not self.engine or not self.engine.scene:
-            return False
-
-        selected = self.engine.scene.get_selected()
-        if not selected:
-            logger.info("[WorkPlane] Seçili eleman yok.")
-            return False
-
-        # Sadece frame kabul et (şimdilik)
-        
-        frames = [e for e in selected if isinstance(e, Frame)]
-        if not frames:
-            logger.info("[WorkPlane] Seçili frame yok.")
-            return False
-
-        frame = frames[0]
-        return self._build_work_plane_from_frame(frame)
-
-
-    def _build_work_plane_from_frame(self, frame):
-        """Verilen frame'den GridPlaneDef üret, ekle, aktifleştir, kamerayı hizala."""
-       
-
-        origin = frame.get_midpoint()
-        u_axis = glm.vec3(*frame.get_axis())
-
-        # Normal seçimi: U dünya Z'sine çok yakınsa (dikey çubuk) global Y kullan,
-        # değilse global Z kullan (yatay/eğik çubuk)
-        world_z = glm.vec3(0.0, 0.0, 1.0)
-        world_x = glm.vec3(1.0, 0.0, 0.0)
-
-        if abs(glm.dot(u_axis, world_z)) > 0.95:
-            # Dikey çubuk → normal olarak dünya Y'yi kullan
-            ref = glm.vec3(0.0, 1.0, 0.0)
-        else:
-            # Yatay/eğik çubuk → normal olarak dünya Z'yi kullan
-            ref = world_z
-
-        # Normal = U'ya dik, ref'e en yakın yön
-        normal = ref - u_axis * glm.dot(ref, u_axis)
-        if glm.length(normal) < 1e-6:
-            # Dejenere — yedek
-            normal = world_x - u_axis * glm.dot(world_x, u_axis)
-        normal = glm.normalize(normal)
-
-        # V ekseni = cross(normal, U) — Frame'in "yukarı" ekseni (grid'in V yönü)
-        v_axis = glm.cross(normal, u_axis)
-
-        # Grid boyutu frame uzunluğuna göre
-        length = frame.get_length() or 1000.0
-        spacing = max(100.0, length / 10.0)  # en az 100 mm, kabaca 10 hücre
-
-        pdef = GridPlaneDef(
-            name=f"FRAME-{frame.element_id}",
-            origin=(origin[0], origin[1], origin[2]),
-            normal=(normal.x, normal.y, normal.z),
-            u_axis=(u_axis.x, u_axis.y, u_axis.z),
-            spacing_u=spacing,
-            spacing_v=spacing,
-            count_u=10,
-            count_v=10,
-            visible=True,
-            color=(0.6, 0.55, 0.75),   # hafif mor — kullanıcı tanımlı olduğu belli olsun
-        )
-
-        # Grid'e ekle + aktif et
-        self.engine.grid.add_user_plane(pdef)
-        self.engine.grid.set_active_user_plane(pdef.name)
-
-        # Kamerayı düzleme dik getir
-        fit_r = max(pdef.count_u * spacing, pdef.count_v * spacing) * 1.3
-        self.engine.cam.look_at_plane(
-            origin=pdef.origin,
-            u=pdef.u_axis,
-            v=(v_axis.x, v_axis.y, v_axis.z),
-            n=pdef.normal,
-            fit_radius=fit_r,
-        )
-
-        # Grid'i yenile
-        self.engine.grid.rebuild_all()
-
-        # Panel'i bilgilendir (açıksa güncellensin)
-        if self.grid_panel.visible:
-            self.grid_panel.grid = self.engine.grid
-
-        logger.info(f"[WorkPlane] '{pdef.name}' oluşturuldu "
-                    f"(uzunluk={length:.0f}, spacing={spacing:.0f})")
-        return True
-
-    def _toggle_load_assign_panel(self):
-        if self.load_assign_panel.visible:
-            self.load_assign_panel.close()
-        else:
-            # Güncel load pattern isimlerini definitions içinden alıp panele verelim
-            patterns = list(self.current_project.definitions.load_patterns.keys()) if hasattr(self.current_project.definitions, "load_patterns") else ["DEAD", "LIVE"]
-            if not patterns:
-                patterns = ["DEAD", "LIVE"]
-            self.load_assign_panel.open(load_patterns=patterns)
-
-    def _apply_load_to_selected_polygon(self, pattern_name: str, value: float, direction, dist_type):
-        """Ekranda seçili olan poligona (Polygon tipindekilere) yükü assign eder."""
-        if not self.engine or not self.engine.scene:
-            logger.warning("[Assign] Aktif sahne bulunamadı.")
-            return
-
-        selected = self.engine.scene.get_selected()
-        polygons = [e for e in selected if isinstance(e, Polygon) and getattr(e, "poly_type", None) == PolygonType.SURFACE]
-        
-        if not polygons:
-            logger.info("[Assign] Seçili geçerli bir Surface Polygon bulunamadı.")
-            return
-
-        count = 0
-        for poly in polygons:
-            # Doğrudan polygon içine yükü ekliyoruz
-            poly.add_uniform_to_frame_load(
-                pattern_name=pattern_name,
-                value=value,
-                direction=direction,
-                dist_type=dist_type
-            )
-            count += 1
-
-        # Sahneyi ve renderer'ı güncelle
-        self.engine.renderer.update_geo(self.engine.scene)
-        logger.info(f"[Assign] {count} adet poligona '{pattern_name}' (Değer: {value}) yükü atandı.")
-
-    def _distribute_selected_polygon_loads(self):
-        """Ekranda seçili olan poligon üzerindeki alan yüklerini çevreleyen frame'lere dağıtır."""
-        pass
-        # if not self.engine or not self.engine.scene:
-        #     logger.warning("[Distribute] Aktif sahne bulunamadı.")
-        #     return
-
-        # selected = self.engine.scene.get_selected()
-        
-        # polygons = [e for e in selected if isinstance(e, Polygon) and getattr(e, "poly_type", None) == PolygonType.SURFACE]
-
-        # if not polygons:
-        #     logger.info("[Distribute] Seçili geçerli bir Surface Polygon bulunamadı.")
-        #     return
-
-        
-        # total_assigned = 0
-        # for poly in polygons:
-        #     count = LoadDistributionService.distribute_polygon_loads(self.engine.scene, poly, target_step=200.0)
-        #     total_assigned += count
-
-        # self.engine.renderer.update_geo(self.engine.scene)
-        # logger.info(f"[Distribute] Seçili poligonlardaki yükler başarıyla {total_assigned} adet frame'e dağıtıldı.")
-
-    def _toggle_local_axes(self):
-        if not self.engine or not self.engine.scene: return
-        sc = self.engine.scene
-        sc.show_local_axes = not sc.show_local_axes
-        logger.info(f"[Axes] Local axes: {sc.show_local_axes}")
-
-    def _align_frames_to_polygon_planes(self):
-        """
-        Seçili polygon(lar) üzerindeki/çevresindeki frame'leri, 
-        poligon düzlemi normaline göre local 3-ekseni hizalar.
-        """
-        
-        
-        
-        scene = self.engine.scene
-        selected = scene.get_selected()
-        polygons = [e for e in selected 
-                    if isinstance(e, Polygon) 
-                    and e.poly_type == PolygonType.SURFACE]
-        if not polygons:
-            logger.warning("[Align] Seçili surface polygon yok.")
-            return
-        
-        affected = 0
-        for poly in polygons:
-            
-            u, v, n = Polygon.calculate_plane_axes(poly.nodes)
-            # Poligon düzleminde olan frame'leri bul
-            for frame in scene.frames.values():
-                mid = frame.get_midpoint()
-                # Midpoint polygon düzleminde mi? (nokta-düzlem mesafesi)
-                d = glm.dot(glm.vec3(mid[0]-poly.nodes[0].x,
-                                    mid[1]-poly.nodes[0].y,
-                                    mid[2]-poly.nodes[0].z), n)
-                if abs(d) < 10.0:  # 10 mm tolerans
-                    # Frame 1-ekseni polygon düzleminde mi?
-                    e1 = glm.vec3(*frame.get_axis())
-                    if abs(glm.dot(e1, n)) < 0.99:  # düşey frame'leri atla
-                        # Doğrudan frame üzerinden çağrılıyor:
-                        frame.align_to_polygon_plane(poly.nodes)
-                        affected += 1
-        
-        logger.info(f"[Align] {affected} frame hizalandı.")
-        self.engine.renderer.update_geo(scene)
-
-    def _align_frames_to_selected_polygons(self):
-        if not self.engine or not self.engine.scene:
-            logger.warning("[Align] Aktif sahne veya engine bulunamadı.")
-            return
-
-        # SelectionManager üzerinden seçili poligonları alıyoruz
-        selected_elements = self.engine.sel_mgr.get_selected()
-        selected_polygons = [e for e in selected_elements if getattr(e, "element_type", None) == "Polygon"]
-        
-        if not selected_polygons:
-            logger.warning("[Align] Seçili poligon yok.")
-            return
-
-        # AlignmentService ile hem ilişkiyi kur (associated_frame_ids) hem de hizala
-        n = AlignmentService.align_frames_to_polygons(
-            self.engine.scene,
-            selected_polygons,
-            project=self.current_project
-        )
-        
-        # Sahne kirli işaretlenip GPU geometrisi güncellenmeli
-        self.engine.scene.mark_dirty()
-        self.engine.renderer.update_geo(self.engine.scene)
-        
-        logger.info(f"[Align] Toplam {n} işlem tamamlandı ve sahne güncellendi.")
-
-    def _check_load_balance(self):
-        """
-        Tüm polygonlar için yük dengesini kontrol eder.
-        Log'a rapor basar, özet bilgi döner.
-        """
-        if not self.engine or not self.engine.scene:
-            logger.warning("[LoadBalance] Aktif sahne yok.")
-            return
-
-       
-
-        scene = self.engine.scene
-        failed = LoadBalanceReport.log_report(scene, tolerance_ratio=0.005)
-
-        if failed == 0:
-            logger.info("[LoadBalance] ✓ Tüm poligon yükleri dengede.")
-        else:
-            logger.warning(f"[LoadBalance] ✗ {failed} pattern başarısız — kontrol edin.")
-
-    def _toggle_selected_visibility(self):
-        if not self.engine or not self.engine.scene:
-            return
-        selected = self.engine.scene.get_selected()
-        if not selected:
-            logger.info("[Visibility] Seçili eleman yok.")
-            return
-        for el in selected:
-            el.is_visible = not getattr(el, "is_visible", True)
-        self.engine.renderer.update_geo(self.engine.scene)
-        logger.info(f"[Visibility] {len(selected)} elemanın görünürlüğü değiştirildi.")
-
-    def _toggle_loads_visibility(self):
-        self.show_loads = not self.show_loads
-        if self.engine and self.engine.renderer:
-            if hasattr(self.engine.renderer, "show_loads"):
-                self.engine.renderer.show_loads = self.show_loads
-        logger.info(f"[Loads] Yük görünürlüğü: {'Açık' if self.show_loads else 'Kapalı'}")
-
-    def _toggle_frame_load_panel(self):
-        if self.frame_load_panel.visible:
-            self.frame_load_panel.close()
-        else:
-            self._refresh_frame_load_targets()
-            patterns = list(self.current_project.definitions.load_patterns.keys()) \
-                    if hasattr(self.current_project.definitions, "load_patterns") else []
-            if not patterns:
-                patterns = ["DEAD", "LIVE", "WIND", "SNOW", "EQ"]
-            self.frame_load_panel.on_refresh_targets = self._refresh_frame_load_targets
-            self.frame_load_panel.open(
-                patterns=patterns,
-                target_frames=self._get_selected_frames(),
-            )
-
-    def _get_selected_frames(self):
-        if not self.engine or not self.engine.scene:
-            return []
-        return [e for e in self.engine.scene.get_selected()
-                if isinstance(e, Frame)]
-
-    def _refresh_frame_load_targets(self):
-        """Seçili frame'leri panel'e yeniden bildir."""
-        self.frame_load_panel.set_target_frames(self._get_selected_frames())
-
-    def _apply_frame_distributed_load(self, frames, load_set):
-        """Segment set'ini frame'lere uygular ve kalıcı olarak saklar."""
-
-        for frame in frames:
-            FrameLoadService.assign_distributed_load_set(frame, load_set)
-
-        # Sahneyi güncelle
-        if self.engine and self.engine.scene:
-            self.engine.scene.mark_dirty()
-            self.engine.renderer.update_geo(self.engine.scene)
-
-        logger.info(f"[FrameLoad] {len(frames)} frame'e '{load_set.pattern_name}' "
-                    f"({len(load_set.segments)} segment) yüklendi.")
-
-    def _distribute_wind_zones_to_frames(self, kind: str = "CPE10", dist_type="one_way") -> int:
-        """Zones panelden çağrılır."""
-        if not self.engine or not self.engine.scene:
-            logger.warning("[WindZone] Aktif sahne yok.")
-            return 0
-
-        
-
-        cfg = self.current_project.config.wind
-        n = WindZoneDistributionService.distribute(
-            self.engine.scene,
-            project=self.current_project,
-            kind=kind,
-            cpi_positive=cfg.cpi_positive,
-            cpi_negative=cfg.cpi_negative,
-            tributary_width=1.0,
-            clear_existing=True,
-        )
-
-        if n > 0:
-            self.engine.scene.mark_dirty()
-            self.engine.renderer.update_geo(self.engine.scene)
-            logger.info(f"[WindZone] {kind}: {n} segment atandı.")
-        else:
-            logger.info("[WindZone] Atama yapılmadı.")
-
-        return n
-
-    def _toggle_show_loads(self):
-        if self.engine and self.engine.renderer:
-            if hasattr(self.engine.renderer, "show_loads"):
-                self.engine.renderer.show_loads = not self.engine.renderer.show_loads
-                logger.info(f"[Loads] Yük görünürlüğü: {self.engine.renderer.show_loads}")
-
-    def _on_load_display_change(self):
-        """Panelde bir ayar değiştiğinde çağrılır."""
-        if self.engine and self.engine.scene:
-            self.engine.renderer.update_geo(self.engine.scene)
-
-    def _clear_loads_from_selected(self, pattern: str) -> int:
-        """Seçili elemanlardan verilen pattern'ı sil."""
-        if not self.engine or not self.engine.scene:
-            return 0
-
-        
-        selected = self.engine.scene.get_selected()
-        frames = [e for e in selected if e.element_type == "Frame"]
-
-        if not frames:
-            logger.info("[Loads] Seçili frame yok.")
-            return 0
-
-        count = 0
-        for f in frames:
-            sets = getattr(f, "dist_load_sets", {})
-            if pattern in sets:
-                del sets[pattern]
-                # dist_loads'tan da temizle
-                f.dist_loads = [
-                    dl for dl in getattr(f, "dist_loads", [])
-                    if dl.pattern_name != pattern
-                ]
-                f.mark_dirty()
-                count += 1
-
-        if count:
-            self.engine.scene.mark_dirty()
-            self.engine.renderer.update_geo(self.engine.scene)
-
-        logger.info(f"[Loads] {count} frame'den '{pattern}' silindi.")
-        return count
-
-    def _clear_loads_from_scene(self, pattern: str) -> int:
-        """Tüm sahnedeki frame'lerden verilen pattern'ı sil."""
-        if not self.engine or not self.engine.scene:
-            return 0
-
-        count = 0
-        for f in self.engine.scene.frames.values():
-            sets = getattr(f, "dist_load_sets", {})
-            if pattern in sets:
-                del sets[pattern]
-                f.dist_loads = [
-                    dl for dl in getattr(f, "dist_loads", [])
-                    if dl.pattern_name != pattern
-                ]
-                f.mark_dirty()
-                count += 1
-
-        if count:
-            self.engine.scene.mark_dirty()
-            self.engine.renderer.update_geo(self.engine.scene)
-
-        logger.info(f"[Loads] Tüm sahnede {count} frame'den '{pattern}' silindi.")
-        return count
-
-    def _toggle_load_display_panel(self):
-        if self.load_display_panel.visible:
-            self.load_display_panel.close()
-        else:
-            self.load_display_panel.open(
-                scene=self.engine.scene if self.engine else None,
-                renderer=self.engine.renderer if self.engine else None,
-            )
+    def dispatch_action(self, action_name: str, payload=None):
+        """Tüm panellerin CadApp ile haberleştiği tek ve ortak kapı."""
+        actions = {
+            "run_wind": self._on_run_wind_analysis,
+            "save_project": self._save_project,
+            "update_geo": lambda: self.engine.renderer.update_geo(self.engine.scene),
+            # ...
+        }
+        if action_name in actions:
+            return actions[action_name]() if payload is None else actions[action_name](payload)
 
     def print_(self):
-        selected_elements = self.engine.sel_mgr.get_selected()
-        selected_polygons = [e for e in selected_elements if getattr(e, "element_type", None) == "Polygon"]
-        selected_frames = [e for e in selected_elements if getattr(e, "element_type", None) == "Frame"]
-        selected_nodes = [e for e in selected_elements if getattr(e, "element_type", None) == "Node"]
-        selected_areas = [e for e in selected_elements if getattr(e, "element_type", None) == "Area"]
-        selected_links = [e for e in selected_elements if getattr(e, "element_type", None) == "Link"]
+        print("grid_lines",self.current_project.grid, self.current_project.grid_lines)
 
-        logger.debug(f"selected frames: len= {len(selected_frames)}")
+    def _import_s2k(self):
+        s2k_panel = self.panels["s2k_import"]["instance"]
+        s2k_panel.on_import_complete = lambda proj: self.set_project(proj)
+        s2k_panel.open()
 
-    def _open_polygon_edit_panel(self):
-        """Seçili poly ile paneli aç."""
-        if not self.engine or not self.engine.scene:
-            return
-        selected = self.engine.scene.get_selected()
-        polygons = [e for e in selected if isinstance(e, Polygon)]
-        if polygons:
-            poly = polygons[0]
-            self.polygon_edit_panel.open(
-                scene=self.engine.scene,
-                poly=poly,
-            )
-        else:
-            self.polygon_edit_panel.open(scene=self.engine.scene)
-
-    def _on_polygon_edit_align(self, polygons):
-        """Panelden align çağrısı."""
-        n = AlignmentService.align_frames_to_polygons(
-            self.engine.scene,
-            polygons,
-            project=self.current_project,
+    def _on_toolbar_open(self):
+        self.file_dialog.open(
+            mode="open",
+            filters=[".cd4"],
+            title="Proje Aç (.cd4)",
+            initial_dir=os.getcwd(),
+            on_select=self._load_project
         )
-        self.engine.scene.mark_dirty()
-        self.engine.renderer.update_geo(self.engine.scene)
-        logger.info(f"[PolyEdit] {n} frame hizalandı.")
 
-    def _on_polygon_edit_distribute(self, poly):
-        """Panelden dağıtım çağrısı."""
-        if getattr(poly, "poly_type", None) in (
-            PolygonType.SURFACE_ONEWAY, PolygonType.SURFACE_TWOWAY
-        ):
-            # Surface için wind distribution değil, uniform_to_frame
-            # (mevcut _distribute_selected_polygon_loads'a yönlendir)
-            pass
-        elif getattr(poly, "poly_type", None) == PolygonType.ZONE:
-            # Zone → wind distribution
-            n = self._distribute_wind_zones_to_frames("CPE10")
-            logger.info(f"[PolyEdit] {n} segment atandı.")
-
-    def _on_polygon_edit_mesh(self, poly):
-        """Mesh — Faz 3."""
-        logger.info(f"[PolyEdit] Mesh henüz uygulanmadı (poly={poly.unique_id})")
-
-    def _on_polygon_edit_assoc(self, action, payload):
-        """Panel assoc aksiyonları."""
-        if action == "model_add":
-            # Sahne 3D'de seçim modunu başlat, seçimi poly'ye ekle
-            self._start_polygon_frame_add_mode()
-        elif action == "model_replace":
-            self._start_polygon_frame_replace_mode()
-        elif action == "focus":
-            # Seçili frame'e kamera odakla
-            self._focus_frame(payload)
-        elif action == "isolate":
-            # Sadece o frame'i göster
-            self._isolate_frame(payload)
-
-    def _start_polygon_frame_add_mode(self):
-        """
-        Sahneden frame seçim modu. Seçim bitince mevcut poly'ye ekle.
-        (Bu bir sonraki fazda detaylandırılacak)
-        """
-        logger.info("[PolyEdit] Modelden ekleme modu başlatıldı")
-        # TODO: Sahne seçim callback'i bağla, seçimi tamamla, poly'ye ekle
-        
     def shutdown(self):
         self.ui_backend.shutdown()

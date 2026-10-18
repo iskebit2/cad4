@@ -489,6 +489,14 @@ class EventRouter:
             if self.app.create_work_plane_from_selection():
                 return
 
+        if key == glfw.KEY_F12:
+            # Eski test plane'lerini temizle
+            for n in list(self.app.current_project.planes.keys()):
+                if n.startswith("Test_"):
+                    self.app.current_project.remove_plane(n)
+            self.app._seed_test_planes()
+            return
+
         # --- Draw mode ---
         if key == glfw.KEY_D:
             self._toggle_draw(); return

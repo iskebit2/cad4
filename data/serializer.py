@@ -9,6 +9,7 @@ import zipfile
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Optional, Type
+import numpy as np
 
 from data.enums import ENUM_REGISTRY, UnitSystem
 from domain.element import Node, Frame, Area, Link, Polygon
@@ -21,9 +22,10 @@ from domain.definition import (
     LoadPattern, Material, ModalCase, PointLoad, ProjectConfig, ProjectInfo,
     ReportManager, ResponseSpectrumCase, ResponseSpectrumLoadAssignment, Restraint,
     Section, SeismicConfig, SiteInformation, SnowConfig, SpectrumFunction,
-    StaticLoadAssignment, WindConfig
+    StaticLoadAssignment, WindConfig, SectionCut, QuadDefinition
 )
 from domain.scene import Scene
+from domain.plane import Plane, PendingChange, ASSOC_KINDS
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
@@ -68,6 +70,8 @@ DATACLASS_REGISTRY: Dict[str, Type] = {
     "AnalysisManager": AnalysisManager,
     "LoadManager": LoadManager,
     "ReportManager": ReportManager,
+    "SectionCut": SectionCut,
+    "QuadDefinition": QuadDefinition,
 }
 
 CLASS_REGISTRY: Dict[str, Type] = {
@@ -78,9 +82,77 @@ CLASS_REGISTRY: Dict[str, Type] = {
     "Polygon": Polygon,
 }
 
+def _encode_plane(p: Plane) -> dict:
+    """Plane'i JSON-güvenli dict'e çevir (pending tuple key'leri liste olur)."""
+    return {
+        "__plane__": True,
+        "plane_id": p.plane_id,
+        "name": p.name,
+        "origin": [float(x) for x in p.origin],
+        "normal": [float(x) for x in p.normal],
+        "u": [float(x) for x in p.u],
+        "v": [float(x) for x in p.v],
+        "u_min": p.u_min, "u_max": p.u_max,
+        "v_min": p.v_min, "v_max": p.v_max,
+        "depth_minus": p.depth_minus,
+        "depth_plus": p.depth_plus,
+        "auto_assoc": p.auto_assoc,
+        "auto_assoc_ignore_bounds": p.auto_assoc_ignore_bounds,
+        "associated": {k: sorted(int(x) for x in v) for k, v in p.associated.items()},
+        "excluded":   {k: sorted(int(x) for x in v) for k, v in p.excluded.items()},
+        "pending": [
+            {"op": pc.op, "kind": pc.kind, "id": pc.id, "data": _encode(pc.data)}
+            for pc in p.pending.values()
+        ],
+    }
+
+def _decode_plane(d: dict) -> Plane:
+    """Plane'i JSON dict'inden geri yükle. Sınırları geçirme — __init__ re-center etmesin."""
+    p = Plane(
+        origin=np.array(d["origin"], dtype=float),
+        normal=np.array(d["normal"], dtype=float),
+        u=np.array(d["u"], dtype=float),
+        v=np.array(d["v"], dtype=float),
+        plane_id=d.get("plane_id"),
+        name=d.get("name", ""),
+        # u_min/v_min GEÇME — __init__ origin'i tekrar merkezlemesin
+        depth_minus=d.get("depth_minus", 0.0),
+        depth_plus=d.get("depth_plus", 0.0),
+    )
+    # Sınırları doğrudan ata (kaydedilmiş değerler)
+    p.u_min = d.get("u_min")
+    p.u_max = d.get("u_max")
+    p.v_min = d.get("v_min")
+    p.v_max = d.get("v_max")
+    p.auto_assoc = d.get("auto_assoc", True)
+    p.auto_assoc_ignore_bounds = d.get("auto_assoc_ignore_bounds", False)
+    for k in ASSOC_KINDS:
+        p.associated[k] = set(int(x) for x in d.get("associated", {}).get(k, []))
+        p.excluded[k]   = set(int(x) for x in d.get("excluded",   {}).get(k, []))
+    for pc_data in d.get("pending", []):
+        pc = PendingChange(
+            op=pc_data["op"],
+            kind=pc_data["kind"],
+            id=pc_data["id"],
+            data=_decode(pc_data.get("data")),
+        )
+        p.pending[(pc.kind, pc.id)] = pc
+    return p
+
 def _encode(obj: Any) -> Any:
     if obj is None or isinstance(obj, (str, int, float, bool)):
         return obj
+    
+    if isinstance(obj, np.ndarray):
+        return {"__ndarray__": [float(x) for x in obj.tolist()]}
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        return float(obj)
+
+    if isinstance(obj, Plane):
+        return _encode_plane(obj)
+
     if isinstance(obj, Enum):
         return {"__enum__": type(obj).__name__, "value": obj.value}
     if isinstance(obj, tuple):
@@ -109,6 +181,15 @@ def _decode(obj: Any) -> Any:
         return [_decode(v) for v in obj]
     if not isinstance(obj, dict):
         return obj
+
+    # --- YENİ: ndarray ---
+    if "__ndarray__" in obj:
+        return np.array(obj["__ndarray__"], dtype=float)
+
+    # --- YENİ: Plane ---
+    if obj.get("__plane__"):
+        return _decode_plane(obj)
+
     if "__enum__" in obj:
         return ENUM_REGISTRY[obj["__enum__"]](obj["value"])
     if "__tuple__" in obj:
@@ -155,6 +236,7 @@ class DomainJSONEncoder(json.JSONEncoder):
 
 def save_project_file(project: Any, path: Path) -> None:
     logger.info(f"[Save Debug] Proje diske yazılıyor: {path.name}")
+    print(f"[SERIALIZER DEBUG] Kaydedilen project.grid Y listesi: {project.grid.y_coords}")
     
     scene = project.scene
     scene_payload = {
@@ -174,7 +256,7 @@ def save_project_file(project: Any, path: Path) -> None:
     u_sys_val = u_sys.value if isinstance(u_sys, Enum) else u_sys
 
     payload = {
-        "version": 3,
+        "version": 4,
         "info": _encode(project.info),
         "general_info": _encode(project.general_info),
         "site_info": _encode(project.site_info),
@@ -196,6 +278,14 @@ def save_project_file(project: Any, path: Path) -> None:
         "response_spectrum_cases": {k: _encode(v) for k, v in project.response_spectrum_cases.items()},
         "auto_seismics": {k: _encode(v) for k, v in project.auto_seismics.items()},
         "mass_source_map": project.mass_source_map,
+        "section_cuts": {k: _encode(v) for k, v in project.section_cuts.items()},
+        "diaphragms": project.diaphragms,
+        "grid_lines": project.grid_lines,
+        "joint_constraints": project.joint_constraints,
+        "frame_modifiers": project.frame_modifiers,
+        "frame_design_procs": project.frame_design_procs,
+        "frame_auto_mesh": project.frame_auto_mesh,
+        "planes": [_encode_plane(p) for p in project.planes.values()],
     }
     logger.info(f"[Save Debug] -> Tanımlar kaydediliyor: {len(project.materials)} malzeme, {len(project.sections)} kesit, {len(project.load_patterns)} load pattern")
 
@@ -256,6 +346,13 @@ def load_project_file(path: Path) -> Any:
     proj.spectrum_functions = {k: _decode(v) for k, v in payload.get("spectrum_functions", {}).items()}
     proj.response_spectrum_cases = {k: _decode(v) for k, v in payload.get("response_spectrum_cases", {}).items()}
     proj.auto_seismics = {k: _decode(v) for k, v in payload.get("auto_seismics", {}).items()}
+    proj.section_cuts = {k: _decode(v) for k, v in payload.get("section_cuts", {}).items()}
+    proj.diaphragms = payload.get("diaphragms", {})
+    proj.grid_lines = payload.get("grid_lines", [])
+    proj.joint_constraints = payload.get("joint_constraints", {})
+    proj.frame_modifiers = payload.get("frame_modifiers", {})
+    proj.frame_design_procs = payload.get("frame_design_procs", {})
+    proj.frame_auto_mesh = payload.get("frame_auto_mesh", {})
     proj.mass_source_map = payload.get("mass_source_map", {})
     
     logger.info(f"[Load Debug] -> Tanımlar yüklendi: {len(proj.materials)} malzeme, {len(proj.sections)} kesit, {len(proj.load_patterns)} load pattern")
@@ -379,6 +476,17 @@ def load_project_file(path: Path) -> Any:
                     added_poly_ids.add(poly.unique_id)
                     loaded_polygons_count += 1
         logger.info(f"[Load Debug] -> Geri yüklenen poligon sayısı: {loaded_polygons_count}")
+        
+    raw_planes = payload.get("planes", [])
+    loaded_planes = {}
+    for pd in raw_planes:
+        try:
+            plane = _decode_plane(pd)
+            loaded_planes[plane.name] = plane
+        except Exception as e:
+            logger.warning(f"[Load Debug] Plane yüklenemedi: {e}")
+    proj.planes = loaded_planes
+    logger.info(f"[Load Debug] -> Geri yüklenen plane sayısı: {len(loaded_planes)}")
 
     proj.scene = scene_obj
     proj.scene.project = proj

@@ -48,9 +48,9 @@ class GridSystem:
         self.active_user_plane: Optional[str] = None
 
         # Tekla / ETABS tarzı aks koordinat listeleri (mm veya proje biriminde)
-        self.x_coords = [0.0, 3000.0, 8000.0, 11000.0]
-        self.y_coords = [0.0, 3000.0, 6000.0, 12000.0]
-        self.z_coords = [0.0, 3200.0, 6400.0]
+        self.x_coords = [0.0, 4000.0, 8000.0]
+        self.y_coords = [0.0, 5000.0, 10000.0]
+        self.z_coords = [0.0, 4000.0]
 
         self.origin = glm.vec3(0.0, 0.0, 0.0)
         self._gpu = {name: {"vao": None, "vbo": None, "count": 0} for name in self.planes}
@@ -60,6 +60,7 @@ class GridSystem:
         self.rebuild_all()
 
     def set_coords(self, x_list, y_list, z_list):
+        print(f"[GridSystem] set_coords çağrıldı! Gelen X: {x_list}, Y: {y_list}, Z: {z_list}")
         if x_list: self.x_coords = sorted(list(set(x_list)))
         if y_list: self.y_coords = sorted(list(set(y_list)))
         if z_list: self.z_coords = sorted(list(set(z_list)))

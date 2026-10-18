@@ -1,6 +1,15 @@
 # tools/s2k_utils.py
 
-from domain.definition import AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, AutoSeismicTSC2018, ComboItem, DistType, FrameDistributedLoad, FrameGravityLoad, GeneralProjectInfo, LinkProp, LinkPropLinear, LinkPropType, LoadCase, LoadCombination, LoadDirection, LoadPattern, MatType, Material, ModalCase, PointLoad, QuadDefinition, ResponseSpectrumCase, ResponseSpectrumLoadAssignment, Section, SectionCut, SectionCutDefinedBy, SectionCutResultType, SectionType, SiteInformation, SpectrumFunction, SpectrumSourceType, StaticLoadAssignment
+from domain.definition import (
+    AreaUniformLoad, AreaUniformToFrameLoad, AreaWindPressureLoad, 
+    AutoSeismicTSC2018, ComboItem, DistType, FrameDistributedLoad, 
+    FrameGravityLoad, GeneralProjectInfo, LinkProp, LinkPropLinear, 
+    LinkPropType, LoadCase, LoadCombination, LoadDirection, LoadPattern, 
+    MatType, Material, ModalCase, PointLoad, QuadDefinition, 
+    ResponseSpectrumCase, ResponseSpectrumLoadAssignment, Section, 
+    SectionCut, SectionCutDefinedBy, SectionCutResultType, SectionType, 
+    SiteInformation, SpectrumFunction, SpectrumSourceType, StaticLoadAssignment
+)
 from typing import Optional, Callable, List, Tuple, Dict
 from dataclasses import dataclass, field
 from domain.scene import Scene
@@ -36,7 +45,6 @@ class UnitConverter:
         if len(parts) >= 3:
             self.temp_unit = parts[2]
 
-    # Dönüşüm metodları
     def L(self, v): return v * self.length_scale
     def F(self, v): return v * self.force_scale
     def M(self, v): return v * self.force_scale * self.length_scale
@@ -46,27 +54,21 @@ class UnitConverter:
     def acc(self, v): return v * self.length_scale
 
     def temp(self, v):
-        """Sıcaklık farkı °C cinsine."""
         if self.temp_unit == "F":
             return v * (5.0 / 9.0)
         return v
 
     def temp_grad(self, v):
-        """Sıcaklık gradyanı °C/mm."""
         return self.temp(v) / self.length_scale
 
     def __str__(self) -> str:
-        """İnsan-okunabilir birim string'i."""
         return self.raw_string
 
 @dataclass
 class LoadContext:
     """Tüm handler'ların veri topladığı merkezi kutu."""
 
-    # Birim dönüştürücü
     units: UnitConverter = field(default_factory=UnitConverter)
-
-    # Proje bilgileri
     project_info: Dict[str, GeneralProjectInfo | SiteInformation] = field(
         default_factory=lambda: {
             "gen": GeneralProjectInfo(),
@@ -74,8 +76,6 @@ class LoadContext:
         }
     )
 
-
-    # Tanımlar (malzeme, kesit, ...)
     materials: Dict[str, Material] = field(default_factory=dict)
     sections: Dict[str, Section] = field(default_factory=dict)
     auto_select_lists: Dict[str, list] = field(default_factory=dict)
@@ -83,23 +83,24 @@ class LoadContext:
     area_thicknesses: Dict[str, float] = field(default_factory=dict)
     link_props: Dict[str, LinkProp] = field(default_factory=dict)
 
-    # Yük ve Analiz tanımları
     load_patterns: Dict[str, LoadPattern] = field(default_factory=dict)
     load_cases: Dict[str, LoadCase] = field(default_factory=dict)
     modal_cases: Dict[str, ModalCase] = field(default_factory=dict)
     load_combos: Dict[str, LoadCombination] = field(default_factory=dict)
 
-    # Dinamik & Deprem Tanımları
     spectrum_functions: Dict[str, SpectrumFunction] = field(default_factory=dict)
     response_spectrum_cases: Dict[str, ResponseSpectrumCase] = field(default_factory=dict)
     auto_seismics: Dict[str, AutoSeismicTSC2018] = field(default_factory=dict)
 
-    # Kütle Kaynağı
     mass_source_map: Dict[str, float] = field(default_factory=dict)
-    # Section Cuts
     section_cuts: Dict[str, float] = field(default_factory=dict)
 
-    # Ham DataFrames (Geometri)
+    # Yeni eklenen tablolara ait haritalar/DataFrame'ler
+    diaphragms: Dict[str, dict] = field(default_factory=dict)
+    frame_modifiers: Dict[str, dict] = field(default_factory=dict)
+    frame_design_procs: Dict[str, str] = field(default_factory=dict)
+    frame_auto_mesh: Dict[str, dict] = field(default_factory=dict)
+
     df_joints: Optional[pd.DataFrame] = None
     df_restraints: Optional[pd.DataFrame] = None
     df_frame_conn: Optional[pd.DataFrame] = None
@@ -110,7 +111,6 @@ class LoadContext:
     df_link_assign: Optional[pd.DataFrame] = None
     df_frame_release: Optional[pd.DataFrame] = None
 
-    # Yük atamaları (ham DataFrame'ler)
     df_joint_loads: Optional[pd.DataFrame] = None
     df_frame_gravity: Optional[pd.DataFrame] = None
     df_frame_distributed: Optional[pd.DataFrame] = None
@@ -120,20 +120,29 @@ class LoadContext:
     df_area_uniform_to_frame: Optional[pd.DataFrame] = None
     df_area_wind: Optional[pd.DataFrame] = None
 
-    # Tepki Spektrumu ve Auto Seismic Tabloları (Ham)
     df_spec_gen: Optional[pd.DataFrame] = None
     df_spec_ass: Optional[pd.DataFrame] = None
-
-    # Sectiom Cut Tabloları (Ham)
     df_section_cut_gen: Optional[pd.DataFrame] = None
     df_section_cut_quad: Optional[pd.DataFrame] = None
 
+    # Yeni Ham DataFrame alanları
+    df_diaphragms: Optional[pd.DataFrame] = None
+    df_frame_modifiers: Optional[pd.DataFrame] = None
+    df_frame_design_procs: Optional[pd.DataFrame] = None
+    df_frame_auto_mesh: Optional[pd.DataFrame] = None
+
+    df_grid_lines: Optional[pd.DataFrame] = None
+    df_joint_constraints: Optional[pd.DataFrame] = None
+    df_link_props_linear: Optional[pd.DataFrame] = None
+    
+    joint_constraints: Dict[str, str] = field(default_factory=dict)
+    grid_lines: list = field(default_factory=list)
+
 
 def get_color_from_string(color_str: str) -> Tuple[float, float, float]:
-    """SAP2000 renk adı → RGB."""
     color_map = {
         'Red': (1.0, 0.0, 0.0), 'Green': (0.0, 1.0, 0.0), 'Blue': (0.0, 0.0, 1.0),
-        'Yellow': (1.0, 1.0, 0.0), 'Cyan': (0.0, 1.0, 1.0), 'Magenta': (1.0, 0.0, 1.0),
+        'Yellow': (1.0, 1.0, 0.0), 'Cyan': (1.0, 1.0, 1.0), 'Magenta': (1.0, 0.0, 1.0),
         'White': (1.0, 1.0, 1.0), 'Black': (0.0, 0.0, 0.0),
         'Gray8Dark': (0.3, 0.3, 0.3), 'Gray8Light': (0.7, 0.7, 0.7),
     }
@@ -141,8 +150,6 @@ def get_color_from_string(color_str: str) -> Tuple[float, float, float]:
 
 
 def parse_sap_mat_type(row) -> 'MatType':
-    """SAP2000 material tipini tespit et."""
-
     raw_type = str(row.get('Type', '')).upper().strip()
     raw_grade = str(row.get('Grade', '')).upper().strip()
     raw_name = str(row.get('Material', '')).upper().strip()
@@ -165,7 +172,6 @@ def parse_sap_mat_type(row) -> 'MatType':
 
 
 def map_sap_to_local_params(row) -> Tuple[SectionType, Dict[str, float]]:
-    """SAP2000 kesit → yerel parametreler."""
     s_type = str(row.get('Shape', 'Rectangle')).strip()
 
     def sf(key, default=0.0, allow_zero=True):
@@ -178,7 +184,6 @@ def map_sap_to_local_params(row) -> Tuple[SectionType, Dict[str, float]]:
         except (ValueError, TypeError):
             return default
 
-    # Analiz parametreleri (her kesitte ortak)
     analysis = {
         'Area': sf('Area'), 'J': sf('TorsConst'),
         'I33': sf('I33'), 'I22': sf('I22'), 'I23': sf('I23'),
@@ -226,7 +231,6 @@ def map_sap_to_local_params(row) -> Tuple[SectionType, Dict[str, float]]:
 
 
 def safe_float(row, key, default=0.0, allow_zero=True):
-    """Güvenli float dönüşümü."""
     val = row.get(key)
     if val is None or str(val).strip() in ("", "None", "nan"):
         return default
@@ -235,10 +239,6 @@ def safe_float(row, key, default=0.0, allow_zero=True):
         return f if (allow_zero or abs(f) > 1e-12) else default
     except (ValueError, TypeError):
         return default
-
-
-
-
 
 
 def _create_nodes(builder: SceneBuilder, ctx: LoadContext) -> Dict[str, Node]:
@@ -299,7 +299,6 @@ def _create_frames(builder: SceneBuilder, ctx: LoadContext, node_map: Dict[str, 
     if ctx.df_frame_conn is None or ctx.df_frame_conn.empty:
         return frame_map, 0
 
-    # Context parametresi dâhil edildi
     frame_assign = _parse_frame_assign(ctx.df_frame_assign, ctx)
     frame_release = _parse_frame_release(ctx.df_frame_release)
     fallback = _get_fallback_section(builder, ctx)
@@ -354,9 +353,7 @@ def _parse_frame_assign(df: pd.DataFrame, ctx: LoadContext = None) -> Dict[str, 
             members = ctx.auto_select_lists[sect]
             if members:
                 mid_idx = len(members) // 2
-                original = sect
                 sect = members[mid_idx]
-                #logger.debug(f"Frame {frame_id}: '{original}' → '{sect}' (liste ortası)")
 
         try:
             rotation = float(row.get('Angle', 0.0))
@@ -537,7 +534,6 @@ def _load_joint_loads(ctx: LoadContext, node_map: Dict[str, Node]):
 
 
 def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
-    # --- 1. Frame gravity loads (aynı kalır) ---
     df_g = ctx.df_frame_gravity
     if df_g is not None and not df_g.empty:
         for _, r in df_g.iterrows():
@@ -550,12 +546,10 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
                     multiplier_z=safe_float(r, 'MultiplierZ'),
                 ))
 
-    # --- 2. Frame distributed loads ---
     df_d = ctx.df_frame_distributed
     if df_d is None or df_d.empty:
         return
 
-    # SAP Dir → bizim load_dir string
     def _sap_dir_to_our(dir_str: str) -> str:
         d = str(dir_str).strip()
         mapping = {
@@ -568,13 +562,11 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
         }
         if d in mapping:
             return mapping[d]
-        # Case-insensitive fallback
         for k, v in mapping.items():
             if k.lower() == d.lower():
                 return v
         return "2"
 
-    # Her frame için pattern bazlı gruplama
     from collections import defaultdict
     per_frame: Dict[str, list] = defaultdict(list)
 
@@ -583,23 +575,19 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
         if not frame_id or frame_id not in frame_map:
             continue
 
-        # SAP alanları
         pattern = str(r.get('LoadPat', 'DEFAULT')).strip()
-        csys = str(r.get('CoordSys', 'Local')).strip()   # "Local" veya "GLOBAL"
+        csys = str(r.get('CoordSys', 'Local')).strip()
         dir_sap = str(r.get('Dir', 'Gravity')).strip()
         our_load_dir = _sap_dir_to_our(dir_sap)
         is_rel = "REL" in str(r.get('DistType', 'RelDist')).upper()
 
-        # Segment sınırları
         if is_rel:
             x1 = safe_float(r, 'RelDistA', 0.0)
             x2 = safe_float(r, 'RelDistB', 1.0)
         else:
-            # AbsDist → relative'e çevir (basitçe kabul et, unit-scale belirsiz)
             x1 = safe_float(r, 'RelDistA', 0.0)
             x2 = safe_float(r, 'RelDistB', 1.0)
 
-        # Yük değerleri
         ftype = str(r.get('Type', 'Force')).upper()
         v1 = safe_float(r, 'FOverLA', 0.0)
         v2 = safe_float(r, 'FOverLB', default=v1)
@@ -617,19 +605,13 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
             "v1": v1, "v2": v2,
         })
 
-    # Frame başına FrameDistributedLoad oluştur
-    from domain.definition import FrameDistributedLoad
-
     for frame_id, rows in per_frame.items():
         frame = frame_map[frame_id]
-
-        # Pattern bazlı grupla
         by_pattern: Dict[str, list] = defaultdict(list)
         for row in rows:
             by_pattern[row["pattern"]].append(row)
 
         for pattern, items in by_pattern.items():
-            # İlk item'dan coord_sys ve load_dir al
             first = items[0]
             csys_norm = "Global" if first["csys"].lower().startswith("g") else "Local"
 
@@ -650,10 +632,8 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
                     q2=float(it["v2"]),
                 )
 
-            # Set'i frame'e ata
             frame.dist_load_sets[pattern] = load_set
 
-            # Export/legacy için dist_loads'a da yaz
             for sap_load in load_set.to_sap_loads():
                 frame.dist_loads.append(sap_load)
 
@@ -683,9 +663,7 @@ def _load_area_loads(ctx: LoadContext, area_map: Dict[str, Area]):
                 ))
 
 
-
 def handle_program_control(ctx: LoadContext, df: pd.DataFrame):
-    """PROGRAM CONTROL → birim ayarları."""
     if 'CurrUnits' in df.columns:
         units_str = str(df.iloc[0]['CurrUnits'])
         ctx.units = UnitConverter(units_str)
@@ -693,7 +671,6 @@ def handle_program_control(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_project_information(ctx: LoadContext, df: pd.DataFrame):
-    """PROJECT INFORMATION → proje bilgileri."""
     info = {}
     for _, row in df.iterrows():
         key = str(row.get('Item', '')).strip()
@@ -717,16 +694,15 @@ def handle_project_information(ctx: LoadContext, df: pd.DataFrame):
         design_code=info.get('Design Code', ''),
     )
     ctx.project_info['site'] = SiteInformation(
-            cadastral_info='--- / --',
-            live_load_factor= 0.3,
-            date='xx.xx.20xx',
-            soil_class='ZD',
-            subgrade_modulus_kn_m3 = 1500,
+        cadastral_info='--- / --',
+        live_load_factor= 0.3,
+        date='xx.xx.20xx',
+        soil_class='ZD',
+        subgrade_modulus_kn_m3 = 1500,
+    )
 
-        )
 
 def handle_material_props(ctx: LoadContext, df: pd.DataFrame):
-    """MATERIAL PROPERTIES 01 - GENERAL."""
     for _, row in df.iterrows():
         name = str(row.get('Material', '')).strip()
         if not name:
@@ -743,7 +719,6 @@ def handle_material_props(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_material_mech(ctx: LoadContext, df: pd.DataFrame):
-    """MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES."""
     if df.empty:
         return
 
@@ -768,8 +743,8 @@ def handle_material_mech(ctx: LoadContext, df: pd.DataFrame):
         mat.nu23 = safe_float(row, 'U23', mat.nu12)
         mat.density = safe_float(row, 'UnitMass', 7.85e-9)
 
+
 def handle_frame_props(ctx: LoadContext, df: pd.DataFrame):
-    """FRAME SECTION PROPERTIES 01 - GENERAL."""
     if df.empty:
         return
 
@@ -800,7 +775,6 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame):
         if mat_obj is None and mat_name and mat_name.lower() != 'nan':
             mat_obj = Material(name=mat_name, mat_type=MatType.STEEL)
             ctx.materials[mat_name] = mat_obj
-            logger.warning(f"Kesit '{sect_name}': malzeme '{mat_name}' bulunamadı, geçici oluşturuldu")
 
         ctx.sections[sect_name] = Section(
             name=sect_name,
@@ -811,12 +785,8 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame):
         )
         loaded += 1
 
-    if skipped > 0:
-        logger.info(f"[Sections] {skipped} Auto Select listesi atlandı, {loaded} gerçek kesit yüklendi")
-
 
 def handle_auto_select_lists(ctx: LoadContext, df: pd.DataFrame):
-    """FRAME SECTION PROPERTIES 04 - AUTO SELECT."""
     if df.empty:
         return
 
@@ -832,11 +802,8 @@ def handle_auto_select_lists(ctx: LoadContext, df: pd.DataFrame):
 
         ctx.auto_select_lists[list_name].append(member)
 
-    logger.info(f"[AutoSelect] {len(ctx.auto_select_lists)} liste yüklendi")
-
 
 def handle_area_props(ctx: LoadContext, df: pd.DataFrame):
-    """AREA SECTION PROPERTIES."""
     if df.empty:
         return
 
@@ -865,12 +832,10 @@ def handle_area_props(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_link_props(ctx: LoadContext, df: pd.DataFrame):
-    """LINK PROPERTY DEFINITIONS 01 - GENERAL."""
     if df.empty:
         return
 
     for _, row in df.iterrows():
-        # LinkProp adı: 'Link' veya 'LinkProp' veya 'Name'
         name = str(
             row.get('Link', row.get('LinkProp', row.get('Name', '')))
         ).strip()
@@ -878,38 +843,104 @@ def handle_link_props(ctx: LoadContext, df: pd.DataFrame):
             continue
 
         if name in ctx.link_props:
-            logger.warning(f"LinkProp '{name}' zaten var, atlanıyor")
             continue
 
-        # ✅ Enum ile tip parse
         link_type_str = str(row.get('LinkType', 'LINEAR')).strip()
         prop_type = LinkPropType.from_sap(link_type_str)
-
-        # ✅ Alt sınıf seçimi (enum ile)
         prop = _make_link_prop(name, prop_type)
 
         ctx.link_props[name] = prop
-        #logger.debug(
-        #     f"LinkProp '{name}': SAP='{link_type_str}' → {prop_type.name}"
-        # )
 
 
 def _make_link_prop(name: str, prop_type: LinkPropType):
-    """LinkPropType → doğru LinkProp alt sınıfı."""
     factory = {
         LinkPropType.LINEAR: LinkPropLinear,
-        LinkPropType.DAMPER: LinkPropLinear,      # şimdilik
-        LinkPropType.GAP: LinkPropLinear,          # şimdilik
-        LinkPropType.HOOK: LinkPropLinear,         # şimdilik
-        LinkPropType.PLASTIC_WEN: LinkPropLinear,  # şimdilik
-        LinkPropType.ISOLATOR1: LinkPropLinear,    # şimdilik
-        LinkPropType.ISOLATOR2: LinkPropLinear,    # şimdilik
+        LinkPropType.DAMPER: LinkPropLinear,
+        LinkPropType.GAP: LinkPropLinear,
+        LinkPropType.HOOK: LinkPropLinear,
+        LinkPropType.PLASTIC_WEN: LinkPropLinear,
+        LinkPropType.ISOLATOR1: LinkPropLinear,
+        LinkPropType.ISOLATOR2: LinkPropLinear,
         LinkPropType.MULTILINEAR_ELASTIC: LinkPropLinear,
         LinkPropType.MULTILINEAR_PLASTIC: LinkPropLinear,
         LinkPropType.ISOLATOR3: LinkPropLinear,
     }
     cls = factory.get(prop_type, LinkPropLinear)
     return cls(name=name, prop_type=prop_type)
+
+
+# --- YENİ EKLENEN VEYA EKSİK GİDERİLEN HANDLE KODLARI ---
+
+def handle_diaphragms(ctx: LoadContext, df: pd.DataFrame):
+    """CONSTRAINT DEFINITIONS - DIAPHRAGM"""
+    ctx.df_diaphragms = df
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        name = str(r.get('Name', '')).strip()
+        if name:
+            ctx.diaphragms[name] = {
+                'coord_sys': str(r.get('CoordSys', 'GLOBAL')).strip(),
+                'axis': str(r.get('Axis', 'Z')).strip(),
+                'multi_level': str(r.get('MultiLevel', 'No')).strip().upper() == 'YES'
+            }
+
+def handle_frame_modifiers(ctx: LoadContext, df: pd.DataFrame):
+    """FRAME PROPERTY MODIFIERS"""
+    ctx.df_frame_modifiers = df
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        fid = str(r.get('Frame', '')).strip()
+        if fid:
+            ctx.frame_modifiers[fid] = {
+                'amod': safe_float(r, 'AMod', 1.0),
+                'as2mod': safe_float(r, 'AS2Mod', 1.0),
+                'as3mod': safe_float(r, 'AS3Mod', 1.0),
+                'jmod': safe_float(r, 'JMod', 1.0),
+                'i22mod': safe_float(r, 'I22Mod', 1.0),
+                'i33mod': safe_float(r, 'I33Mod', 1.0),
+                'massmod': safe_float(r, 'MassMod', 1.0),
+                'weightmod': safe_float(r, 'WeightMod', 1.0),
+            }
+
+def handle_frame_design_procs(ctx: LoadContext, df: pd.DataFrame):
+    """FRAME DESIGN PROCEDURES"""
+    ctx.df_frame_design_procs = df
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        fid = str(r.get('Frame', '')).strip()
+        proc = str(r.get('DesignProc', 'From Material')).strip()
+        if fid:
+            ctx.frame_design_procs[fid] = proc
+
+def handle_frame_auto_mesh(ctx: LoadContext, df: pd.DataFrame):
+    """FRAME AUTO MESH ASSIGNMENTS"""
+    ctx.df_frame_auto_mesh = df
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        fid = str(r.get('Frame', '')).strip()
+        if fid:
+            ctx.frame_auto_mesh[fid] = {
+                'auto_mesh': str(r.get('AutoMesh', 'No')).strip().upper() == 'YES',
+                'at_joints': str(r.get('AtJoints', 'Yes')).strip().upper() == 'YES',
+                'max_length': safe_float(r, 'MaxLength', 0.0),
+            }
+
+def handle_frame_output_stations(ctx: LoadContext, df: pd.DataFrame):
+    """FRAME OUTPUT STATION ASSIGNMENTS"""
+    pass
+
+def handle_frame_load_transfer_options(ctx: LoadContext, df: pd.DataFrame):
+    """FRAME LOAD TRANSFER OPTIONS"""
+    pass
+
+def handle_frame_local_axes(ctx: LoadContext, df: pd.DataFrame):
+    """FRAME LOCAL AXES ASSIGNMENTS 1 - TYPICAL"""
+    pass
+
 
 def handle_joints(ctx: LoadContext, df: pd.DataFrame): ctx.df_joints = df
 def handle_joint_restraints(ctx: LoadContext, df: pd.DataFrame): ctx.df_restraints = df
@@ -930,33 +961,26 @@ def handle_area_uniform_to_frame(ctx: LoadContext, df: pd.DataFrame): ctx.df_are
 def handle_area_wind(ctx: LoadContext, df: pd.DataFrame): ctx.df_area_wind = df
 
 def handle_load_patterns(ctx: LoadContext, df: pd.DataFrame):
-    """LOAD PATTERN DEFINITIONS."""
     if df.empty:
         return
-
     for _, row in df.iterrows():
         name = str(row.get('LoadPat', '')).strip()
         if not name:
             continue
-
         ctx.load_patterns[name] = LoadPattern(
             name=name,
             design_type=str(row.get('DesignType', 'Dead')).strip(),
             self_wt_mult=safe_float(row, 'SelfWtMult', 0.0),
-
         )
 
 
 def handle_load_cases(ctx: LoadContext, df: pd.DataFrame):
-    """LOAD CASE DEFINITIONS."""
     if df.empty:
         return
-
     for _, row in df.iterrows():
         name = str(row.get('Case', '')).strip()
         if not name:
             continue
-
         run_str = str(row.get('RunCase', 'Yes')).strip().upper()
         ctx.load_cases[name] = LoadCase(
             name=name,
@@ -966,21 +990,17 @@ def handle_load_cases(ctx: LoadContext, df: pd.DataFrame):
             design_act=str(row.get('DesignAct', 'Non-Composite')).strip(),
             auto_type=str(row.get('AutoType', 'None')).strip(),
             run_case=(run_str == 'YES'),
-
         )
 
 
 def handle_static_assignments(ctx: LoadContext, df: pd.DataFrame):
-    """CASE - STATIC 1 - LOAD ASSIGNMENTS."""
     if df.empty:
         return
-
     for _, row in df.iterrows():
         case_name = str(row.get('Case', '')).strip()
         case = ctx.load_cases.get(case_name)
         if not case:
             continue
-
         case.static_assignments.append(StaticLoadAssignment(
             load_type=str(row.get('LoadType', 'Load pattern')).strip(),
             load_name=str(row.get('LoadName', '')).strip(),
@@ -989,15 +1009,12 @@ def handle_static_assignments(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_modal_cases(ctx: LoadContext, df: pd.DataFrame):
-    """CASE - MODAL 1 - GENERAL."""
     if df.empty:
         return
-
     for _, row in df.iterrows():
         name = str(row.get('Case', '')).strip()
         if not name:
             continue
-
         ctx.modal_cases[name] = ModalCase(
             name=name,
             mode_type=str(row.get('ModeType', 'Eigen')).strip(),
@@ -1011,10 +1028,8 @@ def handle_modal_cases(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_combinations(ctx: LoadContext, df: pd.DataFrame):
-    """COMBINATION DEFINITIONS."""
     if df.empty:
         return
-
     for _, row in df.iterrows():
         name = str(row.get('ComboName', '')).strip()
         if not name:
@@ -1026,7 +1041,6 @@ def handle_combinations(ctx: LoadContext, df: pd.DataFrame):
                 name=name,
                 combo_type=str(row.get('ComboType', 'Linear Add')).strip(),
                 auto_design=(auto_des_str == 'YES'),
-
             )
 
         case_or_pat = str(row.get('CaseName', '')).strip()
@@ -1038,26 +1052,20 @@ def handle_combinations(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_mass_source(ctx: LoadContext, df: pd.DataFrame):
-    """MASS SOURCE."""
     if df.empty:
         return
-
     for _, row in df.iterrows():
         pattern = str(row.get('LoadPat', '')).strip()
         if not pattern:
             continue
-
         ctx.mass_source_map[pattern] = safe_float(row, 'Multiplier', 1.0)
 
-    logger.info(f"[MassSource] {len(ctx.mass_source_map)} pattern")
 
 def handle_spectrum_functions_TSC(ctx: LoadContext, df: pd.DataFrame):
-    """FUNCTION - RESPONSE SPECTRUM - TSC-2018."""
     if df.empty: return
     for _, r in df.iterrows():
         name = str(r.get('Name', '')).strip()
         if not name: continue
-
         ctx.spectrum_functions[name] = SpectrumFunction(
             name=name,
             source_type=SpectrumSourceType.TSC_2018,
@@ -1076,12 +1084,10 @@ def handle_spectrum_functions_TSC(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_spectrum_functions_file(ctx: LoadContext, df: pd.DataFrame):
-    """FUNCTION - RESPONSE SPECTRUM - FROM FILE."""
     if df.empty: return
     for _, r in df.iterrows():
         name = str(r.get('Name', '')).strip()
         if not name: continue
-
         ctx.spectrum_functions[name] = SpectrumFunction(
             name=name,
             source_type=SpectrumSourceType.FROM_FILE,
@@ -1092,12 +1098,10 @@ def handle_spectrum_functions_file(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_spectrum_functions_user(ctx: LoadContext, df: pd.DataFrame):
-    """FUNCTION - RESPONSE SPECTRUM - USER."""
     if df.empty: return
     for _, r in df.iterrows():
         name = str(r.get('Name', '')).strip()
         if not name: continue
-
         p_val = safe_float(r, 'Period')
         a_val = safe_float(r, 'Accel')
 
@@ -1111,21 +1115,17 @@ def handle_spectrum_functions_user(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_response_spectrum_gen(ctx: LoadContext, df: pd.DataFrame):
-    """CASE - RESPONSE SPECTRUM 1 - GENERAL."""
     ctx.df_spec_gen = df
 
 
 def handle_response_spectrum_assign(ctx: LoadContext, df: pd.DataFrame):
-    """CASE - RESPONSE SPECTRUM 2 - LOAD ASSIGNMENTS."""
     ctx.df_spec_ass = df
     _process_response_spectrum_cases(ctx)
 
 
 def _process_response_spectrum_cases(ctx: LoadContext):
-    """Genel ve atama tabloları yüklendiğinde Spektrum Case nesnelerini türetir."""
     if ctx.df_spec_gen is None or ctx.df_spec_gen.empty:
         return
-
     cases: Dict[str, ResponseSpectrumCase] = {}
 
     for _, r in ctx.df_spec_gen.iterrows():
@@ -1159,7 +1159,6 @@ def _process_response_spectrum_cases(ctx: LoadContext):
 
 
 def handle_auto_seismic(ctx: LoadContext, df: pd.DataFrame):
-    """AUTO SEISMIC - TSC-2018."""
     if df.empty: return
     for _, r in df.iterrows():
         pat_name = str(r.get('LoadPat', '')).strip()
@@ -1182,8 +1181,8 @@ def handle_auto_seismic(ctx: LoadContext, df: pd.DataFrame):
             f1=safe_float(r, 'F1', 1.0)
         )
 
+
 def handle_section_cuts_gen(ctx: LoadContext, df: pd.DataFrame):
-    """SECTION CUTS 1 - GENERAL."""
     if df.empty:
         return
     if not hasattr(ctx, 'section_cuts'):
@@ -1194,14 +1193,12 @@ def handle_section_cuts_gen(ctx: LoadContext, df: pd.DataFrame):
         if not name:
             continue
 
-        # Parse DefinedBy enum safely
         defined_by_str = str(row.get('DefinedBy', 'Quad')).strip()
         try:
             defined_by = SectionCutDefinedBy(defined_by_str)
         except ValueError:
             defined_by = SectionCutDefinedBy.QUAD
 
-        # Parse ResultType enum safely
         result_type_str = str(row.get('ResultType', 'Analysis')).strip()
         try:
             result_type = SectionCutResultType(result_type_str)
@@ -1226,7 +1223,6 @@ def handle_section_cuts_gen(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_section_cuts_quad(ctx: LoadContext, df: pd.DataFrame):
-    """SECTION CUTS 3 - QUADRILATERAL DEFINITIONS."""
     if df.empty:
         return
     if not hasattr(ctx, 'section_cuts'):
@@ -1238,7 +1234,6 @@ def handle_section_cuts_quad(ctx: LoadContext, df: pd.DataFrame):
             continue
 
         if name not in ctx.section_cuts:
-            # If general definitions have not loaded yet, create a placeholder
             ctx.section_cuts[name] = SectionCut(name=name, quad=QuadDefinition(points=[]))
 
         x = ctx.units.L(safe_float(row, 'X'))
@@ -1250,22 +1245,80 @@ def handle_section_cuts_quad(ctx: LoadContext, df: pd.DataFrame):
             sc_obj.quad = QuadDefinition(points=[])
         sc_obj.quad.points.append((x, y, z))
 
+def handle_grid_lines(ctx: LoadContext, df: pd.DataFrame):
+    """GRID LINES"""
+    ctx.df_grid_lines = df
+    if df.empty:
+        return
+    
+    for _, r in df.iterrows():
+        sys_name = str(r.get('CoordSys', 'Global')).strip()
+        line_id = str(r.get('GridID', r.get('ID', ''))).strip()
+        
+        # SAP2000 tablosundaki gerçek koordinat kolonu: 'XRYZCoord'
+        ordinate = safe_float(r, 'XRYZCoord', safe_float(r, 'Ordinate', 0.0))
+        
+        # Aks yönü: 'AxisDir' (X, Y veya Z)
+        axis_dir = str(r.get('AxisDir', r.get('LineType', 'X'))).strip().upper()
+
+        if line_id:
+            ctx.grid_lines.append({
+                'coord_sys': sys_name,
+                'id': line_id,
+                'ordinate': ctx.units.L(ordinate),
+                'axis_dir': axis_dir,  # Hangi eksende olduğunu buraya kaydediyoruz
+                'bubble': str(r.get('Bubble', '')).strip(),
+            })
+
+def handle_joint_constraints(ctx: LoadContext, df: pd.DataFrame):
+    """JOINT CONSTRAINT ASSIGNMENTS"""
+    ctx.df_joint_constraints = df
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        joint_id = str(r.get('Joint', '')).strip()
+        constraint_name = str(r.get('Constraint', '')).strip()
+        if joint_id and constraint_name:
+            ctx.joint_constraints[joint_id] = constraint_name
+
+def handle_link_props_linear(ctx: LoadContext, df: pd.DataFrame):
+    """LINK PROPERTY DEFINITIONS 02 - LINEAR"""
+    ctx.df_link_props_linear = df
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        name = str(r.get('LinkProp', r.get('Link', '') )).strip()
+        if not name:
+            continue
+        
+        if name not in ctx.link_props:
+            ctx.link_props[name] = LinkPropLinear(name=name, prop_type=LinkPropType.LINEAR)
+        
+        prop = ctx.link_props[name]
+        if isinstance(prop, LinkPropLinear):
+            # U1, U2, U3, R1, R2, R3 rijitlik (stiffness) ve sönüm (damping) değerleri
+            for i, dof in enumerate(['u1', 'u2', 'u3', 'rx', 'ry', 'rz'], start=1):
+                k_val = safe_float(r, f'K{i}', safe_float(r, f'Stiff{i}', 0.0))
+                c_val = safe_float(r, f'C{i}', safe_float(r, f'Damp{i}', 0.0))
+                if hasattr(prop, f'stiff_{dof}'):
+                    setattr(prop, f'stiff_{dof}', ctx.units.F(k_val) if i<=3 else ctx.units.M(k_val))
+                if hasattr(prop, f'damp_{dof}'):
+                    setattr(prop, f'damp_{dof}', c_val)
+
 PRIORITY = {
-    # 1. Program ve birimler
     "PROGRAM CONTROL":                                  10,
     "PROJECT INFORMATION":                              11,
+    "GRID LINES":                                       12,
 
-    # 2. Malzemeler
     "MATERIAL PROPERTIES 01 - GENERAL":                 20,
     "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES": 21,
 
-    # 3. Kesitler
     "FRAME SECTION PROPERTIES 01 - GENERAL":            30,
     "FRAME SECTION PROPERTIES 04 - AUTO SELECT":         31,
     "AREA SECTION PROPERTIES":                          32,
     "LINK PROPERTY DEFINITIONS 01 - GENERAL":           33,
+    "LINK PROPERTY DEFINITIONS 02 - LINEAR":            34,
 
-    # 4. Yük & Analiz Tanımları
     "LOAD PATTERN DEFINITIONS":                         40,
     "LOAD CASE DEFINITIONS":                            41,
     "CASE - STATIC 1 - LOAD ASSIGNMENTS":               42,
@@ -1273,40 +1326,43 @@ PRIORITY = {
     "COMBINATION DEFINITIONS":                          44,
     "MASS SOURCE":                                      45,
 
-    # 5. Geometri
     "JOINT COORDINATES":                                50,
     "JOINT RESTRAINT ASSIGNMENTS":                      51,
     "CONNECTIVITY - FRAME":                             52,
     "CONNECTIVITY - AREA":                              53,
     "CONNECTIVITY - LINK":                              54,
+    "JOINT CONSTRAINT ASSIGNMENTS":                     55,
 
-    # 6. Atamalar
     "FRAME SECTION ASSIGNMENTS":                        60,
     "AREA SECTION ASSIGNMENTS":                         61,
     "LINK PROPERTY ASSIGNMENTS":                        62,
     "FRAME RELEASE ASSIGNMENTS 1 - GENERAL":            63,
+    "FRAME PROPERTY MODIFIERS":                         64,
+    "FRAME DESIGN PROCEDURES":                          65,
+    "FRAME AUTO MESH ASSIGNMENTS":                      66,
+    "FRAME OUTPUT STATION ASSIGNMENTS":                 67,
+    "FRAME LOAD TRANSFER OPTIONS":                      68,
+    "FRAME LOCAL AXES ASSIGNMENTS 1 - TYPICAL":         69,
+    "CONSTRAINT DEFINITIONS - DIAPHRAGM":               70,
 
-    # 7. Yükler
-    "JOINT LOADS - FORCE":                              70,
-    "FRAME LOADS - GRAVITY":                            71,
-    "FRAME LOADS - DISTRIBUTED":                        72,
-    "FRAME LOADS - POINTS":                             73,
-    "FRAME LOADS - TEMPERATURE":                        74,
-    "AREA LOADS - UNIFORM":                             75,
-    "AREA LOADS - UNIFORM TO FRAME":                    76,
-    "AREA LOADS - WIND PRESSURE COEFFICIENTS":          77,
+    "JOINT LOADS - FORCE":                              75,
+    "FRAME LOADS - GRAVITY":                            76,
+    "FRAME LOADS - DISTRIBUTED":                        77,
+    "FRAME LOADS - POINTS":                             78,
+    "FRAME LOADS - TEMPERATURE":                        79,
+    "AREA LOADS - UNIFORM":                             80,
+    "AREA LOADS - UNIFORM TO FRAME":                    81,
+    "AREA LOADS - WIND PRESSURE COEFFICIENTS":          82,
 
-    # 8. Spektrum & Seismic
-    "FUNCTION - RESPONSE SPECTRUM - TSC-2018":          80,
-    "FUNCTION - RESPONSE SPECTRUM - FILE":              81,
-    "FUNCTION - RESPONSE SPECTRUM - USER":              82,
-    "CASE - RESPONSE SPECTRUM 1 - GENERAL":             83,
-    "CASE - RESPONSE SPECTRUM 2 - LOAD ASSIGNMENTS":    84,
-    "AUTO SEISMIC - TSC-2018":                          85,
-    # 9.SECTION CUTS
-    "SECTION CUTS 1 - GENERAL":                         90,
-    "SECTION CUTS 3 - QUADRILATERAL DEFINITIONS":       91,
-
+    "FUNCTION - RESPONSE SPECTRUM - TSC-2018":          85,
+    "FUNCTION - RESPONSE SPECTRUM - FILE":              86,
+    "FUNCTION - RESPONSE SPECTRUM - USER":              87,
+    "CASE - RESPONSE SPECTRUM 1 - GENERAL":             88,
+    "CASE - RESPONSE SPECTRUM 2 - LOAD ASSIGNMENTS":    89,
+    "AUTO SEISMIC - TSC-2018":                          90,
+    
+    "SECTION CUTS 1 - GENERAL":                         95,
+    "SECTION CUTS 3 - QUADRILATERAL DEFINITIONS":       96,
 }
 
 
@@ -1344,6 +1400,13 @@ def build_router() -> Dict[str, Callable]:
         "AREA SECTION ASSIGNMENTS":                         handle_area_assign,
         "LINK PROPERTY ASSIGNMENTS":                        handle_link_assign,
         "FRAME RELEASE ASSIGNMENTS 1 - GENERAL":            handle_frame_releases,
+        "FRAME PROPERTY MODIFIERS":                         handle_frame_modifiers,
+        "FRAME DESIGN PROCEDURES":                          handle_frame_design_procs,
+        "FRAME AUTO MESH ASSIGNMENTS":                      handle_frame_auto_mesh,
+        "FRAME OUTPUT STATION ASSIGNMENTS":                 handle_frame_output_stations,
+        "FRAME LOAD TRANSFER OPTIONS":                      handle_frame_load_transfer_options,
+        "FRAME LOCAL AXES ASSIGNMENTS 1 - TYPICAL":         handle_frame_local_axes,
+        "CONSTRAINT DEFINITIONS - DIAPHRAGM":               handle_diaphragms,
 
         "JOINT LOADS - FORCE":                              handle_joint_loads,
         "FRAME LOADS - GRAVITY":                            handle_frame_gravity,
@@ -1363,7 +1426,9 @@ def build_router() -> Dict[str, Callable]:
 
         "SECTION CUTS 1 - GENERAL":                         handle_section_cuts_gen,
         "SECTION CUTS 3 - QUADRILATERAL DEFINITIONS":       handle_section_cuts_quad,
-
+        "GRID LINES":                                       handle_grid_lines,
+        "LINK PROPERTY DEFINITIONS 02 - LINEAR":            handle_link_props_linear,
+        "JOINT CONSTRAINT ASSIGNMENTS":                     handle_joint_constraints,
     }
 
 

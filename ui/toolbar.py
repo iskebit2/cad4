@@ -1,6 +1,6 @@
 # ui/toolbar.py
 """
-ImGui Toolbar — Sekmeli ve kategorize edilmiş modern üst şerit.
+ImGui Toolbar — Merkezi PANEL_REGISTRY ve komut mimarisiyle tam uyumlu üst şerit.
 """
 from typing import Callable, Dict
 import imgui
@@ -11,8 +11,8 @@ from data.enums import UnitSystem
 class Toolbar:
     HEIGHT = 32.0
 
-    def __init__(self, callbacks: Dict[str, Callable], panel_states: Dict[str, Callable] = None):
-        self.callbacks = callbacks or {}
+    def __init__(self, commands: Dict[str, Callable], panel_states: Dict[str, Callable] = None):
+        self.commands = commands or {}
         self.panel_states = panel_states or {}
         self.current_unit = None
 
@@ -60,22 +60,12 @@ class Toolbar:
         imgui.separator()
         imgui.same_line()
 
-        # --- Assign (Yük Atama) Grubu ---
+        # --- Assign (Yük Atama) Menüsü ---
         assign_state = self._get_panel_state("assign_area_load")
-        assign_color = (0.25, 0.45, 0.65, 1.00) if not assign_state else (0.35, 0.65, 0.45, 1.00)
-        
         if imgui.begin_menu("Assign (Atama)"):
             if imgui.menu_item("Assign Area Load to Frame...", selected=assign_state)[0]:
                 self._fire("assign_area_load")
             
-            imgui.separator()
-            # Diğer yük atama butonları için yerler (Şimdilik boş/pasif)
-            if imgui.menu_item("Assign Frame Load... (Yakında)", selected=False, enabled=False)[0]:
-                pass
-            if imgui.menu_item("Assign Joint Load... (Yakında)", selected=False, enabled=False)[0]:
-                pass
-            if imgui.menu_item("Assign Area Uniform Load... (Yakında)", selected=False, enabled=False)[0]:
-                pass
             imgui.separator()
             if imgui.menu_item("Distribute Selected Polygon Loads")[0]:
                 self._fire("distribute_polygon_loads")
@@ -88,17 +78,15 @@ class Toolbar:
             imgui.separator()
             if imgui.menu_item("Check Load Balance")[0]:
                 self._fire("check_load_balance")
-
             if imgui.menu_item("Distribute Wind Zones to Frames")[0]:
                 self._fire("distribute_wind_zones")
-
-            
             imgui.end_menu()
         imgui.same_line()
 
         imgui.separator()
         imgui.same_line()
 
+        # --- Görünüm & Araçlar Menüsü ---
         if imgui.begin_menu("Görünüm & Araçlar"):
             vis_state = self._get_panel_state("visibility")
             filter_state = self._get_panel_state("view_filter")
@@ -111,7 +99,7 @@ class Toolbar:
                 self._fire("view_filter")
             if imgui.menu_item("Grid Ayarları (Grid - Ctrl+G)", selected=grid_state)[0]:
                 self._fire("grid")
-            if imgui.menu_item("Grid Etiketleri", selected=self.panel_states.get("grid_labels", lambda: True)())[0]:
+            if imgui.menu_item("Grid Etiketleri", selected=self._get_panel_state("grid_labels"))[0]:
                 self._fire("grid_labels")
             if imgui.menu_item("Inspector (Ctrl+P)", selected=inspector_state)[0]:
                 self._fire("inspector")
@@ -125,27 +113,22 @@ class Toolbar:
 
             imgui.separator()
 
-            # --- LOCAL AXES ---
-            axes_on       = self._get_panel_state("local_axes")
+            axes_on = self._get_panel_state("local_axes")
             axes_sel_only = self._get_panel_state("local_axes_selected_only")
 
-            if imgui.menu_item("Local Axes Göster (E)", selected=axes_on)[0]:
+            if imgui.menu_item("Local Axes Göster", selected=axes_on)[0]:
                 self._fire("local_axes")
-            if imgui.menu_item("  └ Sadece Seçililerde",
-                            selected=axes_sel_only,
-                            enabled=axes_on)[0]:
+            if imgui.menu_item("  └ Sadece Seçililerde", selected=axes_sel_only, enabled=axes_on)[0]:
                 self._fire("local_axes_selected_only")
 
             imgui.separator()
-            loads_on = self._get_panel_state("show_loads")
-            if imgui.menu_item("Yük Görüntüleme Paneli",
-                   selected=self._get_panel_state("load_display_panel"))[0]:
+            if imgui.menu_item("Yük Görüntüleme Paneli", selected=self._get_panel_state("load_display_panel"))[0]:
                 self._fire("toggle_load_display_panel")
 
             imgui.end_menu()
         imgui.same_line()
 
-        # --- Yönetim & Tanımlar ---
+        # --- Yönetim & Tanımlar Menüsü ---
         if imgui.begin_menu("Yönetim & Tanımlar"):
             if imgui.menu_item("Tanımlar (Definitions - Ctrl+R)", selected=self._get_panel_state("definitions"))[0]:
                 self._fire("definitions")
@@ -160,29 +143,26 @@ class Toolbar:
             imgui.end_menu()
         imgui.same_line()
 
-        # --- Rüzgar & Özel Analizler ---
+        # --- Rüzgar & Özel Butonlar ---
         self._styled_button("Zones", (0.15, 0.45, 0.60, 1.00), lambda: self._fire("wind"))
         imgui.same_line()
 
-        # --- YENİ: Polygon Edit ---
         poly_edit_state = self._get_panel_state("polygon_edit")
         poly_edit_color = (0.35, 0.65, 0.45, 1.00) if poly_edit_state else (0.25, 0.40, 0.55, 1.00)
         self._styled_button("⬡ Poly Edit", poly_edit_color, lambda: self._fire("polygon_edit"))
         imgui.same_line()
         
-        # --- Tek ve Kalıcı Birim Seçici ---
+        # --- Birim Seçici Menü ---
         unit_label = f"Birim: {self.current_unit.name} ({self.current_unit.force_unit}, {self.current_unit.length_unit})" if self.current_unit else "Birim: N-mm"
-        
         if imgui.begin_menu(unit_label):
             for unit in UnitSystem:
                 is_selected = (self.current_unit == unit)
                 if imgui.menu_item(f"{unit.name} ({unit.force_unit}, {unit.length_unit})", selected=is_selected)[0]:
-                    if "on_unit_change" in self.callbacks:
-                        self.callbacks["on_unit_change"](unit)
+                    self._fire_unit(unit)
             imgui.end_menu()
         imgui.same_line()
 
-        # Model Durum Bilgisi
+        # Model Durum Metni
         imgui.text_colored(model_text, 0.60, 0.65, 0.72, 1.00)
 
     def _get_panel_state(self, key: str) -> bool:
@@ -209,6 +189,11 @@ class Toolbar:
             on_click()
     
     def _fire(self, key: str):
-        fn = self.callbacks.get(key)
+        fn = self.commands.get(key)
         if callable(fn):
             fn()
+
+    def _fire_unit(self, unit):
+        fn = self.commands.get("on_unit_change")
+        if callable(fn):
+            fn(unit)

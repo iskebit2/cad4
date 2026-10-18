@@ -1,223 +1,509 @@
 # ui/widgets/polygon_2d_view.py
-"""
-Polygon2DView — Poly'yi kendi düzleminden (u-v) 2D gösterir.
-Frame'ler çizgi, node'lar daire olarak çizilir.
-Tıklama ile frame seçimi.
-"""
+
 import math
 import imgui
-import numpy as np
-
-from domain.plane import Plane
 
 
+# ----------------------------------------------------------------------
+#  Yardımcı: 2D vektör işlemleri (küçük ve bağımlılıksız)
+# ----------------------------------------------------------------------
+def _add(a, b):
+    return (a[0] + b[0], a[1] + b[1])
+
+
+def _sub(a, b):
+    return (a[0] - b[0], a[1] - b[1])
+
+
+def _mul(a, s):
+    return (a[0] * s, a[1] * s)
+
+
+def _len(a):
+    return math.hypot(a[0], a[1])
+
+
+def _dist(a, b):
+    return math.hypot(a[0] - b[0], a[1] - b[1])
+
+
+def _rot(v, deg):
+    rad = math.radians(deg)
+    cs, sn = math.cos(rad), math.sin(rad)
+    return (v[0] * cs - v[1] * sn, v[0] * sn + v[1] * cs)
+
+
+# ----------------------------------------------------------------------
+#  Polygon2DView
+# ----------------------------------------------------------------------
 class Polygon2DView:
+    """
+    2D canvas görünümü.
+
+    Sorumluluklar:
+      - Model uzayı (poly düzlemi) → ekran dönüşümü
+      - View döndürme (orthogonal, sadece görüntü)
+      - Pan / zoom (imleç merkezli)
+      - Hit-test ve seçim (tek / çoklu / rubber-band)
+      - Grid, eksen, HUD çizimi
+
+    Model verisine asla yazmaz; sadece okur. Döndürme view_rotation ile
+    yapılır ve load_polygon sırasında KORUNUR.
+    """
+
+    # ----- Renkler (ABGR) -----
+    COL_BG          = 0xFF1A1A1A
+    COL_GRID        = 0xFF2A2A2A
+    COL_GRID_MAJOR  = 0xFF3A3A3A
+    COL_AXIS_X      = 0xFF4040C0
+    COL_AXIS_Y      = 0xFF40C040
+    COL_POLY_EDGE   = 0xFFBBBBBB
+    COL_POLY_FILL   = 0x30A0A0A0
+    COL_PT          = 0xFFE0E0E0
+    COL_PT_HOVER    = 0xFFFFD060
+    COL_PT_SEL      = 0xFF60D0FF
+    COL_RUBBER      = 0x60FFD060
+
+    # ----- Sabitler -----
+    HIT_RADIUS_PX   = 9.0
+    MIN_ZOOM        = 0.02
+    MAX_ZOOM        = 80.0
+    ZOOM_STEP       = 1.15
 
     def __init__(self):
+        # Model
         self.plane = None
-        self.poly_2d = []          # [(u, v), ...]
-        self.frames_2d = []        # [(fid, (u1,v1), (u2,v2), frame_obj)]
+        self._points = []           # [(fid, (x, y)), ...] sıralı
+        self._bounds = None         # (minx, miny, maxx, maxy)
+
+        # View transform
+        self.zoom = 1.0
+        self.pan = (0.0, 0.0)       # world uzayında merkez ofseti
+        self.view_rotation = 0.0    # derece, sadece görüntü
+
+        # Görsel ayarlar
+        self.show_grid = True
+        self.show_axes = True
+
+        # Etkileşim durumu
         self.selected_fids = set()
         self.hover_fid = None
-        self.clicked_fid = None
+        self.clicked_fid = None     # panel tarafından tüketilir
+        self.clicked_empty = False  # panel tarafından tüketilir
 
-        # Görünüm
-        self.zoom = 1.0
-        self.pan_u = 0.0
-        self.pan_v = 0.0
-        self._fit_pending = True
+        # Drag (rubber-band / pan) durumu
+        self._panning = False
+        self._pan_anchor = None     # ekran px
+        self._rubber = False
+        self._rubber_start = None   # ekran px
+        self._rubber_end = None     # ekran px
+        self._first_load = True
 
-        # Stil
-        self.col_bg = (0.10, 0.12, 0.18, 1.0)
-        self.col_poly = (0.85, 0.65, 0.35, 1.0)      # poly sınırı
-        self.col_poly_fill = (0.85, 0.65, 0.35, 0.10) # çok şeffaf dolgu
-        self.col_frame = (0.65, 0.75, 0.85, 1.0)
-        self.col_frame_sel = (0.95, 0.55, 0.30, 1.0)
-        self.col_frame_hover = (0.95, 0.85, 0.40, 1.0)
-        self.col_node = (0.55, 0.85, 1.0, 1.0)
-        self.col_node_first = (0.95, 0.40, 0.40, 1.0)
-
+    # ------------------------------------------------------------------
+    #  Yükleme
     # ------------------------------------------------------------------
     def load_polygon(self, poly, scene):
-        """Poly'yi ve assoc frame'leri yükle."""
-        self.plane = Plane.from_polygon(poly)
-        self.poly_2d = self.plane.polygon_to_2d(poly)
-        self.frames_2d = []
+        """
+        Yeni polygon yükler. view_rotation / zoom KORUNUR.
+        Sadece model içeriği ve bounds yenilenir.
+        """
+        self.plane = self._build_plane(poly, scene)
+        self._points = list(self._iter_points())
+        self._bounds = self._compute_bounds()
 
-        assoc = list(getattr(poly, "associated_frame_ids", []))
-        for fid in assoc:
-            frame = scene.frames.get(fid)
-            if frame is None or not frame.node_i or not frame.node_j:
+        # İlk yüklemede içeriği sığdır
+        if self._first_load and self._bounds:
+            self.fit_to_content()
+            self._first_load = False
+
+    # ------------------------------------------------------------------
+    #  Veri modelinize bağlanacak tek yerler
+    # ------------------------------------------------------------------
+    def _build_plane(self, poly, scene):
+        """
+        Poly'den 2D düzlem nesnesi üret.
+        Varsayılan: poly üzerinde zaten bir 'plane' varsa onu döndür.
+        Kendi veri modelinize göre düzenleyin.
+        """
+        return getattr(poly, "plane", None)
+
+    def _iter_points(self):
+        """
+        Plane içindeki (frame_id, (x, y)) çiftlerini sırayla döndür.
+        Sıra, polygon kenar çizgisi için kullanılır.
+        """
+        if not self.plane:
+            return
+        frames = getattr(self.plane, "frames", None)
+        if not frames:
+            return
+        for item in frames:
+            fid = getattr(item, "id", getattr(item, "fid", None))
+            if fid is None:
                 continue
-            p1 = (frame.node_i.x, frame.node_i.y, frame.node_i.z)
-            p2 = (frame.node_j.x, frame.node_j.y, frame.node_j.z)
-            uv1 = self.plane.to_2d(p1)
-            uv2 = self.plane.to_2d(p2)
-            self.frames_2d.append((fid, uv1, uv2, frame))
+            x = getattr(item, "x", None)
+            y = getattr(item, "y", None)
+            if x is None or y is None:
+                # alternatif: item.pos / item.p
+                p = getattr(item, "pos", getattr(item, "p", None))
+                if p is not None and len(p) >= 2:
+                    x, y = p[0], p[1]
+            if x is None or y is None:
+                continue
+            yield fid, (float(x), float(y))
 
-        self._fit_pending = True
-
+    # ------------------------------------------------------------------
+    #  Bounds / fit
     # ------------------------------------------------------------------
     def _compute_bounds(self):
-        """Tüm çizilecek şeylerin u-v sınırları."""
-        us, vs = [], []
-        for (u, v) in self.poly_2d:
-            us.append(u); vs.append(v)
-        for (_, uv1, uv2, _) in self.frames_2d:
-            us.extend([uv1[0], uv2[0]])
-            vs.extend([uv1[1], uv2[1]])
-        if not us or not vs:
-            return 0.0, 1.0, 0.0, 1.0
-        u_min, u_max = min(us), max(us)
-        v_min, v_max = min(vs), max(vs)
-        pad_u = (u_max - u_min) * 0.05 + 1e-6
-        pad_v = (v_max - v_min) * 0.05 + 1e-6
-        return u_min - pad_u, u_max + pad_u, v_min - pad_v, v_max + pad_v
+        if not self._points:
+            return None
+        xs = [p[0] for _, p in self._points]
+        ys = [p[1] for _, p in self._points]
+        return (min(xs), min(ys), max(xs), max(ys))
+
+    def fit_to_content(self, view_w=800.0, view_h=500.0, margin=0.85):
+        """İçeriği verilen view boyutuna sığdır."""
+        if not self._bounds:
+            return
+        minx, miny, maxx, maxy = self._bounds
+        w = max(1e-6, maxx - minx)
+        h = max(1e-6, maxy - miny)
+        self.zoom = max(self.MIN_ZOOM,
+                        min(margin * min(view_w / w, view_h / h), self.MAX_ZOOM))
+        cx = (minx + maxx) * 0.5
+        cy = (miny + maxy) * 0.5
+        self.pan = (-cx, -cy)   # merkezi dünyaya taşı
 
     # ------------------------------------------------------------------
-    def draw(self, imgui, draw_list, canvas_pos, canvas_size):
-        """
-        ImGui draw_list ile çizim.
-        canvas_pos: (x, y) ekran koordinatı (sol üst)
-        canvas_size: (w, h) piksel
-        """
-        cx, cy = canvas_pos
-        cw, ch = canvas_size
+    #  View API (panel tarafından çağrılır)
+    # ------------------------------------------------------------------
+    def rotate_view(self, delta_deg, absolute=False):
+        """Sadece görüntüyü döndürür. Model verisi değişmez."""
+        if absolute:
+            self.view_rotation = float(delta_deg)
+        else:
+            self.view_rotation += float(delta_deg)
+        # 90° katlarına oturt
+        self.view_rotation = round(self.view_rotation / 90.0) * 90.0
+        self.view_rotation %= 360.0
 
-        # Arka plan
-        draw_list.add_rect_filled(cx, cy, cx + cw, cy + ch, imgui.get_color_u32_rgba(*self.col_bg))
+    def zoom_at_center(self, factor):
+        self.zoom = max(self.MIN_ZOOM,
+                        min(self.zoom * factor, self.MAX_ZOOM))
 
-        if not self.poly_2d:
-            draw_list.add_text(cx + 10, cy + 10,
-                              imgui.get_color_u32_rgba(0.6, 0.6, 0.6, 1.0),
-                              "Polygon yüklenmedi")
-            return
+    def reset_view(self):
+        self.view_rotation = 0.0
+        self.pan = (0.0, 0.0)
+        self.fit_to_content()
 
-        # Sınırlar
-        u_min, u_max, v_min, v_max = self._compute_bounds()
-        u_span = max(u_max - u_min, 1e-6)
-        v_span = max(v_max - v_min, 1e-6)
+    # ------------------------------------------------------------------
+    #  Dönüşümler
+    # ------------------------------------------------------------------
+    def _world_to_screen_factory(self, cx, cy, cw, ch):
+        """Canvas köşesi (cx,cy) ve boyutu (cw,ch) için dönüşüm kapanışı."""
+        rot = self.view_rotation
+        zoom = self.zoom
+        pan = self.pan
+        half_w = cw * 0.5
+        half_h = ch * 0.5
 
-        # Ekran dönüşümü (eşit ölçek, ortala)
-        margin = 20
-        scale_x = (cw - 2 * margin) / u_span
-        scale_y = (ch - 2 * margin) / v_span
-        scale = min(scale_x, scale_y) * self.zoom
-
-        # Merkez offset
-        offset_u = (u_min + u_max) * 0.5 + self.pan_u
-        offset_v = (v_min + v_max) * 0.5 + self.pan_v
-
-        def to_screen(u, v):
-            sx = cx + cw * 0.5 + (u - offset_u) * scale
-            # v eksenini ters çevir (ekranda +v yukarı olsun)
-            sy = cy + ch * 0.5 - (v - offset_v) * scale
+        def to_screen(x, y):
+            xr, yr = _rot((x, y), rot)
+            sx = cx + half_w + (xr + pan[0]) * zoom
+            sy = cy + half_h - (yr + pan[1]) * zoom
             return sx, sy
 
-        def to_world(sx, sy):
-            u = (sx - cx - cw * 0.5) / scale + offset_u
-            v = -(sy - cy - ch * 0.5) / scale + offset_v
-            return u, v
+        def from_screen(sx, sy):
+            dx = (sx - cx - half_w) / zoom - pan[0]
+            dy = -(sy - cy - half_h) / zoom - pan[1]
+            wx, wy = _rot((dx, dy), -rot)
+            return wx, wy
 
-        # 1. Poly dolgusu (çok şeffaf)
-        if len(self.poly_2d) >= 3:
-            pts = [to_screen(u, v) for (u, v) in self.poly_2d]
-            fill_col = imgui.get_color_u32_rgba(*self.col_poly_fill)
-            # ImGui triangle fan ile dolgu
-            for i in range(1, len(pts) - 1):
-                draw_list.add_triangle_filled(
-                    pts[0][0], pts[0][1],
-                    pts[i][0], pts[i][1],
-                    pts[i + 1][0], pts[i + 1][1],
-                    fill_col,
-                )
+        return to_screen, from_screen
 
-        # 2. Poly sınırı
-        if len(self.poly_2d) >= 2:
-            pts = [to_screen(u, v) for (u, v) in self.poly_2d]
-            poly_col = imgui.get_color_u32_rgba(*self.col_poly)
-            for i in range(len(pts)):
-                x1, y1 = pts[i]
-                x2, y2 = pts[(i + 1) % len(pts)]
-                draw_list.add_line(x1, y1, x2, y2, poly_col, 2.0)
+    # ------------------------------------------------------------------
+    #  Ana çizim
+    # ------------------------------------------------------------------
+    def draw(self, imgui_ctx, draw_list, canvas_pos, canvas_size):
+        cx, cy = canvas_pos
+        cw, ch = canvas_size
+        if cw <= 1 or ch <= 1:
+            return
 
-        # 3. Frame'ler
-        mouse = imgui.get_mouse_pos()
-        self.hover_fid = None
-        hover_dist = 8.0  # piksel
-        for (fid, uv1, uv2, _frame) in self.frames_2d:
-            sx1, sy1 = to_screen(*uv1)
-            sx2, sy2 = to_screen(*uv2)
+        # Arka plan
+        draw_list.add_rect_filled(cx, cy, cx + cw, cy + ch, self.COL_BG)
 
-            is_sel = fid in self.selected_fids
+        to_screen, from_screen = self._world_to_screen_factory(cx, cy, cw, ch)
 
-            # Hover testi (çizgiye mesafe)
-            mx, my = mouse
-            dist = self._point_to_segment_dist((mx, my), (sx1, sy1), (sx2, sy2))
-            is_hover = dist < hover_dist and (self.hover_fid is None or dist < hover_dist)
-            if is_hover:
-                self.hover_fid = fid
+        # Grid + eksenler
+        if self.show_grid:
+            self._draw_grid(draw_list, cx, cy, cw, ch, to_screen, from_screen)
+        if self.show_axes:
+            self._draw_axes(draw_list, cx, cy, cw, ch, to_screen)
 
-            if is_sel:
-                col = imgui.get_color_u32_rgba(*self.col_frame_sel)
-                thickness = 3.0
-            elif is_hover:
-                col = imgui.get_color_u32_rgba(*self.col_frame_hover)
-                thickness = 3.0
+        # Polygon + noktalar
+        self._draw_polygon(draw_list, to_screen)
+
+        # Rubber-band
+        if self._rubber and self._rubber_start and self._rubber_end:
+            x0, y0 = self._rubber_start
+            x1, y1 = self._rubber_end
+            draw_list.add_rect_filled(min(x0, x1), min(y0, y1),
+                                      max(x0, x1), max(y0, y1), self.COL_RUBBER)
+            draw_list.add_rect(min(x0, x1), min(y0, y1),
+                               max(x0, x1), max(y0, y1), 0xFFFFD060)
+
+        # Input en sonda (hover vs. güncel dönüşümle)
+        self._handle_input(imgui_ctx, cx, cy, cw, ch, to_screen, from_screen)
+
+    # ------------------------------------------------------------------
+    def _draw_grid(self, dl, cx, cy, cw, ch, to_screen, from_screen):
+        # Dünya uzayında grid adımı; ekranda ~40px'e denk gelecek şekilde seç
+        target_px = 40.0
+        world_step = target_px / max(self.zoom, 1e-6)
+        # Güzel sayıya yuvarla: 1, 2, 5 * 10^n
+        exp = math.floor(math.log10(max(world_step, 1e-9)))
+        base = 10 ** exp
+        for m in (1, 2, 5, 10):
+            if base * m >= world_step:
+                world_step = base * m
+                break
+
+        # Görünür dünya aralığı (ekran köşelerinden)
+        corners = [
+            from_screen(cx, cy),
+            from_screen(cx + cw, cy),
+            from_screen(cx + cw, cy + ch),
+            from_screen(cx, cy + ch),
+        ]
+        xs = [c[0] for c in corners]
+        ys = [c[1] for c in corners]
+        minx, maxx = min(xs), max(xs)
+        miny, maxy = min(ys), max(ys)
+
+        # Dikey çizgiler (x = sabit)
+        x = math.floor(minx / world_step) * world_step
+        while x <= maxx:
+            sx0, sy0 = to_screen(x, miny)
+            sx1, sy1 = to_screen(x, maxy)
+            major = abs((x / (world_step * 5)) - round(x / (world_step * 5))) < 1e-6
+            dl.add_line(sx0, sy0, sx1, sy1,
+                        self.COL_GRID_MAJOR if major else self.COL_GRID)
+            x += world_step
+
+        # Yatay çizgiler (y = sabit)
+        y = math.floor(miny / world_step) * world_step
+        while y <= maxy:
+            sx0, sy0 = to_screen(minx, y)
+            sx1, sy1 = to_screen(maxx, y)
+            major = abs((y / (world_step * 5)) - round(y / (world_step * 5))) < 1e-6
+            dl.add_line(sx0, sy0, sx1, sy1,
+                        self.COL_GRID_MAJOR if major else self.COL_GRID)
+            y += world_step
+
+    # ------------------------------------------------------------------
+    def _draw_axes(self, dl, cx, cy, cw, ch, to_screen):
+        # Dünya orijini
+        ox, oy = to_screen(0.0, 0.0)
+        # X ekseni (dünya uzayında yatay)
+        x0, y0 = to_screen(-1e6, 0.0)
+        x1, y1 = to_screen(1e6, 0.0)
+        dl.add_line(x0, y0, x1, y1, self.COL_AXIS_X, 1.0)
+        # Y ekseni
+        x0, y0 = to_screen(0.0, -1e6)
+        x1, y1 = to_screen(0.0, 1e6)
+        dl.add_line(x0, y0, x1, y1, self.COL_AXIS_Y, 1.0)
+        # Orijin noktası
+        dl.add_circle_filled(ox, oy, 3.0, 0xFFFFFFFF)
+
+    # ------------------------------------------------------------------
+    def _draw_polygon(self, dl, to_screen):
+        if not self._points:
+            return
+
+        # Ekran koordinatları
+        screen_pts = [(fid, to_screen(p[0], p[1])) for fid, p in self._points]
+
+        # Kapalı çokgen dolgusu (basit fan; dışbükey varsayımı)
+        if len(screen_pts) >= 3:
+            # Dolgu: triangülasyon yerine hafif bir "convex fan"
+            # (dışbükey olmayan poligonlarda hafif yanlış görünebilir ama
+            #  hızlı ve bağımlılıksız. İstenirse ear-clipping eklenebilir.)
+            p0 = screen_pts[0][1]
+            for i in range(1, len(screen_pts) - 1):
+                p1 = screen_pts[i][1]
+                p2 = screen_pts[i + 1][1]
+                dl.add_triangle_filled(p0[0], p0[1],
+                                       p1[0], p1[1],
+                                       p2[0], p2[1], self.COL_POLY_FILL)
+
+        # Kenar çizgileri
+        n = len(screen_pts)
+        for i in range(n):
+            a = screen_pts[i][1]
+            b = screen_pts[(i + 1) % n][1]
+            dl.add_line(a[0], a[1], b[0], b[1], self.COL_POLY_EDGE, 1.5)
+
+        # Noktalar
+        for fid, (sx, sy) in screen_pts:
+            if fid in self.selected_fids:
+                col = self.COL_PT_SEL
+                r = 6.0
+            elif fid == self.hover_fid:
+                col = self.COL_PT_HOVER
+                r = 5.5
             else:
-                col = imgui.get_color_u32_rgba(*self.col_frame)
-                thickness = 1.5
+                col = self.COL_PT
+                r = 4.5
+            dl.add_circle_filled(sx, sy, r, col)
+            dl.add_circle(sx, sy, r + 1.0, 0xFF000000, 1.0)
 
-            draw_list.add_line(sx1, sy1, sx2, sy2, col, thickness)
+    # ------------------------------------------------------------------
+    #  Input handling
+    # ------------------------------------------------------------------
+    def _handle_input(self, imgui_ctx, cx, cy, cw, ch, to_screen, from_screen):
+        io = imgui_ctx.get_io()
+        mx, my = io.mouse_pos
+        over = cx <= mx <= cx + cw and cy <= my <= cy + ch
 
-        # 4. Node'lar
-        for i, (u, v) in enumerate(self.poly_2d):
-            sx, sy = to_screen(u, v)
-            col = self.col_node_first if i == 0 else self.col_node
-            draw_list.add_circle_filled(sx, sy, 4.0, imgui.get_color_u32_rgba(*col))
+        # Her karede tüketim bayraklarını sıfırla
+        self.clicked_fid = None
+        self.clicked_empty = False
 
-        # 5. Etkileşim
-        self._handle_input(imgui, canvas_pos, canvas_size, to_world)
+        if not over:
+            self.hover_fid = None
+            self._panning = False
+            self._pan_anchor = None
+            self._rubber = False
+            return
+
+        # Hover
+        self.hover_fid = self._hit_test(mx, my, to_screen)
+
+        # --- Zoom (tekerlek, imleç merkezli) ---
+        if io.mouse_wheel != 0:
+            self._apply_zoom(io.mouse_wheel, mx, my, cx, cy, cw, ch)
+
+        # --- Pan başlatma ---
+        space_down = self._is_space_down(imgui_ctx)
+        start_pan = (
+            imgui_ctx.is_mouse_clicked(2)          # orta tuş
+            or (space_down and imgui_ctx.is_mouse_clicked(0))
+            or imgui_ctx.is_mouse_clicked(1)       # sağ tuş
+        )
+        if start_pan and not self._rubber:
+            self._panning = True
+            self._pan_anchor = (mx, my)
+
+        if self._panning:
+            if imgui_ctx.is_mouse_down(2) or imgui_ctx.is_mouse_down(1) or imgui_ctx.is_mouse_down(0):
+                if self._pan_anchor:
+                    dx = (mx - self._pan_anchor[0]) / self.zoom
+                    dy = (my - self._pan_anchor[1]) / self.zoom
+                    # pan dünya uzayında; ekran dx'i ters işaretle
+                    self.pan = (self.pan[0] + dx, self.pan[1] - dy)
+                    self._pan_anchor = (mx, my)
+            else:
+                self._panning = False
+                self._pan_anchor = None
+
+        # --- Sol tık: seçim veya rubber-band başlat ---
+        if imgui_ctx.is_mouse_clicked(0) and not self._panning and not space_down:
+            fid = self._hit_test(mx, my, to_screen)
+            if fid is not None:
+                # Frame üzerine tık → seçim
+                self.clicked_fid = fid
+            else:
+                # Boşluğa tık → rubber-band başlat
+                self._rubber = True
+                self._rubber_start = (mx, my)
+                self._rubber_end = (mx, my)
+
+        # Rubber-band güncelle
+        if self._rubber:
+            self._rubber_end = (mx, my)
+            if imgui_ctx.is_mouse_released(0):
+                self._finish_rubber(to_screen)
+                self._rubber = False
+                self._rubber_start = None
+                self._rubber_end = None
+
+    # ------------------------------------------------------------------
+    def _finish_rubber(self, to_screen):
+        if not (self._rubber_start and self._rubber_end):
+            return
+        x0, y0 = self._rubber_start
+        x1, y1 = self._rubber_end
+        # Çok küçük sürükleme = basit tık → boşluk temizleme
+        if abs(x1 - x0) < 3 and abs(y1 - y0) < 3:
+            self.clicked_empty = True
+            return
+
+        rx0, rx1 = min(x0, x1), max(x0, x1)
+        ry0, ry1 = min(y0, y1), max(y0, y1)
+        hit = set()
+        for fid, (wx, wy) in self._points:
+            sx, sy = to_screen(wx, wy)
+            if rx0 <= sx <= rx1 and ry0 <= sy <= ry1:
+                hit.add(fid)
+        # Panel seçim davranışını (ctrl/shift) kendisi uygular;
+        # burada sadece rubber içindekileri "clicked_fid" gibi iletmek
+        # yerine doğrudan seçime ekliyoruz — panel bunu bir sonraki
+        # tıklama mantığıyla birleştirebilir.
+        io = imgui.get_io()
+        if io.key_ctrl:
+            self.selected_fids ^= hit      # toggle
+        elif io.key_shift:
+            self.selected_fids |= hit      # ekle
+        else:
+            self.selected_fids = hit       # değiştir
+
+    # ------------------------------------------------------------------
+    def _apply_zoom(self, wheel, mx, my, cx, cy, cw, ch):
+        factor = self.ZOOM_STEP if wheel > 0 else 1.0 / self.ZOOM_STEP
+        old_zoom = self.zoom
+        new_zoom = max(self.MIN_ZOOM, min(old_zoom * factor, self.MAX_ZOOM))
+        if new_zoom == old_zoom:
+            return
+        # İmleç altındaki dünya noktası sabit kalsın
+        to_screen, from_screen = self._world_to_screen_factory(cx, cy, cw, ch)
+        wx, wy = from_screen(mx, my)
+        self.zoom = new_zoom
+        # pan'i, wx,wy tekrar mx,my'ye düşecek şekilde ayarla
+        # yeni pan hesabı:
+        #   sx = cx + half_w + (xr + pan_x) * zoom
+        #   wx dünya noktasının dönmüş hali xr = rot(wx)
+        rot = self.view_rotation
+        xr, yr = _rot((wx, wy), rot)
+        half_w = cw * 0.5
+        half_h = ch * 0.5
+        pan_x = (mx - cx - half_w) / new_zoom - xr
+        pan_y = -(my - cy - half_h) / new_zoom - yr
+        self.pan = (pan_x, pan_y)
+
+    # ------------------------------------------------------------------
+    def _hit_test(self, mx, my, to_screen, radius=None):
+        if radius is None:
+            radius = self.HIT_RADIUS_PX
+        best = None
+        best_d = radius
+        for fid, (wx, wy) in self._points:
+            sx, sy = to_screen(wx, wy)
+            d = math.hypot(sx - mx, sy - my)
+            if d < best_d:
+                best_d = d
+                best = fid
+        return best
 
     # ------------------------------------------------------------------
     @staticmethod
-    def _point_to_segment_dist(p, a, b):
-        px, py = p
-        ax, ay = a
-        bx, by = b
-        dx, dy = bx - ax, by - ay
-        L2 = dx * dx + dy * dy
-        if L2 < 1e-9:
-            return math.hypot(px - ax, py - ay)
-        t = ((px - ax) * dx + (py - ay) * dy) / L2
-        t = max(0.0, min(1.0, t))
-        cx, cy = ax + t * dx, ay + t * dy
-        return math.hypot(px - cx, py - cy)
-
-    # ------------------------------------------------------------------
-    def _handle_input(self, imgui, canvas_pos, canvas_size, to_world):
-        cx, cy = canvas_pos
-        cw, ch = canvas_size
-        mx, my = imgui.get_mouse_pos()
-
-        hovered = imgui.is_mouse_hovering_rect(cx, cy, cx + cw, cy + ch)
-
-        # Tıklama
-        if hovered and imgui.is_mouse_clicked(0):  # sol tık
-            if self.hover_fid is not None:
-                self.clicked_fid = self.hover_fid
-
-        # Zoom
-        if hovered:
-            wheel = imgui.get_io().mouse_wheel
-            if wheel != 0.0:
-                # Mouse noktasını merkez alarak zoom
-                old_zoom = self.zoom
-                self.zoom *= (1.0 + wheel * 0.1)
-                self.zoom = max(0.1, min(20.0, self.zoom))
-
-                # Pan'ı ayarla ki mouse noktası sabit kalsın
-                u_m, v_m = to_world(mx, my)
-                # to_world'da kullanılan zoom eski, yenisini hesaba kat
-                # Basit yaklaşım: merkezi kaydır
-                # (Detaylı zoom-at-mouse için biraz daha matematik gerekli)
+    def _is_space_down(imgui_ctx):
+        io = imgui_ctx.get_io()
+        # pyimgui sürümlerine göre farklı alanlar
+        if hasattr(io, "key_space"):
+            return bool(io.key_space)
+        try:
+            return imgui_ctx.is_key_down(imgui.KEY_SPACE)
+        except Exception:
+            return False
