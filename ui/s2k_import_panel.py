@@ -9,7 +9,7 @@ import imgui
 import pandas as pd
 
 from ui.file_dialog import ImGuiFileDialog
-from tools.s2kloader import S2KParser, LoadContext, build_scene_into_project, _register_definitions
+from tools.s2kloader import S2KParser, LoadContext, build_scene_into_project
 from tools.s2k_utils import build_router, build_sorted_router
 from domain.project import Project
 from logging_config import CadLogger
@@ -207,52 +207,48 @@ class S2KImportPanel:
         ctx = LoadContext()
         tables = self.parser.get_all_tables()
         router = build_router()
-        processed_tables = set()
+        processed = set()
 
-        for table_name, handler in build_sorted_router():
-            if table_name not in tables or not self.selected_tables.get(table_name, False):
-                continue
-            df = tables[table_name]
-            processed_tables.add(table_name)
-            if not df.empty:
+        for name, handler in build_sorted_router():
+            if name in tables and self.selected_tables.get(name, False) and not tables[name].empty:
+                processed.add(name)
                 try:
-                    handler(ctx, df)
-                    self._log_info(f"✓ {table_name} aktarıldı.")
+                    handler(ctx, tables[name])
+                    self._log_info(f"✓ {name} aktarıldı.")
                 except Exception as e:
-                    self._log_error(f"✗ {table_name} hatası: {e}")
+                    self._log_error(f"✗ {name} hatası: {e}")
 
-        for table_name, df in tables.items():
-            if table_name in processed_tables or not self.selected_tables.get(table_name, False) or df.empty:
+        for name, df in tables.items():
+            if name in processed or not self.selected_tables.get(name, False) or df.empty:
                 continue
-            handler = router.get(table_name)
+            handler = router.get(name)
             if handler:
                 try:
                     handler(ctx, df)
-                    self._log_info(f"✓ {table_name} aktarıldı.")
+                    self._log_info(f"✓ {name} aktarıldı.")
                 except Exception as e:
-                    self._log_error(f"✗ {table_name} hatası: {e}")
+                    self._log_error(f"✗ {name} hatası: {e}")
 
         try:
             new_project = Project()
-            
-            # 1. S2K LoadContext içindeki grid_lines verisini erkenden projeye aktar ve senkronize et
-            if hasattr(ctx, 'grid_lines') and ctx.grid_lines:
-                new_project.grid_lines = list(ctx.grid_lines)
-                new_project.sync_grid_from_s2k_lines()
-            
-            if hasattr(ctx, 'joint_constraints') and ctx.joint_constraints:
-                new_project.joint_constraints = dict(ctx.joint_constraints)
-
-            # 2. Malzeme, kesit ve tanımları yeni projeye işle
-            _register_definitions(new_project, ctx)
-            
-            # 3. Sahne elemanlarını inşa et ve projeye bağla
             new_project = build_scene_into_project(ctx, new_project)
-            
-            self._log_info("Model başarıyla sahneye inşa edildi!")
-            
-            if callable(self.on_import_complete):
-                self.on_import_complete(new_project)
-                
+
+            scn = new_project.scene
+            self._log_info(
+                f"✓ Model inşa edildi: "
+                f"{len(getattr(scn,'frames',{}))} çubuk, "
+                f"{len(getattr(scn,'nodes',{}))} düğüm"
+            )
+
+            if not callable(self.on_import_complete):
+                logger.error("[Import] on_import_complete bağlı değil!")
+                self._log_error("Callback bağlı değil — panel CadApp üzerinden açılmalı.")
+                return
+
+            logger.info("[Import] callback tetikleniyor...")
+            self.on_import_complete(new_project)
+            logger.info("[Import] callback tamamlandı")
+
         except Exception as e:
-            self._log_error(f"Sahnede model oluşturulurken hata: {e}")
+            logger.exception("[Import] Hata")
+            self._log_error(f"Model oluşturulurken hata: {e}")

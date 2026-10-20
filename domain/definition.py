@@ -62,6 +62,10 @@ class Section:
     material: Optional[Material] = None
     color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
 
+    # YENİ: Katalogdan gelen hesaplanmış özellikler (analiz için)
+    catalog_props: Dict[str, float] = field(default_factory=dict)
+    catalog_source: str = ""    # "CSI Euro - W" gibi
+    
     def __post_init__(self):
         if self.material is None:
             self.material = DEFAULT_MATERIAL

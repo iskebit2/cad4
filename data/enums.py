@@ -52,16 +52,70 @@ UNIT_DEFINITIONS_MAP = {
     UnitSystem.TON_CM: ('Ton', 'cm'),
 }
 
-class MatType(Enum):
-    STEEL = 1
-    CONCRETE = 2
-    NODESIGN = 3
-    ALUMINUM = 4
+class MatType(IntEnum):
+    STEEL     = 1
+    CONCRETE  = 2
+    NODESIGN  = 3
+    ALUMINUM  = 4
     COLDFORMED = 5
-    REBAR = 6
-    TENDON = 7
-    TIMBER = 8
-    MASONRY = 9
+    REBAR     = 6
+    TENDON    = 7
+    MASONRY   = 8
+    TIMBER    = 9
+    OTHER     = 10
+    RHINO     = 11
+
+    @classmethod
+    def from_sap(cls, sap_value) -> "MatType":
+        """S2K'dan gelen 'Steel', 'Concrete', 2, '2' vb. normalize et."""
+        if isinstance(sap_value, cls):
+            return sap_value
+        if isinstance(sap_value, int):
+            try:
+                return cls(sap_value)
+            except ValueError:
+                return cls.NODESIGN
+        s = str(sap_value).strip().lower()
+        # Sayısal kod
+        if s.isdigit():
+            try:
+                return cls(int(s))
+            except ValueError:
+                return cls.NODESIGN
+        # İsim eşleşmesi
+        name_map = {
+            "steel":       cls.STEEL,
+            "concrete":    cls.CONCRETE,
+            "nodesign":    cls.NODESIGN,
+            "no design":   cls.NODESIGN,
+            "aluminum":    cls.ALUMINUM,
+            "coldformed":  cls.COLDFORMED,
+            "cold formed": cls.COLDFORMED,
+            "rebar":       cls.REBAR,
+            "tendon":      cls.TENDON,
+            "masonry":     cls.MASONRY,
+            "timber":      cls.TIMBER,
+            "other":       cls.OTHER,
+            "rhino":       cls.RHINO,
+        }
+        return name_map.get(s, cls.NODESIGN)
+
+    @property
+    def sap_label(self) -> str:
+        """SAP'ın kullandığı etiket."""
+        return {
+            MatType.STEEL: "Steel",
+            MatType.CONCRETE: "Concrete",
+            MatType.NODESIGN: "NoDesign",
+            MatType.ALUMINUM: "Aluminum",
+            MatType.COLDFORMED: "ColdFormed",
+            MatType.REBAR: "Rebar",
+            MatType.TENDON: "Tendon",
+            MatType.MASONRY: "Masonry",
+            MatType.TIMBER: "Timber",
+            MatType.OTHER: "Other",
+            MatType.RHINO: "Rhino",
+        }[self]
 
 
 class SectionType(Enum):

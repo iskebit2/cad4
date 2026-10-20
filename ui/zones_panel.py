@@ -7,12 +7,12 @@ WindAnalysisResult yapısı:
 WindDirectionResult:
     w_dir: Tuple[float, float, float]
 """
-import logging
+from logging_config import CadLogger
 import imgui
 from ui.base_panel import BasePanel
 from domain.definition import WindDirectionResult
 
-logger = logging.getLogger(__name__)
+logger = CadLogger.get(__name__)
 
 
 class ZonesPanel(BasePanel):

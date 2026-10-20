@@ -6,7 +6,8 @@ import os
 from typing import Any, Dict, Optional
 
 import imgui
-
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 # Kalıcı referans (pointer silinmesin)
 _PERSISTENT_GLYPH_RANGES = None
@@ -51,7 +52,7 @@ def load_fonts(font_size: int = 16,
 
     if not path:
         io.fonts.add_font_default()
-        print("[font] TTF bulunamadı, varsayılan")
+        logger.debug("[font] TTF bulunamadı, varsayılan")
         return {"font": None, "path": None, "size": font_size}
 
     # Glyph range — global referans
@@ -63,9 +64,9 @@ def load_fonts(font_size: int = 16,
     # KRİTİK: bu fontu VARSAYILAN yap
     try:
         io.font_default = font_obj
-        print(f"[font] varsayılan yapıldı: {os.path.basename(path)}")
+        logger.debug(f"[font] varsayılan yapıldı: {os.path.basename(path)}")
     except Exception as e:
-        print(f"[font] io.font_default atanamadı: {e}")
+        logger.debug(f"[font] io.font_default atanamadı: {e}")
 
     if impl is not None:
         try:
@@ -73,10 +74,10 @@ def load_fonts(font_size: int = 16,
         except Exception:
             pass
 
-    print(f"[font] YÜKLENDİ: {os.path.basename(path)}  boyut={font_size}")
+    logger.debug(f"[font] YÜKLENDİ: {os.path.basename(path)}  boyut={font_size}")
 
     # KRİTİK — hangi glyph range uygulanıyor?
-    print(f"[font] glyph_range: {ranges}")   # pyimgui'de __str__ var mı bilmiyorum
+    logger.debug(f"[font] glyph_range: {ranges}")   # pyimgui'de __str__ var mı bilmiyorum
 
     return {"font": font_obj, "path": path, "size": font_size}
 

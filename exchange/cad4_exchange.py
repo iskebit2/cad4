@@ -18,7 +18,7 @@ Kullanım:
     bridge.import_selected_into(scene, unit_factor=1.0)
 """
 import array
-import logging
+from logging_config import CadLogger
 from contextlib import contextmanager
 from typing import Optional, Dict, List, Tuple
 
@@ -28,7 +28,7 @@ from pyautocad import Autocad, APoint
 from domain.scene import Scene
 from domain.element import Node, Frame, Area, Link, Polygon
 
-logger = logging.getLogger(__name__)
+logger = CadLogger.get(__name__)
 
 
 # ============================================================

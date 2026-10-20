@@ -54,6 +54,15 @@ class CadLogger:
     _initialized = False
     _root_configured = False
 
+    # Modül bazında log seviyeleri
+    MODULE_LEVELS = {
+        "cad": "WARNING",
+        "cad.app.cad_app": "DEBUG",
+        "cad.data.serializer": "WARNING",
+        "cad.ui.plane_manager_panel": "DEBUG",
+        "cad.render.scenerenderer": "DEBUG",
+    }
+
     @classmethod
     def _configure_root_once(cls):
         if cls._root_configured:
@@ -61,7 +70,7 @@ class CadLogger:
         cls._root_configured = True
 
         root = logging.getLogger("cad")
-        root.setLevel(logging.DEBUG)
+        root.setLevel(logging.INFO)
         root.propagate = False   # kendi handler'larımızı kullanacağız
 
         # Eski handler'ları temizle (çift log olmasın)
@@ -100,23 +109,28 @@ class CadLogger:
         cls._configure_root_once()
 
         full_name = name if name.startswith("cad") else f"cad.{name}"
+
         if full_name not in cls._loggers:
             log = logging.getLogger(full_name)
 
-            # ⬅️ Instance üzerinden setup() çağrılabilsin diye kısayol bağla
-            # (Kullanıcı yanlışlıkla logger.setup("INFO") derse patlamasın)
+            # Modül seviyesini uygula
+            level_name = cls.MODULE_LEVELS.get(full_name)
+
+            if level_name:
+                log.setLevel(getattr(logging, level_name.upper()))
+            else:
+                log.setLevel(logging.NOTSET)
+
+            # Eski kullanım biçimiyle uyumluluk
             log.setup = lambda level="INFO": cls.setup(level)
 
             cls._loggers[full_name] = log
+
         return cls._loggers[full_name]
 
     @classmethod
-    def setup(cls, level: str = "INFO"):
-        """Geriye dönük uyumluluk için. Aslında root zaten DEBUG'da."""
-        cls._configure_root_once()
-        lvl = getattr(logging, level.upper(), logging.INFO)
-        # Sadece konsol seviyesini değiştir
-        for h in logging.getLogger("cad").handlers:
-            if isinstance(h, logging.StreamHandler) and not isinstance(h, RotatingFileHandler):
-                h.setLevel(lvl)
-        logging.getLogger("cad").setLevel(logging.DEBUG)
+    def set_module_level(cls, name: str, level: str):
+        full_name = name if name.startswith("cad") else f"cad.{name}"
+
+        log = logging.getLogger(full_name)
+        log.setLevel(getattr(logging, level.upper()))

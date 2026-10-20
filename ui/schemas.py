@@ -26,7 +26,6 @@ def node_schema():
     ]
 
 
-# ui/schemas.py
 def frame_schema():
     return [
         GroupSpec("Genel", [
@@ -35,18 +34,16 @@ def frame_schema():
             FieldSpec("color",      "color", "Renk"),
         ]),
         GroupSpec("Geometri", [
-            FieldSpec("rotation_deg", "float", "Rotation",
+            FieldSpec("rotation_deg", "float", "Rotation (°)",
                       step=1.0, format="%.2f"),
         ]),
         GroupSpec("Kesit", [
-            FieldSpec("section.profile_type", "enum", "Profil",
-                      choices=["RECT", "CIRCLE", "I", "T", "TUBE", "PIPE"]),
-            FieldSpec("section.profile_params.h", "float", "h",
-                      step=1.0, format="%.1f"),
-            FieldSpec("section.profile_params.b", "float", "b",
-                      step=1.0, format="%.1f"),
+            # Hazır kesit seçimi — Section nesnesi yazacak
+            FieldSpec("section", "section_ref", "Kesit"),
+            # Paylaşılan Section'ın özeti (salt okunur bilgi)
+            FieldSpec("section_info", "info", "Özet"),
         ]),
-        GroupSpec("Yayılı Yük Setleri (Segment Bazlı)", [
+        GroupSpec("Yayılı Yük Setleri", [
             FieldSpec("dist_load_sets_list", "list_object",
                       "Pattern → Segment Seti",
                       item_schema=[
@@ -72,9 +69,11 @@ def area_schema():
             FieldSpec("is_visible", "bool",  "Görünür"),
             FieldSpec("color",      "color", "Renk"),
         ]),
-        GroupSpec("Geometri", [
-            FieldSpec("thickness", "float", "Kalınlık",
-                      step=0.01, format="%.3f"),
+        GroupSpec("Kabuk", [
+            FieldSpec("thickness",    "float", "Kalınlık"),
+            FieldSpec("material",     "material_ref", "Malzeme"),
+            FieldSpec("section_name", "string_select", "Kesit Adı"),
+            FieldSpec("material_info", "info", "Malzeme Özeti"),
         ]),
     ]
 
@@ -86,8 +85,8 @@ def link_schema():
             FieldSpec("is_visible", "bool",  "Görünür"),
             FieldSpec("color",      "color", "Renk"),
         ]),
-        GroupSpec("Property", [
-            FieldSpec("propname", "str", "Prop Adı"),
+        GroupSpec("Link", [
+            FieldSpec("propname", "link_prop_ref", "Prop"),
         ]),
     ]
 

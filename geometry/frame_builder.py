@@ -5,9 +5,9 @@ from typing import Tuple
 from domain.element import Frame
 from geometry.profile_generator import ProfileGenerator
 import mapbox_earcut as earcut
-import logging
+from logging_config import CadLogger
 
-logger = logging.getLogger(__name__)
+logger = CadLogger.get(__name__)
 
 
 def normalize(v):

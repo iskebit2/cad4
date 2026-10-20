@@ -1,7 +1,6 @@
 # domain/element.py
 from dataclasses import field
 from typing import List, Optional, Dict, Any, Tuple
-import uuid
 import math
 import glm
 
@@ -39,7 +38,6 @@ class Element:
                  ):
         self.unique_id = Element._id_counter
         Element._id_counter += 1
-        self.element_id = str(uuid.uuid4())
         self.label = label
         self.is_selected = is_selected
         self.is_visible = is_visible
@@ -60,8 +58,6 @@ class Element:
             self.unique_id = int(data["unique_id"])
             Element._id_counter = max(Element._id_counter, self.unique_id + 1)
             self.pick_id = self.unique_id
-        if "element_id" in data:
-            self.element_id = str(data["element_id"])
         self.is_selected = bool(data.get("is_selected", False))
         self.is_visible = bool(data.get("is_visible", True))
         if "color" in data and data["color"]:
@@ -138,11 +134,11 @@ class Node(Element):
 
     def add_connection(self, element):
         if isinstance(element, Frame):
-            self.connected.append((E.ObjType.FRAME, element.element_id))
+            self.connected.append((E.ObjType.FRAME, element.unique_id))
         elif isinstance(element, Area):
-            self.connected.append((E.ObjType.AREA, element.element_id))
+            self.connected.append((E.ObjType.AREA, element.unique_id))
         elif isinstance(element, Link):
-            self.connected.append((E.ObjType.LINK, element.element_id))
+            self.connected.append((E.ObjType.LINK, element.unique_id))
 
 
 # ============================================================================

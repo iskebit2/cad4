@@ -23,7 +23,7 @@ from domain.element import Frame, Area, Link
 @dataclass
 class ElementWeight:
     """Tek bir elemanın ağırlık bilgisi."""
-    element_id: str
+    unique_id: str
     element_type: str       # "Frame" | "Area" | "Link"
     label: str
     material_name: str
@@ -168,7 +168,7 @@ def _frame_weight(frame: Frame) -> ElementWeight:
     weight = mass * G_MM_S2 / 1e6   # kN (t·mm/s² → N × 1e-3 → kN)
     
     return ElementWeight(
-        element_id=frame.element_id,
+        unique_id=frame.unique_id,
         element_type="Frame",
         label=frame.label,
         material_name=mat.name,
@@ -207,7 +207,7 @@ def _area_weight(area: Area) -> ElementWeight:
     weight = mass * G_MM_S2 / 1e6
     
     return ElementWeight(
-        element_id=area.element_id,
+        unique_id=area.unique_id,
         element_type="Area",
         label=area.label,
         material_name=mat_name,

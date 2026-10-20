@@ -10,6 +10,9 @@ from ui.base_panel import BasePanel
 from ui.schema import get_path, set_path
 from ui.adapters import MIXED
 
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
+
 def _unpack(result):
     if isinstance(result, tuple) and len(result) == 2:
         a, b = result

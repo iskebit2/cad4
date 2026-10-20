@@ -594,7 +594,7 @@ class PropertiesPanel(BoxLayout):
         g = CollapsibleGroup("Tüm Alanlar (salt okunur)")
         for key, val in vars(element).items():
             if key.startswith('_') or key in (
-                'unique_id', 'element_id', 'is_selected', 'is_visible',
+                'unique_id', 'unique_id', 'is_selected', 'is_visible',
                 'needs_update', 'pick_id', 'element_type', 'label', 'color',
             ):
                 continue

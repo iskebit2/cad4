@@ -1,6 +1,6 @@
 # ui/polygon_edit_panel.py
 
-import logging
+from logging_config import CadLogger
 import math
 import imgui
 
@@ -9,7 +9,7 @@ from ui.widgets.polygon_2d_view import Polygon2DView
 from ui.widgets.polygon_info import PolygonInfoWidget
 from ui.widgets.frame_assoc import FrameAssocWidget
 
-logger = logging.getLogger(__name__)
+logger = CadLogger.get(__name__)
 
 
 class PolygonEditPanel(BasePanel):

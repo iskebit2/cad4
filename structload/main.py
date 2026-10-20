@@ -1,6 +1,6 @@
 # main.py
 import os
-import logging
+from logging_config import CadLogger
 
 os.environ["KIVY_LOG_LEVEL"] = "warning"
 os.environ["KIVY_NO_ARGS"] = "1"

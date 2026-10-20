@@ -1,7 +1,6 @@
 # domain/element.py
 from dataclasses import field
 from typing import List, Optional, Dict, Any, Tuple
-import uuid
 import math
 import glm
 
@@ -39,7 +38,6 @@ class Element:
                  ):
         self.unique_id = Element._id_counter
         Element._id_counter += 1
-        self.element_id = str(uuid.uuid4())
         self.label = label
         self.is_selected = is_selected
         self.is_visible = is_visible
@@ -60,8 +58,6 @@ class Element:
             self.unique_id = int(data["unique_id"])
             Element._id_counter = max(Element._id_counter, self.unique_id + 1)
             self.pick_id = self.unique_id
-        if "element_id" in data:
-            self.element_id = str(data["element_id"])
         self.is_selected = bool(data.get("is_selected", False))
         self.is_visible = bool(data.get("is_visible", True))
         if "color" in data and data["color"]:
@@ -138,11 +134,11 @@ class Node(Element):
 
     def add_connection(self, element):
         if isinstance(element, Frame):
-            self.connected.append((E.ObjType.FRAME, element.element_id))
+            self.connected.append((E.ObjType.FRAME, element.unique_id))
         elif isinstance(element, Area):
-            self.connected.append((E.ObjType.AREA, element.element_id))
+            self.connected.append((E.ObjType.AREA, element.unique_id))
         elif isinstance(element, Link):
-            self.connected.append((E.ObjType.LINK, element.element_id))
+            self.connected.append((E.ObjType.LINK, element.unique_id))
 
 
 # ============================================================================
@@ -217,8 +213,11 @@ class Frame(Element):
         
         return glm.mat3(e1, e2, e3)
 
-    def align_to_polygon_plane(self, polygon_nodes: List[Node]) -> float:
-        """Frame'in local 3-eksenini poligon normaline hizalar ve rotation_deg günceller."""
+    def align_to_polygon_plane(self, polygon_nodes):
+        """
+        Frame'in Local 2 eksenini poligon normaline hizalar.
+        Böylece LOAD_DIR='2' yükü düzleme dik olur.
+        """
         if len(polygon_nodes) < 3:
             return 0.0
 
@@ -232,13 +231,15 @@ class Frame(Element):
         if abs(glm.dot(e1, n_poly)) > 0.999:
             return 0.0
 
+        # Doğal e2 (rotation_deg=0 için)
         R0 = Frame(self.node_i, self.node_j, self.section, rotation_deg=0.0).get_local_axes()
-        e3_natural = glm.vec3(R0[2][0], R0[2][1], R0[2][2])
+        e2_natural = glm.vec3(R0[1][0], R0[1][1], R0[1][2])
 
-        dot = max(-1.0, min(1.0, glm.dot(e3_natural, n_poly)))
+        # e2'yi n_poly'ye hizala
+        dot = max(-1.0, min(1.0, glm.dot(e2_natural, n_poly)))
         angle_rad = math.acos(dot)
-        cross = glm.cross(e1, e3_natural)
-        sign = 1.0 if glm.dot(cross, n_poly) >= 0.0 else -1.0
+        cross = glm.cross(e2_natural, n_poly)
+        sign = 1.0 if glm.dot(cross, e1) >= 0.0 else -1.0
 
         angle_deg = math.degrees(angle_rad) * sign
         while angle_deg > 180.0: angle_deg -= 360.0

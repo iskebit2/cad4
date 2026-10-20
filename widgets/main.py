@@ -35,7 +35,7 @@ from logging_config import CadLogger
 CadLogger.setup("INFO")
 logger = CadLogger.get(__name__)
 
-import logging
+from logging_config import CadLogger
 logging.getLogger("OpenGL").setLevel(logging.WARNING)
 logging.getLogger("OpenGL.arrays").setLevel(logging.WARNING)
 logging.getLogger("OpenGL.GL").setLevel(logging.WARNING)

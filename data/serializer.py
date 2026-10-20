@@ -171,6 +171,8 @@ def _encode(obj: Any) -> Any:
         for k, v in obj.__dict__.items():
             if k == "project":
                 continue
+            if k == "is_selected":
+                continue   # ← seçim state'i kaydedilmesin
             data[k] = _encode(v)
         return data
     return str(obj)
@@ -211,9 +213,12 @@ def _decode(obj: Any) -> Any:
         if not cls:
             return obj
         instance = cls.__new__(cls)
+        instance.is_selected = False
         decoded_dict = {}
         for k, v in obj.items():
             if k == "__object__":
+                continue
+            if k == "is_selected":
                 continue
             decoded_dict[k] = _decode(v)
         instance.__dict__.update(decoded_dict)
@@ -377,22 +382,21 @@ def load_project_file(path: Path) -> Any:
         for n_data in raw_nodes_data:
             node = _decode(n_data)
             if isinstance(node, Node):
-                # Mükerrer eklemeyi önle (unique_id veya koordinat bazlı kontrol)
                 if node.unique_id not in node_map:
+                    node.connected = []
                     scene_obj.add_node(node)
                     node_map[node.unique_id] = node
-                    if hasattr(node, "element_id"):
-                        node_map[str(node.element_id)] = node
+                    node_map[str(node.unique_id)] = node
         logger.info(f"[Load Debug] -> Geri yüklenen tekil düğüm (node) sayısı: {len(node_map)}")
 
         def resolve_node(ref) -> Optional[Node]:
             if isinstance(ref, Node):
-                return node_map.get(ref.unique_id) or node_map.get(str(ref.element_id))
+                return node_map.get(ref.unique_id) or node_map.get(str(ref.unique_id))
             if isinstance(ref, dict):
                 uid = ref.get("unique_id")
                 if uid and int(uid) in node_map:
                     return node_map[int(uid)]
-                eid = ref.get("element_id")
+                eid = ref.get("unique_id")
                 if eid and str(eid) in node_map:
                     return node_map[str(eid)]
             if isinstance(ref, (int, str)):
@@ -411,10 +415,8 @@ def load_project_file(path: Path) -> Any:
                 if frame.unique_id in added_frame_ids:
                     continue
                 
-                if not isinstance(frame.node_i, Node):
-                    frame.node_i = resolve_node(frame.node_i)
-                if not isinstance(frame.node_j, Node):
-                    frame.node_j = resolve_node(frame.node_j)
+                frame.node_i = resolve_node(frame.node_i) or frame.node_i
+                frame.node_j = resolve_node(frame.node_j) or frame.node_j
                 
                 if isinstance(frame.section, str):
                     frame.section = proj.get_section_by_name(frame.section)
@@ -435,7 +437,7 @@ def load_project_file(path: Path) -> Any:
             if isinstance(area, Area):
                 if area.unique_id in added_area_ids:
                     continue
-                resolved_nodes = [resolve_node(n) for n in area.nodes]
+                resolved_nodes = [resolve_node(n) or n for n in area.nodes]
                 area.nodes = [fn for fn in resolved_nodes if fn is not None]
                 if area.nodes:
                     scene_obj.add_area(area)
@@ -451,10 +453,8 @@ def load_project_file(path: Path) -> Any:
             if isinstance(link, Link):
                 if link.unique_id in added_link_ids:
                     continue
-                if not isinstance(link.node_i, Node):
-                    link.node_i = resolve_node(link.node_i)
-                if not isinstance(link.node_j, Node):
-                    link.node_j = resolve_node(link.node_j)
+                link.node_i = resolve_node(link.node_i) or link.node_i
+                link.node_j = resolve_node(link.node_j) or link.node_j
                 if link.node_i and link.node_j:
                     scene_obj.add_link(link)
                     added_link_ids.add(link.unique_id)
@@ -469,7 +469,7 @@ def load_project_file(path: Path) -> Any:
             if isinstance(poly, Polygon):
                 if poly.unique_id in added_poly_ids:
                     continue
-                resolved_nodes = [resolve_node(n) for n in poly.nodes]
+                resolved_nodes = [resolve_node(n) or n for n in poly.nodes]
                 poly.nodes = [fn for fn in resolved_nodes if fn is not None]
                 if poly.nodes:
                     scene_obj.add_polygon(poly)

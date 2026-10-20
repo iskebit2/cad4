@@ -3,8 +3,6 @@ from typing import List, Set
 from core.selection_policy import SelectionMode
 from core.commands import CommandManager, DeleteElementsCommand
 from logging_config import CadLogger
-from logging_config import CadLogger
-
 logger = CadLogger.get(__name__)
 
 class SelectionManager:
@@ -26,8 +24,7 @@ class SelectionManager:
             try:
                 self.on_selection_changed(list(self.get_selected()))
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(
+                logger.error(
                     f"selection_changed callback hatası: {e}"
                 )
         
@@ -124,12 +121,21 @@ class SelectionManager:
                     e.is_selected = True
         
         self._update()
-    
+
+    def select_only(self, element):
+        """Tek elemanı seç, diğerlerini bırak."""
+        if element is None:
+            self.clear()
+            return
+        self.select(element, additive=False)
+        
     def clear(self):
         """Tüm seçimleri temizle"""
         for e in self.get_selected():
             e.is_selected = False
         self.selected.clear()
+        if self.on_selection_changed:
+            self.on_selection_changed([])
         self._update()
     
     def get_selected(self):

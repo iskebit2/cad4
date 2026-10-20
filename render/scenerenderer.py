@@ -59,6 +59,8 @@ class SceneRenderer:
         
         self.gizmo = self.grid = self.marquee = None
         self.snap = None
+        self.plane_draw_mgr = None
+
         self.show = {
                         'grid': True, 'axes': True, 'area': True,
                         'frame': True, 'link': True, 'node': True,
@@ -106,6 +108,12 @@ class SceneRenderer:
         self.axes_r.init_gl()
 
         self.load_renderer = LoadRenderer()
+
+        self.selected_plane = None
+        self._sel_plane_tri_vao = None
+        self._sel_plane_tri_vbo = None
+        self._sel_plane_line_vao = None
+        self._sel_plane_line_vbo = None
 
     def _init_marquee_buffers(self):
         """Marquee için kalıcı buffer'ları oluştur"""
@@ -233,7 +241,11 @@ class SceneRenderer:
 
     def set_marquee(self, m): 
         self.marquee = m
-    
+
+    def set_plane_draw_mgr(self, pdm):
+        """PlaneDrawManager referansı (CadApp tarafından verilir)."""
+        self.plane_draw_mgr = pdm
+
     def set_engine(self, e):
         self.engine = e
         self.w = self.engine.w
@@ -568,6 +580,15 @@ class SceneRenderer:
         if self.show.get('loads', True):
             self._draw_loads(cam)
 
+        # 4.8 Plane çizimi tekrar bak!
+        if self.plane_draw_mgr and self.plane_draw_mgr.is_active:
+            mvp_pdm = p * v * self.model_mat
+            self.plane_draw_mgr.render_preview(mvp_pdm, self.overlay_shader)
+
+        # 4.9 Seçili plane (statik)
+        if self.selected_plane is not None:
+            self._draw_selected_plane(mvp)
+            
         # 5. MARQUEE - renkleri düzeltilmiş
         if self.marquee and self.marquee.is_active:
             self._draw_marquee()
@@ -1096,3 +1117,101 @@ class SceneRenderer:
             return max(0.6, min(2.5, d / 10000.0))
         except Exception:
             return 1.0
+
+    def _draw_selected_plane(self, mvp):
+        plane = self.selected_plane
+        logger.debug(f"[sel_plane] render: plane={plane}")
+        if plane is None or self.overlay_shader is None:
+            return
+
+        # VAO/VBO lazy init
+        if self._sel_plane_tri_vao is None:
+            self._sel_plane_tri_vao = glGenVertexArrays(1)
+            self._sel_plane_tri_vbo = glGenBuffers(1)
+            self._sel_plane_line_vao = glGenVertexArrays(1)
+            self._sel_plane_line_vbo = glGenBuffers(1)
+
+        # Geometri (Plane.render_solid için)
+        # ... copy from PlaneDrawManager._build_temp_plane but from real plane
+        # Ama Plane.render_solid doğrudan geometri hesaplar
+        
+        # from domain.plane import Plane   # gerekmiyor, plane zaten var
+        shader = self.overlay_shader
+        shader.use()
+        loc_mvp = shader.get_loc("mvp")
+        if loc_mvp != -1:
+            glUniformMatrix4fv(loc_mvp, 1, GL_FALSE, glm.value_ptr(mvp))
+        loc_color = shader.get_loc("color")
+        if loc_color == -1:
+            return
+
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_DEPTH_TEST)
+        from OpenGL.GL import glDepthMask, GL_FALSE as GLF
+        glDepthMask(GLF)
+        try:
+            self._render_plane_solid(plane, shader, loc_color)
+        finally:
+            from OpenGL.GL import glDepthMask, GL_TRUE
+            glDepthMask(GL_TRUE)
+            glDisable(GL_BLEND)
+
+    def _render_plane_solid(self, plane, shader, loc_color):
+        """Verilen plane için 8-köşe kutu çiz."""
+        import numpy as np
+        
+        # u/v aralıkları
+        u0 = plane.u_min if plane.u_min is not None else -1000.0
+        u1 = plane.u_max if plane.u_max is not None else 1000.0
+        v0 = plane.v_min if plane.v_min is not None else -1000.0
+        v1 = plane.v_max if plane.v_max is not None else 1000.0
+        
+        def corner(u, v, d):
+            return plane.origin + u * plane.u + v * plane.v + d * plane.normal
+        
+        # 8 köşe
+        b00 = corner(u0, v0, -plane.depth_minus)
+        b10 = corner(u1, v0, -plane.depth_minus)
+        b11 = corner(u1, v1, -plane.depth_minus)
+        b01 = corner(u0, v1, -plane.depth_minus)
+        t00 = corner(u0, v0, +plane.depth_plus)
+        t10 = corner(u1, v0, +plane.depth_plus)
+        t11 = corner(u1, v1, +plane.depth_plus)
+        t01 = corner(u0, v1, +plane.depth_plus)
+        
+        # 6 yüz × 2 üçgen
+        tris = []
+        tris.extend([*t00, *t10, *t11, *t00, *t11, *t01])   # üst
+        tris.extend([*b00, *b11, *b10, *b00, *b01, *b11])   # alt
+        for a, b, c, d in [
+            (b00, b10, t10, t00),
+            (b10, b11, t11, t10),
+            (b11, b01, t01, t11),
+            (b01, b00, t00, t01),
+        ]:
+            tris.extend([*a, *b, *c, *a, *c, *d])
+        
+        arr = np.array(tris, dtype=np.float32)
+        glBindVertexArray(self._sel_plane_tri_vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self._sel_plane_tri_vbo)
+        glBufferData(GL_ARRAY_BUFFER, arr.nbytes, arr, GL_STREAM_DRAW)
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*4, None)
+        glUniform4f(loc_color, 0.30, 0.60, 1.00, 0.15)   # mavi yarı saydam
+        glDrawArrays(GL_TRIANGLES, 0, len(arr)//3)
+        
+        # Kenarlar
+        edges = []
+        for a, b in [(t00,t10),(t10,t11),(t11,t01),(t01,t00),
+                    (b00,b10),(b10,b11),(b11,b01),(b01,b00),
+                    (b00,t00),(b10,t10),(b11,t11),(b01,t01)]:
+            edges.extend([*a, *b])
+        edge_arr = np.array(edges, dtype=np.float32)
+        glBindVertexArray(self._sel_plane_line_vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self._sel_plane_line_vbo)
+        glBufferData(GL_ARRAY_BUFFER, edge_arr.nbytes, edge_arr, GL_STREAM_DRAW)
+        glEnableVertexAttribArray(0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*4, None)
+        glUniform4f(loc_color, 0.55, 0.80, 1.00, 0.90)   # açık mavi kenar
+        glDrawArrays(GL_LINES, 0, len(edge_arr)//3)

@@ -1,6 +1,6 @@
 # gui/report_view.py
 import io
-import logging
+from logging_config import CadLogger
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView

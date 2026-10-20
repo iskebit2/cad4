@@ -336,7 +336,7 @@ class EditController:
         for n in scene.nodes.values():
             if getattr(n, "label", None) == ref:
                 return n
-            if getattr(n, "element_id", None) == ref:
+            if getattr(n, "unique_id", None) == ref:
                 return n
 
         return None

@@ -25,8 +25,8 @@ try:
     from logging_config import CadLogger
     logger = CadLogger.get(__name__)
 except ImportError:
-    import logging
-    logger = logging.getLogger(__name__)
+    from logging_config import CadLogger
+    logger = CadLogger.get(__name__)
 
 # Structload modülleri
 try:

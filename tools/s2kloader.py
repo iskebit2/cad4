@@ -16,78 +16,39 @@ logger = CadLogger.get(__name__)
 
 def build_scene_into_project(ctx: LoadContext, project: Project) -> Project:
     logger.info("[S2KLoader Debug] Sahne inşası başlatılıyor...")
-    
-    # --- 0. GRID LINES VE KRİTİK VERİLERİ ÖNCEDEN AKTAR ---
-    if hasattr(ctx, 'grid_lines') and ctx.grid_lines:
+    _register_definitions(project, ctx)          # <-- TEK YER
+
+    # Grid ve joint constraint'leri sahne kurulmadan önce aktar
+    if getattr(ctx, 'grid_lines', None):
         project.grid_lines = list(ctx.grid_lines)
         project.sync_grid_from_s2k_lines()
-        logger.info(f"[S2KLoader Debug] -> {len(ctx.grid_lines)} adet Grid Line erken aşamada projeye işlendi.")
+        logger.info(f"-> {len(ctx.grid_lines)} Grid Line aktarıldı.")
 
-    if hasattr(ctx, 'joint_constraints') and ctx.joint_constraints:
+    if getattr(ctx, 'joint_constraints', None):
         project.joint_constraints = dict(ctx.joint_constraints)
 
     builder = SceneBuilder(project)
-    _register_definitions(project, ctx)
-    
     node_map = _create_nodes(builder, ctx)
-    logger.info(f"[S2KLoader Debug] -> Oluşturulan düğüm (node) sayısı: {len(node_map)}")
-
     frame_map, n_frames = _create_frames(builder, ctx, node_map)
-    logger.info(f"[S2KLoader Debug] -> Oluşturulan çubuk (frame) sayısı: {n_frames}")
-
-    area_map, n_areas = _create_areas(builder, ctx, node_map)
-    logger.info(f"[S2KLoader Debug] -> Oluşturulan döşeme/alan (area) sayısı: {n_areas}")
-
-    n_links = _create_links(builder, ctx, node_map)
-    logger.info(f"[S2KLoader Debug] -> Oluşturulan bağ (link) sayısı: {n_links}")
-
+    area_map, n_areas  = _create_areas(builder, ctx, node_map)
+    n_links            = _create_links(builder, ctx, node_map)
     _assign_loads(ctx, node_map, frame_map, area_map)
-    logger.info("[S2KLoader Debug] -> Yükler elemanlara atandı.")
 
-    # Scene
     scene = builder.scene
     scene.units = str(ctx.units)
+
+    # Sahneyi MUTLAKA dirty işaretle — renderer yeniden yüklesin
+    if hasattr(scene, "mark_dirty"):
+        scene.mark_dirty()
+    elif hasattr(scene, "_is_dirty"):
+        scene._is_dirty = True
+
     project.scene = scene
 
-    # --- EKSİK OLAN ATAMALAR VE SENRONİZASYONLAR ---
-    
-    # 1. Grid Lines ve Grid Senkronizasyonu
-    if hasattr(ctx, 'grid_lines') and ctx.grid_lines:
-        project.grid_lines = ctx.grid_lines
-        project.sync_grid_from_s2k_lines() # Project içine eklediğimiz akıllı senkronizasyon
-        logger.info(f"[S2KLoader Debug] -> {len(ctx.grid_lines)} adet Grid Line yüklendi ve projeye işlendi.")
-
-    # 2. Joint Constraints Atamaları
-    if hasattr(ctx, 'joint_constraints') and ctx.joint_constraints:
-        project.joint_constraints = dict(ctx.joint_constraints)
-        logger.info(f"[S2KLoader Debug] -> {len(ctx.joint_constraints)} adet Joint Constraint ataması aktarıldı.")
-
-    # 3. Link Property Linear ve Diğerleri
-    if hasattr(ctx, 'link_props') and ctx.link_props:
-        for lp_name, lp_obj in ctx.link_props.items():
-            project.add_link_prop(lp_obj)
-
-    # 4. Section cuts
-    if hasattr(ctx, 'section_cuts') and ctx.section_cuts:
-        project.section_cuts = ctx.section_cuts
-        logger.info(f"[S2KLoader Debug] -> {len(ctx.section_cuts)} adet Section Cut yüklendi.")
-
-    # Proje bilgileri
-    if isinstance(ctx.project_info, dict):
-        gen = ctx.project_info.get("gen")
-        site = ctx.project_info.get("site")
-        if isinstance(gen, GeneralProjectInfo):
-            project.general_info = gen
-            project.info = ProjectInfo(
-                name=gen.project_name or "Untitled",
-                description=gen.model_description or "",
-                author=gen.engineer or "",
-            )
-            logger.info(f"[S2KLoader Debug] -> Proje Adı: {gen.project_name}")
-        if isinstance(site, SiteInformation):
-            project.site_info = site
-
-    logger.info("[S2KLoader Debug] Sahne projeye başarıyla bağlandı.")
+    logger.info(
+        f"Sahne hazır: {len(node_map)} düğüm, {n_frames} çubuk, "
+        f"{n_areas} alan, {n_links} bağ"
+    )
     return project
 
 
@@ -119,35 +80,95 @@ def _register_definitions(project: Project, ctx: LoadContext):
     logger.info("[S2KLoader Debug] Tüm tanımlar aktarıldı.")
 
 
+# class S2KParser:
+#     PAIR_PATTERN = re.compile(r'(\w+)=("[^"]*"|[^\s]+)')
+
+#     def __init__(self, file_path: Optional[str] = None):
+#         self.file_path = file_path
+#         self.tables: Dict[str, pd.DataFrame] = {}
+#         if self.file_path:
+#             self._parse(self.file_path)
+
+#     def _parse(self, file_path: str):
+#         path = Path(file_path)
+#         if not path.exists():
+#             logger.error(f"[Parser Debug] Dosya bulunamadı: {file_path}")
+#             return
+
+#         try:
+#             content = path.read_text(encoding='utf-8', errors='ignore')
+#         except Exception as e:
+#             logger.error(f"[Parser Debug] Dosya okuma hatası: {e}")
+#             return
+
+#         logger.info(f"[Parser Debug] Dosya okundu: {path.name}, Boyut: {len(content)} bytes")
+
+#         content = re.sub(r' _\r?\n', ' ', content)
+#         raw_tables = re.split(r'TABLE:\s*"*', content)
+#         logger.info(f"[Parser Debug] Toplam {len(raw_tables)} ham tablo bloğu ayrıştırıldı.")
+
+#         # Optimize edilmiş satır parse döngüsü
+#         parsed_tables = {}
+#         for raw in raw_tables:
+#             if not raw.strip():
+#                 continue
+
+#             lines = raw.strip().split('\n')
+#             table_name = lines[0].strip().strip('"')
+#             rows = []
+
+#             for line in lines[1:]:
+#                 line = line.strip()
+#                 if not line:
+#                     continue
+#                 pairs = self.PAIR_PATTERN.findall(line)
+#                 if pairs:
+#                     row = {k: (v[1:-1] if v.startswith('"') and v.endswith('"') else v) for k, v in pairs}
+#                     rows.append(row)
+
+#             if rows:
+#                 parsed_tables[table_name] = pd.DataFrame(rows)
+
+#         self.tables = parsed_tables
+#         logger.info(f"[Parser Debug] Başarıyla DataFrame'e çevrilen tablo sayısı: {len(self.tables)}")
+
+#     def get_table(self, name: str) -> pd.DataFrame:
+#         return self.tables.get(name, pd.DataFrame())
+
+#     def get_all_tables(self) -> Dict[str, pd.DataFrame]:
+#         return self.tables
 class S2KParser:
-    PAIR_PATTERN = re.compile(r'(\w+)=("[^"]*"|[^\s]+)')
+    # Key=Value; değer ya tırnaklı ya da boşluksuz tek token
+    PAIR_PATTERN = re.compile(r'(\w+)=(?:"([^"]*)"|(\S+))')
 
     def __init__(self, file_path: Optional[str] = None):
         self.file_path = file_path
         self.tables: Dict[str, pd.DataFrame] = {}
+        self.curr_units: Optional[str] = None
         if self.file_path:
             self._parse(self.file_path)
 
     def _parse(self, file_path: str):
         path = Path(file_path)
         if not path.exists():
-            logger.error(f"[Parser Debug] Dosya bulunamadı: {file_path}")
+            logger.error(f"[Parser] Dosya yok: {file_path}")
             return
 
-        try:
-            content = path.read_text(encoding='utf-8', errors='ignore')
-        except Exception as e:
-            logger.error(f"[Parser Debug] Dosya okuma hatası: {e}")
-            return
+        content = path.read_text(encoding='utf-8', errors='ignore')
 
-        logger.info(f"[Parser Debug] Dosya okundu: {path.name}, Boyut: {len(content)} bytes")
+        # Birim etiketi
+        m = re.search(r'CurrUnits\s*=\s*"([^"]+)"', content)
+        if m:
+            self.curr_units = m.group(1)
+            logger.info(f"[Parser] Birim: {self.curr_units}")
 
-        content = re.sub(r' _\r?\n', ' ', content)
+        # Satır devamı: " _" ile biten satırlar birleştirilir
+        content = re.sub(r'[ ]_\r?\n', ' ', content)
+
         raw_tables = re.split(r'TABLE:\s*"*', content)
-        logger.info(f"[Parser Debug] Toplam {len(raw_tables)} ham tablo bloğu ayrıştırıldı.")
+        logger.info(f"[Parser] {len(raw_tables)} ham tablo bloğu")
 
-        # Optimize edilmiş satır parse döngüsü
-        parsed_tables = {}
+        parsed_tables: Dict[str, pd.DataFrame] = {}
         for raw in raw_tables:
             if not raw.strip():
                 continue
@@ -161,22 +182,63 @@ class S2KParser:
                 if not line:
                     continue
                 pairs = self.PAIR_PATTERN.findall(line)
-                if pairs:
-                    row = {k: (v[1:-1] if v.startswith('"') and v.endswith('"') else v) for k, v in pairs}
-                    rows.append(row)
+                if not pairs:
+                    continue
+                row = {}
+                for key, quoted, unquoted in pairs:
+                    if quoted:
+                        # Tırnaklı metin — DOKUNMA
+                        row[key] = quoted
+                    else:
+                        # Tırnaksız — virgül varsa ondalık ayracıdır
+                        row[key] = unquoted.replace(',', '.') if ',' in unquoted else unquoted
+                rows.append(row)
 
             if rows:
                 parsed_tables[table_name] = pd.DataFrame(rows)
 
         self.tables = parsed_tables
-        logger.info(f"[Parser Debug] Başarıyla DataFrame'e çevrilen tablo sayısı: {len(self.tables)}")
+        logger.info(f"[Parser] {len(self.tables)} tablo parse edildi.")
+
+        self._convert_units_to_n_mm()
+
+    def _convert_units_to_n_mm(self):
+        """Eğer dosya birimi Ton, m, C ise, N ve mm cinsine dönüştürür."""
+        if not self.curr_units or "Ton" not in self.curr_units or "m" not in self.curr_units:
+            return
+
+        logger.info("[Parser Debug] Birim dönüşümü tetiklendi: Ton, m -> N, mm dönüştürülüyor...")
+        
+        # Dönüşüm Çarpanları:
+        # 1 Ton = 10,000 N (veya yerçekimiyle 9806.65 ama yapısal yazılımlarda genellikle 1 tf = 9.80665 kN = 9806.65 N veya 1 ton = 10 kN baz alınır. Projenizin standart katsayısına göre 9806.65 veya 10000 kullanılabilir). Standard SAP2000 ton-kN-m dönüşümlerinde 1 tf = 9.80665 kN, yani N cinsinden 9806.65 tir. Veya düz tablolarda kuvvet birimi ton ise Newton'a çevrilir.
+        # Uzunluk: 1 m = 1000 mm
+        
+        force_factor = 9806.65  # Ton -> N (veya projeye göre 10000)
+        length_factor = 1000.0  # m -> mm
+        
+        # Koordinat ve uzunluk içeren sütunlar (örneğin X, Y, Z, Length vb.) length_factor ile çarpılmalı
+        # Kuvvet/Yük içeren sütunlar force_factor ile (veya basınca bağlı olarak stress birimleri değişir)
+        
+        length_cols = {'X', 'Y', 'Z', 'CoordX', 'CoordY', 'CoordZ', 'Length', 'Span'}
+        
+        for table_name, df in self.tables.items():
+            for col in df.columns:
+                # Sütun adı uzunluk içeriyorsa veya koordinatsa mm'ye çevir
+                if col in length_cols or any(lc in col.lower() for lc in ['x', 'y', 'z', 'length', 'width', 'height', 'thick']):
+                    try:
+                        df[col] = pd.to_numeric(df[col], errors='ignore')
+                        if pd.api.types.is_numeric_dtype(df[col]):
+                            df[col] = df[col] * length_factor
+                    except Exception:
+                        pass
+                        
+                # Kuvvet/Yük kolonları için dönüştürme eklenebilir (İhtiyaca göre özelleştirilebilir)
 
     def get_table(self, name: str) -> pd.DataFrame:
         return self.tables.get(name, pd.DataFrame())
 
     def get_all_tables(self) -> Dict[str, pd.DataFrame]:
         return self.tables
-
 
 class S2KLoader:
     def __init__(self, file_path: Optional[str] = None):
@@ -236,4 +298,5 @@ class S2KLoader:
         self.units = ctx.units
         project = build_scene_into_project(ctx, project)
         logger.info("[Loader Debug] Model yükleme ve inşa süreci tamamlandı.")
+        
         return project

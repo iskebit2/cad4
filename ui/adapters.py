@@ -5,7 +5,8 @@ Element ↔ dict dönüşümleri.
 Ana uygulama bu modülü çağırır; ImGui tarafında sadece dict dolaşır.
 """
 from typing import Any, Dict
-from data.enums import PolygonType
+from data.enums import PolygonType, SectionType
+from domain.definition import FrameDistributedLoad
 from ui.schema import get_path, set_path
 
 MIXED = "__MIXED__"   # çakışmayacak bir string (nadir)
@@ -106,7 +107,6 @@ def frame_to_values(frame) -> Dict[str, Any]:
     sec = getattr(frame, "section", None)
     sets = getattr(frame, "dist_load_sets", {}) or {}
 
-    # Her set'i liste olarak dışa aktar (inspector list_object sever)
     sets_list = []
     for pat_name, s in sets.items():
         sets_list.append({
@@ -118,22 +118,26 @@ def frame_to_values(frame) -> Dict[str, Any]:
             "segments_text": _segments_to_text(s.segments),
         })
 
-    # Eğer frame'in dist_loads'u var ama dist_load_sets'i yoksa,
-    # dist_loads'tan reconstruct edip göster (read-only hissi)
+    # dist_loads'tan reconstruct — FrameDistributedLoadSet YOK
     if not sets_list and getattr(frame, "dist_loads", None):
-        from domain.definition import FrameDistributedLoadSet
         by_pattern: Dict[str, list] = {}
         for dl in frame.dist_loads:
             by_pattern.setdefault(dl.pattern_name, []).append(dl)
         for pat_name, dls in by_pattern.items():
-            s = FrameDistributedLoadSet.from_sap_loads(dls)
+            # Her pattern için ayrı FrameDistributedLoad ama
+            # hepsinin segmentlerini tek listede birleştir
+            first = dls[0]
+            all_segments = []
+            for dl in dls:
+                all_segments.extend(dl.segments)
+            all_segments.sort(key=lambda s: s.x1)
             sets_list.append({
-                "pattern_name":  s.pattern_name,
-                "coord_sys":     s.coord_sys,
-                "load_dir":      str(s.load_dir),
-                "mode":          s.mode,
-                "is_relative":   bool(getattr(s, "is_relative", True)),
-                "segments_text": _segments_to_text(s.segments),
+                "pattern_name":  first.pattern_name,
+                "coord_sys":     first.coord_sys,
+                "load_dir":      str(first.load_dir),
+                "mode":          first.mode,
+                "is_relative":   bool(getattr(first, "is_relative", True)),
+                "segments_text": _segments_to_text(all_segments),
             })
 
     return {
@@ -141,15 +145,9 @@ def frame_to_values(frame) -> Dict[str, Any]:
         "is_visible": frame.is_visible,
         "color": list(frame.color[:3]),
         "rotation_deg": float(getattr(frame, "rotation_deg", 0.0)),
-        "section": {
-            "name": getattr(sec, "name", "") if sec else "",
-            "profile_type": (sec.profile_type.name
-                             if sec and hasattr(sec, "profile_type")
-                             else ""),
-            "profile_params": dict(getattr(sec, "profile_params", {})
-                                   if sec else {}),
-        },
-        # Inspector için tek sanal alan
+        # --- Kesit: nesne (dict değil) ---
+        "section": sec,
+        # --- Sanal alan: yük setleri ---
         "dist_load_sets_list": sets_list,
     }
 
@@ -160,32 +158,19 @@ def values_to_frame(frame, v: Dict[str, Any]):
     frame.is_visible = bool(v.get("is_visible", frame.is_visible))
     frame.rotation_deg = float(v.get("rotation_deg", frame.rotation_deg))
 
-    # Kesit
-    sec_v = v.get("section", {})
-    if frame.section is not None:
-        pt = sec_v.get("profile_type")
-        if pt:
-            from domain.definition import SectionType
-            try:
-                frame.section.profile_type = SectionType[pt]
-            except KeyError:
-                pass
-        for k, val in sec_v.get("profile_params", {}).items():
-            try:
-                frame.section.profile_params[k] = float(val)
-            except (ValueError, TypeError):
-                pass
+    # --- Kesit: NESNE olarak yaz ---
+    sec = v.get("section")
+    if sec is not None and hasattr(sec, "name") and hasattr(sec, "profile_type"):
+        frame.section = sec
+        frame.mark_dirty()
 
     # --- Segment bazlı yük setleri ---
     sets_v = v.get("dist_load_sets_list")
     if isinstance(sets_v, list):
-        from domain.definition import FrameDistributedLoadSet
-
         if not hasattr(frame, "dist_load_sets"):
             frame.dist_load_sets = {}
 
-        # Yeni setleri oluştur
-        new_sets: Dict[str, FrameDistributedLoadSet] = {}
+        new_sets: Dict[str, FrameDistributedLoad] = {}
         for item in sets_v:
             if not isinstance(item, dict):
                 continue
@@ -193,8 +178,7 @@ def values_to_frame(frame, v: Dict[str, Any]):
             if not pat:
                 continue
             segs = _text_to_segments(item.get("segments_text", ""))
-
-            s = FrameDistributedLoadSet(
+            s = FrameDistributedLoad(
                 pattern_name=pat,
                 coord_sys=str(item.get("coord_sys", "Local")),
                 load_dir=str(item.get("load_dir", "7")),
@@ -206,10 +190,9 @@ def values_to_frame(frame, v: Dict[str, Any]):
 
         frame.dist_load_sets = new_sets
 
-        # dist_loads'u (SAP satırları) senkronize et
+        # dist_loads'u (SAP satırları) setlerden senkronize et
         if not hasattr(frame, "dist_loads"):
             frame.dist_loads = []
-        # Tüm eski satırları temizle, setlerden yeniden üret
         frame.dist_loads = []
         for s in new_sets.values():
             frame.dist_loads.extend(s.to_sap_loads())
@@ -221,11 +204,13 @@ def values_to_frame(frame, v: Dict[str, Any]):
 # AREA
 # ------------------------------------------------------------------
 def area_to_values(area) -> Dict[str, Any]:
+    mat = getattr(area, "material", None)
     return {
         "label": area.label,
         "is_visible": area.is_visible,
         "color": list(area.color[:3]),
         "thickness": float(area.thickness),
+        "material": mat,   # ← NESNE
         "section_name": getattr(area, "section_name", ""),
     }
 
@@ -235,7 +220,15 @@ def values_to_area(area, v: Dict[str, Any]):
     area.color = list(v.get("color", area.color))[:3]
     area.is_visible = bool(v.get("is_visible", area.is_visible))
     area.thickness = float(v.get("thickness", area.thickness))
-    area.section_name = v.get("section_name", area.section_name)
+
+    mat = v.get("material")
+    if mat is not None and hasattr(mat, "name"):
+        area.material = mat
+
+    sec_name = v.get("section_name")
+    if isinstance(sec_name, str):
+        area.section_name = sec_name
+
     area.mark_dirty()
 
 

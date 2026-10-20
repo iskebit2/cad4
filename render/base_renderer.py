@@ -183,14 +183,14 @@ class BaseRenderer(ABC, Generic[T]):
             
     def update_single_element_color(self, element, color_getter):
         """Tüm CBO'yu yenilemek yerine sadece tek bir elemanın rengini GPU'da günceller."""
-        if not hasattr(element, 'element_id') or element.element_id not in self.elem_to_cbo_offset:
+        if not hasattr(element, 'unique_id') or element.unique_id not in self.elem_to_cbo_offset:
             return
         
-        vc = self.elem_to_vcount.get(element.element_id, 0)
+        vc = self.elem_to_vcount.get(element.unique_id, 0)
         if vc == 0:
             return
             
-        byte_offset = self.elem_to_cbo_offset[element.element_id]
+        byte_offset = self.elem_to_cbo_offset[element.unique_id]
         
         raw_color = color_getter(element)
         rgb_color = np.array(raw_color[:3], dtype=np.float32)
@@ -218,9 +218,9 @@ class BaseRenderer(ABC, Generic[T]):
         if self.cbo and glIsBuffer(self.cbo):
             cols = []
             for e in self.elements:
-                if e.element_id not in self.elem_to_vcount:
+                if e.unique_id not in self.elem_to_vcount:
                     continue
-                vc = self.elem_to_vcount[e.element_id]
+                vc = self.elem_to_vcount[e.unique_id]
                 if vc == 0:
                     continue
                 color = _final_color_for(e)
@@ -238,7 +238,7 @@ class BaseRenderer(ABC, Generic[T]):
             for e in self.elements:
                 if not e.is_visible:
                     continue
-                vc = self.elem_to_simple_vcount.get(e.element_id, 0)   # ← cache
+                vc = self.elem_to_simple_vcount.get(e.unique_id, 0)   # ← cache
                 if vc == 0:
                     continue
                 color = _final_color_for(e)
@@ -315,10 +315,10 @@ class BaseRenderer(ABC, Generic[T]):
 
                 id_data = np.full(vc, e.unique_id, dtype=np.uint32)
 
-                self.elem_to_idx[e.element_id] = (ioff, ic)
-                self.elem_to_vcount[e.element_id] = vc
-                self.elem_to_inst[e.element_id] = inst_idx
-                self.elem_to_cbo_offset[e.element_id] = voff * 3 * 4
+                self.elem_to_idx[e.unique_id] = (ioff, ic)
+                self.elem_to_vcount[e.unique_id] = vc
+                self.elem_to_inst[e.unique_id] = inst_idx
+                self.elem_to_cbo_offset[e.unique_id] = voff * 3 * 4
 
                 pos = v.reshape(-1, stride_floats)[:, :3]
                 self.bounds_min = np.minimum(self.bounds_min, pos.min(axis=0))
@@ -344,7 +344,7 @@ class BaseRenderer(ABC, Generic[T]):
             if sv is not None and len(sv) > 0:
                 if (len(sv) % stride_floats) == 0:
                     simple_vc = len(sv) // stride_floats   # ← simple vertex sayısı
-                    self.elem_to_simple_vcount[e.element_id] = simple_vc   # ← DOĞRU DEĞER
+                    self.elem_to_simple_vcount[e.unique_id] = simple_vc   # ← DOĞRU DEĞER
 
                     simple_verts.append(sv)
                     simple_colors.append(sc)
@@ -354,7 +354,7 @@ class BaseRenderer(ABC, Generic[T]):
                 else:
                     logger.warning(...)
             else:
-                self.elem_to_simple_vcount[e.element_id] = 0   # ← boş element
+                self.elem_to_simple_vcount[e.unique_id] = 0   # ← boş element
 
         # --- Bounds ----------------------------------------------------
         if voff > 0:
@@ -658,9 +658,9 @@ class BaseRenderer(ABC, Generic[T]):
 
         cols = []
         for e in elements:
-            if e.element_id not in self.elem_to_vcount:
+            if e.unique_id not in self.elem_to_vcount:
                 continue
-            vc = self.elem_to_vcount[e.element_id]
+            vc = self.elem_to_vcount[e.unique_id]
             if vc == 0:
                 continue
             
@@ -687,7 +687,7 @@ class BaseRenderer(ABC, Generic[T]):
         for e in self.elements:
             if not e.is_visible:
                 continue
-            vc = self.elem_to_simple_vcount.get(e.element_id, 0)
+            vc = self.elem_to_simple_vcount.get(e.unique_id, 0)
             if vc == 0:
                 continue
             color = color_func(e)
@@ -708,7 +708,7 @@ class BaseRenderer(ABC, Generic[T]):
     # =============================================================
 
     def get(self, eid: str) -> Optional[T]:
-        return next((e for e in self.elements if e.element_id == eid), None)
+        return next((e for e in self.elements if e.unique_id == eid), None)
 
     # =============================================================
     # CLEANUP

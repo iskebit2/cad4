@@ -72,10 +72,10 @@ class Scene:
         if isinstance(element, (Frame, Link)):
             for n in (element.node_i, element.node_j):
                 if n:
-                    n.connected = [(t, eid) for (t, eid) in n.connected if eid != element.element_id]
+                    n.connected = [(t, eid) for (t, eid) in n.connected if eid != element.unique_id]
         elif isinstance(element, Area):
             for n in element.nodes:
-                n.connected = [(t, eid) for (t, eid) in n.connected if eid != element.element_id]
+                n.connected = [(t, eid) for (t, eid) in n.connected if eid != element.unique_id]
 
         del bucket[element.unique_id]
         self.mark_dirty()
@@ -87,24 +87,38 @@ class Scene:
             bucket[element.unique_id] = element
             if isinstance(element, (Frame, Link)):
                 for n in (element.node_i, element.node_j):
-                    if n and (ObjType.FRAME if isinstance(element, Frame) else ObjType.LINK, element.element_id) not in n.connected:
-                        n.connected.append((ObjType.FRAME if isinstance(element, Frame) else ObjType.LINK, element.element_id))
+                    if n and (ObjType.FRAME if isinstance(element, Frame) else ObjType.LINK, element.unique_id) not in n.connected:
+                        n.connected.append((ObjType.FRAME if isinstance(element, Frame) else ObjType.LINK, element.unique_id))
             elif isinstance(element, Area):
                 for n in element.nodes:
-                    if (ObjType.AREA, element.element_id) not in n.connected:
-                        n.connected.append((ObjType.AREA, element.element_id))
+                    if (ObjType.AREA, element.unique_id) not in n.connected:
+                        n.connected.append((ObjType.AREA, element.unique_id))
             self.mark_dirty()
 
     def mark_dirty_from_node(self, node: Node):
-        for _, elem_id in node.connected:
-            elem = self.get_element_by_id(str(elem_id)) or self.get_element_by_unique_id(int(elem_id) if str(elem_id).isdigit() else -1)
-            if elem:
+        if node is None:
+            return
+
+        for obj_type, elem_uid in node.connected:
+            bucket = self._bucket_for_type(obj_type)
+            if bucket is None:
+                continue
+            elem = bucket.get(int(elem_uid)) if elem_uid is not None else None
+            if elem is not None:
                 elem.mark_dirty()
+
         self.mark_dirty()
+
+
+    def _bucket_for_type(self, obj_type) -> Optional[Dict]:
+        if obj_type == ObjType.FRAME:    return self.frames
+        if obj_type == ObjType.AREA:     return self.areas
+        if obj_type == ObjType.LINK:     return self.links
+        return None
     
-    def get_element_by_id(self, element_id: str) -> Optional[Element]:
+    def get_element_by_id(self, unique_id: str) -> Optional[Element]:
         for elem in self.all_elements.values():
-            if elem.element_id == element_id:
+            if elem.unique_id == unique_id:
                 return elem
         return None
 

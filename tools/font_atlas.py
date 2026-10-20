@@ -12,7 +12,8 @@ from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 @dataclass(frozen=True)
 class Glyph:
@@ -215,10 +216,10 @@ class FontAtlas:
         try:
             from PIL import Image
             Image.fromarray(self.pixels, mode="L").save("_atlas_debug.png")
-            print(f"[Atlas] {self.width}x{self.height} kaydedildi: _atlas_debug.png")
-            print(f"[Atlas] pixel min/max: {self.pixels.min()}/{self.pixels.max()}")
+            logger.debug(f"[Atlas] {self.width}x{self.height} kaydedildi: _atlas_debug.png")
+            logger.debug(f"[Atlas] pixel min/max: {self.pixels.min()}/{self.pixels.max()}")
         except Exception as e:
-            print(f"[Atlas] debug kaydedilemedi: {e}")
+            logger.debug(f"[Atlas] debug kaydedilemedi: {e}")
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
@@ -243,7 +244,7 @@ class FontAtlas:
 
         glBindTexture(GL_TEXTURE_2D, 0)
         self.texture_id = tex
-        print(f"[Atlas] texture id={tex}")
+        logger.debug(f"[Atlas] texture id={tex}")
         return tex
 
     # ------------------------------------------------------------------

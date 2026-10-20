@@ -45,7 +45,7 @@ DEFAULT_POLYGONS = {}
 DEFAULT_DEAD_CONFIG = {
     # GUI'deki manuel tanımlar + hazır yüklerin bir özeti
     "definitions": [],   # [{id, name, load_type, value, unit, source, description}]
-    "assignments": {},   # {element_id: {"G": [...], "Q": [...]}}
+    "assignments": {},   # {unique_id: {"G": [...], "Q": [...]}}
 }
 
 DEFAULT_LIVE_CONFIG = {

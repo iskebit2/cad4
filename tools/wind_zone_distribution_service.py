@@ -148,9 +148,9 @@ class WindZoneDistributionService:
         try:
             sid = int(surface_ref)
         except (ValueError, TypeError):
-            # element_id fallback
+            # unique_id fallback
             for poly in scene.polygons.values():
-                if str(getattr(poly, "element_id", "")) == str(surface_ref):
+                if str(getattr(poly, "unique_id", "")) == str(surface_ref):
                     pt = getattr(poly, "poly_type", None)
                     if pt in (PolygonType.SURFACE_ONEWAY,
                               PolygonType.SURFACE_TWOWAY):

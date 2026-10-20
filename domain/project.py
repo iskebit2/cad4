@@ -55,6 +55,8 @@ class Project:
     frame_design_procs: Dict[str, str] = field(default_factory=dict)
     frame_auto_mesh: Dict[str, dict] = field(default_factory=dict)
 
+    catalog_sections: Dict[str, Section] = field(default_factory=dict)
+
     def __post_init__(self):
         # Scene, projeye referans versin ki kendi içinden malzemelere/kesitlere ulaşabilsin
         self.scene.project = self
@@ -138,8 +140,7 @@ class Project:
     # FILE I/O (Serializer'a delege edilir)
     # ==================================================================
     def save(self, filepath: str):
-        print("self.grid:", self.grid)
-        print("self.grid_lines:", self.grid_lines)
+        
         path = Path(filepath)
         if path.suffix != ".cd4":
             path = path.with_suffix(".cd4")

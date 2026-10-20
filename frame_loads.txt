@@ -1,5 +1,0 @@
-TABLE:  "FRAME LOADS - DISTRIBUTED"
-   Frame=308   LoadPat=WIND   CoordSys=GLOBAL   Type=Force   Dir=X   DistType=RelDist   RelDistA=0   RelDistB=0.25   AbsDistA=0   AbsDistB=400   FOverLA=5   FOverLB=5
-   Frame=308   LoadPat=WIND   CoordSys=GLOBAL   Type=Force   Dir=X   DistType=RelDist   RelDistA=0.25   RelDistB=0.5   AbsDistA=400   AbsDistB=800   FOverLA=4   FOverLB=4
-   Frame=308   LoadPat=WIND   CoordSys=GLOBAL   Type=Force   Dir=X   DistType=RelDist   RelDistA=0.5   RelDistB=0.75   AbsDistA=800   AbsDistB=1200   FOverLA=3   FOverLB=3
-   Frame=308   LoadPat=WIND   CoordSys=GLOBAL   Type=Force   Dir=X   DistType=RelDist   RelDistA=0.75   RelDistB=1   AbsDistA=1200   AbsDistB=1600   FOverLA=2   FOverLB=2

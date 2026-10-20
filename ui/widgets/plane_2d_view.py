@@ -75,7 +75,8 @@ class Plane2DView:
         self.show_axes = True
 
         # Etkileşim
-        self.selected = set()          # {(kind, id)} — kind: "frame"/"node"/...
+        # self.selected = set()          # {(kind, id)} — kind: "frame"/"node"/...
+        self._own_selected = set()
         self.hover = None              # (kind, id) veya None
         self.clicked = None            # (kind, id) veya None (panel tüketir)
         self.clicked_empty = False
@@ -92,6 +93,7 @@ class Plane2DView:
         # İçerik bounds cache (u/v)
         self._bounds = None
         self._first_load = True
+        self.sel_mgr = None
 
     def _get_mods(self):
         if self._mods_getter:
@@ -102,6 +104,51 @@ class Plane2DView:
         io = imgui.get_io()
         return bool(getattr(io, "key_ctrl", False)), bool(getattr(io, "key_shift", False))
 
+    @property
+    def selected(self):
+        """sel_mgr varsa oradan oku, yoksa kendi set'inden."""
+        if self.sel_mgr is None:
+            return self._own_selected
+        result = set()
+        for uid in self.sel_mgr.selected:
+            kind = self._uid_to_kind(uid)
+            if kind is not None:
+                result.add((kind, uid))
+        return result
+
+    @selected.setter
+    def selected(self, value):
+        """Panel eski koddan set ediyorsa — geri uyumluluk için."""
+        if self.sel_mgr is None:
+            self._own_selected = value
+        # sel_mgr varsa no-op (sel_mgr'ye panel doğrudan yazmaz, UI çağırır)
+        
+    def bind_selection(self, sel_mgr):
+        """Sahne sel_mgr'sini bağla."""
+        self.sel_mgr = sel_mgr
+
+    def _uid_to_kind(self, uid) -> Optional[str]:
+        """unique_id → kind. Scene'deki 5 dict'ten türet."""
+        if self.scene is None:
+            return None
+        if uid in self.scene.nodes:     return "node"
+        if uid in self.scene.frames:    return "frame"
+        if uid in self.scene.areas:     return "area"
+        if uid in self.scene.links:     return "link"
+        if uid in self.scene.polygons:  return "poly"
+        return None
+
+
+    def _kind_id_to_element(self, kind, eid):
+        scene = self.scene
+        if scene is None:
+            return None
+        coll = {"node": "nodes", "frame": "frames", "area": "areas",
+                "link": "links", "poly": "polygons"}.get(kind)
+        if not coll:
+            return None
+        return getattr(scene, coll, {}).get(eid)
+    
     # ------------------------------------------------------------------
     #  Yükleme
     # ------------------------------------------------------------------
@@ -557,10 +604,9 @@ class Plane2DView:
         if abs(x1 - x0) < 3 and abs(y1 - y0) < 3:
             self.clicked_empty = True
             return
+
         rx0, rx1 = min(x0, x1), max(x0, x1)
         ry0, ry1 = min(y0, y1), max(y0, y1)
-
-        io = imgui.get_io()
         hit = set()
         for kind, eid in self._iter_assoc_ids():
             for uv in self._element_uvs(kind, eid):
@@ -570,12 +616,33 @@ class Plane2DView:
                     break
 
         ctrl, shift = self._get_mods()
+
+        # sel_mgr varsa oraya yaz
+        if self.sel_mgr is not None:
+            elements = []
+            for kind, eid in hit:
+                el = self._kind_id_to_element(kind, eid)
+                if el is not None:
+                    elements.append(el)
+
+            from core.selection_policy import SelectionMode
+            if ctrl:
+                # Toggle: her elemanı ayrı ayrı toggle et
+                for el in elements:
+                    self.sel_mgr.select(el, additive=True)
+            elif shift:
+                self.sel_mgr.select_multiple(elements, mode=SelectionMode.ADD)
+            else:
+                self.sel_mgr.select_multiple(elements, mode=SelectionMode.REPLACE)
+            return
+
+        # Fallback (sel_mgr yoksa, demo)
         if ctrl:
-            self.selected ^= hit
+            self._own_selected ^= hit
         elif shift:
-            self.selected |= hit
+            self._own_selected |= hit
         else:
-            self.selected = hit
+            self._own_selected = hit
 
     def _apply_zoom(self, wheel, mx, my, cx, cy, cw, ch):
         factor = self.ZOOM_STEP if wheel > 0 else 1.0 / self.ZOOM_STEP

@@ -14,7 +14,7 @@ CadApp'ten sadece `self.app` referansı alır. Callback YOK.
 
 from __future__ import annotations
 
-import logging
+from logging_config import CadLogger
 from typing import Optional, List
 
 import imgui
@@ -23,7 +23,7 @@ import numpy as np
 from domain.plane import Plane, ASSOC_KINDS
 from domain.element import Node
 
-logger = logging.getLogger(__name__)
+logger = CadLogger.get(__name__)
 
 
 _AXIS_LABELS = ("X", "Y", "Z")
@@ -88,9 +88,15 @@ class PlaneManagerPanel:
 
     def _selected_plane(self) -> Optional[Plane]:
         proj = self._project()
-        if not proj or not self._selected_name:
+        if not proj:
+            logger.debug("[PM] _selected_plane: proj None")
             return None
-        return proj.planes.get(self._selected_name)
+        if not self._selected_name:
+            logger.debug("[PM] _selected_plane: _selected_name None")
+            return None
+        plane = proj.planes.get(self._selected_name)
+        logger.debug(f"[PM] _selected_plane: name={self._selected_name}, plane={plane}")
+        return plane
 
     def _scene_nodes_by_id(self) -> dict:
         scene = self._scene()
@@ -132,8 +138,7 @@ class PlaneManagerPanel:
             return
 
         imgui.set_next_window_size(self.PANEL_W, self.PANEL_H, imgui.FIRST_USE_EVER)
-        imgui.set_next_window_position(1300 - self.PANEL_W - 20, 60,
-                                       imgui.FIRST_USE_EVER)
+        imgui.set_next_window_position(1300 - self.PANEL_W - 20, 60, imgui.FIRST_USE_EVER)
 
         expanded, opened = imgui.begin("Plane Manager", True)
         try:
@@ -147,14 +152,18 @@ class PlaneManagerPanel:
             imgui.separator()
 
             imgui.begin_child("pm_list", width=230, height=0, border=True)
-            self._draw_list()
-            imgui.end_child()
+            try:
+                self._draw_list()
+            finally:
+                imgui.end_child()
 
             imgui.same_line()
 
             imgui.begin_child("pm_detail", width=0, height=0, border=False)
-            self._draw_detail()
-            imgui.end_child()
+            try:
+                self._draw_detail()
+            finally:
+                imgui.end_child()
 
         finally:
             imgui.end()
@@ -182,8 +191,12 @@ class PlaneManagerPanel:
                 self._pending_delete = sel.name
 
         imgui.same_line()
-        if sel is not None and imgui.button("Edit", width=60):
-            self._do_edit(sel)
+        if sel is not None and imgui.button("Düzenle", width=70):
+            self._open_new_plane_form(from_plane=sel)
+
+        imgui.same_line()
+        if sel is not None and imgui.button("Plot", width=60):
+            self._do_plot(sel)
 
         imgui.same_line()
         if sel is not None and imgui.button("Yenile", width=70):
@@ -294,60 +307,80 @@ class PlaneManagerPanel:
         imgui.spacing()
         imgui.separator()
 
-        if imgui.button("Edit (Polygon Edit Panel)", width=-1, height=28):
-            self._do_edit(sel)
-
     # ==================================================================
-    #  YENİ PLANE FORMU
+    #  YENİ PLANE FORMU veya DÜZENLE
     # ==================================================================
-    def _open_new_plane_form(self):
+    def _open_new_plane_form(self, from_plane: Optional[Plane] = None):
         self._form_open = True
-        self._new_source = SRC_GRID
+        self._new_source = SRC_GRID   # varsayılan
         self._picked_nodes = []
         self._preview = None
         self._edit_bounds_open = False
-        self._refresh_preview()
+        self._editing_plane = from_plane   # ← YENİ: mevcut plane kopyası
+
+        if from_plane is not None:
+            # Mevcut plane'in kopyasını preview olarak kullan
+            import copy
+            self._preview = copy.deepcopy(from_plane)
+            self._preview_name = from_plane.name
+            # Sınır/depth alanlarını doldur
+            self._pv_u_min = from_plane.u_min or 0.0
+            self._pv_u_max = from_plane.u_max or 0.0
+            self._pv_v_min = from_plane.v_min or 0.0
+            self._pv_v_max = from_plane.v_max or 0.0
+            self._pv_depth_minus = from_plane.depth_minus
+            self._pv_depth_plus = from_plane.depth_plus
+            # "kaynak" seçimi anlamsız — düzenleme modunda gizle
+        else:
+            self._editing_plane = None
+            self._refresh_preview()
 
     def _clear_preview(self):
         self._preview = None
 
     def _draw_new_plane_form(self):
-        imgui.text_colored("─── Yeni Plane ───", 0.85, 0.9, 0.95, 1.0)
+        editing = getattr(self, "_editing_plane", None) is not None
+        
+        if editing:
+            imgui.text_colored("─── Plane Düzenle ───", 0.9, 0.8, 0.5, 1.0)
+            imgui.text_colored(f"Kaynak: mevcut plane (kopya)", 0.7, 0.7, 0.7, 1.0)
+            imgui.spacing()
+        else:
+            imgui.text_colored("─── Yeni Plane ───", 0.85, 0.9, 0.95, 1.0)
+            # Kaynak seçimi (radio_button)
+            imgui.text("Kaynak")
+            imgui.same_line(120)
+            for i, label in enumerate(("Grid", "2 Nokta", "3 Nokta")):
+                ...
+            imgui.spacing()
+            if self._new_source == SRC_GRID:
+                self._draw_grid_source()
+            elif self._new_source == SRC_2PT:
+                self._draw_points_source(required=2)
+            elif self._new_source == SRC_3PT:
+                self._draw_points_source(required=3)
+            imgui.spacing()
 
-        # Kaynak seçimi (radio_button — 3 kaynak yatay)
-        imgui.text("Kaynak")
-        imgui.same_line(120)
-        for i, label in enumerate(("Grid", "2 Nokta", "3 Nokta")):
-            if i > 0:
-                imgui.same_line()
-            clicked = imgui.radio_button(f"{label}##pm_src{i}", self._new_source == i)
-            if clicked and self._new_source != i:
-                self._new_source = i
-                self._picked_nodes = []
-                self._refresh_preview()
-
-        imgui.spacing()
-
-        # --- Kaynağa göre giriş ---
-        if self._new_source == SRC_GRID:
-            self._draw_grid_source()
-        elif self._new_source == SRC_2PT:
-            self._draw_points_source(required=2)
-        elif self._new_source == SRC_3PT:
-            self._draw_points_source(required=3)
-
-        imgui.spacing()
-
-        # --- Önizleme ---
+        # Önizleme (düzenleme modunda da)
         if self._preview is not None:
             self._draw_preview()
             imgui.spacing()
-            if imgui.button("Oluştur", width=120):
-                self._do_create_from_preview()
-            imgui.same_line()
-            if imgui.button("Vazgeç", width=100):
-                self._form_open = False
-                self._clear_preview()
+            
+            if editing:
+                if imgui.button("Güncelle", width=120):
+                    self._do_update_from_preview()
+                imgui.same_line()
+                if imgui.button("Vazgeç", width=100):
+                    self._form_open = False
+                    self._editing_plane = None
+                    self._clear_preview()
+            else:
+                if imgui.button("Oluştur", width=120):
+                    self._do_create_from_preview()
+                imgui.same_line()
+                if imgui.button("Vazgeç", width=100):
+                    self._form_open = False
+                    self._clear_preview()
         else:
             imgui.text_colored("Önizleme yok.", 0.6, 0.6, 0.6, 1.0)
             if imgui.button("Vazgeç", width=100):
@@ -731,6 +764,54 @@ class PlaneManagerPanel:
         self._selected_name = new_name
         logger.info(f"[PlaneMgr] Yeniden adlandırıldı: '{old}' → '{new_name}'")
 
+    def _do_update_from_preview(self):
+        """Düzenleme modunda mevcut plane'i güncelle."""
+        editing = getattr(self, "_editing_plane", None)
+        if editing is None or self._preview is None:
+            return
+        proj = self._project()
+        if not proj:
+            return
+
+        # Preview'dan geometriyi al
+        p = self._preview
+        
+        # Mevcut plane'in alanlarını güncelle
+        editing.u_min = self._pv_u_min
+        editing.u_max = self._pv_u_max
+        editing.v_min = self._pv_v_min
+        editing.v_max = self._pv_v_max
+        editing.depth_minus = self._pv_depth_minus
+        editing.depth_plus = self._pv_depth_plus
+        if self._preview_name.strip() and self._preview_name.strip() != editing.name:
+            editing.name = self._preview_name.strip()
+        
+        # Assoc yenile
+        scene = self._scene()
+        if scene is not None:
+            editing.refresh_assoc(scene)
+
+        self._form_open = False
+        self._editing_plane = None
+        self._clear_preview()
+        logger.info(f"[PlaneMgr] '{editing.name}' güncellendi")
+
+    def _do_plot(self, plane: Plane):
+        """Plane Plot panelini aç."""
+        scene = self._scene()
+        if scene is None:
+            return
+        pp = None
+        if self.app and hasattr(self.app, "panels"):
+            pp_info = self.app.panels.get("plane_plot")
+            if pp_info:
+                pp = pp_info["instance"]
+        if pp is None:
+            logger.warning("[PlaneMgr] PlanePlotPanel bulunamadı")
+            return
+        pp.open(scene=scene, plane=plane)
+        logger.info(f"[PlaneMgr] Plot: {plane.name}")
+        
     @staticmethod
     def _fmt(v):
         return "None" if v is None else f"{v:.1f}"

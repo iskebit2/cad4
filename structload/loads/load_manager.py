@@ -11,7 +11,7 @@ class LoadManager:
 
     assignments:
         {
-            element_id: {
+            unique_id: {
                 "G": ["G01", "G02"],
                 "Q": ["Q01"]
             }
@@ -69,7 +69,7 @@ class LoadManager:
 
     def assign(
         self,
-        element_id: int | str,
+        unique_id: int | str,
         load_id: str
     ):
 
@@ -77,48 +77,48 @@ class LoadManager:
 
         load_type = definition.load_type
 
-        if element_id not in self.assignments:
-            self.assignments[element_id] = {
+        if unique_id not in self.assignments:
+            self.assignments[unique_id] = {
                 "G": [],
                 "Q": []
             }
 
-        if load_id not in self.assignments[element_id][load_type]:
-            self.assignments[element_id][load_type].append(load_id)
+        if load_id not in self.assignments[unique_id][load_type]:
+            self.assignments[unique_id][load_type].append(load_id)
 
     def remove(
         self,
-        element_id: int | str,
+        unique_id: int | str,
         load_id: str
     ):
 
-        if element_id not in self.assignments:
+        if unique_id not in self.assignments:
             return
 
         definition = self.get_definition(load_id)
 
         load_type = definition.load_type
 
-        if load_id in self.assignments[element_id][load_type]:
-            self.assignments[element_id][load_type].remove(load_id)
+        if load_id in self.assignments[unique_id][load_type]:
+            self.assignments[unique_id][load_type].remove(load_id)
 
     def clear_element(
         self,
-        element_id: int | str,
+        unique_id: int | str,
         load_type: str | None = None
     ):
 
-        if element_id not in self.assignments:
+        if unique_id not in self.assignments:
             return
 
         if load_type is None:
-            self.assignments[element_id] = {
+            self.assignments[unique_id] = {
                 "G": [],
                 "Q": []
             }
 
         else:
-            self.assignments[element_id][load_type] = []
+            self.assignments[unique_id][load_type] = []
 
     # ---------------------------------------------------------
     # ELEMAN YÜKLERİ
@@ -126,7 +126,7 @@ class LoadManager:
 
     def get_element_loads(
         self,
-        element_id: int | str
+        unique_id: int | str
     ) -> dict[str, list[LoadDefinition]]:
 
         result = {
@@ -135,7 +135,7 @@ class LoadManager:
         }
 
         assignment = self.assignments.get(
-            element_id,
+            unique_id,
             {"G": [], "Q": []}
         )
 
@@ -151,7 +151,7 @@ class LoadManager:
 
     def get_element_total(
         self,
-        element_id: int | str,
+        unique_id: int | str,
         load_type: str
     ) -> float:
 
@@ -161,7 +161,7 @@ class LoadManager:
             )
 
         assignment = self.assignments.get(
-            element_id,
+            unique_id,
             {"G": [], "Q": []}
         )
 
@@ -237,7 +237,7 @@ class LoadManager:
 
         rows = []
 
-        for element_id, assignment in self.assignments.items():
+        for unique_id, assignment in self.assignments.items():
 
             g = [
                 self.get_definition(load_id).name
@@ -250,15 +250,15 @@ class LoadManager:
             ]
 
             rows.append({
-                "Eleman": element_id,
+                "Eleman": unique_id,
                 "G yükleri": ", ".join(g),
                 "G toplam (kN/m²)": round(
-                    self.get_element_total(element_id, "G"),
+                    self.get_element_total(unique_id, "G"),
                     3
                 ),
                 "Q yükleri": ", ".join(q),
                 "Q toplam (kN/m²)": round(
-                    self.get_element_total(element_id, "Q"),
+                    self.get_element_total(unique_id, "Q"),
                     3
                 ),
             })
