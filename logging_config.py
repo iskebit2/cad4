@@ -90,9 +90,9 @@ class CadLogger:
     # Modül bazlı seviyeler (dosya handler'ı bunları kullanır).
     # Değer yoksa → NOTSET (root'tan miras)
     MODULE_LEVELS: Dict[str, str] = {
-        "cad.tools.s2kloader":       "DEBUG",
-        "cad.tools.s2k_utils":       "DEBUG",
-        "cad.geometry.scenebuilder": "DEBUG",
+        "cad.tools.s2kloader":       "INFO",
+        "cad.tools.s2k_utils":       "INFO",
+        "cad.geometry.scenebuilder": "INFO",
         "cad.data.serializer":       "INFO",
         "cad.core.gl_engine":        "INFO",
         "cad.render.axes_renderer":  "INFO",

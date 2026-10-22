@@ -22,7 +22,7 @@ logger = CadLogger.get(__name__)
 # ----------------------------------------------------------------------
 # Scene keşif yardımcıları — farklı scene API'lerine uyumlu
 # ----------------------------------------------------------------------
-_TYPES = ("Node", "Frame", "Area", "Polygon")
+_TYPES = ("Node", "Frame", "Area", "Polygon", "Link")
 
 
 def _scene_groups(scene):

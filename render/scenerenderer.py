@@ -269,19 +269,23 @@ class SceneRenderer:
             self.pick_pass.set_main_fbo(self.mrt_fbo)
     
     def update_geo(self, scene=None, progress_cb=None):
-        """
-        Sahne geometrisini GPU'ya yükle.
         
-        Parameters
-        ----------
-        scene : Scene, optional
-        progress_cb : callable, optional
-            İlerleme callback'i. `progress_cb(value, message)` çağrılır.
-            `value` 0..1 arası, `message` açıklama.
-        """
         self._last_progress_value = 0.0
         if scene is None:
             scene = self.scene
+
+        flt = getattr(scene, '_render_filter', None)
+
+        def _f(d):
+            if flt is None:
+                return list(d.values())
+            return [e for e in d.values() if e.unique_id in flt]
+
+        frames = _f(scene.frames)
+        nodes = _f(scene.nodes)
+        areas = _f(scene.areas)
+        links = _f(scene.links)
+        polygons = _f(scene.polygons)
 
         # ---- 0. PickPass sıfırla ----
         if self.pick_pass and hasattr(self.pick_pass, 'clear_registry'):
@@ -296,11 +300,6 @@ class SceneRenderer:
 
         # ---- 1. Elementleri al ----
         _progress(0.00, "Hazırlanıyor...")
-        frames = list(scene.frames.values())
-        nodes = list(scene.nodes.values())
-        areas = list(scene.areas.values())
-        links = list(scene.links.values())
-        polygons = list(scene.polygons.values())
 
         self.scene = scene
 

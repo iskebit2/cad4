@@ -1,6 +1,7 @@
 # app/panel_registry.py
 
 from inspector import InspectorWindow
+from ui.sd_convert_panel import SDConvertPanel
 from ui.visibility_panel import VisibilityPanel
 from ui.view_filter_panel import ViewFilterPanel
 from ui.grid_panel import GridPanel
@@ -35,6 +36,7 @@ PANEL_SPECS = [
     ("load_display_panel",          LoadDisplayPanel,     "Yük Görüntüleme",         "loads",      True,  None),
     ("plane_plot",                  PlanePlotPanel,       "Plane Plot (2D)",         "tools",      False, None),
     ("plane_manager",               PlaneManagerPanel,    "Plane Manager",           "tools",      True,  "F12"),
+    ("sd_convert", SDConvertPanel, "SD → Area", "Araçlar", True, "Ctrl+Shift+J"),
     
     # ("material_panel", MaterialPanel, "Malzeme Yönetimi", "Tanımlar", True, "CTRL+M"),
 ]

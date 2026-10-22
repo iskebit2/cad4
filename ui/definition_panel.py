@@ -20,10 +20,11 @@ from domain.definition import (
     Material, Section, LoadPattern, LoadCase,
     ModalCase, LoadCombination, SpectrumFunction,
     ResponseSpectrumCase, AutoSeismicTSC2018,
+    LinkProp, LinkPropLinear,
     LinkProp, SectionCut,
 )
 from tools.section_preview import draw_section_preview
-from data.enums import SectionType, MatType
+from data.enums import LinkPropType, SectionType, MatType
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -128,8 +129,21 @@ DEFINITIONS: List[Tuple] = [
     (AutoSeismicTSC2018, "auto_seismics", "Otomatik Sismik (TSC2018)",
         lambda p: AutoSeismicTSC2018(load_pattern=_unique_name(p.auto_seismics, "SEISMIC")),
         dataclasses.replace),
-
-    (SectionCut, "section_cuts", "Kesit Kesitleri",
+    (LinkProp, "link_props", "Link Özellikleri",
+    lambda p: LinkPropLinear(
+        name=_unique_name(p.link_props, "LINK"),
+        prop_type=LinkPropType.LINEAR,
+    ),
+    lambda lp: LinkPropLinear(
+        name=lp.name,
+        prop_type=lp.prop_type,
+        DOF=dict(getattr(lp, "DOF", {}) or {}),
+        Fixed=dict(getattr(lp, "Fixed", {}) or {}),
+        Ke=dict(getattr(lp, "Ke", {}) or {}),
+        Ce=dict(getattr(lp, "Ce", {}) or {}),
+    )),
+    
+    (SectionCut, "section_cuts", "Section Cuts",
         lambda p: SectionCut(name=_unique_name(p.section_cuts, "CUT")),
         dataclasses.replace),
 ]
@@ -287,6 +301,33 @@ class DefinitionPanel:
         imgui.set_next_item_width(250)
         _, self._search = imgui.input_text("Arama", self._search)
 
+        # --- Seç butonu ---
+        imgui.same_line()
+        cls, _, _, _, _ = DEFINITIONS[self._current_idx]
+        can_select = (cls in (Section, Material) and self._selected_name is not None)
+        if not can_select:
+            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1)
+        if imgui.button("Seç ▾" if cls is Section else "Seç") and can_select:
+            if cls is Section:
+                imgui.open_popup("##select_by_section_popup")
+            else:
+                self._select_by_definition(cls, self._selected_name)
+        if not can_select:
+            imgui.pop_style_color()
+        if imgui.is_item_hovered() and not can_select:
+            imgui.set_tooltip("Sadece bir Section veya Material seçiliyken kullanılabilir.")
+
+        # Section için popup
+        if cls is Section and can_select:
+            if imgui.begin_popup("##select_by_section_popup"):
+                if imgui.menu_item("Frame'leri Seç")[0]:
+                    self._select_by_section(self._selected_name, target="frames")
+                    imgui.close_current_popup()
+                if imgui.menu_item("Area'ları Seç")[0]:
+                    self._select_by_section(self._selected_name, target="areas")
+                    imgui.close_current_popup()
+                imgui.end_popup()
+
     # -----------------------------------------------------------------
     # LİSTE
     # -----------------------------------------------------------------
@@ -363,7 +404,7 @@ class DefinitionPanel:
             if imgui.is_item_hovered():
                 imgui.set_tooltip(msg)
             return False
-
+    
     # -----------------------------------------------------------------
     # RENDER DISPATCH
     # -----------------------------------------------------------------
@@ -383,6 +424,12 @@ class DefinitionPanel:
                 imgui.text_colored("Önizleme:", 0.6, 0.7, 0.85)
                 draw_section_preview(obj, avail_w=160, avail_h=120)
                 return changed
+        # --- LinkProp özel ---
+        if isinstance(obj, LinkProp):
+            if name == "prop_type":
+                return self._draw_linkprop_type_editor(obj)
+            if name in ("DOF", "Fixed", "Ke", "Ce"):
+                return self._draw_linkprop_dict(obj, name)
             
         # --- Özel editörler ---
         if isinstance(obj, Section):
@@ -866,3 +913,147 @@ class DefinitionPanel:
 
         imgui.end_popup()
         return changed
+
+    # -----------------------------------------------------------------
+    # ÖZEL: LINK PROPERTY
+    # -----------------------------------------------------------------
+    def _draw_linkprop_type_editor(self, prop) -> bool:
+        """prop_type combo — Linear, Gap, Hook vb."""
+        values = list(LinkPropType)
+        labels = [pt.name for pt in values]
+        try:
+            cur_idx = values.index(prop.prop_type)
+        except (ValueError, TypeError):
+            cur_idx = 0
+
+        changed = False
+        if imgui.begin_combo("prop_type", labels[cur_idx]):
+            for i, lbl in enumerate(labels):
+                c, _ = imgui.selectable(lbl, i == cur_idx)
+                if c and i != cur_idx:
+                    prop.prop_type = values[i]
+                    changed = True
+            imgui.end_combo()
+        return changed
+
+
+    def _draw_linkprop_dict(self, prop, name: str) -> bool:
+        """
+        DOF: {'U1': bool, ...}    → checkbox grid
+        Ke / Ce: {'U1': float, ...} → input_float grid
+        Fixed: {dof: bool}          → checkbox grid
+        """
+        cur = getattr(prop, name, None)
+        if not isinstance(cur, dict):
+            imgui.text_disabled(f"{name}: <dict değil>")
+            return False
+
+        dofs = ["U1", "U2", "U3", "R1", "R2", "R3"]
+        changed = False
+
+        imgui.text_colored(name, 0.7, 0.9, 0.7)
+
+        if name in ("DOF", "Fixed"):
+            # 6 DOF checkbox yan yana
+            for i, dof in enumerate(dofs):
+                if i > 0:
+                    imgui.same_line()
+                val = bool(cur.get(dof, False))
+                c, v = imgui.checkbox(f"{dof}##{name}_{dof}", val)
+                if c:
+                    cur[dof] = v
+                    changed = True
+
+        elif name in ("Ke", "Ce"):
+            # 3 satır × 2 sütun grid
+            for row_start in (0, 2, 4):
+                for col in range(2):
+                    dof = dofs[row_start + col]
+                    val = float(cur.get(dof, 0.0))
+                    imgui.set_next_item_width(120)
+                    c, v = imgui.input_float(f"{dof}##{name}_{dof}", val, 1.0, 100.0)
+                    if c:
+                        cur[dof] = v
+                        changed = True
+                    if col == 0:
+                        imgui.same_line()
+
+        return changed
+
+    def _select_by_section(self, section_name: str, target: str = "frames"):
+        """
+        Belirli bir Section'ı kullanan Frame veya Area'ları seç.
+        
+        Args:
+            section_name: Seçilecek kesitin adı
+            target: "frames" | "areas"
+        """
+        project = getattr(self.app, "current_project", None)
+        if project is None or project.scene is None:
+            return
+        scn = project.scene
+        scn.clear_selections()
+
+        count = 0
+
+        if target == "frames":
+            for frame in scn.frames.values():
+                sec = getattr(frame, "section", None)
+                if sec is not None and getattr(sec, "name", None) == section_name:
+                    frame.is_selected = True
+                    count += 1
+        elif target == "areas":
+            for area in scn.areas.values():
+                if getattr(area, "section_name", "") == section_name:
+                    area.is_selected = True
+                    count += 1
+
+        self._notify_selection_changed(scn)
+        logger.info(
+            f"[Filter] Section '{section_name}' → "
+            f"{count} {target} seçildi"
+        )
+
+
+    def _select_by_definition(self, cls, name: str):
+        """
+        Material için: belirli bir Material'i kullanan Frame + Area'ları seç.
+        """
+        project = getattr(self.app, "current_project", None)
+        if project is None or project.scene is None:
+            return
+        scn = project.scene
+        scn.clear_selections()
+
+        if cls is not Material:
+            return
+
+        n_frames = 0
+        for frame in scn.frames.values():
+            sec = getattr(frame, "section", None)
+            mat = getattr(sec, "material", None) if sec else None
+            if mat is not None and getattr(mat, "name", None) == name:
+                frame.is_selected = True
+                n_frames += 1
+
+        n_areas = 0
+        for area in scn.areas.values():
+            mat = getattr(area, "material", None)
+            if mat is not None and getattr(mat, "name", None) == name:
+                area.is_selected = True
+                n_areas += 1
+
+        self._notify_selection_changed(scn)
+        logger.info(
+            f"[Filter] Material '{name}' → {n_frames} frame + {n_areas} area seçildi"
+        )
+
+
+    def _notify_selection_changed(self, scn):
+        """Seçim değişikliğini CadApp'e bildir (renderer + inspector güncellensin)."""
+        if not self.app or not hasattr(self.app, "_on_selection_changed"):
+            return
+        try:
+            self.app._on_selection_changed(scn.get_selected())
+        except Exception:
+            logger.exception("on_selection_changed çağrısı hatası")

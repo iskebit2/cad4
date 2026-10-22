@@ -146,6 +146,18 @@ class Toolbar:
             if imgui.menu_item("Yerel Eksenleri Göster (Local Axes)", selected=axes_on)[0]:
                 self._fire("local_axes")
 
+            imgui.separator()
+            show_only_on = self._get_panel_state("show_only")
+            label = "Sadece Seçilileri Göster (Ctrl+H)" if not show_only_on else "Normal Görünüm (Ctrl+H)"
+            if imgui.menu_item(label, selected=show_only_on)[0]:
+                self._fire("show_only")
+
+            if imgui.menu_item("SD → Area Dönüşümü", selected=self._get_panel_state("sd_convert"))[0]:
+                self._fire("sd_convert")
+
+            if imgui.menu_item("Frame → Link Dönüşümü")[0]:
+                self._fire("convert_to_link")
+
             imgui.end_menu()
 
         # --- 5. Yönetim & Tanımlar Menüsü ---

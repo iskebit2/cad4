@@ -1,0 +1,95 @@
+TABLE:  "PROGRAM CONTROL"
+   ProgramName=SAP2000   Version=25.3.1   CurrUnits="N, mm, C"   SteelCode="AISC 360-16"   ConcCode="ACI 318-19"   AlumCode="AA 2015"   ColdCode=AISI-16   RegenHinge=Yes
+
+TABLE:  "ACTIVE DEGREES OF FREEDOM"
+   UX=Yes   UY=Yes   UZ=Yes   RX=Yes   RY=Yes   RZ=Yes
+
+TABLE:  "MATERIAL PROPERTIES 01 - GENERAL"
+   Material=C30/37   Type=Concrete   SymType=Isotropic   TempDepend=No   Color=Yellow
+
+TABLE:  "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES"
+   Material=C30/37   UnitWeight=2.54941e-09   UnitMass=2.59879e-13   E1=3.36506e+06   G12=1.40211e+06   U12=0.2   A1=1.17E-05
+
+TABLE:  "MATERIAL PROPERTIES 03B - CONCRETE DATA"
+   Material=C30/37   Fc=30   eFc=30   LtWtConc=No   SSCurveOpt=Mander   SSHysType=Takeda   SFc=0.002   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0   CoupModType="Modified Darwin-Pecknold"
+
+TABLE:  "FRAME SECTION PROPERTIES 01 - GENERAL"
+   SectionName=R30x60   Material=C30/37   Shape=Rectangular   t3=600   t2=300   Color=Red   FromFile=No
+
+TABLE:  "LOAD PATTERN DEFINITIONS"
+   LoadPat=DEAD   DesignType=Dead   SelfWtMult=1
+   LoadPat=G-Dead   DesignType=Dead   SelfWtMult=0
+   LoadPat=Q-Live   DesignType=Live   SelfWtMult=0
+   LoadPat=QxA-Quake   DesignType=Quake   SelfWtMult=0   AutoLoad=None
+   LoadPat=QxB-Quake   DesignType=Quake   SelfWtMult=0   AutoLoad=None
+   LoadPat=QyA-Quake   DesignType=Quake   SelfWtMult=0   AutoLoad=None
+   LoadPat=QyB-Quake   DesignType=Quake   SelfWtMult=0   AutoLoad=None
+   LoadPat=Wx-Wind   DesignType=Wind   SelfWtMult=0   AutoLoad=None
+   LoadPat=Wy-Wind   DesignType=Wind   SelfWtMult=0   AutoLoad=None
+
+TABLE:  "LOAD CASE DEFINITIONS"
+   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+   Case=G-Dead   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+   Case=Q-Live   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Live   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+   Case=QxA-Quake   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Quake   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+   Case=QxB-Quake   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Quake   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+   Case=QyA-Quake   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Quake   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+   Case=QyB-Quake   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Quake   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+   Case=Wx-Wind   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+   Case=Wy-Wind   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Wind   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+
+TABLE:  "COMBINATION DEFINITIONS"
+   ComboName=DEAD1   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1.4
+   ComboName=DEAD1   CaseName=Q-Live   ScaleFactor=1.6
+   ComboName=QUAX2   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1
+   ComboName=QUAX2   CaseName=Q-Live   ScaleFactor=1
+   ComboName=QUAX2   CaseName=QxA-Quake   ScaleFactor=1
+   ComboName=QUAX3   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1
+   ComboName=QUAX3   CaseName=Q-Live   ScaleFactor=1
+   ComboName=QUAX3   CaseName=QxB-Quake   ScaleFactor=1
+   ComboName=QUAY4   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1
+   ComboName=QUAY4   CaseName=Q-Live   ScaleFactor=1
+   ComboName=QUAY4   CaseName=QyA-Quake   ScaleFactor=1
+   ComboName=QUAY5   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1
+   ComboName=QUAY5   CaseName=Q-Live   ScaleFactor=1
+   ComboName=QUAY5   CaseName=QyB-Quake   ScaleFactor=1
+   ComboName=QUAX6   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=0.9
+   ComboName=QUAX6   CaseName=QxA-Quake   ScaleFactor=1
+   ComboName=QUAX7   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=0.9
+   ComboName=QUAX7   CaseName=QxB-Quake   ScaleFactor=1
+   ComboName=QUAY8   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=0.9
+   ComboName=QUAY8   CaseName=QyA-Quake   ScaleFactor=1
+   ComboName=QUAY9   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=0.9
+   ComboName=QUAY9   CaseName=QyB-Quake   ScaleFactor=1
+   ComboName=WNDX10   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1
+   ComboName=WNDX10   CaseName=Q-Live   ScaleFactor=1.3
+   ComboName=WNDX11   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1
+   ComboName=WNDX11   CaseName=Q-Live   ScaleFactor=1.3
+   ComboName=WNDY12   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1
+   ComboName=WNDY12   CaseName=Q-Live   ScaleFactor=1.3
+   ComboName=WNDY13   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=1
+   ComboName=WNDY13   CaseName=Q-Live   ScaleFactor=1.3
+   ComboName=WNDX14   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=0.9
+   ComboName=WNDX15   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=0.9
+   ComboName=WNDY16   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=0.9
+   ComboName=WNDY17   ComboType="Linear Add"   AutoDesign=No   CaseName=G-Dead   ScaleFactor=0.9
+
+TABLE:  "JOINT COORDINATES"
+   Joint=7   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8570.3   Y=-2559.4   Z=0   SpecialJt=No
+   Joint=8   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8570.3   Y=-2559.4   Z=2750   SpecialJt=No
+   Joint=9   CoordSys=GLOBAL   CoordType=Cartesian   XorR=13530.3   Y=-2559.4   Z=0   SpecialJt=No
+   Joint=10   CoordSys=GLOBAL   CoordType=Cartesian   XorR=13530.3   Y=-2559.4   Z=2750   SpecialJt=No
+
+TABLE:  "JOINT RESTRAINT ASSIGNMENTS"
+   Joint=7   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+   Joint=9   U1=Yes   U2=Yes   U3=Yes   R1=No   R2=No   R3=No
+
+TABLE:  "CONNECTIVITY - FRAME"
+   Frame=C104_5   JointI=7   JointJ=8   IsCurved=No
+   Frame=C105_6   JointI=9   JointJ=10   IsCurved=No
+
+TABLE:  "FRAME SECTION ASSIGNMENTS"
+   Frame=C104_5   AutoSelect=N.A.   AnalSect=R30x60   MatProp=Default
+   Frame=C105_6   AutoSelect=N.A.   AnalSect=R30x60   MatProp=Default
+
+END TABLE DATA

@@ -384,7 +384,7 @@ def _create_nodes(builder: SceneBuilder, ctx: LoadContext) -> Dict[str, Node]:
 
         node = builder.create_node(
             x, y, z,
-            label=f"N{joint_id}",
+            label=f"{joint_id}",
             restraint=restraints.get(joint_id),
         )
         node_map[joint_id] = node
@@ -454,7 +454,7 @@ def _create_frames(builder, ctx, node_map):
         try:
             frame = builder.create_frame(
                 node_map[joint_i], node_map[joint_j],
-                sect_name, rotation_deg=rotation, label=f"F{frame_id}",
+                sect_name, rotation_deg=rotation, label=f"{frame_id}",
             )
             if frame_id in frame_release:
                 frame.release_i = frame_release[frame_id]['i']
@@ -621,7 +621,7 @@ def _create_links(builder, ctx, node_map):
         try:
             builder.create_link(
                 node_map[joint_i], node_map[joint_j],
-                prop_name=prop_name, label=f"L{link_id}",
+                prop_name=prop_name, label=f"{link_id}",
             )
             count += 1
         except Exception as e:

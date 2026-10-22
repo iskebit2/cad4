@@ -2,10 +2,11 @@
 import os
 import queue
 import threading
-from typing import Dict
+from typing import Dict, Optional
 from OpenGL.GL import *
 import glm
 import glfw
+import imgui
 import numpy as np
 
 from app.cad_window import CadWindow
@@ -15,6 +16,7 @@ from data.enums import UnitSystem, GridPlane, PolygonType
 from domain.definition import GridPlaneDef, Section
 from domain.element import Frame, Node, Polygon
 from domain.project import Project
+from tools import frame_to_link
 from tools.alignment_service import AlignmentService
 from tools.s2kloader import S2KLoader
 from tools.wind_service import WindSceneAdapter
@@ -117,6 +119,7 @@ class CadApp:
             self.inspector.set_catalog(ProjectCatalog(self.current_project))
 
         self._load_section_catalog()
+        self._show_only_ids: Optional[set] = None
         
     # ==================================================================
     # MERKEZİ PANEL KAYIT SİSTEMİ (PANEL_REGISTRY)
@@ -363,21 +366,46 @@ class CadApp:
 
     def on_key_down(self, key, scancode, mods):
         try:
-            import imgui
             io = imgui.get_io()
-            io.keys_down[key] = True
+            io.keys_down[key] = True       # bu çalışır (index erişimi)
         except Exception:
             pass
+
+        # Modifier'ları DOĞRUDAN mods'tan oku (glfw garanti eder)
+        try:
+            io = imgui.get_io()
+            io.key_ctrl  = bool(mods & glfw.MOD_CONTROL)
+            io.key_shift = bool(mods & glfw.MOD_SHIFT)
+            io.key_alt   = bool(mods & glfw.MOD_ALT)
+            io.key_super = bool(mods & glfw.MOD_SUPER)
+        except Exception:
+            pass
+
         self._pending.append(("key_down", (key, scancode, mods)))
         return True
 
     def on_key_up(self, key, scancode):
+        
         try:
-            import imgui
             io = imgui.get_io()
             io.keys_down[key] = False
         except Exception:
             pass
+
+        # Sadece o modifier bırakıldıysa False yap
+        try:
+            io = imgui.get_io()
+            if key in (glfw.KEY_LEFT_CONTROL, glfw.KEY_RIGHT_CONTROL):
+                io.key_ctrl = False
+            elif key in (glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT):
+                io.key_shift = False
+            elif key in (glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT):
+                io.key_alt = False
+            elif key in (glfw.KEY_LEFT_SUPER, glfw.KEY_RIGHT_SUPER):
+                io.key_super = False
+        except Exception:
+            pass
+
         self._pending.append(("key_up", (key, scancode)))
         return True
 
@@ -618,6 +646,9 @@ class CadApp:
 
         self._sync_from_glfw_mods(mods)
 
+        logger.info(f"[KeyDown] key={key} ctrl={eng.input.is_ctrl_pressed() if eng.input else '?'} "
+                f"ui_captured={self._keyboard_captured_by_ui()}")
+        
         if self._keyboard_captured_by_ui():
             if key == glfw.KEY_ESCAPE:
                 self._on_escape()
@@ -662,6 +693,8 @@ class CadApp:
             "render_mode":       lambda: self.engine.renderer.toggle_render_mode() if self.engine else None,
             "toggle_loads_vis":  self._toggle_loads_visibility,
             "local_axes":        self._toggle_local_axes,
+            "show_only":         self.toggle_show_only,
+            "convert_to_link": lambda: self.convert_selected_frames_to_links("DefaultLink"),
         }
         for name in self.panels:
             cmds[name] = (lambda n=name: self.toggle_panel(n))
@@ -681,6 +714,7 @@ class CadApp:
             "plane_draw_active": lambda: bool(self.engine and getattr(self.engine, "plane_draw_mgr", None) and self.engine.plane_draw_mgr.is_active),
             "local_axes":        lambda: bool(self.engine and self.engine.scene and self.engine.scene.show_local_axes),
             "show_loads":        lambda: bool(self.engine and self.engine.renderer and self.engine.renderer.show.get('loads', True)),
+            "show_only": lambda: self._show_only_ids is not None,
         }
         for name in self.panels:
             states[name] = (lambda n=name: getattr(self.panels[n]["instance"], "visible", False))
@@ -781,11 +815,13 @@ class CadApp:
 
         # Ctrl Kısayolları
         if eng.input.is_ctrl_pressed():
+            if key == glfw.KEY_J : self.toggle_show_only(); return
             if key == glfw.KEY_Z: eng.sel_mgr.undo(); return
             if key == glfw.KEY_Y: eng.sel_mgr.redo(); return
             if key == glfw.KEY_S:
                 return self._save_as_project() if eng.input.is_shift_pressed() else self._quick_save()
             if key == glfw.KEY_O: return self._on_toolbar_open()
+            if key == glfw.KEY_E: self._export_s2k(); return
 
     def _handle_key_up(self, key, scancode):
         eng = self.engine
@@ -910,9 +946,9 @@ class CadApp:
                     self.engine.grid.set_plane(GridPlane[plane_name], visible=vis)
                 except KeyError:
                     pass
-            center, size = self.engine.grid.get_bounds()
-            self.engine.cam.update_bounds(center, size)
-            self.engine.cam.focus_on_model()
+            # center, size = self.engine.grid.get_bounds()
+            # self.engine.cam.update_bounds(center, size)
+            # self.engine.cam.focus_on_model()
         else:
             # Grid tanımı olmasa bile kamerayı sahneye sığdır
             self.engine.fit_view()
@@ -950,7 +986,10 @@ class CadApp:
     def _on_selection_changed(self, selected_elements):
         if self.engine and self.engine.renderer:
             self.engine.renderer.update_sel()
-        self.inspector.set_selection(selected_elements)
+        if self.inspector:
+            self.inspector.set_selection(selected_elements)
+        if self._show_only_ids is not None:
+            return
 
     def _on_hover_changed(self, element):
         pass
@@ -985,6 +1024,16 @@ class CadApp:
 
     def _import_s2k(self):
         self.toggle_panel("s2k_import")
+
+    def _export_s2k(self):
+        if self.engine is None:
+            return
+        from tools.s2k_exporter import S2KExporter
+
+        selected = self.engine.scene.get_selected()
+        text = S2KExporter.export(self.current_project, selected_elements=selected)
+        with open("model.s2k", "w", encoding="utf-8") as f:
+            f.write(text)
        
     def _on_toolbar_open(self):
         self.file_dialog.open(mode="open", filters=[".cd4"], title="Proje Aç (.cd4)", initial_dir=os.getcwd(), on_select=self._load_project)
@@ -1046,6 +1095,84 @@ class CadApp:
             self.engine.renderer.update_geo(scn)
             scn.clear_dirty()
         logger.info("[CadApp] Kesit değişikliği sahneye yansıtıldı")
+
+    def toggle_show_only(self):
+        """Toolbar butonu: seçili eleman(lar)ı izole et / normal görünüme dön."""
+        if self.engine is None or self.engine.scene is None:
+            return
+
+        scn = self.engine.scene
+
+        # --- TEŞHİS ---
+        n_sel = sum(1 for e in scn.all_elements.values() if e.is_selected)
+        logger.info(
+            f"[ShowOnly] scene: frames={len(scn.frames)}, nodes={len(scn.nodes)}, "
+            f"areas={len(scn.areas)}, selected={n_sel}"
+        )
+
+        if self._show_only_ids is None:
+            # GİRİŞ: mevcut seçimi al
+            selected = scn.get_selected()   # Scene'de bu metod var mı? yoksa:
+            # selected = [e for e in scn.frames.values() if e.is_selected] + ...
+            if not selected:
+                logger.warning("[ShowOnly] Seçili eleman yok — işlem iptal")
+                return
+            self._show_only_ids = {e.unique_id for e in selected}
+            logger.info(f"[ShowOnly] {len(self._show_only_ids)} eleman izole edildi")
+        else:
+            # ÇIKIŞ: normal görünüm
+            self._show_only_ids = None
+            logger.info("[ShowOnly] Normal görünüme dönüldü")
+
+        # Filtreyi scene'e uygula
+        scn._render_filter = self._show_only_ids
+        if self._show_only_ids is not None:
+            # Show-only modunda kamera sabit kalsın (fit_view çağırma)
+            self.engine.renderer.update_geo(scn)
+            # NOT: engine.set_scene içindeki fit_view çağrısını atlıyoruz
+        else:
+            # Normal moda dönerken kamerayı tekrar fit et
+            self.engine.set_scene(scn)   # bu update_geo + fit_view çağırır
+
+    def convert_selected_frames_to_links(
+        self,
+        link_prop_name: str = "DefaultLink",
+        delete_original: bool = True,
+    ):
+        
+        if not self.engine or not self.engine.scene:
+            return
+
+        scn = self.engine.scene
+        frames = [e for e in scn.get_selected() if isinstance(e, Frame)]
+        if not frames:
+            logger.warning("[Frame→Link] Seçili frame yok")
+            return
+        
+        report = frame_to_link.convert_frames_to_links(
+            scene=scn,
+            project=self.current_project,
+            frames=frames,
+            link_prop_name=link_prop_name,
+            delete_original=delete_original,
+        )
+
+        # Show-only modundaysa filtre güncelle
+        if self._show_only_ids is not None:
+            removed = {f.unique_id for f in frames}
+            self._show_only_ids -= removed
+            self._show_only_ids.update(l.unique_id for l in report["new_links"])
+            scn._render_filter = self._show_only_ids
+
+        if self.engine.sel_mgr:
+            self.engine.sel_mgr.clear()
+
+        logger.warning(
+    f"[Frame→Link] SONRA: scene.links={len(scn.links)}, "
+    f"scene.frames={len(scn.frames)}, "
+    f"show_only={'aktif' if self._show_only_ids else 'yok'}, "
+    f"filter={self._show_only_ids}"
+)
         
     def shutdown(self):
         self.ui_backend.shutdown()

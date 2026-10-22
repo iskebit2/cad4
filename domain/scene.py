@@ -19,6 +19,7 @@ class Scene:
         self.show_local_axes_scale = 1.0
         self.units = "N, mm, C"
         self._is_dirty: bool = True
+        self._render_filter: Optional[set] = None
 
     def mark_dirty(self):
         self._is_dirty = True
