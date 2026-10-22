@@ -118,7 +118,7 @@ class Scene:
     
     def get_element_by_id(self, unique_id: str) -> Optional[Element]:
         for elem in self.all_elements.values():
-            if elem.unique_id == unique_id:
+            if str(elem.unique_id) == str(unique_id):
                 return elem
         return None
 

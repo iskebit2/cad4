@@ -16,7 +16,6 @@ from domain.definition import GridPlaneDef, Section
 from domain.element import Frame, Node, Polygon
 from domain.project import Project
 from tools.alignment_service import AlignmentService
-from tools.load_balance_report import LoadBalanceReport
 from tools.s2kloader import S2KLoader
 from tools.wind_service import WindSceneAdapter
 from tools.wind_zone_distribution_service import WindZoneDistributionService
@@ -826,10 +825,14 @@ class CadApp:
                 self.engine.draw_mgr.start()
 
     def _draw_snap_indicator(self, w, h):
+        if not self.engine:
+            return
         snap = self.engine.snap
         if snap is None or not getattr(self.engine, "hover_visual_enabled", True):
             return
         mx, my = self.engine.input.mouse_pos.x, self.engine.input.mouse_pos.y
+        if not self.engine.draw_mgr:
+            return
         if self.engine.draw_mgr.is_active or self.engine.hover_id > 0:
             snap.draw_snap(mx, my, w, h, active=True)
 

@@ -25,7 +25,6 @@ from tools.gridsystem import GridSystem
 from render.scenerenderer import SceneRenderer
 from core.selection_manager import SelectionManager
 from core.marquee_selector import MarqueeSelector
-from tools.loader import ModelLoader
 from core.draw_manager import DrawManager
 from render.snapsquare import SnapSquareRenderer
 from core.edit.edit_controller import EditController
@@ -159,7 +158,6 @@ class Engine:
         self.sel_mgr = SelectionManager(self.renderer)
         self.marquee = MarqueeSelector(self, self.sel_mgr, self.sel_policy)
         self.renderer.set_marquee(self.marquee)
-        self.loader = ModelLoader(self)
         self.draw_mgr = DrawManager(self)
         self.edit = EditController(self)
 

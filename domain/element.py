@@ -44,7 +44,7 @@ class Element:
         self.needs_update = needs_update
         self.pick_id = self.unique_id
         self.element_type = None
-        self.color = list(color[:3]) if color is not None else [0.7, 0.7, 0.7]
+        self.color = list(color) if color is not None else [0.7, 0.7, 0.7, 0.7]
         self.show_axes_override: Optional[bool] = None  # None → scene default
 
     def toggle_selection(self):
@@ -162,7 +162,7 @@ class Frame(Element):
         self.dist_loads: List[Any] = []
         self.gravity_loads: List[Any] = []
         self.temp_loads: List[Any] = []
-        self.dist_load_sets: Dict[str, D.FrameDistributedLoadSet] = {}
+        self.dist_load_sets: Dict[str, D.FrameDistributedLoad] = {}
 
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)

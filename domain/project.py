@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, Optional, List, Any
 
 from data.enums import UnitSystem
+from data.seismic import get_tsc2018_site_coefficients
 from domain.element import Area, Frame, Link, Node, Polygon
 from domain.scene import Scene
 from domain.definition import (

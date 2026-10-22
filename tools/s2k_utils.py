@@ -6,7 +6,7 @@ from domain.definition import (
     FrameGravityLoad, GeneralProjectInfo, LinkProp, LinkPropLinear, 
     LinkPropType, LoadCase, LoadCombination, LoadDirection, LoadPattern, 
     MatType, Material, ModalCase, PointLoad, QuadDefinition, 
-    ResponseSpectrumCase, ResponseSpectrumLoadAssignment, Section, 
+    ResponseSpectrumCase, ResponseSpectrumLoadAssignment, SDPolygonPoint, SDSection, SDShape, Section, 
     SectionCut, SectionCutDefinedBy, SectionCutResultType, SectionType, 
     SiteInformation, SpectrumFunction, SpectrumSourceType, StaticLoadAssignment
 )
@@ -20,46 +20,75 @@ import pandas as pd
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
+from data.unit_enums import (
+    UnitSystem,
+    UnitDef,
+    UNIT_DEFINITIONS_MAP,
+    unit_system_from_sap_string,
+    G_MM_S2,          # 9806.65 mm/s²
+)
+
 class UnitConverter:
-    """SAP2000 birim sistemi → yerel (N, mm, °C)."""
+    """
+    SAP2000 CurrUnits string'i → yerel (N, mm, °C) dönüşümleri.
 
-    LENGTH_FACTORS = {'MM': 1.0, 'CM': 10.0, 'M': 1000.0, 'IN': 25.4, 'FT': 304.8}
-    FORCE_FACTORS = {
-        'N': 1.0, 'KN': 1000.0, 'KG': 9.80665, 'KGF': 9.80665,
-        'TON': 9806.65, 'KIP': 4448.22, 'LB': 4.44822,
-    }
+    Kullanım:
+        uc = UnitConverter('Tonf, m, C')
+        uc.L(3.0)        # 3000.0 mm
+        uc.F(1.0)        # 9806.65 N
+        uc.M(1.0)        # 9806.65 * 1000 N·mm
+        uc.E(1.0)        # 9806.65 / (1000**2) MPa = 0.00980665 MPa
+    """
 
-    def __init__(self, currunits_str: str = "N, mm, C"):
-        self.length_scale = 1.0
-        self.force_scale = 1.0
-        self.temp_unit = "C"
-        self.raw_string = currunits_str
-        self.parse_units(currunits_str)
+    def __init__(self, curr_units_str: str = "N, mm, C"):
+        self.raw_string = (curr_units_str or "N, mm, C").strip()
+        self.unit_system: UnitSystem = unit_system_from_sap_string(self.raw_string)
+        self.unit_def: UnitDef = self.unit_system.unit_def
 
-    def parse_units(self, currunits_str: str):
-        self.raw_string = currunits_str.strip()
-        parts = [p.strip().upper() for p in currunits_str.split(',')]
-        if len(parts) >= 2:
-            self.force_scale = self.FORCE_FACTORS.get(parts[0], 1.0)
-            self.length_scale = self.LENGTH_FACTORS.get(parts[1], 1.0)
-        if len(parts) >= 3:
-            self.temp_unit = parts[2]
+        # Sıcaklık birimini string'den override et (enum'da C/F ayrımı yok)
+        parts = [p.strip() for p in self.raw_string.split(",")]
+        temp = parts[2].upper() if len(parts) > 2 else "C"
+        self.temp_unit = temp if temp in ("C", "F") else "C"
 
-    def L(self, v): return v * self.length_scale
-    def F(self, v): return v * self.force_scale
-    def M(self, v): return v * self.force_scale * self.length_scale
-    def E(self, v): return v * self.force_scale / (self.length_scale ** 2)
-    def w(self, v): return v * self.force_scale / self.length_scale
-    def area_w(self, v): return v * self.force_scale / (self.length_scale ** 2)
-    def acc(self, v): return v * self.length_scale
+    # ---------------------------------------------------------------
+    # Temel büyüklükler
+    # ---------------------------------------------------------------
+    def L(self, v: float) -> float: return float(v) * self.unit_def.length_to_mm
+    def L2(self, v: float) -> float: return float(v) * (self.unit_def.length_to_mm ** 2)
+    def L3(self, v: float) -> float: return float(v) * (self.unit_def.length_to_mm ** 3)
+    def L4(self, v: float) -> float: return float(v) * (self.unit_def.length_to_mm ** 4)
+    def F(self, v: float) -> float: return float(v) * self.unit_def.force_to_N
+    def M(self, v: float) -> float: return float(v) * self.unit_def.moment_to_Nmm
+    def E(self, v: float) -> float: return float(v) * self.unit_def.stress_to_MPa
+    def w(self, v: float) -> float: return float(v) * self.unit_def.line_load_to_N_per_mm
+    def area_w(self, v: float) -> float: return float(v) * self.unit_def.area_load_to_N_per_mm2
+    def mass(self, v: float) -> float:return float(v) * self.unit_def.force_to_N / (self.unit_def.length_to_mm / 1000.0)
+    def density(self, v: float) -> float: return float(v)
 
-    def temp(self, v):
+    def mmi(self, v: float) -> float:
+        """Kütle atalet momenti: F·L² → kg·mm²."""
+        return float(v) * self.unit_def.mass_to_kg * (self.unit_def.length_to_mm ** 2)
+    # ---------------------------------------------------------------
+    # İvme
+    # ---------------------------------------------------------------
+    def acc(self, v: float) -> float: return float(v) * self.unit_def.length_to_mm
+
+    def acc_from_g(self, v: float) -> float: return float(v) * G_MM_S2
+
+    # ---------------------------------------------------------------
+    # Sıcaklık
+    # ---------------------------------------------------------------
+    def temp_abs(self, v: float) -> float:
+        """Mutlak sıcaklık → °C."""
         if self.temp_unit == "F":
-            return v * (5.0 / 9.0)
-        return v
+            return (float(v) - 32.0) * 5.0 / 9.0
+        return float(v)
 
-    def temp_grad(self, v):
-        return self.temp(v) / self.length_scale
+    def temp_diff(self, v: float) -> float:
+        """Sıcaklık farkı → °C farkı."""
+        if self.temp_unit == "F":
+            return float(v) * 5.0 / 9.0
+        return float(v)
 
     def __str__(self) -> str:
         return self.raw_string
@@ -100,6 +129,17 @@ class LoadContext:
     frame_modifiers: Dict[str, dict] = field(default_factory=dict)
     frame_design_procs: Dict[str, str] = field(default_factory=dict)
     frame_auto_mesh: Dict[str, dict] = field(default_factory=dict)
+
+    joint_added_mass: Dict[str, dict] = field(default_factory=dict)
+    frame_insertion_points: Dict[str, dict] = field(default_factory=dict)
+    frame_end_offsets: Dict[str, dict] = field(default_factory=dict)
+    frame_section_rebar: Dict[str, dict] = field(default_factory=dict)
+    rebar_sizes: Dict[str, dict] = field(default_factory=dict)
+
+    sd_sections: Dict[str, SDSection] = field(default_factory=dict)
+    df_sd_general: Optional[pd.DataFrame] = None
+    df_sd_polygon: Optional[pd.DataFrame] = None
+    df_sd_rect: Optional[pd.DataFrame] = None
 
     df_joints: Optional[pd.DataFrame] = None
     df_restraints: Optional[pd.DataFrame] = None
@@ -171,63 +211,144 @@ def parse_sap_mat_type(row) -> 'MatType':
     return MatType.NODESIGN
 
 
-def map_sap_to_local_params(row) -> Tuple[SectionType, Dict[str, float]]:
+def map_sap_to_local_params(row, units: UnitConverter) -> Tuple[SectionType, Dict[str, float]]:
+    """
+    SAP2000 'FRAME SECTION PROPERTIES 01 - GENERAL' satırını yerel SectionType + params'a çevirir.
+    Not: SD Section için geometri burada BAĞLANMAZ — handle_frame_props,
+    ctx.sd_sections'tan çekip Section.sd_section alanına yazar.
+    """
+
     s_type = str(row.get('Shape', 'Rectangle')).strip()
 
-    def sf(key, default=0.0, allow_zero=True):
-        val = row.get(key)
-        if val is None or str(val).strip() in ("", "None", "nan"):
-            return default
-        try:
-            f = float(val)
-            return f if (allow_zero or abs(f) > 1e-12) else default
-        except (ValueError, TypeError):
-            return default
+    # ---- yardımcılar ----
+    def L(key, default=0.0):
+        return units.L(safe_float(row, key, default))
 
+    def L2(key, default=0.0):
+        return units.L(safe_float(row, key, default)) ** 2
+
+    def L3(key, default=0.0):
+        return units.L(safe_float(row, key, default)) ** 3
+
+    def L4(key, default=0.0):
+        return units.L(safe_float(row, key, default)) ** 4
+
+    def dim(key, default=1.0):
+        v = safe_float(row, key, default)
+        return v if v != 0 else default
+
+    # ---- analiz özellikleri (tüm tipler için ortak) ----
     analysis = {
-        'Area': sf('Area'), 'J': sf('TorsConst'),
-        'I33': sf('I33'), 'I22': sf('I22'), 'I23': sf('I23'),
-        'AS2': sf('AS2'), 'AS3': sf('AS3'),
-        'S33Top': sf('S33Top'), 'S33Bot': sf('S33Bot'),
-        'S22Left': sf('S22Left'), 'S22Right': sf('S22Right'),
-        'Z33': sf('Z33'), 'Z22': sf('Z22'),
-        'R33': sf('R33'), 'R22': sf('R22'),
-        'Cw': sf('Cw'),
-        'AMod': sf('AMod', 1.0), 'A2Mod': sf('A2Mod', 1.0), 'A3Mod': sf('A3Mod', 1.0),
-        'JMod': sf('JMod', 1.0), 'I2Mod': sf('I2Mod', 1.0), 'I3Mod': sf('I3Mod', 1.0),
-        'MMod': sf('MMod', 1.0), 'WMod': sf('WMod', 1.0),
+        'Area':  L2('Area'),
+        'J':     L4('TorsConst'),
+        'I33':   L4('I33'),
+        'I22':   L4('I22'),
+        'I23':   L4('I23'),
+        'AS2':   L2('AS2'),
+        'AS3':   L2('AS3'),
+        'S33Top':  L3('S33Top'),
+        'S33Bot':  L3('S33Bot'),
+        'S22Left': L3('S22Left'),
+        'S22Right':L3('S22Right'),
+        'Z33':     L3('Z33'),
+        'Z22':     L3('Z22'),
+        'R33':     L3('R33'),
+        'R22':     L3('R22'),
+        'Cw':      L4('Cw'),
+        'AMod':   dim('AMod', 1.0),
+        'A2Mod':  dim('A2Mod', 1.0),
+        'A3Mod':  dim('A3Mod', 1.0),
+        'JMod':   dim('JMod', 1.0),
+        'I2Mod':  dim('I2Mod', 1.0),
+        'I3Mod':  dim('I3Mod', 1.0),
+        'MMod':   dim('MMod', 1.0),
+        'WMod':   dim('WMod', 1.0),
     }
 
+    # ==================================================================
+    # GEOMETRİK PARAMETRELER (mm)
+    # ==================================================================
+
     if s_type in ("I/Wide Flange", "I"):
-        geom = {"h": sf('t3', 200), "b": sf('t2', 100),
-                "tw": sf('tw', 10), "tf": sf('tf', 14)}
-        return SectionType.I, {**geom, **analysis}
+        return SectionType.I, {
+            "h":  L('t3', 200.0),
+            "b":  L('t2', 100.0),
+            "tw": L('tw', 10.0),
+            "tf": L('tf', 14.0),
+            "t2b": L('t2b', L('t2', 100.0)),
+            "tfb": L('tfb', L('tf', 14.0)),
+            **analysis,
+        }
+
+    if s_type in ("Tee", "T"):
+        return SectionType.T, {
+            "h":  L('t3', 200.0),
+            "b":  L('t2', 100.0),
+            "tw": L('tw', 10.0),
+            "tf": L('tf', 14.0),
+            **analysis,
+        }
+
+    if s_type == "SD Section":
+        # Geometri handle_frame_props'ta ctx.sd_sections'tan bağlanacak.
+        # Bayrak YOK; ayrımı handle_frame_props sd_section varlığıyla yapacak.
+        logger.debug(f"[SectionMap] 'SD Section' — geometri handle_frame_props'ta bağlanacak")
+        return SectionType.CUSTOM, {**analysis}
+
+    if s_type == "General":
+        # SAP "General" = kullanıcı tanımlı analiz özellikleri (SD değil)
+        logger.debug(f"[SectionMap] 'General' — sadece analiz özellikleri")
+        return SectionType.CUSTOM, {**analysis}
 
     if s_type in ("Rectangle", "Rectangular"):
-        return SectionType.RECT, {"h": sf('t3', 200), "b": sf('t2', 100), **analysis}
+        return SectionType.RECT, {
+            "h": L('t3', 200.0),
+            "b": L('t2', 100.0),
+            **analysis,
+        }
 
     if s_type in ("Pipe", "Circular", "Circle"):
-        t3, tw = sf('t3', 120), sf('tw', 10)
+        d = L('t3', 120.0)
+        tw = L('tw', 10.0)
         return SectionType.PIPE, {
-            "ro": t3 / 2, "ri": max(0.1, (t3 - 2 * tw) / 2), "n": 24, **analysis,
+            "ro": d / 2.0,
+            "ri": max(0.1, (d - 2.0 * tw) / 2.0),
+            "n": 24,
+            **analysis,
         }
 
     if s_type in ("Channel", "C"):
         return SectionType.C, {
-            "h": sf('t3', 100), "b": sf('t2', 80), "t": sf('tw', 6), **analysis,
+            "h": L('t3', 100.0),
+            "b": L('t2', 80.0),
+            "t": L('tw', 6.0),
+            "tf": L('tf', 6.0),
+            **analysis,
         }
 
     if s_type in ("Angle", "L"):
         return SectionType.L, {
-            "h": sf('t3', 100), "b": sf('t2', 80), "t": sf('tw', 8), **analysis,
+            "h": L('t3', 100.0),
+            "b": L('t2', 80.0),
+            "t": L('tw', 8.0),
+            **analysis,
         }
 
     if s_type in ("Tube", "Box"):
         return SectionType.TUBE, {
-            "h": sf('t3', 200), "b": sf('t2', 100), "t": sf('tw', 10), **analysis,
+            "h": L('t3', 200.0),
+            "b": L('t2', 100.0),
+            "t": L('tw', 10.0),
+            **analysis,
         }
 
-    return SectionType.RECT, {"h": 200.0, "b": 100.0, **analysis}
+    # Bilinmeyen shape → RECT fallback
+    logger.warning(f"[SectionMap] Bilinmeyen Shape='{s_type}', RECT fallback")
+    return SectionType.RECT, {
+        "h": L('t3', 200.0),
+        "b": L('t2', 100.0),
+        **analysis,
+    }
 
 
 def safe_float(row, key, default=0.0, allow_zero=True):
@@ -294,51 +415,69 @@ def _parse_restraints(df: pd.DataFrame) -> Dict[str, dict]:
     return restraints
 
 
-def _create_frames(builder: SceneBuilder, ctx: LoadContext, node_map: Dict[str, Node]) -> Tuple[Dict[str, Frame], int]:
-    frame_map: Dict[str, Frame] = {}
+def _create_frames(builder, ctx, node_map):
+    frame_map = {}
     if ctx.df_frame_conn is None or ctx.df_frame_conn.empty:
+        logger.warning("[Frames] df_frame_conn BOŞ")
         return frame_map, 0
 
     frame_assign = _parse_frame_assign(ctx.df_frame_assign, ctx)
+    logger.info(f"[Frames] {len(frame_assign)} frame ataması")
+
     frame_release = _parse_frame_release(ctx.df_frame_release)
     fallback = _get_fallback_section(builder, ctx)
+    logger.info(f"[Frames] fallback kesit: '{fallback}'")
 
     count = 0
+    errors = 0
+    no_section = 0
     for _, row in ctx.df_frame_conn.iterrows():
         frame_id = str(row.get('Frame', '')).strip()
         joint_i = str(row.get('JointI', '')).strip()
         joint_j = str(row.get('JointJ', '')).strip()
 
         if not frame_id or joint_i not in node_map or joint_j not in node_map:
+            errors += 1
             continue
 
         sect_name, rotation = frame_assign.get(frame_id, ("", 0.0))
-        if sect_name not in ctx.sections:
+        if not sect_name:
+            no_section += 1
+            sect_name = fallback
+        elif sect_name not in ctx.sections:
+            no_section += 1
+            if no_section <= 3:
+                logger.warning(f"[Frames] Frame {frame_id}: '{sect_name}' ctx.sections'ta yok, "
+                               f"mevcut: {list(ctx.sections.keys())[:5]}...")
             sect_name = fallback
 
         try:
             frame = builder.create_frame(
-                node_map[joint_i],
-                node_map[joint_j],
-                sect_name,
-                rotation_deg=rotation,
-                label=f"F{frame_id}",
+                node_map[joint_i], node_map[joint_j],
+                sect_name, rotation_deg=rotation, label=f"F{frame_id}",
             )
-
             if frame_id in frame_release:
                 frame.release_i = frame_release[frame_id]['i']
                 frame.release_j = frame_release[frame_id]['j']
-
             frame_map[frame_id] = frame
             count += 1
-        except ValueError as e:
-            logger.warning(f"Frame {frame_id}: {e}")
+        except Exception as e:
+            errors += 1
+            if errors <= 3:
+                logger.error(f"[Frames] Frame {frame_id} oluşturma HATASI: {e}", exc_info=True)
 
+    logger.info(f"[Frames] SONUÇ: created={count}, no_section={no_section}, errors={errors}, "
+                f"total={len(ctx.df_frame_conn)}")
     return frame_map, count
 
 
 def _parse_frame_assign(df: pd.DataFrame, ctx: LoadContext = None) -> Dict[str, Tuple[str, float]]:
     if df is None or df.empty or 'Frame' not in df.columns:
+        logger.warning("[FrameAssign] Tablo BOŞ veya None")
+        return {}
+    
+    if 'Frame' not in df.columns:
+        logger.error(f"[FrameAssign] 'Frame' kolonu YOK! Kolonlar: {list(df.columns)}")
         return {}
 
     result = {}
@@ -362,6 +501,7 @@ def _parse_frame_assign(df: pd.DataFrame, ctx: LoadContext = None) -> Dict[str, 
 
         result[frame_id] = (sect, rotation)
 
+    logger.info(f"[FrameAssign] {len(result)} atama parse edildi")
     return result
 
 
@@ -397,12 +537,13 @@ def _get_fallback_section(builder: SceneBuilder, ctx: LoadContext) -> str:
         profile_params={"h": 200.0, "b": 100.0},
         color=(0.5, 0.5, 0.5),
     )
-    builder.def_mgr.add_section(default)
     ctx.sections["DEFAULT"] = default
+    # ✅ KRİTİK: project'e de ekle!
+    builder.project.add_section(default)
     return "DEFAULT"
 
 
-def _create_areas(builder: SceneBuilder, ctx: LoadContext, node_map: Dict[str, Node]) -> Tuple[Dict[str, Area], int]:
+def _create_areas(builder, ctx, node_map):
     area_map = {}
     if ctx.df_area_conn is None or ctx.df_area_conn.empty:
         return area_map, 0
@@ -411,19 +552,20 @@ def _create_areas(builder: SceneBuilder, ctx: LoadContext, node_map: Dict[str, N
 
     for _, row in ctx.df_area_conn.iterrows():
         area_id = str(row.get('Area', '')).strip()
-
-        joints = [node_map[j] for i in range(1, 5) if (j := str(row.get(f'Joint{i}', '')).strip()) in node_map]
+        joints = [node_map[j] for i in range(1, 5)
+                  if (j := str(row.get(f'Joint{i}', '')).strip()) in node_map]
         if len(joints) < 3:
             continue
 
         section_name = area_assign.get(area_id, "")
         section_data = ctx.area_sections.get(section_name, {})
-        thickness = ctx.units.L(section_data.get("thickness", 100.0))
+
+        # DİKKAT: thickness artık mm; dönüştürme YOK
+        thickness = section_data.get("thickness", 100.0)
 
         area = builder.create_area(joints, thickness=thickness, label=f"A{area_id}")
         area.material = section_data.get("material")
         area.section_name = section_name
-
         area_map[area_id] = area
 
     return area_map, len(area_map)
@@ -585,8 +727,10 @@ def _load_frame_loads(ctx: LoadContext, frame_map: Dict[str, Frame]):
             x1 = safe_float(r, 'RelDistA', 0.0)
             x2 = safe_float(r, 'RelDistB', 1.0)
         else:
-            x1 = safe_float(r, 'RelDistA', 0.0)
-            x2 = safe_float(r, 'RelDistB', 1.0)
+            # Mutlak mesafe → normalize et
+            L = frame.get_length()
+            x1 = safe_float(r, 'DistA', 0.0) / L if L > 0 else 0.0
+            x2 = safe_float(r, 'DistB', L) / L if L > 0 else 1.0
 
         ftype = str(r.get('Type', 'Force')).upper()
         v1 = safe_float(r, 'FOverLA', 0.0)
@@ -662,12 +806,48 @@ def _load_area_loads(ctx: LoadContext, area_map: Dict[str, Area]):
                     coordinate_system=str(r.get('CoordSys', 'GLOBAL')).strip(),
                 ))
 
-
+def parse_sd_polygon_table(df, ctx):
+    """Aynı (SectionName, ShapeName) grubunu tek SDShape'e birleştirir."""
+    if df is None or df.empty:
+        return
+    grouped = {}   # (section, shape) -> list of rows (sıralı!)
+    for _, row in df.iterrows():
+        sec = str(row.get('SectionName','')).strip()
+        shp = str(row.get('ShapeName','')).strip()
+        if not sec or not shp: continue
+        grouped.setdefault((sec, shp), []).append(row)
+    
+    for (sec, shp), rows in grouped.items():
+        # İlk satırdan meta oku
+        first = rows[0]
+        material = str(first.get('ShapeMat','')).strip()
+        try: z_order = int(float(first.get('ZOrder', 1)))
+        except: z_order = 1
+        color = get_color_from_string(str(first.get('FillColor','Gray8Dark')))
+        
+        pts = []
+        for r in rows:
+            x = ctx.units.L(safe_float(r, 'X'))
+            y = ctx.units.L(safe_float(r, 'Y'))
+            rad = ctx.units.L(safe_float(r, 'Radius'))
+            pts.append(SDPolygonPoint(x, y, rad))
+        
+        shape = SDShape(name=shp, shape_kind="Polygon", material=material,
+                        z_order=z_order, fill_color=color, points=pts)
+        
+        sd = ctx.sd_sections.setdefault(sec, SDSection(name=sec))
+        sd.shapes.append(shape)
+        logger.info(f"[SD Polygon] {sec}/{shp}: {len(pts)} köşe, mat={material}")
+        
 def handle_program_control(ctx: LoadContext, df: pd.DataFrame):
-    if 'CurrUnits' in df.columns:
-        units_str = str(df.iloc[0]['CurrUnits'])
-        ctx.units = UnitConverter(units_str)
-        logger.info(f"[Units] {units_str}")
+    if 'CurrUnits' in df.columns and not df.empty:
+        raw = str(df.iloc[0]['CurrUnits']).strip()
+        if raw:
+            ctx.units = UnitConverter(raw)
+            logger.info(f"[Units] CurrUnits='{raw}' → {ctx.units.unit_system.name}")
+            return
+    logger.info("[Units] CurrUnits bulunamadı, varsayılan N_MM kullanılıyor")
+    ctx.units = UnitConverter("N, mm, C")
 
 
 def handle_project_information(ctx: LoadContext, df: pd.DataFrame):
@@ -741,49 +921,119 @@ def handle_material_mech(ctx: LoadContext, df: pd.DataFrame):
         mat.nu12 = safe_float(row, 'U12', 0.3)
         mat.nu13 = safe_float(row, 'U13', mat.nu12)
         mat.nu23 = safe_float(row, 'U23', mat.nu12)
-        mat.density = safe_float(row, 'UnitMass', 7.85e-9)
+        raw_unit_mass = safe_float(row, 'UnitMass', 7.85e-6)
+        # SAP UnitMass = kg/mm³ (pratikte); dönüşüm yok
+        mat.density = ctx.units.density(raw_unit_mass)
 
+
+def handle_joint_added_mass(ctx: LoadContext, df: pd.DataFrame):
+    """JOINT ADDED MASS ASSIGNMENTS → ctx.joint_added_mass[joint_id]"""
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        jid = str(r.get('Joint', '')).strip()
+        if not jid:
+            continue
+        ctx.joint_added_mass[jid] = {
+            'm1': ctx.units.mass(safe_float(r, 'Mass1', 0.0)),
+            'm2': ctx.units.mass(safe_float(r, 'Mass2', 0.0)),
+            'm3': ctx.units.mass(safe_float(r, 'Mass3', 0.0)),
+            'mmi1': ctx.units.mmi(safe_float(r, 'MMI1', 0.0)),  # MMI: kg·mm²
+            'mmi2': ctx.units.mmi(safe_float(r, 'MMI2', 0.0)),
+            'mmi3': ctx.units.mmi(safe_float(r, 'MMI3', 0.0)),
+        }
+
+def _attach_sd_geometry(sect_name: str, shape: str, ctx: LoadContext):
+    """
+    'SD Section' satırları için Section Designer geometrisini ctx.sd_sections'tan çeker.
+    SD olmayan satırlar için None döner.
+    """
+    if shape != "SD Section":
+        return None
+
+    sd = ctx.sd_sections.get(sect_name)
+    if sd is None:
+        logger.warning(
+            f"[FrameProps] SD Section '{sect_name}' için "
+            f"ctx.sd_sections'ta geometri YOK"
+        )
+        return None
+
+    n_shapes = len(sd.shapes)
+    n_pts = sum(len(sh.points) for sh in sd.shapes)
+    logger.info(
+        f"[FrameProps] SD Section '{sect_name}': "
+        f"{n_shapes} shape, {n_pts} toplam köşe noktası bağlandı"
+    )
+    return sd
+
+def _resolve_material(ctx: LoadContext, mat_name_raw) -> Optional[Material]:
+    mat_name = str(mat_name_raw or '').strip()
+    if not mat_name or mat_name.lower() == 'nan':
+        return None
+    mat = ctx.materials.get(mat_name)
+    if mat is None:
+        mat = Material(name=mat_name, mat_type=MatType.STEEL)
+        ctx.materials[mat_name] = mat
+    return mat
 
 def handle_frame_props(ctx: LoadContext, df: pd.DataFrame):
+    logger.info(f"[FrameProps] ÇAĞRILDI! {len(df)} satır")
     if df.empty:
+        logger.warning("[FrameProps] DataFrame BOŞ")
         return
 
     name_col = next((c for c in ('SectionName', 'Section', 'Name') if c in df.columns), None)
     if name_col is None:
-        logger.error("Kesit isim kolonu bulunamadı")
+        logger.error(f"[FrameProps] Kesit isim kolonu YOK! Kolonlar: {list(df.columns)}")
         return
 
-    skipped = 0
-    loaded = 0
+    loaded = skipped = failed = 0
 
-    for _, row in df.iterrows():
+    for idx, row in df.iterrows():
         sect_name = str(row.get(name_col, '')).strip()
         if not sect_name:
             continue
 
         shape = str(row.get('Shape', '')).strip()
-        if 'auto select' in shape.lower():
+        auto_type = str(row.get('AutoType', '')).strip().upper()
+
+        if 'auto select' in shape.lower() or auto_type in ('YES', 'AUTOSELECT'):
             skipped += 1
             continue
 
-        s_type, s_params = map_sap_to_local_params(row)
-        color = get_color_from_string(row.get('Color', 'Gray8Dark'))
+        try:
+            s_type, s_params = map_sap_to_local_params(row, ctx.units)
+        except Exception as e:
+            failed += 1
+            logger.error(
+                f"[FrameProps] '{sect_name}' (satır {idx}) dönüşüm HATASI: {e}",
+                exc_info=True,
+            )
+            continue
 
-        mat_name = str(row.get('Material', '')).strip()
-        mat_obj = ctx.materials.get(mat_name) if mat_name and mat_name.lower() != 'nan' else None
+        mat_obj = _resolve_material(ctx, row.get('Material', ''))
 
-        if mat_obj is None and mat_name and mat_name.lower() != 'nan':
-            mat_obj = Material(name=mat_name, mat_type=MatType.STEEL)
-            ctx.materials[mat_name] = mat_obj
+        # SD Section ise geometriyi ctx.sd_sections'tan bağla
+        # (General vb. CUSTOM'lar için helper None döner)
+        sd_section = None
+        if s_type == SectionType.CUSTOM:
+            sd_section = _attach_sd_geometry(sect_name, shape, ctx)
 
         ctx.sections[sect_name] = Section(
             name=sect_name,
             profile_type=s_type,
-            profile_params=s_params,
+            profile_params=s_params,     # ← artık _is_sd yok
             material=mat_obj,
-            color=color,
+            color=get_color_from_string(row.get('Color', 'Gray8Dark')),
+            sd_section=sd_section,
         )
         loaded += 1
+
+    logger.info(
+        f"[FrameProps] SONUÇ: loaded={loaded}, skipped={skipped}, "
+        f"failed={failed}, total={len(df)}"
+    )
 
 
 def handle_auto_select_lists(ctx: LoadContext, df: pd.DataFrame):
@@ -812,22 +1062,28 @@ def handle_area_props(ctx: LoadContext, df: pd.DataFrame):
         if not name:
             continue
 
-        thickness = safe_float(row, 'Thickness', 100.0)
-        ctx.area_thicknesses[name] = thickness
+        # HAM değeri oku (CurrUnits cinsinden, ör. m)
+        raw_thickness = safe_float(row, 'Thickness', 0.1)  # varsayılan 0.1 m
+        thickness_mm = ctx.units.L(raw_thickness)          # → mm
+
+        ctx.area_thicknesses[name] = thickness_mm
 
         mat_name = str(row.get('Material', '')).strip()
         mat_obj = ctx.materials.get(mat_name) if mat_name else None
-
         if mat_obj is None and mat_name:
             mat_obj = Material(name=mat_name)
             ctx.materials[mat_name] = mat_obj
 
         ctx.area_sections[name] = {
             "material": mat_obj,
-            "thickness": thickness,
+            "thickness": thickness_mm,   # ← ARTIK mm
             "area_type": str(row.get('AreaType', 'Shell')).strip(),
             "type": str(row.get('Type', 'Shell-Thin')).strip(),
             "color": get_color_from_string(row.get('Color', 'Gray8Dark')),
+            "bend_thick": ctx.units.L(safe_float(row, 'BendThick', 0.0)),
+            "drill_dof": str(row.get('DrillDOF', 'No')).strip().upper() == 'YES',
+            "type": str(row.get('Type', 'Shell-Thin')).strip(),
+            "area_type": str(row.get('AreaType', 'Shell')).strip(),
         }
 
 
@@ -1144,14 +1400,13 @@ def _process_response_spectrum_cases(ctx: LoadContext):
         for _, r in ctx.df_spec_ass.iterrows():
             c_name = str(r.get('Case', '')).strip()
             if case_obj := cases.get(c_name):
-                raw_sf = safe_float(r, 'TransAccSF', 9810.0)
-                scaled_sf = ctx.units.acc(raw_sf)
+                sf = safe_float(r, 'TransAccSF', 1.0)
 
                 assignment = ResponseSpectrumLoadAssignment(
                     load_name=str(r.get('LoadName', 'U1')).strip(),
                     function_name=str(r.get('Function', '')).strip(),
                     angle=safe_float(r, 'Angle', 0.0),
-                    sf=scaled_sf
+                    sf=sf
                 )
                 case_obj.assignments.append(assignment)
 
@@ -1305,6 +1560,167 @@ def handle_link_props_linear(ctx: LoadContext, df: pd.DataFrame):
                 if hasattr(prop, f'damp_{dof}'):
                     setattr(prop, f'damp_{dof}', c_val)
 
+def handle_frame_insertion_points(ctx: LoadContext, df: pd.DataFrame):
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        fid = str(r.get('Frame', '')).strip()
+        if not fid:
+            continue
+        ctx.frame_insertion_points[fid] = {
+            'cardinal_pt': str(r.get('CardinalPt', '10 (centroid)')).strip(),
+            'jt_offset_xi': ctx.units.L(safe_float(r, 'JtOffsetXI', 0.0)),
+            'jt_offset_yi': ctx.units.L(safe_float(r, 'JtOffsetYI', 0.0)),
+            'jt_offset_zi': ctx.units.L(safe_float(r, 'JtOffsetZI', 0.0)),
+            'jt_offset_xj': ctx.units.L(safe_float(r, 'JtOffsetXJ', 0.0)),
+            'jt_offset_yj': ctx.units.L(safe_float(r, 'JtOffsetYJ', 0.0)),
+            'jt_offset_zj': ctx.units.L(safe_float(r, 'JtOffsetZJ', 0.0)),
+            'mirror2': str(r.get('Mirror2', 'No')).strip().upper() == 'YES',
+            'mirror3': str(r.get('Mirror3', 'No')).strip().upper() == 'YES',
+            'transform': str(r.get('Transform', 'Yes')).strip().upper() == 'YES',
+        }
+
+def handle_frame_end_offsets(ctx: LoadContext, df: pd.DataFrame):
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        fid = str(r.get('Frame', '')).strip()
+        if not fid:
+            continue
+        ctx.frame_end_offsets[fid] = {
+            'length_i': ctx.units.L(safe_float(r, 'LengthI', 0.0)),
+            'length_j': ctx.units.L(safe_float(r, 'LengthJ', 0.0)),
+            'rigid_factor': safe_float(r, 'RigidFactor', 0.5),
+        }
+
+def handle_frame_section_concrete_column(ctx: LoadContext, df: pd.DataFrame):
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        sname = str(r.get('SectionName', '')).strip()
+        if not sname:
+            continue
+        ctx.frame_section_rebar[sname] = {
+            'rebar_mat_l': str(r.get('RebarMatL', '')).strip(),
+            'rebar_mat_c': str(r.get('RebarMatC', '')).strip(),
+            'reinf_config': str(r.get('ReinfConfig', 'Rectangular')).strip(),
+            'lat_reinf': str(r.get('LatReinf', 'Ties')).strip(),
+            'cover': ctx.units.L(safe_float(r, 'Cover', 0.04)),
+            'num_bars3': int(safe_float(r, 'NumBars3Dir', 3)),
+            'num_bars2': int(safe_float(r, 'NumBars2Dir', 3)),
+            'bar_size_l': str(r.get('BarSizeL', '#9')).strip(),
+            'bar_size_c': str(r.get('BarSizeC', '#4')).strip(),
+            'spacing_c': ctx.units.L(safe_float(r, 'SpacingC', 0.15)),
+            'num_cbars2': int(safe_float(r, 'NumCBars2', 3)),
+            'num_cbars3': int(safe_float(r, 'NumCBars3', 3)),
+            'reinf_type': str(r.get('ReinfType', 'Design')).strip(),
+        }
+
+def handle_frame_section_concrete_beam(ctx: LoadContext, df: pd.DataFrame):
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        sname = str(r.get('SectionName', '')).strip()
+        if not sname:
+            continue
+        d = ctx.frame_section_rebar.setdefault(sname, {})
+        d.update({
+            'top_cover': ctx.units.L(safe_float(r, 'TopCover', 0.06)),
+            'bot_cover': ctx.units.L(safe_float(r, 'BotCover', 0.06)),
+            'top_left_area': ctx.units.L2(safe_float(r, 'TopLeftArea', 0.0)) ** 2,
+            'top_right_area': ctx.units.L2(safe_float(r, 'TopRghtArea', 0.0)) ** 2,
+            'bot_left_area': ctx.units.L2(safe_float(r, 'BotLeftArea', 0.0)) ** 2,
+            'bot_right_area': ctx.units.L2(safe_float(r, 'BotRghtArea', 0.0)) ** 2,
+        })
+
+def handle_frame_section_time_dependent(ctx: LoadContext, df: pd.DataFrame):
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        sname = str(r.get('SectionName', '')).strip()
+        if not sname:
+            continue
+        d = ctx.frame_section_rebar.setdefault(sname, {})
+        d.update({
+            'type_size': str(r.get('TypeSize', 'Auto')).strip(),
+            'auto_sf_size': safe_float(r, 'AutoSFSize', 1.0),
+        })
+
+def handle_material_concrete_data(ctx: LoadContext, df: pd.DataFrame):
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        name = str(r.get('Material', '')).strip()
+        if not name:
+            continue
+        mat = ctx.materials.get(name)
+        if mat is None:
+            mat = Material(name=name, mat_type=MatType.CONCRETE)
+            ctx.materials[name] = mat
+        mat.fc = ctx.units.E(safe_float(r, 'Fc', 0.0))
+        mat.fu = ctx.units.E(safe_float(r, 'Fu', 0.0))
+        # unit weight: F/L³ → N/mm³; kg/m³'e çevirmek istersen *1e9/9.80665
+        mat.unit_weight = safe_float(r, 'UnitWeight', 0.0)
+
+def handle_material_rebar_data(ctx: LoadContext, df: pd.DataFrame):
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        name = str(r.get('Material', '')).strip()
+        if not name:
+            continue
+        mat = ctx.materials.get(name)
+        if mat is None:
+            mat = Material(name=name, mat_type=MatType.REBAR)
+            ctx.materials[name] = mat
+        mat.fy = ctx.units.E(safe_float(r, 'Fy', 0.0))
+        mat.fu = ctx.units.E(safe_float(r, 'Fu', 0.0))
+        mat.E1 = ctx.units.E(safe_float(r, 'E', mat.E1))
+
+def handle_rebar_sizes(ctx: LoadContext, df: pd.DataFrame):
+    if df.empty:
+        return
+    for _, r in df.iterrows():
+        name = str(r.get('RebarSize', r.get('Name', ''))).strip()
+        if not name:
+            continue
+        ctx.rebar_sizes[name] = {
+            'diameter': ctx.units.L(safe_float(r, 'Diameter', 0.0)),
+            'area': ctx.units.L2(safe_float(r, 'Area', 0.0)),
+        }
+
+def handle_sd_general(ctx, df):
+    """SECTION DESIGNER PROPERTIES 01 - GENERAL"""
+    ctx.df_sd_general = df
+    for _, r in df.iterrows():
+        name = str(r.get('SectionName','')).strip()
+        if not name: continue
+        sd = ctx.sd_sections.setdefault(name, SDSection(name=name))
+        sd.design_type = str(r.get('DesignType','No Check/Design')).strip()
+        sd.axis_angle = safe_float(r, 'AxisAngle', 90.0)
+        # base material tablo 04+'da ShapeMat olarak geliyor; buradan da alabiliriz
+
+def handle_sd_polygon(ctx, df):
+    ctx.df_sd_polygon = df
+    parse_sd_polygon_table(df, ctx)
+
+def handle_sd_rebar_rect(ctx, df):
+    """SECTION DESIGNER PROPERTIES 19 - SHAPE REINFORCING RECTANGLE"""
+    ctx.df_sd_rect = df
+    for _, r in df.iterrows():
+        sec = str(r.get('SectionName','')).strip()
+        if not sec: continue
+        sd = ctx.sd_sections.setdefault(sec, SDSection(name=sec))
+        sd.rect_rebars.append({
+            'shape': str(r.get('ShapeName','')).strip(),
+            'material': str(r.get('ShapeMat','')).strip(),
+            'x_center': ctx.units.L(safe_float(r,'XCenter')),
+            'y_center': ctx.units.L(safe_float(r,'YCenter')),
+            'height': ctx.units.L(safe_float(r,'Height')),
+            'width': ctx.units.L(safe_float(r,'Width')),
+            'rotation': safe_float(r,'Rotation'),
+        })
+
 PRIORITY = {
     "PROGRAM CONTROL":                                  10,
     "PROJECT INFORMATION":                              11,
@@ -1312,6 +1728,14 @@ PRIORITY = {
 
     "MATERIAL PROPERTIES 01 - GENERAL":                 20,
     "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES": 21,
+
+    "SECTION DESIGNER PROPERTIES 01 - GENERAL": 29,
+    "SECTION DESIGNER PROPERTIES 16 - SHAPE POLYGON": 29,
+    "SECTION DESIGNER PROPERTIES 19 - SHAPE REINFORCING RECTANGLE": 29,
+    "SECTION DESIGNER PROPERTIES 18 - SHAPE REINFORCING LINE": 29,
+    "SECTION DESIGNER PROPERTIES 02 - REINFORCING AT SHAPE EDGES": 29,
+    "SECTION DESIGNER PROPERTIES 03 - REINFORCING AT SHAPE CORNERS": 29,
+    "SECTION DESIGNER PROPERTIES 30 - FIBER GENERAL": 29,
 
     "FRAME SECTION PROPERTIES 01 - GENERAL":            30,
     "FRAME SECTION PROPERTIES 04 - AUTO SELECT":         31,
@@ -1382,6 +1806,9 @@ def build_router() -> Dict[str, Callable]:
         "FRAME SECTION PROPERTIES 04 - AUTO SELECT":         handle_auto_select_lists,
         "AREA SECTION PROPERTIES":                          handle_area_props,
         "LINK PROPERTY DEFINITIONS 01 - GENERAL":           handle_link_props,
+        "SECTION DESIGNER PROPERTIES 01 - GENERAL":         handle_sd_general,
+        "SECTION DESIGNER PROPERTIES 16 - SHAPE POLYGON":   handle_sd_polygon,
+        "SECTION DESIGNER PROPERTIES 19 - SHAPE REINFORCING RECTANGLE": handle_sd_rebar_rect,
 
         "LOAD PATTERN DEFINITIONS":                         handle_load_patterns,
         "LOAD CASE DEFINITIONS":                            handle_load_cases,

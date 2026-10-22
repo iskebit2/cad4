@@ -2,55 +2,10 @@
 
 from enum import Enum, IntEnum, auto
 from typing import Dict, Type
-
+from data.unit_enums import UNIT_DEFINITIONS_MAP, UnitSystem
 # ============================================================================
 # ENUMERATION'LAR
 # ============================================================================
-class UnitSystem(IntEnum):
-    LB_IN = 1
-    LB_FT = 2
-    KIP_IN = 3
-    KIP_FT = 4
-    KN_MM = 5
-    KN_M = 6
-    KGF_MM = 7
-    KGF_M = 8
-    N_MM = 9
-    N_M = 10
-    TON_MM = 11
-    TON_M = 12
-    KN_CM = 13
-    KGF_CM = 14
-    N_CM = 15
-    TON_CM = 16
-
-    @property
-    def force_unit(self) -> str:
-        return UNIT_DEFINITIONS_MAP[self][0]
-
-    @property
-    def length_unit(self) -> str:
-        return UNIT_DEFINITIONS_MAP[self][1]
-
-
-UNIT_DEFINITIONS_MAP = {
-    UnitSystem.LB_IN: ('lb', 'in'),
-    UnitSystem.LB_FT: ('lb', 'ft'),
-    UnitSystem.KIP_IN: ('kip', 'in'),
-    UnitSystem.KIP_FT: ('kip', 'ft'),
-    UnitSystem.KN_MM: ('kN', 'mm'),
-    UnitSystem.KN_M: ('kN', 'm'),
-    UnitSystem.KGF_MM: ('kgf', 'mm'),
-    UnitSystem.KGF_M: ('kgf', 'm'),
-    UnitSystem.N_MM: ('N', 'mm'),
-    UnitSystem.N_M: ('N', 'm'),
-    UnitSystem.TON_MM: ('Ton', 'mm'),
-    UnitSystem.TON_M: ('Ton', 'm'),
-    UnitSystem.KN_CM: ('kN', 'cm'),
-    UnitSystem.KGF_CM: ('kgf', 'cm'),
-    UnitSystem.N_CM: ('N', 'cm'),
-    UnitSystem.TON_CM: ('Ton', 'cm'),
-}
 
 class MatType(IntEnum):
     STEEL     = 1

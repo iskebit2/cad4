@@ -29,7 +29,7 @@ class SceneBuilder:
                       material: Optional[Material] = None,
                       color: Tuple[float, float, float] = (0.8, 0.8, 0.8)) -> Section:
         """Kesit oluştur ve doğrudan Project içine kaydet"""
-        section = Section(name=profile_type, profile_params=profile_params, material=material, color=color)
+        section = Section(name=name, profile_type=profile_type, profile_params=profile_params, material=material, color=color)
         self.project.add_section(section)
         return section
     

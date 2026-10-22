@@ -254,10 +254,33 @@ class ProfileGenerator:
         ]
     
     def _custom_profile(self, params: dict) -> List[Tuple[float, float]]:
-        """Özel profil - points parametresinden alır"""
-        if 'points' not in params:
-            return self._default_profile(params)
-        return params['points']
+        # 1) SD Section varsa → ilk Polygon shape'ini kullan
+        sd = params.get('sd_section') if isinstance(params, dict) else None
+        if sd is not None and getattr(sd, 'shapes', None):
+            poly = next(
+                (s for s in sd.shapes
+                if getattr(s, 'shape_kind', '') == 'Polygon' and len(s.points) >= 3),
+                None,
+            )
+            if poly is not None:
+                pts = [(float(p.x), float(p.y)) for p in poly.points]
+                logger.debug(
+                    f"[ProfileGenerator] SD Section '{getattr(sd, 'name', '?')}': "
+                    f"Polygon '{poly.name}' → {len(pts)} köşe"
+                )
+                return pts
+            logger.debug(
+                f"[ProfileGenerator] SD Section '{getattr(sd, 'name', '?')}': "
+                f"Polygon shape bulunamadı, fallback"
+            )
+
+        # 2) Ham nokta listesi
+        if 'points' in params and params['points']:
+            return params['points']
+
+        # 3) Fallback
+        logger.debug("[ProfileGenerator] CUSTOM: ne sd_section ne points, fallback kare")
+        return self._default_profile(params)
     
     def _default_profile(self, params: dict) -> List[Tuple[float, float]]:
         """Varsayılan profil (100x100 kare)"""

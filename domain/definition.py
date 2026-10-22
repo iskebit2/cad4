@@ -13,7 +13,35 @@ import typing
 
 import glm
 from data.seismic import get_tsc2018_site_coefficients
-from data.enums import DistType, LinkPropType, LoadDirection, MatType, PropAreaType, SectionCutDefinedBy, SectionCutResultType, SectionType, SpectrumSourceType
+# ============================================================================
+# RE-EXPORT (s2k_utils.py'nin beklediği tüm isimler)
+# ============================================================================
+from data.enums import (
+    DistType,
+    LinkPropType,
+    LoadDirection,
+    MatType,
+    PropAreaType,
+    SectionCutDefinedBy,
+    SectionCutResultType,
+    SectionType,
+    SpectrumSourceType,
+)
+
+__all__ = [
+    # enums (re-export)
+    "DistType", "LinkPropType", "LoadDirection", "MatType",
+    "PropAreaType", "SectionCutDefinedBy", "SectionCutResultType",
+    "SectionType", "SpectrumSourceType",
+    # sınıflar
+    "AreaUniformLoad", "AreaUniformToFrameLoad", "AreaWindPressureLoad",
+    "AutoSeismicTSC2018", "ComboItem", "FrameDistributedLoad",
+    "FrameGravityLoad", "GeneralProjectInfo", "LinkProp", "LinkPropLinear",
+    "LoadCase", "LoadCombination", "LoadPattern", "Material", "ModalCase",
+    "PointLoad", "QuadDefinition", "ResponseSpectrumCase",
+    "ResponseSpectrumLoadAssignment", "Section", "SectionCut",
+    "SiteInformation", "SpectrumFunction", "StaticLoadAssignment",
+]
 
 # ============================================================================
 # MATERIAL
@@ -65,6 +93,8 @@ class Section:
     # YENİ: Katalogdan gelen hesaplanmış özellikler (analiz için)
     catalog_props: Dict[str, float] = field(default_factory=dict)
     catalog_source: str = ""    # "CSI Euro - W" gibi
+
+    sd_section: Optional["SDSection"] = None   # ileri referans
     
     def __post_init__(self):
         if self.material is None:
@@ -696,3 +726,34 @@ class AutoSeismicTSC2018:
     fs: float = 1.3
     f1: float = 1.5
 
+@dataclass
+class SDPolygonPoint:
+    x: float = 0.0
+    y: float = 0.0
+    radius: float = 0.0
+
+@dataclass
+class SDShape:
+    name: str = ""
+    shape_kind: str = "Polygon"        # "Polygon" | "SolidRect" | "Pipe" | ...
+    material: str = ""
+    z_order: int = 1
+    fill_color: Tuple[float,float,float] = (0.8,0.8,0.8)
+    # polygon için
+    points: List[SDPolygonPoint] = field(default_factory=list)
+    # diğer shape'ler için ham parametreler
+    params: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class SDSection:
+    name: str = ""
+    design_type: str = "No Check/Design"
+    base_material: str = ""
+    axis_angle: float = 90.0
+    shapes: List[SDShape] = field(default_factory=list)
+    # donatı (opsiyonel, tablo 02/03/18/19)
+    edge_rebars: List[dict] = field(default_factory=list)
+    corner_rebars: List[dict] = field(default_factory=list)
+    line_rebars: List[dict] = field(default_factory=list)
+    rect_rebars: List[dict] = field(default_factory=list)
+    fiber: dict = field(default_factory=dict)

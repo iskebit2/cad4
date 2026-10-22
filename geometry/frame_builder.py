@@ -40,20 +40,20 @@ class FrameBuilder:
         return profile
 
     def _prepare_geometry(self, frame):
-        """
-        Profil ve elemanın 3B yerel koordinat sistemini hazırlar.
+        section = frame.section
+        params = dict(section.profile_params or {})
+        if getattr(section, 'sd_section', None) is not None:
+            params["sd_section"] = section.sd_section
 
-        Returns
-        -------
-        profile : np.ndarray
-        start_ring : np.ndarray
-        end_ring : np.ndarray
-        """
-
-        profile = self.profile_gen.get_profile(
-            frame.section.profile_type,
-            frame.section.profile_params
-        )
+        logger.debug(
+                        f"[FrameBuilder-DIAG] section='{section.name}' "
+                        f"type={section.profile_type} "
+                        f"sd={'VAR' if getattr(section, 'sd_section', None) else 'YOK'} "
+                        f"params_keys={list(params.keys())} "
+                        f"has_sd_in_params={'sd_section' in params}"
+                    )
+                            
+        profile = self.profile_gen.get_profile(section.profile_type, params)
 
         profile = self._ensure_closed_cw(profile)
 
