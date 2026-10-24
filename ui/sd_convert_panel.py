@@ -21,6 +21,7 @@ from domain.element import Frame, Node, Area
 from domain.definition import SectionType
 from geometry.sd_to_areas import sd_frame_to_areas
 from logging_config import CadLogger
+from ui.base_panel import BasePanel
 
 logger = CadLogger.get(__name__)
 
@@ -68,7 +69,7 @@ def _color_u32(r: float, g: float, b: float, a: float = 1.0) -> int:
 # ============================================================
 # PANEL
 # ============================================================
-class SDConvertPanel:
+class SDConvertPanel(BasePanel):
     def __init__(self):
         self.visible = False
         self.app = None

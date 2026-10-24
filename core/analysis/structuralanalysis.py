@@ -1,177 +1,189 @@
-# core/analysis/analysis.py
+# core/analysis/structuralanalysis.py
+"""
+Orchestration — mass + stiffness + modal (+ spectrum).
 
-from dataclasses import dataclass
+Birim sözleşmesi: units.py.
+"""
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 import numpy as np
 
-from .mass_source import (
-    MassBreakdown,
-    build_mass_data,
-)
+from data.unit_enums import KG_PER_TON
+from .mass_assembly import build_mass, MassAssembly
+from .stiffness_assembly import build_stiffness, StiffnessAssembly
+from .solver import StructuralSolver, ModalResult
 
-from .solver import (
-    StructuralSolver,
-    ModalResult,
-)
-
-from .modal_analysis import (
-    SpectralResult,
-    response_spectrum_solve,
-)
-
-
-# ============================================================
-# ANALİZ SONUCU
-# ============================================================
 
 @dataclass
 class StructuralAnalysisResult:
+    mass: MassAssembly
+    stiffness: StiffnessAssembly
+    fixed_dofs: List[int]
+    modal: Optional[ModalResult] = None
+    spectral: Optional[object] = None    # sonra doldurulacak
+    warnings: List[str] = field(default_factory=list)
 
-    mass: MassBreakdown
+    @property
+    def K(self) -> np.ndarray:
+        return self.stiffness.K_global
 
-    node_masses: dict
-
-    K: np.ndarray
-    M: np.ndarray
-
-    fixed_dofs: list
-
-    modal: ModalResult
-
-    spectral: SpectralResult | None = None
+    @property
+    def M(self) -> np.ndarray:
+        return self.mass.M_global
 
     def __inspector_tree__(self):
-
         data = {
             "Model": {
                 "DOF": self.K.shape[0],
                 "Fixed DOF": len(self.fixed_dofs),
+                "Frame": self.stiffness.frame_count,
+                "Skipped": len(self.stiffness.skipped),
             },
-
-            "Mass": {
-                "Seismic Mass":
-                    f"{self.mass.total:.3f} ton",
-                "G":
-                    f"{self.mass.G:.3f} ton",
-                "Q":
-                    f"{self.mass.Q:.3f} ton",
-            },
-
-            "Modal": {
-                "Modes":
-                    self.modal.n_modes,
+            "Mass (kg)": {
+                "Self": f"{self.mass.total_self_kg:.3f}",
+                "Dead": f"{self.mass.total_dead_kg:.3f}",
+                "Live (ham)": f"{self.mass.total_live_kg:.3f}",
+                "Total (n={n:.2f})".format(n=self.mass.n_live):
+                    f"{self.mass.total_kg:.3f}",
+                "Total (ton)": f"{self.mass.total_ton:.4f}",
             },
         }
-
-        if self.spectral is not None:
-
-            data["Spectral"] = {
-                "Modes":
-                    len(self.spectral.modes),
-                "Max UX":
-                    f"{np.max(np.abs(self.spectral.ux_srss)):.3f} mm",
-                "Max UY":
-                    f"{np.max(np.abs(self.spectral.uy_srss)):.3f} mm",
-                "Max UZ":
-                    f"{np.max(np.abs(self.spectral.uz_srss)):.3f} mm",
+        if self.modal is not None:
+            data["Modal"] = {
+                "n_modes": self.modal.n_modes,
+                "T1 (s)": f"{self.modal.periods[0]:.4f}",
+                "f1 (Hz)": f"{self.modal.frequencies[0]:.3f}",
             }
-
+        if self.warnings:
+            data["Warnings"] = {f"Uyarı {i+1}": w for i, w in enumerate(self.warnings)}
         return data
 
 
-# ============================================================
-# MODEL ANALİZİ
-# ============================================================
+# ============================================================================
+# YARDIMCILAR
+# ============================================================================
+def _collect_fixed_dofs(scene) -> List[int]:
+    """Mesnetli node'ların DOF endekslerini topla."""
+    fixed: List[int] = []
+    for node in scene.nodes.values():
+        dofs = getattr(node, "dof_indices", None)
+        if not dofs:
+            continue
+        r = getattr(node, "restraint", None)
+        if r is None:
+            continue
+        # Node.DOF_ORDER = ('ux','uy','uz','rx','ry','rz')
+        for i, dof_name in enumerate(("ux", "uy", "uz", "rx", "ry", "rz")):
+            if getattr(r, dof_name, False):
+                if i < len(dofs) and dofs[i] is not None:
+                    fixed.append(int(dofs[i]))
+    return fixed
 
-def run_modal_analysis(
+
+def _validate_modal(modal: ModalResult, tol: float = 1e-6) -> List[str]:
+    """Modal sonuç doğrulaması."""
+    errs = []
+
+    if not np.all(np.diff(modal.frequencies) >= -tol):
+        errs.append("Frekanslar artan değil")
+
+    if np.any(modal.frequencies < -tol):
+        errs.append("Negatif frekans var")
+
+    # Toplam efektif kütle, toplam modal kütleye yakın olmalı (yeterli mod varsa)
+    # (uyarı olarak raporlanır — eksik mod normaldir)
+
+    return errs
+
+
+# ============================================================================
+# ANA FONKSİYON
+# ============================================================================
+def run_analysis(
     scene,
-    K,
-    fixed_dofs,
-    n=0.3,
-    n_modes=10,
+    project,
+    n_live: float = 0.3,
+    n_modes: int = 10,
     spectrum=None,
-):
+    *,
+    validate: bool = True,
+) -> StructuralAnalysisResult:
+    """
+    Tam analiz zinciri: mass → stiffness → modal (+ spectrum).
 
-    num_dofs = len(scene.nodes) * 6
+    Parameters
+    ----------
+    scene    : Scene
+    project  : Project (load_patterns için)
+    n_live   : live yük çarpanı
+    n_modes  : kaç mod isteniyor
+    spectrum : opsiyonel spektrum (get_sa(T) → Sa[g])
+    """
+    # --- 1. Mass ---
+    mass_asm = build_mass(scene, project, n_live=n_live, validate=validate)
 
-    # --------------------------------------------------------
-    # DOF'LAR
-    # --------------------------------------------------------
+    # --- 2. Stiffness ---
+    stiff_asm = build_stiffness(scene, project, validate=validate)
 
-    for i, node in enumerate(
-        scene.nodes.values()
-    ):
+    # --- 3. Mesnetli DOF'lar ---
+    fixed_dofs = _collect_fixed_dofs(scene)
 
-        node.dof_indices = list(
-            range(
-                i * 6,
-                i * 6 + 6
-            )
+    if not fixed_dofs:
+        # Uyarı — mesnetsiz model
+        stiff_asm.warnings.append("Mesnetli DOF yok — modal analiz çökebilir")
+
+    # --- 4. Modal ---
+    modal = None
+    warnings = list(mass_asm.warnings) + list(stiff_asm.warnings)
+
+    try:
+        solver = StructuralSolver(
+            K_global=stiff_asm.K_global,
+            M_global=mass_asm.M_global,
+            fixed_dofs=fixed_dofs,
+            num_dofs=mass_asm.num_dofs,
         )
+        modal = solver.modal_solve(n_modes=n_modes)
+        if validate:
+            warnings.extend(_validate_modal(modal))
+    except Exception as e:
+        warnings.append(f"Modal çözüm hatası: {e}")
+        import logging
+        logging.getLogger(__name__).exception("[Analysis] modal_solve")
 
-    # --------------------------------------------------------
-    # KÜTLE
-    # --------------------------------------------------------
+    spec_obj = _resolve_spectrum(project, spectrum)
 
-    M, mass, node_masses = (
-        build_mass_data(
-            scene,
-            num_dofs,
-            n
-        )
-    )
-
-    # --------------------------------------------------------
-    # SOLVER
-    # --------------------------------------------------------
-
-    solver = StructuralSolver(
-        K_global=K,
-        M_global=M,
-        fixed_dofs=fixed_dofs,
-        num_dofs=num_dofs,
-    )
-
-    # --------------------------------------------------------
-    # MODAL
-    # --------------------------------------------------------
-
-    modal = solver.modal_solve(
-        n_modes=n_modes
-    )
-
-    # --------------------------------------------------------
-    # SPEKTRAL
-    # --------------------------------------------------------
-
+    # --- 5. Spektral (opsiyonel) ---
     spectral = None
+    if modal is not None and spectrum is not None:
+        try:
+            from .modal_analysis import response_spectrum_solve
+            spectral = response_spectrum_solve(
+                    modal=modal,
+                    M_global=mass_asm.M_global,
+                    num_dofs=mass_asm.num_dofs,
+                    spectrum=spec_obj,
+                    n_modes=n_modes,
+                )
+        except Exception as e:
+            warnings.append(f"Spektral çözüm hatası: {e}")
+            import logging
+            logging.getLogger(__name__).exception("[Analysis] spectrum_solve")
 
-    if spectrum is not None:
-
-        spectral = response_spectrum_solve(
-            modal=modal,
-            M_global=M,
-            num_dofs=num_dofs,
-            spectrum=spectrum,
-            n_modes=n_modes,
-        )
-
-    # --------------------------------------------------------
-    # SONUÇ
-    # --------------------------------------------------------
-
-    return StructuralAnalysisResult(
-
-        mass=mass,
-
-        node_masses=node_masses,
-
-        K=K,
-        M=M,
-
+    result = StructuralAnalysisResult(
+        mass=mass_asm,
+        stiffness=stiff_asm,
         fixed_dofs=fixed_dofs,
-
         modal=modal,
-
         spectral=spectral,
+        warnings=warnings,
     )
+    return result
+
+def _resolve_spectrum(project, spectrum):
+    if spectrum is None:
+        return None
+    if isinstance(spectrum, str):
+        return project.spectrum_functions.get(spectrum)
+    return spectrum

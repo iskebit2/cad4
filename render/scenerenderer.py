@@ -65,7 +65,7 @@ class SceneRenderer:
                         'grid': True, 'axes': True, 'area': True,
                         'frame': True, 'link': True, 'node': True,
                         'polygon': True,
-                        'loads': True,
+                        'loads': False,
                     }
         self.use_lights = True
         

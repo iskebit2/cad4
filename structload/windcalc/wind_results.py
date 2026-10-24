@@ -446,4 +446,4 @@ if __name__ == "__main__":
     wind_report = WindReport(proje_data)
     wind_report.analyze()
     report_=wind_report.report()
-    print(report_.get("parameters",[]))
+    logger.debug(report_.get("parameters",[]))

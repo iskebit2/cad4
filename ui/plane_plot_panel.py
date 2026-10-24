@@ -7,13 +7,14 @@ from typing import Optional
 import imgui
 
 from domain.plane import Plane, ASSOC_KINDS, ChangeOp
+from ui.base_panel import BasePanel
 from ui.widgets.plane_2d_view import Plane2DView
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
 
-class PlanePlotPanel:
+class PlanePlotPanel(BasePanel):
 
     PANEL_W = 1100
     PANEL_H = 700

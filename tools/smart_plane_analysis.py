@@ -268,7 +268,7 @@ class SmartPlaneAnalyzer:
             p1 = np.array(f.node_i.coord if hasattr(f.node_i, "coord") else f.node_i.coords, dtype=float)
             p2 = np.array(f.node_j.coord if hasattr(f.node_j, "coord") else f.node_j.coords, dtype=float)
         except Exception as e:
-            print(f"[R] HATA: {e}")
+            logger.debug(f"[R] HATA: {e}")
             return
 
         

@@ -63,7 +63,9 @@ class UnitConverter:
     def w(self, v: float) -> float: return float(v) * self.unit_def.line_load_to_N_per_mm
     def area_w(self, v: float) -> float: return float(v) * self.unit_def.area_load_to_N_per_mm2
     def mass(self, v: float) -> float:return float(v) * self.unit_def.force_to_N / (self.unit_def.length_to_mm / 1000.0)
-    def density(self, v: float) -> float: return float(v)
+    def density(self, v: float) -> float:
+        """SAP UnitMass (F·s²/L⁴) → kg/mm³."""
+        return float(v) * self.unit_def.force_to_N * 1000.0 / (self.unit_def.length_to_mm ** 4)
 
     def mmi(self, v: float) -> float:
         """Kütle atalet momenti: F·L² → kg·mm²."""
@@ -214,47 +216,71 @@ def parse_sap_mat_type(row) -> 'MatType':
 def map_sap_to_local_params(row, units: UnitConverter) -> Tuple[SectionType, Dict[str, float]]:
     """
     SAP2000 'FRAME SECTION PROPERTIES 01 - GENERAL' satırını yerel SectionType + params'a çevirir.
-    Not: SD Section için geometri burada BAĞLANMAZ — handle_frame_props,
+
+    Birim sözleşmesi:
+        - Parametreler (h, b, t3, t2, ...) → mm
+        - Area, AS2, AS3              → mm²
+        - I33, I22, J, I23, Cw        → mm⁴
+        - S33, S22, Z33, Z22, R33, R22 → mm³
+
+    Dönüşüm: SAP'tan gelen değerler "CurrUnits" cinsindendir.
+        mm cinsine:  v × length_to_mm
+        mm² cinsine: v × length_to_mm²
+        mm³ cinsine: v × length_to_mm³
+        mm⁴ cinsine: v × length_to_mm⁴
+
+    Not: 'SD Section' için geometri burada BAĞLANMAZ — handle_frame_props,
     ctx.sd_sections'tan çekip Section.sd_section alanına yazar.
     """
 
     s_type = str(row.get('Shape', 'Rectangle')).strip()
 
-    # ---- yardımcılar ----
+    u = units.unit_def
+    Lf = u.length_to_mm
+    L2f = Lf ** 2
+    L3f = Lf ** 3
+    L4f = Lf ** 4
+
+    # ---- birim dönüşüm yardımcıları ----
     def L(key, default=0.0):
-        return units.L(safe_float(row, key, default))
+        """Uzunluk → mm."""
+        return safe_float(row, key, default) * Lf
 
     def L2(key, default=0.0):
-        return units.L(safe_float(row, key, default)) ** 2
+        """Alan (Area, AS2, AS3) → mm²."""
+        return safe_float(row, key, default) * L2f
 
     def L3(key, default=0.0):
-        return units.L(safe_float(row, key, default)) ** 3
+        """Kesit modülü (S33, Z33, R33) → mm³."""
+        return safe_float(row, key, default) * L3f
 
     def L4(key, default=0.0):
-        return units.L(safe_float(row, key, default)) ** 4
+        """Atalet momenti (I33, I22, J, Cw) → mm⁴."""
+        return safe_float(row, key, default) * L4f
 
     def dim(key, default=1.0):
+        """Boyutsuz modifier (AMod, I3Mod, ...)."""
         v = safe_float(row, key, default)
         return v if v != 0 else default
 
     # ---- analiz özellikleri (tüm tipler için ortak) ----
     analysis = {
-        'Area':  L2('Area'),
-        'J':     L4('TorsConst'),
-        'I33':   L4('I33'),
-        'I22':   L4('I22'),
-        'I23':   L4('I23'),
-        'AS2':   L2('AS2'),
-        'AS3':   L2('AS3'),
-        'S33Top':  L3('S33Top'),
-        'S33Bot':  L3('S33Bot'),
+        'Area':   L2('Area'),
+        'J':      L4('TorsConst'),
+        'I33':    L4('I33'),
+        'I22':    L4('I22'),
+        'I23':    L4('I23'),
+        'AS2':    L2('AS2'),
+        'AS3':    L2('AS3'),
+        'S33Top': L3('S33Top'),
+        'S33Bot': L3('S33Bot'),
         'S22Left': L3('S22Left'),
-        'S22Right':L3('S22Right'),
-        'Z33':     L3('Z33'),
-        'Z22':     L3('Z22'),
-        'R33':     L3('R33'),
-        'R22':     L3('R22'),
-        'Cw':      L4('Cw'),
+        'S22Right': L3('S22Right'),
+        'Z33':    L3('Z33'),
+        'Z22':    L3('Z22'),
+        'R33':    L3('R33'),
+        'R22':    L3('R22'),
+        'Cw':     L4('Cw'),
         'AMod':   dim('AMod', 1.0),
         'A2Mod':  dim('A2Mod', 1.0),
         'A3Mod':  dim('A3Mod', 1.0),
@@ -290,14 +316,11 @@ def map_sap_to_local_params(row, units: UnitConverter) -> Tuple[SectionType, Dic
         }
 
     if s_type == "SD Section":
-        # Geometri handle_frame_props'ta ctx.sd_sections'tan bağlanacak.
-        # Bayrak YOK; ayrımı handle_frame_props sd_section varlığıyla yapacak.
-        logger.debug(f"[SectionMap] 'SD Section' — geometri handle_frame_props'ta bağlanacak")
+        logger.debug("[SectionMap] 'SD Section' — geometri handle_frame_props'ta bağlanacak")
         return SectionType.CUSTOM, {**analysis}
 
     if s_type == "General":
-        # SAP "General" = kullanıcı tanımlı analiz özellikleri (SD değil)
-        logger.debug(f"[SectionMap] 'General' — sadece analiz özellikleri")
+        logger.debug("[SectionMap] 'General' — sadece analiz özellikleri")
         return SectionType.CUSTOM, {**analysis}
 
     if s_type in ("Rectangle", "Rectangular"):
@@ -334,7 +357,7 @@ def map_sap_to_local_params(row, units: UnitConverter) -> Tuple[SectionType, Dic
             **analysis,
         }
 
-    if s_type in ("Tube", "Box"):
+    if s_type in ("Tube", "Box", "Box/Tube"):
         return SectionType.TUBE, {
             "h": L('t3', 200.0),
             "b": L('t2', 100.0),
@@ -343,7 +366,7 @@ def map_sap_to_local_params(row, units: UnitConverter) -> Tuple[SectionType, Dic
         }
 
     # Bilinmeyen shape → RECT fallback
-    logger.warning(f"[SectionMap] Bilinmeyen Shape='{s_type}', RECT fallback")
+    logger.warning("[SectionMap] Bilinmeyen Shape=%r, RECT fallback", s_type)
     return SectionType.RECT, {
         "h": L('t3', 200.0),
         "b": L('t2', 100.0),
@@ -899,31 +922,31 @@ def handle_material_props(ctx: LoadContext, df: pd.DataFrame):
 
 
 def handle_material_mech(ctx: LoadContext, df: pd.DataFrame):
-    if df.empty:
-        return
-
     for _, row in df.iterrows():
         name = str(row.get('Material', '')).strip()
         if not name:
             continue
-
         if name not in ctx.materials:
             ctx.materials[name] = Material(name=name)
-
         mat = ctx.materials[name]
-        e1 = safe_float(row, 'E1', 2.0e8)
-        mat.E1 = e1
-        mat.E2 = safe_float(row, 'E2', e1)
-        mat.E3 = safe_float(row, 'E3', e1)
-        mat.G12 = safe_float(row, 'G12', 7.7e7)
-        mat.G13 = safe_float(row, 'G13', mat.G12)
-        mat.G23 = safe_float(row, 'G23', mat.G12)
+
+        e1_raw = safe_float(row, 'E1', 2.0e5)
+        mat.E1 = ctx.units.E(e1_raw)
+        mat.E2 = mat.E1
+        mat.E3 = mat.E1
+
+        g12_raw = safe_float(row, 'G12', 8.1e4)
+        mat.G12 = ctx.units.E(g12_raw)   # aynı MPa dönüşümü
+        mat.G13 = mat.G12
+        mat.G23 = mat.G12
+
         mat.nu12 = safe_float(row, 'U12', 0.3)
-        mat.nu13 = safe_float(row, 'U13', mat.nu12)
-        mat.nu23 = safe_float(row, 'U23', mat.nu12)
-        raw_unit_mass = safe_float(row, 'UnitMass', 7.85e-6)
-        # SAP UnitMass = kg/mm³ (pratikte); dönüşüm yok
-        mat.density = ctx.units.density(raw_unit_mass)
+        mat.nu13 = mat.nu12
+        mat.nu23 = mat.nu12
+
+        # KRİTİK: density doğru dönüşüm
+        um_raw = safe_float(row, 'UnitMass', 0.0)
+        mat.density = ctx.units.density(um_raw)
 
 
 def handle_joint_added_mass(ctx: LoadContext, df: pd.DataFrame):

@@ -6,6 +6,7 @@ Konsol: sadece WARNING+ (varsayılan)
 Dosya : DEBUG+  (logs/cad.log)
 """
 
+
 from __future__ import annotations
 
 import os
@@ -14,6 +15,7 @@ import sys
 from logging_config import CadLogger
 
 logger = CadLogger.get("cad.main")
+
 
 
 def _bootstrap_logging() -> None:
@@ -62,10 +64,12 @@ def main() -> int:
         from app import CadApp
 
         app = CadApp(window)
-
+        
         logger.info("[3/3] Ana döngü başlıyor")
         window.run(app.frame, target_fps=60)
+        
         logger.info("[3/3] Ana döngü bitti")
+
 
     except KeyboardInterrupt:
         logger.info("Kullanıcı durdurdu (Ctrl+C)")

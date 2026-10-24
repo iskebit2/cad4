@@ -47,6 +47,8 @@ class S2KExporter:
     @classmethod
     def export(cls, project, selected_elements: Optional[List] = None) -> str:
         scene = project.scene
+        if scene is None:
+            return 'TABLE:  "PROGRAM CONTROL"\nEND TABLE DATA\n'
         used = cls._collect_used(scene, project, selected_elements)
 
         sections = [
@@ -215,17 +217,14 @@ class S2KExporter:
         # --- Restraint'li node'lar ---
         for node in getattr(scene, "nodes", {}).values():
             if not _include(node):
-                # Node seçili değilse yine de restraint varsa kullanılıyor say
-                # (frame/area/link tarafından zaten toplanmış olabilir)
-                pass
+                continue
             label = getattr(node, "label", None) or f"J{node.unique_id}"
             if label.startswith("W_NODE_"):
                 continue
             r = getattr(node, "restraint", None)
             if r and any(getattr(r, k, False) for k in
-                         ("ux", "uy", "uz", "rx", "ry", "rz")):
-                if sel_ids is None or _include(node):
-                    used_nodes.add(label)
+                        ("ux", "uy", "uz", "rx", "ry", "rz")):
+                used_nodes.add(label)
 
         # --- Node nokta yükleri ---
         for node in getattr(scene, "nodes", {}).values():

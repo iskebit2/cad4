@@ -38,7 +38,7 @@ class LoadDisplayPanel(BasePanel):
         self.on_clear_all = on_clear_all     # tüm WIND_* veya seçili pattern
 
         # --- State ---
-        self.show_loads = True
+        self.show_loads = False
 
         # Tip filtreleri
         self.show_frame_loads = True
@@ -64,6 +64,7 @@ class LoadDisplayPanel(BasePanel):
         self._pattern_signature = None
 
     # ------------------------------------------------------------------
+        
     def open(self, scene=None, renderer=None):
         if scene is not None:
             self.scene = scene

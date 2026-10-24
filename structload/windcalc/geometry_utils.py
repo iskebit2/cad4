@@ -210,7 +210,7 @@ def _split_by_line_2d(pts_2d, p1, p2, tol: float = EPS):
 
     area2 = _area2(poly)
     if abs(area2) <= tol:
-        print("Poligon alanı sıfıra çok yakın.")
+        logger.debug("Poligon alanı sıfıra çok yakın.")
         return empty, empty
         # raise ValueError("Poligon alanı sıfıra çok yakın.")
     ccw = area2 > 0

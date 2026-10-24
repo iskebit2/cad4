@@ -75,23 +75,23 @@ class WallLoadEngine:
         line_load_kn_m = self.line_load_kn_m()
         line_load_t_m = line_load_kn_m / 9.81
 
-        print("=" * 70)
-        print(f" DUVAR HESAP RAPORU: {self.wall_name}")
-        print("=" * 70)
-        print(f" Kat Yüksekliği   : {self.wall_height:.2f} m")
-        print(f" Kiriş Yüksekliği : {self.beam_depth:.2f} m")
-        print(f" Net Duvar Yük.   : {self.net_height:.2f} m")
-        print("-" * 70)
-        print(f"{'Katman Adı':<30} | {'Kalınlık':<10} | {'Birim Yük':<12} | {'Yüzey Yükü'}")
-        print("-" * 70)
+        logger.debug("=" * 70)
+        logger.debug(f" DUVAR HESAP RAPORU: {self.wall_name}")
+        logger.debug("=" * 70)
+        logger.debug(f" Kat Yüksekliği   : {self.wall_height:.2f} m")
+        logger.debug(f" Kiriş Yüksekliği : {self.beam_depth:.2f} m")
+        logger.debug(f" Net Duvar Yük.   : {self.net_height:.2f} m")
+        logger.debug("-" * 70)
+        logger.debug(f"{'Katman Adı':<30} | {'Kalınlık':<10} | {'Birim Yük':<12} | {'Yüzey Yükü'}")
+        logger.debug("-" * 70)
 
         for l in self.layers:
-            print(
+            logger.debug(
                 f"{l['label']:<30} | {l['thickness']:<10} | "
                 f"{l['unit_fmt']:<12} | {l['area_load']:.3f} kN/m²"
             )
 
-        print("-" * 70)
-        print(f" TOPLAM YÜZEY YÜKÜ (g_duvar) : {total_kn_m2:.3f} kN/m²")
-        print(f" KİRİŞ ÇİZGİSEL YÜKÜ (q_kiriş): {line_load_kn_m:.3f} kN/m  ({line_load_t_m:.3f} t/m)")
-        print("=" * 70 + "\n")
+        logger.debug("-" * 70)
+        logger.debug(f" TOPLAM YÜZEY YÜKÜ (g_duvar) : {total_kn_m2:.3f} kN/m²")
+        logger.debug(f" KİRİŞ ÇİZGİSEL YÜKÜ (q_kiriş): {line_load_kn_m:.3f} kN/m  ({line_load_t_m:.3f} t/m)")
+        logger.debug("=" * 70 + "\n")

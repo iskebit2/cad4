@@ -12,6 +12,7 @@ from typing import Optional, Dict, Any, List, Tuple, Type
 import typing
 
 import glm
+import numpy as np
 from data.seismic import get_tsc2018_site_coefficients
 # ============================================================================
 # RE-EXPORT (s2k_utils.py'nin beklediği tüm isimler)
@@ -27,6 +28,7 @@ from data.enums import (
     SectionType,
     SpectrumSourceType,
 )
+from data.unit_enums import DENSITY_STEEL
 
 __all__ = [
     # enums (re-export)
@@ -43,6 +45,27 @@ __all__ = [
     "SiteInformation", "SpectrumFunction", "StaticLoadAssignment",
 ]
 
+# domain/definition.py (başına)
+
+# ============================================================================
+# BİRİM SÖZLEŞMESİ (tek doğruluk kaynağı)
+# ============================================================================
+# Uzunluk      : mm
+# Kuvvet       : N
+# Gerilme      : MPa (= N/mm²)
+# Moment       : N·mm
+# Kütle        : kg   (yoğunluk kg/mm³ ise hacim mm³ → kg)
+# Yoğunluk     : kg/mm³
+# Yerçekimi ivmesi g : 9810 mm/s²
+#
+# Material.density [kg/mm³] — çelik 7.85e-6, beton 2.5e-6
+# Section.profile_params['Area'] [mm²]
+# Section.profile_params['I33','I22','J'] [mm⁴]
+# MassSource katkıları kg cinsinden; rapor ton'a çevirirken /1000.
+# ============================================================================
+
+
+
 # ============================================================================
 # MATERIAL
 # ============================================================================
@@ -51,16 +74,17 @@ class Material:
     name: str = "DEFAULT"
     mat_type: MatType = MatType.STEEL
     color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
-    E1: float = 2.0e8
-    E2: float = 2.0e8
-    E3: float = 2.0e8
-    G12: float = 7.7e7
-    G13: float = 7.7e7
-    G23: float = 7.7e7
+    E1: float = 2.1e5     # MPa (çelik 210 GPa)
+    E2: float = 2.1e5
+    E3: float = 2.1e5
+    G12: float = 8.1e4    # MPa (G = E / (2(1+ν)))
+    G13: float = 8.1e4
+    G23: float = 8.1e4
     nu12: float = 0.3
     nu13: float = 0.3
     nu23: float = 0.3
-    density: float = 7850
+    density: float = DENSITY_STEEL   # kg/mm³
+
     @property
     def E(self) -> float:
         return self.E1
@@ -77,7 +101,8 @@ DEFAULT_MATERIAL = Material(
     E1=2.1e8,
     G12=8.1e7,
     nu12=0.3,
-    density=7850
+    density=DENSITY_STEEL   # kg/mm³
+
 )
 # ============================================================================
 # SECTION
@@ -516,7 +541,6 @@ class FrameDistributedLoad:
         self.segments.clear()
 
     def to_sap_loads(self):
-        """Eski set yapısını korumak için, segmentleri ayrı FrameDistributedLoad nesnelerine açar."""
         out = []
         for seg in self.segments:
             out.append(FrameDistributedLoad(
@@ -524,10 +548,12 @@ class FrameDistributedLoad:
                 coord_sys=self.coord_sys,
                 load_dir=self.load_dir,
                 mode=self.mode,
+                force_or_moment=self.force_or_moment,
+                direction=self.direction,           # ← EKLENDİ
                 is_relative=self.is_relative,
                 coordinate_system=self.coordinate_system,
-                dist_type=self.dist_type,          # ← YENİ
-                segments=[seg]
+                dist_type=self.dist_type,
+                segments=[seg],
             ))
         return out
 
@@ -757,3 +783,25 @@ class SDSection:
     line_rebars: List[dict] = field(default_factory=list)
     rect_rebars: List[dict] = field(default_factory=list)
     fiber: dict = field(default_factory=dict)
+
+@dataclass
+class MassContribution:
+    """Tek bir kütle kaynağı. Rapor ve debug için."""
+    source_type: str      # "frame_self" | "frame_load" | "area_self" | ...
+    element_id: int
+    element_label: str
+    pattern: str          # "" self için
+    mass_kg: float
+
+@dataclass
+class MassAssembly:
+    """Kütle toplamanın tek çıkışı."""
+    num_dofs: int
+    M_global: np.ndarray              # köşegen, kg
+    node_masses: Dict[str, float]     # kg, key = scene.nodes anahtarı
+    contributions: List[MassContribution]
+    # Özet
+    total_self_kg: float = 0.0
+    total_dead_kg: float = 0.0
+    total_live_kg: float = 0.0
+    n_live: float = 0.3

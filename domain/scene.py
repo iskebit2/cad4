@@ -116,7 +116,13 @@ class Scene:
         if obj_type == ObjType.AREA:     return self.areas
         if obj_type == ObjType.LINK:     return self.links
         return None
-    
+
+    def get_element_by_label(self, label: str) -> Optional[Element]:
+        for elem in self.all_elements.values():
+            if str(elem.label) == str(label):
+                return elem
+        return None
+
     def get_element_by_id(self, unique_id: str) -> Optional[Element]:
         for elem in self.all_elements.values():
             if str(elem.unique_id) == str(unique_id):

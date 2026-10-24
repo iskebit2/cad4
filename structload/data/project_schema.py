@@ -231,7 +231,7 @@ def config_to_load_manager(config: dict, load_manager):
             )
             load_manager.add_definition(definition)
         except Exception as e:
-            print(f"[config_to_load_manager] '{d.get('id')}' atlandı: {e}")
+            logger.debug(f"[config_to_load_manager] '{d.get('id')}' atlandı: {e}")
 
     for elem_id, kinds in config.get("assignments", {}).items():
         for load_id in kinds.get("G", []):

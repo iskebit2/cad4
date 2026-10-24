@@ -22,6 +22,7 @@ import numpy as np
 
 from domain.plane import Plane, ASSOC_KINDS
 from domain.element import Node
+from ui.base_panel import BasePanel
 
 logger = CadLogger.get(__name__)
 
@@ -34,7 +35,7 @@ SRC_2PT = 1
 SRC_3PT = 2
 
 
-class PlaneManagerPanel:
+class PlaneManagerPanel(BasePanel):
 
     PANEL_W = 640
     PANEL_H = 720

@@ -893,7 +893,7 @@ class HazirYukPaneli(BoxLayout):
 
         # Detay aç/kapa
         self.detay_btn = Button(
-            text="▶ Detay", size_hint_x=0.30,
+            text="> Detay", size_hint_x=0.30,
             background_color=(0.30, 0.55, 0.75, 1),
         )
         self.detay_btn.bind(on_press=self.detay_toggle)
@@ -974,7 +974,7 @@ class HazirYukPaneli(BoxLayout):
         self.detay_kart.size_hint_x = 0.58
         self.detay_kart.width = 0  # size_hint_x kullanılıyor
         self.detay_kart.opacity = 1
-        self.detay_btn.text = "◀ Gizle"
+        self.detay_btn.text = "< Gizle"
 
     def detay_kapat(self):
         self._detay_acik = False
@@ -982,7 +982,7 @@ class HazirYukPaneli(BoxLayout):
         self.detay_kart.size_hint_x = None
         self.detay_kart.width = 0
         self.detay_kart.opacity = 0
-        self.detay_btn.text = "▶ Detay"
+        self.detay_btn.text = "> Detay"
 
     # ------------------------------------------------------------------
     # Kategori / liste
@@ -1941,9 +1941,9 @@ class RaporPaneli(BoxLayout):
     # ==========================================================
     def _debug_df_yazdir(self, instance):
         for i, df in enumerate(self._tables, 1):
-            print(f"\n===== Tablo {i}: {df.custom_title} =====")
-            print(df.to_string())
-            print(f"Shape: {df.shape}, Columns: {list(df.columns)}")
+            logger.debug(f"\n===== Tablo {i}: {df.custom_title} =====")
+            logger.debug(df.to_string())
+            logger.debug(f"Shape: {df.shape}, Columns: {list(df.columns)}")
 
 # ============================================================
 # DEAD / LIVE CONFIG EXPORT

@@ -7,7 +7,7 @@ from geometry.profile_generator import ProfileGenerator
 import mapbox_earcut as earcut
 from logging_config import CadLogger
 
-logger = CadLogger.get(__name__)
+# logger = CadLogger.get(__name__)
 
 
 def normalize(v):
@@ -45,13 +45,13 @@ class FrameBuilder:
         if getattr(section, 'sd_section', None) is not None:
             params["sd_section"] = section.sd_section
 
-        logger.debug(
-                        f"[FrameBuilder-DIAG] section='{section.name}' "
-                        f"type={section.profile_type} "
-                        f"sd={'VAR' if getattr(section, 'sd_section', None) else 'YOK'} "
-                        f"params_keys={list(params.keys())} "
-                        f"has_sd_in_params={'sd_section' in params}"
-                    )
+        # logger.debug(
+        #                 f"[FrameBuilder-DIAG] section='{section.name}' "
+        #                 f"type={section.profile_type} "
+        #                 f"sd={'VAR' if getattr(section, 'sd_section', None) else 'YOK'} "
+        #                 f"params_keys={list(params.keys())} "
+        #                 f"has_sd_in_params={'sd_section' in params}"
+        #             )
                             
         profile = self.profile_gen.get_profile(section.profile_type, params)
 

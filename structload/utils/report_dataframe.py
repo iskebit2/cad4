@@ -297,33 +297,33 @@ class ReportDataFrame(pd.DataFrame):
 
         raw_doc.add_paragraph()
 
-    def print(self) -> None:
+    def logger.debug(self) -> None:
         if self.custom_title:
-            print(f"\n{self.custom_title}")
-            print("-" * len(self.custom_title))
+            logger.debug(f"\n{self.custom_title}")
+            logger.debug("-" * len(self.custom_title))
 
         if self.custom_desc:
-            print(f"{self.custom_desc}\n")
+            logger.debug(f"{self.custom_desc}\n")
 
         if self.empty:
-            print("Veri yok")
+            logger.debug("Veri yok")
             return
 
-        print(" | ".join(str(col) for col in self.columns))
+        logger.debug(" | ".join(str(col) for col in self.columns))
 
         if self.column_descriptions:
-            print(
+            logger.debug(
                 " | ".join(
                     self.column_descriptions.get(col, "") for col in self.columns
                 )
             )
 
         if self.column_units:
-            print(
+            logger.debug(
                 " | ".join(
                     self.column_units.get(col, "") for col in self.columns
                 )
             )
 
         for _, row in self.iterrows():
-            print(" | ".join(self._format_row(row)))
+            logger.debug(" | ".join(self._format_row(row)))

@@ -152,7 +152,9 @@ class Project:
         path = Path(filepath)
         if not path.exists():
             return cls()
-        return load_project_file(path)
+        p = load_project_file(path)
+        p._migrate_materials()
+        return p
 
     def sync_grid_from_s2k_lines(self):
         """S2K'dan gelen ham grid_lines verilerini CAD4 GridConfig yapısına senkronize eder."""
@@ -179,3 +181,97 @@ class Project:
             self.grid.y_coords = sorted(list(set(ys)))
         if zs:
             self.grid.z_coords = sorted(list(set(zs)))
+
+    def _migrate_materials(self):
+        import logging
+        log = logging.getLogger(__name__)
+        logged = set()
+
+        def _fix_density(mat):
+            name = getattr(mat, "name", "?")
+            rho = float(mat.density or 0.0)
+            if rho <= 0 or 1e-8 <= rho <= 1e-4:
+                return
+            if 1e-13 < rho < 1e-8:
+                new = rho * 1000.0
+            elif 1e-3 <= rho < 1.0:
+                new = rho * 9.80665e-6
+            elif 1.0 <= rho < 25.0:
+                new = rho * 1e-6
+            elif 100.0 <= rho < 25000.0:
+                new = rho * 1e-9
+            else:
+                return
+            mat.density = new
+            if ("density", name) not in logged:
+                log.info("[Migrate] %s.density: %g → %g kg/mm³", name, rho, new)
+                logged.add(("density", name))
+            
+
+        def _fix_E1(mat):
+            e = float(mat.E1 or 0.0)
+            if e <= 0:
+                return
+            if 1e3 <= e <= 5e5:                           # MPa (max 500 GPa)
+                return
+            if 5e5 < e <= 1e10:
+                new = e * 9.80665e-3                      # tonf/m² → MPa
+            elif e > 1e10:
+                new = e * 6.89476e-3                      # psi → MPa
+            else:
+                return
+            mat.E1 = new
+            mat.E2 = new
+            mat.E3 = new
+            log.warning("[Migrate] %s.E1: %g → %g MPa",
+                        getattr(mat, "name", "?"), e, new)
+
+        def _fix_G12(mat):
+            g = float(mat.G12 or 0.0)
+            if g <= 0:
+                return
+            if 1e3 <= g <= 5e5:
+                return
+            if 5e5 < g <= 1e10:
+                new = g * 9.80665e-3
+            elif g > 1e10:
+                new = g * 6.89476e-3
+            else:
+                return
+            mat.G12 = new
+            mat.G13 = new
+            mat.G23 = new
+            log.warning("[Migrate] %s.G12: %g → %g MPa",
+                        getattr(mat, "name", "?"), g, new)
+
+        def _fix(mat):
+            if mat is None:
+                return
+            _fix_density(mat)
+            _fix_E1(mat)
+            _fix_G12(mat)
+
+        # ---------- tüm Material kopyalarını bul ----------
+        
+
+        def _visit(mat):
+            if mat is None or id(mat) in _seen:
+                return
+            _seen.add(id(mat))
+            _fix_density(mat)
+            _fix_E1(mat)
+            _fix_G12(mat)
+
+        _seen = set()
+        for m in self.materials.values():
+            _visit(m)
+        for sec in self.sections.values():
+            _visit(getattr(sec, "material", None))
+        for frame in self.scene.frames.values():
+            sec = getattr(frame, "section", None)
+            _visit(getattr(sec, "material", None) if sec else None)
+        for area in self.scene.areas.values():
+            _visit(getattr(area, "material", None))
+
+        if _seen:
+            log.info("[Migrate] %d Material nesnesi işlendi", len(_seen))

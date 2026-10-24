@@ -231,6 +231,7 @@ class S2KLoader:
 
         self.units = ctx.units
         project = build_scene_into_project(ctx, project)
+        project._migrate_materials()
         logger.info("[Loader Debug] Model yükleme ve inşa süreci tamamlandı.")
         
         return project

@@ -130,10 +130,10 @@ class cSap:
             
             self.SapModel = self.SapObject.SapModel
             
-            print("SAP2000 bağlantısı başarılı")
-            print(self.get_model_info())
+            logger.debug("SAP2000 bağlantısı başarılı")
+            logger.debug(self.get_model_info())
         except Exception as e:
-            print(f"Bağlantı hatası: {str(e)}")
+            logger.debug(f"Bağlantı hatası: {str(e)}")
             self.SapModel = None
 
     # --------------------------------------------------
@@ -152,7 +152,7 @@ class cSap:
             info['Filename'] = self.SapModel.GetModelFilename()
             info['Locked'] = self.SapModel.GetModelIsLocked()
         except Exception as e:
-            print(f"Bilgi alınamadı: {str(e)}")
+            logger.debug(f"Bilgi alınamadı: {str(e)}")
         return info
     
     def refresh_view(self):
@@ -245,7 +245,7 @@ class cSap:
                 type_id = obj_type
             
             if type_id not in OBJECT_TYPE_MAP:
-                print(f"Geçersiz type_id: {type_id}")
+                logger.debug(f"Geçersiz type_id: {type_id}")
                 return None
             
             # Clear selection first if needed
@@ -268,11 +268,11 @@ class cSap:
             elif obj_type_str == "Link":
                 return self.SapModel.LinkObj.SetSelected(name, selected)
             else:
-                print(f"Desteklenmeyen obj_type: {obj_type_str}")
+                logger.debug(f"Desteklenmeyen obj_type: {obj_type_str}")
                 return None
                 
         except Exception as e:
-            print(f"Seçim hatası (type: {obj_type}, name: {name}): {e}")
+            logger.debug(f"Seçim hatası (type: {obj_type}, name: {name}): {e}")
             return None
         
     def select_multiple(self, obj_type, names: list, clear_selection: bool = True):
@@ -407,7 +407,7 @@ class cSap:
             raise RuntimeError("Model kilitli, koordinat değiştirilemez")
         
         ret = self.SapModel.EditPoint.ChangeCoordinates_1(name, float(x), float(y), float(z))
-        print(name, float(x), float(y), float(z),"ChangeCoordinates_1 ret", ret)
+        logger.debug(name, float(x), float(y), float(z),"ChangeCoordinates_1 ret", ret)
         if ret != 0:
             raise RuntimeError(f"ChangeCoordinates_1 başarısız (Point='{name}', ret={ret})")
     
@@ -494,7 +494,7 @@ class cSap:
     def get_frame_length(self, name: str) -> float:
         """Çubuğun gerçek 3D uzunluğunu döndürür"""
         pts = self.get_frame_endpoints(name)
-        print("pts", pts)
+        logger.debug("pts", pts)
         p1, p2 = pts[0], pts[1]
         return float(np.linalg.norm(p2 - p1))
     
@@ -856,14 +856,14 @@ class cSap:
         p2_name = self.add_point_cartesian_safe(Q)
         
         if p1_name is None or p2_name is None:
-            print("Nokta oluşturma başarısız, bağlantı oluşturulmadı.")
+            logger.debug("Nokta oluşturma başarısız, bağlantı oluşturulmadı.")
             return None
         
         try:
             ret = self.SapModel.LinkObj.AddByPoint(p1_name, p2_name, link_name)
             return ret
         except Exception as e:
-            print(f"Bağlantı oluşturma hatası: {e}")
+            logger.debug(f"Bağlantı oluşturma hatası: {e}")
             return None
     
     # --------------------------------------------------
@@ -925,7 +925,7 @@ class cSap:
     def read_table(self, table_key: str, case_names: Optional[List[str]] = None, combo_names: Optional[List[str]] = None, numerics:  Optional[Dict] = None) -> List:
         """SAP2000 tablosunu pandas DataFrame olarak okur"""
         if not self.SapModel:
-            print("SAPModel bağlantısı yok")
+            logger.debug("SAPModel bağlantısı yok")
             return []
         
     

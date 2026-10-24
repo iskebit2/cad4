@@ -15,6 +15,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union, get_origin, get_args, get_type_hints
 
 import imgui
+from ui.base_panel import BasePanel
 from ui.widgets.color_picker import color_edit3
 from domain.definition import (
     Material, Section, LoadPattern, LoadCase,
@@ -167,7 +168,7 @@ _DEFAULT_SECTION_PARAMS: Dict[SectionType, Dict[str, float]] = {
 # ============================================================================
 # PANEL
 # ============================================================================
-class DefinitionPanel:
+class DefinitionPanel(BasePanel):
     def __init__(self):
         self.visible = False
         self.app = None

@@ -633,7 +633,7 @@ def create_meta_tables(pdata: dict) -> list:
     try:
         tables.append(tablo_ahsap_mekanik(pdata))
     except Exception as e:
-        print(f"⚠️  Ahşap mekanik: {e}")
+        logger.debug(f"⚠️  Ahşap mekanik: {e}")
 
     # --- 6-8: Yük tabloları (özet + detay) ---
     reports = parse_project_loads(pdata)

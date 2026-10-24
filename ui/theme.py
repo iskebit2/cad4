@@ -22,7 +22,7 @@ def _make_glyph_ranges():
         0x2000, 0x206F,  # Noktalama
         0x2190, 0x21FF,  # Oklar
         0x25A0, 0x25FF,  # Geometrik Şekiller (▲, ▼, vb.)
-        0x25B0, 0x25DF,  # ▲, ▶, ▼, ◀ ok varyasyonları ve bloklar
+        0x25B0, 0x25DF,  # ▲, >, ▼, < ok varyasyonları ve bloklar
         0
     ]
     _PERSISTENT_GLYPH_RANGES = imgui.core.GlyphRanges(ranges)

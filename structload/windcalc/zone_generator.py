@@ -827,7 +827,7 @@ def _analysis_all_zones(all_surfaces, e):
             for z in surf_zones
         ]
 
-        # print(
+        # logger.debug(
         #     f"{surf.name} "
         #     f"{surf.surface_type.value} "
         #     f"wind_relation={surf.wind_relation.value} "

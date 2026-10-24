@@ -59,7 +59,25 @@ LENGTH_TO_MM: Dict[str, float] = {
 TEMP_UNITS = {"C", "F"}
 
 # Yerçekimi ivmesi (mm/s²)
-G_MM_S2 = 9806.65
+G_MM_S2 = 9.80665
+KG_PER_TON = 1000.0
+
+# Yoğunluklar (kg/mm³)
+DENSITY_STEEL    = 7.85e-6
+DENSITY_CONCRETE = 2.50e-6
+DENSITY_ALUMINUM = 2.70e-6
+DENSITY_TIMBER   = 0.60e-6
+
+
+def kg_to_ton(kg: float) -> float:
+    return kg / KG_PER_TON
+
+def ton_to_kg(t: float) -> float:
+    return t * KG_PER_TON
+
+def mass_to_weight_kN(mass_kg: float) -> float:
+    """kg → kN ağırlık (g=9.80665 m/s²)."""
+    return mass_kg * G_MM_S2 / 1e6
 
 
 @dataclass(frozen=True)
@@ -99,12 +117,8 @@ class UnitDef:
 
     @property
     def density_to_kg_per_mm3(self) -> float:
-        """Yoğunluk: F / L³ → kg / mm³.
-        SAP2000 'UnitMass' genellikle F/L³ olarak verir;
-        kg/mm³ = (F_to_N / g_m_s2) / (L_to_mm)³ * 1000³ ... dikkat!
-        Aşağıdaki formül: (F_to_N / 9.80665) kg / (L_to_mm)³ mm³.
-        """
-        return (self.force_to_N / 9.80665) / (self.length_to_mm ** 3)
+        """SAP2000 UnitMass (F·s²/L⁴) → kg/mm³ çarpanı."""
+        return self.force_to_N * 1000.0 / (self.length_to_mm ** 4)
 
     @property
     def mass_to_kg(self) -> float:
@@ -123,6 +137,8 @@ class UnitDef:
             return v * 5.0 / 9.0
         return v
 
+    def density(self, v: float) -> float:
+        return float(v) * self.unit_def.density_to_kg_per_mm3
 
 class UnitSystem(IntEnum):
     LB_IN = 1

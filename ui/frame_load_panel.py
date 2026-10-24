@@ -12,9 +12,10 @@ from typing import List, Optional, Callable
 from data.enums import SAP_DIR_LABELS
 from domain.definition import FrameDistributedLoad, LoadSegment
 from domain.element import Frame
+from ui.base_panel import BasePanel
 
 
-class FrameLoadPanel:
+class FrameLoadPanel(BasePanel):
     CANVAS_WIDTH = 620
     CANVAS_HEIGHT = 300
     CANVAS_PADDING = 55
@@ -57,14 +58,18 @@ class FrameLoadPanel:
     # ------------------------------------------------------------------
     # PUBLIC
     # ------------------------------------------------------------------
-    def open(self, patterns: List[str] = None, target_frames: List[Frame] = None):
-        self.visible = True
+    def set_context(self, ctx):
+        frames = ctx.get("selection_frames") or []
+        patterns = ctx.get("patterns") or []
         if patterns:
             self.available_patterns = patterns
-            if self.pattern_name not in patterns and patterns:
+            if self.pattern_name not in patterns:
                 self.pattern_name = patterns[0]
-        self.target_frames = target_frames or []
-        self._load_from_target()
+        self.set_target_frames(frames)
+            
+    def open(self, patterns: List[str] = None, target_frames: List[Frame] = None):
+        self.visible = True
+        
 
     def close(self):
         self.visible = False
@@ -195,6 +200,7 @@ class FrameLoadPanel:
 
     # ------------------------------------------------------------------
     def _draw_header(self):
+        
         imgui.text_colored("Hedef Frame'ler:", 0.7, 0.8, 0.9, 1.0)
         if not self.target_frames:
             imgui.same_line()
@@ -520,70 +526,79 @@ class FrameLoadPanel:
 
         imgui.same_line()
         imgui.text_colored(f"({len(self.active_set.segments)} segment)",
-                           0.6, 0.6, 0.7, 1.0)
+                        0.6, 0.6, 0.7, 1.0)
 
-        imgui.begin_child("seg_list", 0, 0, True)
+        # --- Tablo başlangıcı ---
+        table_flags = 0
+        # pyimgui'de mevcut olanları dene (varsa)
+        if hasattr(imgui, 'TABLE_BORDERS'):
+            table_flags |= imgui.TABLE_BORDERS
+        if hasattr(imgui, 'TABLE_ROW_BACKGROUND'):
+            table_flags |= imgui.TABLE_ROW_BACKGROUND
+        if hasattr(imgui, 'TABLE_SIZING_STRETCH_PROP'):
+            table_flags |= imgui.TABLE_SIZING_STRETCH_PROP
 
-        avail = imgui.get_content_region_available_width()
-        col_idx_w = 32
-        col_x_w = (avail - col_idx_w - 40) * 0.22
-        col_q_w = (avail - col_idx_w - 40) * 0.28
+        if not imgui.begin_table("seg_table", 5, table_flags):
+            return
 
-        imgui.columns(5, "seg_cols", True)
-        imgui.set_column_width(0, col_idx_w)
-        imgui.set_column_width(1, col_x_w)
-        imgui.set_column_width(2, col_x_w)
-        imgui.set_column_width(3, col_q_w)
-        imgui.set_column_width(4, col_q_w)
+        imgui.table_setup_column("#",        imgui.TABLE_COLUMN_WIDTH_FIXED, 36)
+        imgui.table_setup_column("x1 (rel)", imgui.TABLE_COLUMN_WIDTH_STRETCH)
+        imgui.table_setup_column("x2 (rel)", imgui.TABLE_COLUMN_WIDTH_STRETCH)
+        imgui.table_setup_column("q1",       imgui.TABLE_COLUMN_WIDTH_STRETCH)
+        imgui.table_setup_column("q2",       imgui.TABLE_COLUMN_WIDTH_STRETCH)
 
-        imgui.text("#"); imgui.next_column()
-        imgui.text("x1 (rel)"); imgui.next_column()
-        imgui.text("x2 (rel)"); imgui.next_column()
-        imgui.text("q1"); imgui.next_column()
-        imgui.text("q2"); imgui.next_column()
+        imgui.table_headers_row()
 
         for i, seg in enumerate(self.active_set.segments):
             imgui.push_id(f"seg_{i}")
+            imgui.table_next_row()
 
-            if i == self.selected_segment_idx:
-                imgui.push_style_color(imgui.COLOR_TEXT, 0.4, 1.0, 0.5, 1.0)
-
-            if imgui.selectable(f"{i+1}", i == self.selected_segment_idx,
-                                width=col_idx_w - 4)[0]:
+            # --- Kolon 0: seçim butonu ---
+            imgui.table_set_column_index(0)
+            if imgui.selectable(
+                f"{i + 1}",
+                i == self.selected_segment_idx,
+                imgui.SELECTABLE_SPAN_ALL_COLUMNS if False else 0,
+            )[0]:
                 self.selected_segment_idx = i
-            imgui.next_column()
 
+            # --- Kolon 1: x1 ---
+            imgui.table_set_column_index(1)
+            imgui.push_item_width(-1)
             ch1, v1 = imgui.input_float("##x1", seg.x1, 0.01, 0.05, "%.3f")
             if ch1:
                 seg.x1 = max(0.0, min(seg.x2 - 0.001, v1))
-            imgui.next_column()
+            imgui.pop_item_width()
 
+            # --- Kolon 2: x2 ---
+            imgui.table_set_column_index(2)
+            imgui.push_item_width(-1)
             ch2, v2 = imgui.input_float("##x2", seg.x2, 0.01, 0.05, "%.3f")
             if ch2:
                 seg.x2 = max(seg.x1 + 0.001, min(1.0, v2))
-            imgui.next_column()
+            imgui.pop_item_width()
 
+            # --- Kolon 3: q1 ---
+            imgui.table_set_column_index(3)
+            imgui.push_item_width(-1)
             cq1, w1 = imgui.input_float("##q1", seg.q1, 0.1, 1.0, "%.3f")
             if cq1:
                 seg.q1 = w1
                 self._update_q_range()
-            imgui.next_column()
+            imgui.pop_item_width()
 
+            # --- Kolon 4: q2 ---
+            imgui.table_set_column_index(4)
+            imgui.push_item_width(-1)
             cq2, w2 = imgui.input_float("##q2", seg.q2, 0.1, 1.0, "%.3f")
             if cq2:
                 seg.q2 = w2
                 self._update_q_range()
-            imgui.next_column()
-
             imgui.pop_item_width()
-
-            if i == self.selected_segment_idx:
-                imgui.pop_style_color(1)
 
             imgui.pop_id()
 
-        imgui.columns(1)
-        imgui.end_child()
+        imgui.end_table()
 
     def _add_segment_after_selected(self):
         segs = self.active_set.segments
@@ -638,8 +653,7 @@ class FrameLoadPanel:
 
         imgui.same_line()
         if imgui.button("Hedefi Yenile", 130, 34):
-            if callable(self.on_refresh_targets):
-                self.on_refresh_targets()
+            self.refresh_targets()
 
         imgui.spacing()
         if not self.target_frames:
@@ -666,3 +680,23 @@ class FrameLoadPanel:
 
         if callable(self.on_apply):
             self.on_apply(self.target_frames, self.active_set)
+
+    def refresh_targets(self):
+        """Aktif seçimi sahne üzerinden yeniden oku."""
+        app = getattr(self, "app", None)
+        if not app or not getattr(app, "engine", None):
+            return
+        scn = app.engine.scene
+        if scn is None:
+            return
+        sel = scn.get_selected()
+        self.set_target_frames([e for e in sel if isinstance(e, Frame)])
+
+    def on_scene_selection_changed(self, selected):
+        """CadApp seçim değiştiğinde bunu çağırır (opsiyonel hook)."""
+        frames = [e for e in selected if isinstance(e, Frame)]
+        if not frames:
+            return
+        # Hedef listesini güncelle, ama mevcut düzenlemeyi KORU
+        self.target_frames = frames
+        # _load_from_target ÇAĞIRMA — kullanıcı çalışması kaybolmasın

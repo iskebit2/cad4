@@ -17,6 +17,7 @@ from inspector.controller import InspectorController
 from inspector.widgets.base import DrawContext
 from inspector.widgets.group import GroupDrawer
 
+
 logger = CadLogger.get(__name__)
 
 # ----------------------------------------------------------------------
@@ -175,6 +176,10 @@ class InspectorWindow:
     # ==================================================================
     # Dış API
     # ==================================================================
+    def set_context(self, ctx: dict):
+        for k, v in ctx.items():
+            setattr(self, k, v)
+            
     def open(self):
         self.visible = True
         self._first_open = True
@@ -190,14 +195,30 @@ class InspectorWindow:
 
     def set_scene(self, scene):
         self.scene = scene
-        self.controller.scene = scene
+        if self.controller is not None:
+            if hasattr(self.controller, "scene"):
+                self.controller.scene = scene
+            cset = getattr(self.controller, "set_scene", None)
+            if callable(cset):
+                cset(scene)
+
+        # --- View state sıfırla ---
+        self._tree_filter = ""
+        self._tree_open_groups.clear()
+        self._form_open_groups.clear()
+        self._scroll_to_id = None
+
+        if hasattr(self, "set_selection"):
+            self.set_selection([])
+
+        self.refresh()
 
     def set_catalog(self, catalog):
         self.catalog = catalog
         self.controller.catalog = catalog
 
     def set_selection(self, elements: List[Any]):
-        self.filter_type = None
+        self.controller.set_filter_type(None)   # controller'ın filtresini sıfırla
         self.controller.set_selection(elements)
         self._form_open_groups.clear()
         for el in (elements or []):
@@ -235,7 +256,8 @@ class InspectorWindow:
             logger.exception("sel_mgr senkron hatası")
 
     def refresh(self):
-        self.controller.refresh_from_scene()
+        if self.controller is not None:
+            self.controller.refresh_from_scene()
 
     # ==================================================================
     # Draw — ana giriş
@@ -306,7 +328,8 @@ class InspectorWindow:
 
     # ------------------------------------------------------------------
     def _draw_tree(self):
-        if imgui.button("◀" if self._left_open else "▶"):
+        # ("<" if self._left_open else ">")
+        if imgui.button("<" if self._left_open else ">"):
             self._left_open = not self._left_open
         imgui.same_line()
         imgui.text_disabled("Elements")
@@ -332,13 +355,12 @@ class InspectorWindow:
         if imgui.is_window_focused() and imgui.get_io().key_ctrl and imgui.is_key_pressed(imgui.get_key_index(imgui.KEY_F)):
             imgui.set_keyboard_focus_here()
 
+        flt = self._tree_filter.strip().lower()
+
         # Enter ile ilk eşleşmeyi seç
         if imgui.is_item_focused() and imgui.is_key_pressed(imgui.get_key_index(imgui.KEY_ENTER)):
             self._select_first_match(flt)
-            
-        flt = self._tree_filter.strip().lower()
 
-        # filtre boşsa hepsi açık; değilse tüm gruplar açık başlasın
         force_open = bool(flt)
         self._draw_filtered_groups(flt, force_open)
 
@@ -427,14 +449,7 @@ class InspectorWindow:
         self.set_selection([el])
 
     def _draw_form(self):
-        """
-        Sağ form — seçili element(ler)in schema'sını widget'lara devreder.
-
-        Akış:
-            1. Boş seçim -> mesaj
-            2. Başlık bilgisi (tip + label + dirty + yenile)
-            3. Schema gruplarını GroupDrawer ile çiz
-        """
+        
         c = self.controller
 
         # ------------------------------------------------------------------
@@ -452,7 +467,7 @@ class InspectorWindow:
         # --- Assoc filtresi badge ---
         if c.filter_assoc_only is not None:
             imgui.text_colored(
-                f"⚑ Plane assoc filtresi: {c.filter_assoc_only.name}",
+                f"! Plane assoc filtresi: {c.filter_assoc_only.name}",
                 0.85, 0.75, 0.35, 1.0,
             )
             imgui.same_line()
@@ -537,7 +552,7 @@ class InspectorWindow:
 
         # Sağ: yenile
         imgui.same_line(position=imgui.get_content_region_available_width() - 30)
-        if imgui.button("↻##refresh"):
+        if imgui.button("_##refresh"):
             self.refresh()
         if imgui.is_item_hovered():
             imgui.set_tooltip("Sahneden güncel değerleri tekrar oku")
@@ -636,11 +651,11 @@ class InspectorWindow:
             pass
 
     def _draw_assoc_filter_bar(self):
-        """Assoc filtresi: [⚑ Plane: P1 ▾] veya [⚑ Plane: (tümü) ▾]"""
+        """Assoc filtresi: [! Plane: P1 ▾] veya [! Plane: (tümü) ▾]"""
         c = self.controller
 
         imgui.align_text_to_frame_padding()
-        imgui.text_colored("⚑ Plane assoc:", 0.85, 0.75, 0.35, 1.0)
+        imgui.text_colored("! Plane assoc:", 0.85, 0.75, 0.35, 1.0)
         imgui.same_line()
 
         planes = c.list_planes()
@@ -668,7 +683,7 @@ class InspectorWindow:
                 c.set_filter_assoc_only(planes[new_idx - 1])
 
         imgui.same_line()
-        if imgui.small_button("↻##refresh_assoc"):
+        if imgui.small_button("_##refresh_assoc"):
             # Assoc'u yenile (sahne değişmişse)
             if c.filter_assoc_only is not None and c.scene is not None:
                 c.filter_assoc_only.refresh_assoc(c.scene)

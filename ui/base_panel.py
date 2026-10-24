@@ -1,188 +1,78 @@
 # ui/base_panel.py
-"""
-BasePanel — Tüm ImGui panellerinin ortak iskeleti.
+from __future__ import annotations
 
-Alt sınıflar sadece draw_content() yazar. Base:
-  - begin/end + başlık + kapatma butonu
-  - ilk açılış konumu (FIRST_USE_EVER)
-  - focus/hover durumu (is_hovered, is_focused)
-  - focus renk efekti (başlık rengi)
-  - hata yakalama (draw_content'te exception)
-  - genişlik/yükseklik yönetimi
-  - aç/kapa API
-
-Kullanım:
-    class MyPanel(BasePanel):
-        def __init__(self):
-            super().__init__(title="Panelim", width=380, height=560,
-                             pos_first_use=(500, 100))
-        def draw_content(self):
-            imgui.text("Merhaba")
-            if imgui.button("Tıkla"):
-                ...
-
-    panel = MyPanel()
-    panel.open()
-    # her frame: panel.draw()
-"""
 from typing import Optional, Tuple
-
-import imgui
 
 
 class BasePanel:
+    """
+    Tüm panellerin ortak tabanı.
 
-    # Focus renk tonları — alt sınıf override edebilir
-    TITLE_NORMAL       = (0.10, 0.13, 0.18, 1.00)
-    TITLE_NORMAL_ACT   = (0.16, 0.20, 0.28, 1.00)
-    TITLE_HOVERED      = (0.15, 0.30, 0.45, 1.00)
-    TITLE_HOVERED_ACT  = (0.20, 0.40, 0.60, 1.00)
-    TITLE_FOCUSED      = (0.20, 0.50, 0.75, 1.00)
-    TITLE_FOCUSED_ACT  = (0.25, 0.60, 0.90, 1.00)
+    - Görünürlük, pencere boyutu/konumu, toolbar entegrasyonu burada.
+    - `set_context(ctx)` varsayılanı ctx'i attribute olarak yazar.
+    - Alt sınıflar `super().__init__(title=..., width=..., height=..., pos_first_use=...)`
+      çağırıp kendi alanlarını ekler.
+    """
+
+    visible: bool = False
+    app = None
 
     def __init__(
         self,
         title: str = "Panel",
-        width: float = 380.0,
-        height: float = 560.0,
-        pos_first_use: Optional[Tuple[float, float]] = None,
-        closable: bool = True,
-        window_flags: int = 0,
+        width: float = 420.0,
+        height: float = 480.0,
+        pos_first_use: Tuple[float, float] = (100.0, 100.0),
+        **kwargs,                       # alt sınıf ekstra parametre geçirirse sessizce yut
     ):
         self.title = title
-        self.width = width
-        self.height = height
-        self.pos_first_use = pos_first_use
-        self.closable = closable
-        self.window_flags = window_flags
+        self.width = float(width)
+        self.height = float(height)
+        self.pos_first_use = tuple(pos_first_use)
 
-        # State
+        self.app = None
         self.visible = False
-        self.is_hovered = False
-        self.is_focused = False
-        self._first_open = True
 
-        # Özel: alt sınıfların değiştirebileceği ayarlar
-        self._want_close = False   # bu frame'de X'e basıldı mı?
+        # alt sınıf __init__ sonuna eklerken kullanabilir
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
-    # ==================================================================
+    # ------------------------------------------------------------------
     # Yaşam döngüsü
-    # ==================================================================
-    def open(self):
-        """Paneli aç. Alt sınıflar override edebilir (scene vermek vs.)."""
+    # ------------------------------------------------------------------
+    def open(self, **kwargs):
         self.visible = True
-        self._first_open = True
 
     def close(self):
-        """Paneli kapat."""
         self.visible = False
-        self.is_hovered = False
-        self.is_focused = False
 
-    def toggle(self):
-        if self.visible:
-            self.close()
-        else:
-            self.open()
+    # ------------------------------------------------------------------
+    # Bağlam
+    # ------------------------------------------------------------------
+    def set_context(self, ctx: dict):
+        for k, v in (ctx or {}).items():
+            setattr(self, k, v)
 
-    # ==================================================================
-    # Ana draw — begin/end burada
-    # ==================================================================
+    # ------------------------------------------------------------------
+    # ImGui çizim iskeleti — alt sınıf `draw_content()` yazar
+    # ------------------------------------------------------------------
     def draw(self):
         if not self.visible:
             return
+        import imgui
 
-        self._position_window()
-        
-        pushed_colors = False
-        try:
-            self._push_title_colors()
-            pushed_colors = True
+        imgui.set_next_window_size(self.width, self.height, imgui.FIRST_USE_EVER)
+        imgui.set_next_window_position(*self.pos_first_use, imgui.FIRST_USE_EVER)
 
-            expanded, opened = imgui.begin(self.title, self.closable,
-                                           self.window_flags)
-
-            self._pop_title_colors()
-            pushed_colors = False
-
-            if not opened:
-                # Kullanıcı X'e bastı
-                self._want_close = True
-                self.close()
-                imgui.end()
-                return
-
-            self._want_close = False
-
-            # --- İçerik (alt sınıf) ---
-            self.draw_content()
-
-            # --- Focus state (end'den önce) ---
-            self.is_hovered = imgui.is_window_hovered()
-            self.is_focused = imgui.is_window_focused()
-
+        expanded, opened = imgui.begin(self.title, True)
+        if not opened:
+            self.close()
             imgui.end()
-
-        except Exception:
-            if pushed_colors:
-                try:
-                    self._pop_title_colors()
-                except Exception:
-                    pass
-            import traceback
-            traceback.print_exc()
-
-    # ==================================================================
-    # Alt sınıf override eder
-    # ==================================================================
-    def draw_content(self):
-        imgui.text(f"{self.title} — içerik yok")
-
-    # ==================================================================
-    # İç yardımcılar
-    # ==================================================================
-    def _position_window(self):
-        if not self._first_open:
             return
-        if self.pos_first_use is not None:
-            imgui.set_next_window_position(
-                self.pos_first_use[0], self.pos_first_use[1],
-                condition=imgui.FIRST_USE_EVER,
-            )
-        imgui.set_next_window_size(
-            self.width, self.height,
-            condition=imgui.FIRST_USE_EVER,
-        )
-        self._first_open = False
+        if expanded:
+            self.draw_content()
+        imgui.end()
 
-    def _push_title_colors(self):
-        if self.is_focused:
-            imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND,
-                                   *self.TITLE_FOCUSED)
-            imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND_ACTIVE,
-                                   *self.TITLE_FOCUSED_ACT)
-        elif self.is_hovered:
-            imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND,
-                                   *self.TITLE_HOVERED)
-            imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND_ACTIVE,
-                                   *self.TITLE_HOVERED_ACT)
-        else:
-            imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND,
-                                   *self.TITLE_NORMAL)
-            imgui.push_style_color(imgui.COLOR_TITLE_BACKGROUND_ACTIVE,
-                                   *self.TITLE_NORMAL_ACT)
-
-    def _pop_title_colors(self):
-        imgui.pop_style_color(2)
-
-    # ==================================================================
-    # Yardımcı metotlar — alt sınıflar kullanabilir
-    # ==================================================================
-    @staticmethod
-    def ascii_arrow(is_open: bool) -> str:
-        """Genişletilmiş şık ok işaretleri."""
-        return "▼" if is_open else ">"  # veya  "▾" ve "▸" 
-
-    @staticmethod
-    def ascii_check(checked: bool) -> str:
-        return "[x]" if checked else "[ ]"
+    def draw_content(self):
+        """Alt sınıf override eder."""
+        pass

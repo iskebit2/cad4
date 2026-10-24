@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .mass_source import G_MM_S2
+from data.unit_enums import G_MM_S2
 from .solver import ModalResult
 
 

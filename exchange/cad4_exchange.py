@@ -473,10 +473,10 @@ if __name__ == "__main__":
 
     bridge = CAD4AutoCADBridge()
     if bridge.connect():
-        print("Bağlantı OK")
+        logger.debug("Bağlantı OK")
         counts = bridge.export_scene(scene)
-        print("Export:", counts)
+        logger.debug("Export:", counts)
 
         input("AutoCAD'de seçim yapıp ENTER'a basın (import testi)...")
         counts2 = bridge.import_selected_into(scene, unit_factor=1.0)
-        print("Import:", counts2)
+        logger.debug("Import:", counts2)

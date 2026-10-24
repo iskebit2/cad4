@@ -32,11 +32,15 @@ class TBDYSpectrum:
         self.R = R
         self.D = D
         self.I = I
+
+    def get_sa(self, T: float) -> float:
+        """Alias for S_ra — modal_analysis uyumu için."""
+        return self.S_ra(T)
     
     def S_ae(self, T):
         """Yatay elastik spektral ivme (g)."""
         if T <= 0:
-            T = 1e-6
+            return 0.4 * self.S_DS
         
         if T <= self.T_A:
             return (0.4 + 0.6 * T / self.T_A) * self.S_DS

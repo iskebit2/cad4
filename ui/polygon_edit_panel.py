@@ -121,7 +121,7 @@ class PolygonEditPanel(BasePanel):
         if imgui.button("↺ 90", width=50, height=24):
             self.view2d.rotate_view(-90)
         imgui.same_line()
-        if imgui.button("↻ 90", width=50, height=24):
+        if imgui.button("_ 90", width=50, height=24):
             self.view2d.rotate_view(90)
         imgui.same_line()
         if imgui.button("⟲ Reset", width=60, height=24):

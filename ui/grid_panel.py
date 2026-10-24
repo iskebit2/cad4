@@ -54,7 +54,7 @@ class GridPanel(BasePanel):
         self.project = self._project()
         self.camera = self._camera()
         super().open()
-        print("self.project.grid:", self.project.grid)
+        logger.debug("self.project.grid:", self.project.grid)
         g = self.grid
         if g is not None:
             # Mevcut koordinatları string'e çevir[cite: 11]
@@ -153,8 +153,8 @@ class GridPanel(BasePanel):
                 y_list = [float(v.strip()) for v in self._y_text.split(",") if v.strip()]
                 z_list = [float(v.strip()) for v in self._z_text.split(",") if v.strip()]
                 
-                print(f"[Panel] Parse edilen X listesi: {x_list}")
-                print(f"[Panel] Parse edilen Y listesi: {y_list}")
+                logger.debug(f"[Panel] Parse edilen X listesi: {x_list}")
+                logger.debug(f"[Panel] Parse edilen Y listesi: {y_list}")
                 
                 # 1. Görsel Engine Grid'i güncelle
                 if g and hasattr(g, "set_coords"):
@@ -173,7 +173,7 @@ class GridPanel(BasePanel):
                     center, size = g.get_bounds()
                     camera.update_bounds(center, size)
             except Exception as e:
-                print(f"[Panel Hata] Uygula sırasında hata: {e}")
+                logger.debug(f"[Panel Hata] Uygula sırasında hata: {e}")
 
         imgui.spacing()
         imgui.separator()

@@ -19,7 +19,7 @@ from domain.definition import (
     AreaWindPressureLoad, AutoSeismicTSC2018, ComboItem, FrameDistributedLoad,
     FrameGravityLoad, FramePointLoad, FrameTemperatureLoad, GeneralProjectInfo,
     GridConfig, LinkProp, LinkPropLinear, LoadCase, LoadCombination, LoadManager,
-    LoadPattern, Material, ModalCase, PointLoad, ProjectConfig, ProjectInfo,
+    LoadPattern, LoadSegment, Material, ModalCase, PointLoad, ProjectConfig, ProjectInfo,
     ReportManager, ResponseSpectrumCase, ResponseSpectrumLoadAssignment, Restraint,
     Section, SeismicConfig, SiteInformation, SnowConfig, SpectrumFunction,
     StaticLoadAssignment, WindConfig, SectionCut, QuadDefinition
@@ -81,6 +81,17 @@ CLASS_REGISTRY: Dict[str, Type] = {
     "Link": Link,
     "Polygon": Polygon,
 }
+def _revive_load_segment(d):
+    if isinstance(d, LoadSegment):
+        return d
+    if isinstance(d, dict):
+        return LoadSegment(
+            x1=float(d.get("x1", 0.0)),
+            x2=float(d.get("x2", 1.0)),
+            q1=float(d.get("q1", 0.0)),
+            q2=float(d.get("q2", 0.0)),
+        )
+    return d
 
 def _encode_plane(p: Plane) -> dict:
     """Plane'i JSON-güvenli dict'e çevir (pending tuple key'leri liste olur)."""
@@ -241,7 +252,7 @@ class DomainJSONEncoder(json.JSONEncoder):
 
 def save_project_file(project: Any, path: Path) -> None:
     logger.info(f"[Save Debug] Proje diske yazılıyor: {path.name}")
-    print(f"[SERIALIZER DEBUG] Kaydedilen project.grid Y listesi: {project.grid.y_coords}")
+    logger.debug(f"[SERIALIZER DEBUG] Kaydedilen project.grid Y listesi: {project.grid.y_coords}")
     
     scene = project.scene
     scene_payload = {

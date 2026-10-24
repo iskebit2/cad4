@@ -174,9 +174,18 @@ class InspectorController:
         self.schema = []
 
     def refresh_from_scene(self):
-        """Seçili element'lerin güncel değerlerini sahne'den tekrar oku."""
-        if not self.selection.is_empty:
-            self.set_selection(self.selection.elements)
+        scn = getattr(self, "scene", None)
+        if scn is None:
+            self.clear()
+            return
+
+        # Seçim boşsa hiçbir şey yapma yerine — filtre ve seçim yeniden kur
+        if self.selection.is_empty:
+            # Ama schema da boş; sadece dirty flag temizle
+            return
+
+        # Seçim varsa yeniden kur (mevcut davranış)
+        self.set_selection(self.selection.elements)
 
     # ==================================================================
     # Düzenleme yaşam döngüsü

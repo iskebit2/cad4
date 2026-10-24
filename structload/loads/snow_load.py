@@ -127,4 +127,4 @@ if __name__ == "__main__":
         "Ct": 1.0
     }
     snow = SnowLoad(config)
-    print(snow.report())
+    logger.debug(snow.report())
