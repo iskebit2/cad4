@@ -1,0 +1,222 @@
+SAP2000 v25.3.1    25 Ekim 2026 10:08:23
+
+Table:  Assembled Joint Masses
+
+       Joint  MassSource          U1          U2          U3          R1          R2          R3     CenterX     CenterY     CenterZ
+                             N-s2/mm     N-s2/mm     N-s2/mm     N-mm-s2     N-mm-s2     N-mm-s2          mm          mm          mm
+           1     MSSSRC1       0.107       0.107       0.107           0           0           0           0           0           0
+           2     MSSSRC1       0.241       0.241       0.241           0           0           0           0           0        3000
+           3     MSSSRC1       0.241       0.241       0.241           0           0           0        6000           0        3000
+           4     MSSSRC1       0.241       0.241       0.241           0           0           0           0        6000        3000
+           5     MSSSRC1       0.107       0.107       0.107           0           0           0        6000           0           0
+           6     MSSSRC1       0.107       0.107       0.107           0           0           0           0        6000           0
+           7     MSSSRC1       0.107       0.107       0.107           0           0           0        6000        6000           0
+           8     MSSSRC1       0.241       0.241       0.241           0           0           0        6000        6000        3000
+  SumAccelUX     MSSSRC1       1.394           0           0           0           0           0        3000        3000      2077.7
+  SumAccelUY     MSSSRC1           0       1.394           0           0           0           0        3000        3000      2077.7
+  SumAccelUZ     MSSSRC1           0           0       1.394           0           0           0        3000        3000      2077.7
+
+
+Table:  Base Reactions
+
+  OutputCase    CaseType    StepType     StepNum    GlobalFX    GlobalFY    GlobalFZ    GlobalMX    GlobalMY    GlobalMZ     GlobalX     GlobalY     GlobalZ XCentroidFX YCentroidFX ZCentroidFX XCentroidFY YCentroidFY ZCentroidFY XCentroidFZ YCentroidFZ ZCentroidFZ
+                                                           N           N           N        N-mm        N-mm        N-mm          mm          mm          mm          mm          mm          mm          mm          mm          mm          mm          mm          mm
+        DEAD   LinStatic                             -100000           0    13670.38 41011141.91  -341011142  -1.164E-08           0           0           0     3003.84        19.3           0           0           0           0     7553.11        3000           0
+       MODAL    LinModal        Mode           1  -2.209E-12     5372.45  -6.031E-10 -16128535.2   1.991E-06 16117347.64           0           0           0           0           0           0        3000        3000           0           0           0           0
+       MODAL    LinModal        Mode           2   4.519E-12   2.558E-10   2.104E-10   4.703E-08  -1.336E-07  16522305.2           0           0           0      914.52  -8.627E+16           0   6.301E+16     3007.37           0      688.38     2651.72           0
+       MODAL    LinModal        Mode           3     10639.9  -3.455E-12  -7.349E-10  -1.268E-06 31946980.46   -31919696           0           0           0        3000        3000           0           0           0           0           0           0           0
+       MODAL    LinModal        Mode           4  -5.812E-10   2.764E-12  -6.946E-11  -3.017E-07  -1.176E-06   -31744559           0           0           0     2993.48  -5.493E+16           0   6.871E+16     -884.48           0     2936.25     4263.59           0
+       MODAL    LinModal        Mode           5  -2.349E-09   1.874E-10  -2.782E-06   -0.007678     0.01644    7.64E-06           0           0           0  -300670.69     3121.88           0     1630.45    6.18E+16           0     5912.24     2760.13           0
+       MODAL    LinModal        Mode           6   1.245E-09  -1.767E-10   3.715E-06     0.01029    -0.01547  -3.682E-06           0           0           0  -245091.57      590.64           0    16679.21 232751562.6           0     4164.59     2768.46           0
+       MODAL    LinModal        Mode           7    1.79E-09  -6.609E-10   1.704E-06    0.002284    -0.01132  -6.938E-06           0           0           0   -1.45E+16      1848.2           0     5493.66  -478625.26           0     6643.65     1340.21           0
+       MODAL    LinModal        Mode           8  -8.195E-10  -5.495E-10   4.979E-07  -0.0007946    0.001159   5.811E-07           0           0           0  -152016073      825.11           0      173.36 -1515411.78           0    -2329.36    -1596.86           0
+       MODAL    LinModal        Mode           9  -4.066E-05   3.686E-05 -2593214.21 -7779642469  7779642770        0.23           0           0           0           0           0           0           0           0           0        3000        3000           0
+       MODAL    LinModal        Mode          10   6.983E-05    -1800.87    -0.05308 -7777851418      -85.63 -5402618.11           0           0           0     3000.13     2848.98           0        3000        3000           0    -1614.64 146600000000           0
+       MODAL    LinModal        Mode          11     2217.92    5.67E-05    -0.04754      102.23 -7777557415 -6653751.47           0           0           0        3000        3000           0     5101.06     3000.22           0 -163600000000     -2151.5           0
+       MODAL    LinModal        Mode          12   4.891E-05   2.854E-06     -0.0141      -29.96     -129.23  1251476.57           0           0           0     3000.17 -136000000000           0 -1893000000000     2999.77           0    -9170.42     2125.28           0
+
+
+Table:  Joint Displacements
+
+       Joint  OutputCase    CaseType    StepType     StepNum          U1          U2          U3          R1          R2          R3
+                                                                      mm          mm          mm     Radians     Radians     Radians
+           1        DEAD   LinStatic                                   0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           1           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           2           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           3           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           4           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           5           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           6           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           7           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           8           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode           9           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode          10           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode          11           0           0           0           0           0           0
+           1       MODAL    LinModal        Mode          12           0           0           0           0           0           0
+           2        DEAD   LinStatic                           19.317513   -0.109626    0.012435    -3.6E-05    0.007865    0.001578
+           2       MODAL    LinModal        Mode           1   1.388E-17   -1.017745   -0.000706    0.000335   6.437E-20    8.41E-18
+           2       MODAL    LinModal        Mode           2   -0.012282    1.017671    0.000695   -0.000335  -4.935E-06   -0.000166
+           2       MODAL    LinModal        Mode           3   -1.017745   5.658E-16    -0.00087  -2.703E-19   -0.000412   9.627E-18
+           2       MODAL    LinModal        Mode           4     1.01767    0.012282    0.000878  -4.145E-06    0.000412    0.000162
+           2       MODAL    LinModal        Mode           5   1.013E-10    1.017745   1.601E-13   -0.000432   4.593E-14  -8.412E-13
+           2       MODAL    LinModal        Mode           6  -3.532E-11    1.017745  -5.336E-13   -0.000432  -1.597E-14   -0.000242
+           2       MODAL    LinModal        Mode           7   -1.017745   1.588E-11   9.909E-14  -6.739E-15   -0.000462  -1.157E-12
+           2       MODAL    LinModal        Mode           8   -1.017745   5.012E-11  -1.129E-12  -2.121E-14   -0.000462   -0.000242
+           2       MODAL    LinModal        Mode           9   1.981E-11  -1.025E-11    1.017745  -1.722E-12  -1.306E-12  -2.485E-16
+           2       MODAL    LinModal        Mode          10   -2.81E-11    0.000706   -1.017745    0.000115   1.817E-12   5.344E-17
+           2       MODAL    LinModal        Mode          11    -0.00087  -6.179E-12    1.017745  -1.081E-12     5.5E-05   6.398E-16
+           2       MODAL    LinModal        Mode          12    -0.00087   -0.000706    1.017744   -0.000115     5.5E-05  -2.634E-08
+           3        DEAD   LinStatic                           18.818592    0.112414   -0.019867   -0.000108    0.007579    0.001519
+           3       MODAL    LinModal        Mode           1  -4.163E-17   -1.017745   -0.000706    0.000335   2.711E-20   8.455E-18
+           3       MODAL    LinModal        Mode           2   -0.012282   -1.017671   -0.000695    0.000335  -4.935E-06   -0.000166
+           3       MODAL    LinModal        Mode           3   -1.017745   1.557E-16     0.00087  -1.735E-19   -0.000412   9.689E-18
+           3       MODAL    LinModal        Mode           4     1.01767   -0.012282   -0.000878   4.145E-06    0.000412    0.000162
+           3       MODAL    LinModal        Mode           5  -1.013E-10    1.017745   2.198E-12   -0.000432  -4.604E-14   -8.76E-13
+           3       MODAL    LinModal        Mode           6   3.532E-11   -1.017745  -2.608E-12    0.000432   1.608E-14   -0.000242
+           3       MODAL    LinModal        Mode           7    1.017745   4.009E-11  -2.176E-12  -1.694E-14    0.000462   1.163E-12
+           3       MODAL    LinModal        Mode           8    1.017745   9.655E-11   1.396E-13  -4.098E-14    0.000462    0.000242
+           3       MODAL    LinModal        Mode           9   2.154E-11  -2.085E-11    1.017745  -2.966E-12  -1.306E-12  -1.518E-16
+           3       MODAL    LinModal        Mode          10  -2.944E-11    0.000706   -1.017745    0.000115   1.816E-12   -9.06E-17
+           3       MODAL    LinModal        Mode          11    -0.00087  -3.618E-11   -1.017745  -6.132E-12     5.5E-05   8.006E-16
+           3       MODAL    LinModal        Mode          12    -0.00087    0.000706   -1.017744    0.000115     5.5E-05  -2.634E-08
+           4        DEAD   LinStatic                            0.064141   -0.112414   -0.003581    0.000108     5.6E-05    0.001578
+           4       MODAL    LinModal        Mode           1  -6.939E-17   -1.017745    0.000706    0.000335           0   8.458E-18
+           4       MODAL    LinModal        Mode           2    0.012282    1.017671   -0.000695   -0.000335   4.935E-06   -0.000166
+           4       MODAL    LinModal        Mode           3   -1.017745   6.617E-17    -0.00087  -1.009E-19   -0.000412   9.662E-18
+           4       MODAL    LinModal        Mode           4    -1.01767    0.012282   -0.000878  -4.145E-06   -0.000412    0.000162
+           4       MODAL    LinModal        Mode           5  -4.535E-11   -1.017745  -9.619E-14    0.000432  -2.064E-14    8.76E-13
+           4       MODAL    LinModal        Mode           6   1.111E-11   -1.017745  -1.251E-12    0.000432    5.05E-15    0.000242
+           4       MODAL    LinModal        Mode           7   -1.017745  -1.588E-11   1.879E-13   6.752E-15   -0.000462  -1.163E-12
+           4       MODAL    LinModal        Mode           8    1.017745  -5.012E-11    4.42E-14   2.135E-14    0.000462   -0.000242
+           4       MODAL    LinModal        Mode           9   1.075E-11  -1.099E-11    1.017745  -1.722E-12  -7.089E-13   4.421E-16
+           4       MODAL    LinModal        Mode          10  -2.594E-11    0.000706    1.017745    0.000115   1.643E-12  -9.802E-19
+           4       MODAL    LinModal        Mode          11    -0.00087  -7.166E-12    1.017745   -1.08E-12     5.5E-05   3.774E-16
+           4       MODAL    LinModal        Mode          12     0.00087   -0.000706   -1.017744   -0.000115    -5.5E-05  -2.634E-08
+           5        DEAD   LinStatic                                   0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           1           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           2           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           3           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           4           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           5           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           6           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           7           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           8           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode           9           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode          10           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode          11           0           0           0           0           0           0
+           5       MODAL    LinModal        Mode          12           0           0           0           0           0           0
+           6        DEAD   LinStatic                                   0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           1           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           2           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           3           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           4           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           5           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           6           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           7           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           8           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode           9           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode          10           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode          11           0           0           0           0           0           0
+           6       MODAL    LinModal        Mode          12           0           0           0           0           0           0
+           7        DEAD   LinStatic                                   0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           1           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           2           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           3           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           4           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           5           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           6           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           7           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           8           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode           9           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode          10           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode          11           0           0           0           0           0           0
+           7       MODAL    LinModal        Mode          12           0           0           0           0           0           0
+           8        DEAD   LinStatic                            0.061166    0.109626    -0.00385     3.6E-05  -4.921E-06    0.001519
+           8       MODAL    LinModal        Mode           1  -2.914E-16   -1.017745    0.000706    0.000335  -6.776E-20   8.425E-18
+           8       MODAL    LinModal        Mode           2    0.012282   -1.017671    0.000695    0.000335   4.935E-06   -0.000166
+           8       MODAL    LinModal        Mode           3   -1.017745  -3.994E-16     0.00087    1.84E-19   -0.000412   9.569E-18
+           8       MODAL    LinModal        Mode           4    -1.01767   -0.012282    0.000878   4.145E-06   -0.000412    0.000162
+           8       MODAL    LinModal        Mode           5   4.535E-11   -1.017745   2.105E-12    0.000432   2.052E-14   8.412E-13
+           8       MODAL    LinModal        Mode           6  -1.111E-11    1.017745  -1.441E-12   -0.000432  -5.037E-15    0.000242
+           8       MODAL    LinModal        Mode           7    1.017745  -4.009E-11  -7.853E-13   1.709E-14    0.000462   1.157E-12
+           8       MODAL    LinModal        Mode           8   -1.017745  -9.655E-11   1.638E-13   4.098E-14   -0.000462    0.000242
+           8       MODAL    LinModal        Mode           9    1.17E-11  -1.575E-11    1.017745  -2.968E-12  -7.084E-13   5.405E-16
+           8       MODAL    LinModal        Mode          10  -2.608E-11    0.000706    1.017745    0.000115   1.643E-12  -1.427E-16
+           8       MODAL    LinModal        Mode          11    -0.00087  -3.944E-11   -1.017745  -6.131E-12     5.5E-05   5.284E-16
+           8       MODAL    LinModal        Mode          12     0.00087    0.000706    1.017744    0.000115    -5.5E-05  -2.634E-08
+
+
+Table:  Joint Reactions
+
+       Joint  OutputCase    CaseType    StepType     StepNum          F1          F2          F3          M1          M2          M3
+                                                                       N           N           N        N-mm        N-mm        N-mm
+           1        DEAD   LinStatic                           -50070.71      428.14     -6870.5  -569985.38  -119649910   -32710.46
+           1       MODAL    LinModal        Mode           1  -6.908E-13     1343.11      450.01 -2682106.33  -2.101E-09  -1.743E-10
+           1       MODAL    LinModal        Mode           2       32.49    -1343.23     -442.98  2682119.92    76682.17     3438.98
+           1       MODAL    LinModal        Mode           3     2659.97  -1.382E-12      554.15   3.471E-09  6324284.12  -1.996E-10
+           1       MODAL    LinModal        Mode           4    -2660.09      -15.83     -559.27    31987.97 -6324109.51    -3356.96
+           1       MODAL    LinModal        Mode           5  -2.159E-07     -964.87   -1.02E-07  2307043.11   -0.000584   1.744E-05
+           1       MODAL    LinModal        Mode           6   7.565E-08     -965.21   3.399E-07  2307381.79   0.0002039     5012.02
+           1       MODAL    LinModal        Mode           7     2162.96  -1.507E-08  -6.312E-08   3.601E-05   5860621.9     2.4E-05
+           1       MODAL    LinModal        Mode           8     2163.35  -4.777E-08   7.194E-07   0.0001139   5860986.2     5012.02
+           1       MODAL    LinModal        Mode           9  -1.318E-05   6.767E-06  -648303.55   -0.006724    -0.01237   5.152E-09
+           1       MODAL    LinModal        Mode          10   1.833E-05     -450.22   648303.36    447373.7     0.01721  -1.108E-09
+           1       MODAL    LinModal        Mode          11      554.48   4.247E-06  -648303.33   -0.004219   520557.13  -1.326E-08
+           1       MODAL    LinModal        Mode          12      554.44      450.15  -648303.18  -447302.55    520515.7        0.55
+           5        DEAD   LinStatic                           -49607.68      127.93    13705.69    22288.75  -117334129   -31489.29
+           5       MODAL    LinModal        Mode           1  -6.935E-13     1343.11      450.01 -2682106.33  -1.893E-09  -1.753E-10
+           5       MODAL    LinModal        Mode           2       32.49     1343.23      442.98 -2682119.92    76682.17     3438.98
+           5       MODAL    LinModal        Mode           3     2659.97  -6.909E-13     -554.15   2.241E-09  6324284.12  -2.009E-10
+           5       MODAL    LinModal        Mode           4    -2660.09       15.83      559.27   -31987.97 -6324109.51    -3356.96
+           5       MODAL    LinModal        Mode           5   2.148E-07     -964.87    -1.4E-06  2307043.09   0.0005829   1.816E-05
+           5       MODAL    LinModal        Mode           6  -7.452E-08      965.21   1.661E-06 -2307381.81  -0.0002029     5012.02
+           5       MODAL    LinModal        Mode           7    -2162.96  -3.832E-08   1.386E-06   9.118E-05  -5860621.9  -2.411E-05
+           5       MODAL    LinModal        Mode           8    -2163.35  -9.155E-08  -8.894E-08   0.0002189  -5860986.2    -5012.02
+           5       MODAL    LinModal        Mode           9  -1.318E-05   1.166E-05  -648303.58    -0.01159    -0.01238   3.147E-09
+           5       MODAL    LinModal        Mode          10   1.834E-05     -450.22    648303.4    447373.7     0.01722   1.878E-09
+           5       MODAL    LinModal        Mode          11      554.48    2.41E-05   648303.27    -0.02394   520557.13   -1.66E-08
+           5       MODAL    LinModal        Mode          12      554.44     -450.15   648303.17   447302.55    520515.7        0.55
+           6        DEAD   LinStatic                              134.78     -127.93     3331.89   -22288.75  -116446.74   -32710.46
+           6       MODAL    LinModal        Mode           1   -8.47E-13     1343.11     -450.01 -2682106.33  -1.932E-09  -1.754E-10
+           6       MODAL    LinModal        Mode           2      -32.49    -1343.23      442.98  2682119.92   -76682.17     3438.98
+           6       MODAL    LinModal        Mode           3     2659.97  -7.412E-13      554.15   2.172E-09  6324284.12  -2.003E-10
+           6       MODAL    LinModal        Mode           4     2660.09      -15.83      559.27    31987.97  6324109.51    -3356.96
+           6       MODAL    LinModal        Mode           5   9.581E-08      964.87   6.128E-08 -2307043.11   0.0002606  -1.816E-05
+           6       MODAL    LinModal        Mode           6  -2.355E-08      965.21   7.966E-07 -2307381.79  -6.392E-05    -5012.02
+           6       MODAL    LinModal        Mode           7     2162.96   1.501E-08  -1.197E-07  -3.596E-05  5860621.84   2.411E-05
+           6       MODAL    LinModal        Mode           8    -2163.35   4.724E-08  -2.815E-08  -0.0001133 -5860986.26     5012.02
+           6       MODAL    LinModal        Mode           9  -7.151E-06   6.768E-06  -648303.53   -0.006726   -0.006712  -9.165E-09
+           6       MODAL    LinModal        Mode          10   1.658E-05     -450.22  -648303.43    447373.7     0.01556   2.032E-11
+           6       MODAL    LinModal        Mode          11      554.48   4.248E-06  -648303.32   -0.004222   520557.16  -7.824E-09
+           6       MODAL    LinModal        Mode          12     -554.44      450.15   648303.14  -447302.55  -520515.68        0.55
+           7        DEAD   LinStatic                             -456.39     -428.14      3503.3   569985.38  -656713.19   -31489.29
+           7       MODAL    LinModal        Mode           1   2.228E-14     1343.11     -450.01 -2682106.33  -2.824E-10  -1.746E-10
+           7       MODAL    LinModal        Mode           2      -32.49     1343.23     -442.98 -2682119.92   -76682.17     3438.98
+           7       MODAL    LinModal        Mode           3     2659.97  -6.415E-13     -554.15   1.456E-09  6324284.12  -1.984E-10
+           7       MODAL    LinModal        Mode           4     2660.09       15.83     -559.27   -31987.97  6324109.51    -3356.96
+           7       MODAL    LinModal        Mode           5  -9.703E-08      964.87  -1.341E-06 -2307043.09  -0.0002618  -1.744E-05
+           7       MODAL    LinModal        Mode           6   2.367E-08     -965.21   9.176E-07  2307381.81   6.404E-05    -5012.02
+           7       MODAL    LinModal        Mode           7    -2162.96   3.771E-08   5.003E-07  -9.059E-05 -5860621.84    -2.4E-05
+           7       MODAL    LinModal        Mode           8     2163.35   9.154E-08  -1.044E-07  -0.0002189  5860986.26    -5012.02
+           7       MODAL    LinModal        Mode           9  -7.153E-06   1.166E-05  -648303.55    -0.01158   -0.006717  -1.121E-08
+           7       MODAL    LinModal        Mode          10   1.658E-05     -450.22  -648303.39    447373.7     0.01556   2.959E-09
+           7       MODAL    LinModal        Mode          11      554.48    2.41E-05   648303.34    -0.02395   520557.16  -1.096E-08
+           7       MODAL    LinModal        Mode          12     -554.44     -450.15  -648303.15   447302.55  -520515.68        0.55
+
+
+Table:  Modal Periods And Frequencies
+
+  OutputCase    StepType     StepNum      Period   Frequency    CircFreq  Eigenvalue
+                                             Sec     Cyc/sec     rad/sec   rad2/sec2
+       MODAL        Mode           1    0.084972 11.7686277977411 73.9444692644321 5467.78453479854
+       MODAL        Mode           2    0.084426 11.844729324032 74.4226292562772 5538.72774541729
+       MODAL        Mode           3     0.06038 16.561834607586 104.061075866323 10828.7075104566
+       MODAL        Mode           4    0.060177 16.6175143150903 104.410921786422 10901.6405882903
+       MODAL        Mode           5    0.006895 145.040741876154 911.31785829868 830500.238854092
+       MODAL        Mode           6    0.006894 145.044304769279 911.340244616413 830541.041457504
+       MODAL        Mode           7    0.006874 145.466018884626 913.989952549792 835377.633361971
+       MODAL        Mode           8    0.006874 145.469588725059 914.012382518747 835418.635397596
+       MODAL        Mode           9    0.003868 258.55849573549 1624.57094145169 2639230.74380922
+       MODAL        Mode          10    0.003867 258.618530332304 1624.94814994831 2640456.49002044
+       MODAL        Mode          11    0.003866 258.634452497076 1625.04819186006 2640781.62586766
+       MODAL        Mode          12    0.003866 258.694475285656 1625.42532616337 2642007.49093329

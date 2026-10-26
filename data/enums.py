@@ -2,7 +2,7 @@
 
 from enum import Enum, IntEnum, auto
 from typing import Dict, Type
-from data.unit_enums import UNIT_DEFINITIONS_MAP, UnitSystem
+from core.units import UnitSystem
 # ============================================================================
 # ENUMERATION'LAR
 # ============================================================================

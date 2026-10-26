@@ -136,7 +136,7 @@ def build_router() -> Dict[str, Callable]:
         "AREA LOADS - UNIFORM": loads.handle_area_uniform,
         "AREA LOADS - UNIFORM TO FRAME": loads.handle_area_uniform_to_frame,
         "AREA LOADS - WIND PRESSURE COEFFICIENTS": loads.handle_area_wind,
-
+    
         # Spectra
         "FUNCTION - RESPONSE SPECTRUM - TSC-2018": spectra.handle_spectrum_functions_TSC,
         "FUNCTION - RESPONSE SPECTRUM - FILE": spectra.handle_spectrum_functions_file,

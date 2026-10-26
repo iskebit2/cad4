@@ -29,10 +29,10 @@ from domain.definition import Section
 from domain.element import Frame, Node, Area, Link
 from domain.project import Project
 from tools import frame_to_link
-from tools.s2kloader import S2KLoader
+from tools.s2k.loader import S2KLoader
 from ui.file_dialog import ImGuiFileDialog
 from ui.imgui_backend import UiBackend
-from ui.main_menu import MainMenuPopup
+# from ui.main_menu import MainMenuPopup
 from inspector import InspectorWindow
 from inspector.catalog_project import ProjectCatalog
 
@@ -58,7 +58,7 @@ class CadApp:
 
         self.section_catalog: Dict[str, Section] = {}
         self.hover_visual_enabled = True
-        self.show_loads = False
+        
 
         # --- 2. Mouse durumu ---
         self._pending: List[tuple] = []
@@ -93,7 +93,7 @@ class CadApp:
         )
 
         # --- 6. Yardımcı bileşenler ---
-        self.main_menu = MainMenuPopup()
+        # self.main_menu = MainMenuPopup()
         self.file_dialog = ImGuiFileDialog()
 
         
@@ -155,21 +155,30 @@ class CadApp:
             inst.set_catalog(ProjectCatalog(self.current_project))
 
     def _context_resolvers(self) -> Dict[str, callable]:
-        scn = self.engine.scene if self.engine else None
+        eng = self.engine
+        logger.info("[ctx] engine=%r renderer=%r", eng, getattr(eng, "renderer", "YOK") if eng else None)
+        scn = eng.scene if eng else None
+        renderer = eng.renderer if eng else None
+        camera = eng.cam if eng else None
         selection = list(scn.get_selected()) if scn else []
         project = self.current_project
+        catalog = ProjectCatalog(project)
+
 
         return {
             "scene":            lambda: scn,
-            "catalog":          lambda: project,
             "project":          lambda: project,
+            "catalog":          lambda: catalog,
             "selection":        lambda: selection,
             "selection_frames": lambda: [e for e in selection if isinstance(e, Frame)],
             "selection_areas":  lambda: [e for e in selection if isinstance(e, Area)],
             "selection_links":  lambda: [e for e in selection if isinstance(e, Link)],
+            "selection_nodes": lambda: [e for e in selection if isinstance(e, Node)],
             "patterns":         lambda: list(getattr(project, "load_patterns", {}).keys()),
             "sections":         lambda: list(getattr(project, "sections", {}).keys()),
             "materials":        lambda: list(getattr(project, "materials", {}).keys()),
+            "renderer":         lambda: renderer,
+            "camera":           lambda: camera,
         }
 
     def _resolve_panel_context(self, keys: List[str]) -> dict:
@@ -231,11 +240,11 @@ class CadApp:
             self.initialized = True
 
 
-            from pathlib import Path
+            # from pathlib import Path
 
-            PROJECT_ROOT = Path(__file__).resolve().parent.parent
-            TEST_MODEL = PROJECT_ROOT / "betonarme.cd4"
-            self._load_project(str(TEST_MODEL))
+            # PROJECT_ROOT = Path(__file__).resolve().parent.parent
+            # TEST_MODEL = PROJECT_ROOT / "betonarme.cd4"
+            # self._load_project(str(TEST_MODEL))
 
             if self.current_project:
                 self.set_project(self.current_project)
@@ -282,7 +291,7 @@ class CadApp:
             scn.clear_dirty()
 
     def _draw_panels(self):
-        self.main_menu.draw()
+        # self.main_menu.draw()
         # BasePanel sözleşmesi: visible + draw
         for entry in self.panels.values():
             panel = entry["instance"]
@@ -369,7 +378,7 @@ class CadApp:
             "draw_poly":  lambda: bool(self.engine and self.engine.draw_mgr and self.engine.draw_mgr.is_active),
             "draw_plane": lambda: bool(self.engine and getattr(self.engine, "plane_draw_mgr", None) and self.engine.plane_draw_mgr.is_active),
             "local_axes": lambda: bool(self.engine and self.engine.scene and self.engine.scene.show_local_axes),
-            "show_loads": lambda: bool(self.engine and self.engine.renderer and self.engine.renderer.show.get("loads", True)),
+            "show_loads": lambda: bool(self.engine and self.engine.renderer and self.engine.renderer.show.get("loads", False)),
             "show_only":  lambda: self._show_only_ids is not None,
         }
         for name in self.panels:
@@ -624,10 +633,17 @@ class CadApp:
             self.engine.scene.show_local_axes = not self.engine.scene.show_local_axes
 
     def _toggle_loads_visibility(self):
-        if self.engine and self.engine.renderer:
-            cur = self.engine.renderer.show.get("loads", True)
-            self.engine.renderer.show["loads"] = not cur
-            self.show_loads = not cur
+        r = self.engine.renderer if self.engine else None
+        if not r:
+            return
+        cur = bool(r.show.get("loads", False))
+        if hasattr(r, "set_loads_enabled"):
+            r.set_loads_enabled(not cur)
+        else:
+            r.show["loads"] = not cur
+            if hasattr(r, "load_renderer"):
+                r.load_renderer.enabled = not cur
+            
 
     def toggle_show_only(self):
         if not self.engine or not self.engine.scene:

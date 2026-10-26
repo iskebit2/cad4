@@ -1,22 +1,5 @@
 # tools/debug_modal_full.py
-"""
-Modal debug — katman katman teşhis + SAP2000 karşılaştırma.
 
-Kullanım:
-    python -m tools.debug_modal_full [s2k_dosyası] [sap2000_rapor.txt]
-
-Örnek:
-    python -m tools.debug_modal_full tests/simple_ba1.s2k tests/sap2000_simple_ba1.txt
-
-Bölümler
---------
-1. Model özeti
-2. DOF atama ve mesnetler
-3. Kütle (mass_assembly) + SAP2000 joint mass karşılaştırma
-4. Rijitlik (stiffness_assembly) + lokal frame testi
-5. Mesnetli DOF'lar
-6. Modal çözüm + K/M teşhisi + SAP2000 period karşılaştırma
-"""
 from __future__ import annotations
 
 import sys
@@ -27,6 +10,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from core.units import MEGAGRAM
 from domain.project import Project
 from core.analysis.mass_assembly import build_mass
 from core.analysis.stiffness_assembly import (
@@ -50,12 +34,14 @@ def hdr(s: str, width: int = 28) -> str:
 
 
 def safe(fn, label: str):
-    """Bölümü izole çalıştır; hata olsa da diğer bölümler devam etsin."""
     try:
         fn()
     except Exception:
         print(f"  [{label}] HATA:")
-        traceback.print_exc()
+        traceback.print_exc(limit=5)   # limit ekle
+        # veya tam traceback için:
+        import traceback as tb
+        tb.print_exc()
 
 
 # ============================================================================
@@ -152,6 +138,10 @@ def report_stiffness(scn, p):
     print(hdr(f"K[4,4] RY: {K[4,4]:.2e}"))
     print(hdr(f"K[5,5] RZ: {K[5,5]:.2e}"))
 
+    print(f"area_count: {stiff.area_count}")
+    print(f"skipped: {stiff.skipped}")
+    
+
     return stiff
 
 
@@ -190,21 +180,30 @@ def report_local_frame(scn) -> None:
         getattr(f, "release_j", None),
     )
 
+    # test2
+    print("-"*30)
+    print("test")
+    print(f"\n   report_local_frame     ---> params... Sction: {sec.name} A: {A} AS2: {AS2} AS3: {AS3} I33: {I33} I22: {I22} J: {J}")
+    phi3 = 12 * E * I33 / (G * AS2 * L**2) if G > 0 and AS2 > 0 and I33 > 0 else 0.0
+    phi2 = 12 * E * I22 / (G * AS3 * L**2) if G > 0 and AS3 > 0 and I22 > 0 else 0.0
     tests = [
-        ("k[0,0]  EA/L",      k_loc[0, 0], E * A / L),
-        ("k[3,3]  GJ/L",      k_loc[3, 3], G * J / L),
-        ("k[1,1]  12EI33/L³", k_loc[1, 1], 12 * E * I33 / L**3),
-        ("k[2,2]  12EI22/L³", k_loc[2, 2], 12 * E * I22 / L**3),
-        ("k[5,5]  4EI33/L",   k_loc[5, 5], 4 * E * I33 / L),
-        ("k[4,4]  4EI22/L",   k_loc[4, 4], 4 * E * I22 / L),
-    ]
+    ("EA/L",       k_loc[0, 0], E * A / L),
+    ("GJ/L",       k_loc[3, 3], G * J / L),
+    ("12EI33/L³",  k_loc[1, 1], 12 * E * I33 / (L**3 * (1 + phi3))),
+    ("12EI22/L³",  k_loc[2, 2], 12 * E * I22 / (L**3 * (1 + phi2))),
+    ("4EI33/L",    k_loc[5, 5], (4 + phi3) * E * I33 / (L * (1 + phi3))),
+    ("4EI22/L",    k_loc[4, 4], (4 + phi2) * E * I22 / (L * (1 + phi2))),
+]
     for name, got, exp in tests:
         ratio = got / exp if exp else float("nan")
         print(hdr(f"{name}: {got:.3e}  (bekl. {exp:.3e}, oran {ratio:.3f})"))
+    print("-"*30)
+    #
 
     evals = np.linalg.eigvalsh(k_loc)
     print(hdr(f"k_loc özdeğer min: {evals.min():.3e}"))
     print(hdr(f"k_loc negatif özdeğer: {int((evals < -1e-6).sum())}"))
+    print("-"*30)
 
     p1 = (f.node_i.x, f.node_i.y, f.node_i.z)
     p2 = (f.node_j.x, f.node_j.y, f.node_j.z)
@@ -240,7 +239,7 @@ def report_fixed_dofs(scn):
 # 7) MODAL + K/M TEŞHİSİ (+ SAP2000 period karşılaştırma)
 # ============================================================================
 def report_modal(scn, stiff, mass, fixed_dofs, sap_file: str | None = None):
-    section("Modal çözüm (solver)")
+    section("Modal çözüm (solver) — Guyan")
 
     solver = StructuralSolver(
         K_global=stiff.K_global,
@@ -249,18 +248,27 @@ def report_modal(scn, stiff, mass, fixed_dofs, sap_file: str | None = None):
         num_dofs=len(scn.nodes) * 6,
     )
 
-    # --- Reduced K/M teşhisi ---
+    # ------------------------------------------------------------------
+    # 1) Reduced (mesnetli) sistem — Guyan öncesi
+    # ------------------------------------------------------------------
     K_red, M_red = solver._reduced()
     m_diag = np.diag(M_red)
-    massive = np.where(m_diag > 1e-9)[0]
 
-    K_mm = K_red[np.ix_(massive, massive)]
-    K_evals = np.linalg.eigvalsh(K_red)
+    # Kütleli (master) ve kütlesiz (slave) DOF ayrımı
+    master_mask = m_diag > 1e-9
+    n_master = int(master_mask.sum())
+    n_slave = int((~master_mask).sum())
 
-    print(hdr(f"K_mm boyut: {K_mm.shape}"))
-    print(hdr(f"K_mm özdeğer min: {np.linalg.eigvalsh(K_mm).min():.3e}"))
-    print(hdr(f"K_mm özdeğer max: {np.linalg.eigvalsh(K_mm).max():.3e}"))
     print(hdr(f"K_red boyut: {K_red.shape}"))
+    print(hdr(f"Master (kütleli) DOF: {n_master}"))
+    print(hdr(f"Slave (kütlesiz) DOF: {n_slave}"))
+
+    if n_master > 0:
+        K_mm = K_red[np.ix_(master_mask, master_mask)]
+        print(hdr(f"K_mm boyut: {K_mm.shape}"))
+        print(hdr(f"K_mm max köşegen: {np.max(np.diag(K_mm)):.3e}"))
+
+    K_evals = np.linalg.eigvalsh(K_red)
     print(hdr(f"K_red özdeğer min: {K_evals.min():.3e}"))
     print(hdr(f"K_red özdeğer max: {K_evals.max():.3e}"))
     print(hdr(f"K_red negatif: {int((K_evals < -1e-6).sum())}"))
@@ -268,7 +276,27 @@ def report_modal(scn, stiff, mass, fixed_dofs, sap_file: str | None = None):
     print(hdr(f"M_red köşegen max: {m_diag.max():.3e}"))
     print(hdr(f"M_red sıfır sayısı: {int((m_diag <= 1e-12).sum())}"))
 
-    # --- Modal çözüm ---
+    # ------------------------------------------------------------------
+    # 2) Guyan kondensasyonu (solver içinde yapılıyorsa burada da yap)
+    # ------------------------------------------------------------------
+    # NOT: solver.modal_solve() içinde Guyan uygulanıyorsa, burada
+    # ayrıca yapmayın. Sadece teşhis için K_gg / K_gs / K_ss boyutlarını
+    # ve kondanse matrisin durumunu raporlayın.
+    try:
+        K_gg, M_gg = solver._guyan_reduced()   # solver'da böyle bir API varsa
+        print(hdr(f"Guyan sonrası K_gg boyut: {K_gg.shape}"))
+        print(hdr(f"Guyan K_gg özdeğer min: {np.linalg.eigvalsh(K_gg).min():.3e}"))
+        print(hdr(f"Guyan K_gg özdeğer max: {np.linalg.eigvalsh(K_gg).max():.3e}"))
+        print(hdr(f"Guyan K_gg negatif: {int((np.linalg.eigvalsh(K_gg) < -1e-6).sum())}"))
+        print(hdr(f"Guyan M_gg köşegen min: {np.diag(M_gg).min():.3e}"))
+        print(hdr(f"Guyan M_gg köşegen max: {np.diag(M_gg).max():.3e}"))
+        print(hdr(f"Guyan M_gg sıfır sayısı: {int((np.diag(M_gg) <= 1e-12).sum())}"))
+    except AttributeError:
+        print(hdr("Guyan API bulunamadı (solver._guyan_reduced yok)"))
+
+    # ------------------------------------------------------------------
+    # 3) Modal çözüm
+    # ------------------------------------------------------------------
     modal = solver.modal_solve(n_modes=6, debug=True)
 
     print(hdr(f"n_modes: {modal.n_modes}"))
@@ -277,21 +305,80 @@ def report_modal(scn, stiff, mass, fixed_dofs, sap_file: str | None = None):
 
     print(hdr(f"modal_dofs: {len(modal.modal_dofs)}"))
     print(hdr(f"total_mass_x: {modal.total_mass_x:.2f} kg"))
+    print(hdr(f"total_mass_y: {modal.total_mass_y:.2f} kg"))
+    print(hdr(f"total_mass_z: {modal.total_mass_z:.2f} kg"))
 
-    # --- SAP2000 period karşılaştırma ---
+    # Modal kütle dengesi
+    em_x = float(np.sum(modal.effective_mass_x))
+    em_y = float(np.sum(modal.effective_mass_y))
+    em_z = float(np.sum(modal.effective_mass_z))
+    print(hdr(f"Σ effective_mass_x: {em_x:.2f} kg"))
+    print(hdr(f"Σ effective_mass_y: {em_y:.2f} kg"))
+    print(hdr(f"Σ effective_mass_z: {em_z:.2f} kg"))
+    if modal.total_mass_x > 0:
+        print(hdr(f"Katılım oranı X: {em_x / modal.total_mass_x:.4f}"))
+    if modal.total_mass_y > 0:
+        print(hdr(f"Katılım oranı Y: {em_y / modal.total_mass_y:.4f}"))
+    if modal.total_mass_z > 0:
+        print(hdr(f"Katılım oranı Z: {em_z / modal.total_mass_z:.4f}"))
+
+    # Z DOF kontrolü
+    z_mask = (np.asarray(modal.modal_dofs) % 6) == 2
+    z_rows = np.where(z_mask)[0]
+    print(f"Z DOF sayısı: {z_mask.sum()}")
+    print(f"Z DOF endeksleri: {np.asarray(modal.modal_dofs)[z_mask][:10]}")
+
+    z_dofs = [8, 14, 20, 44, 50, 56, 74, 80, 86, 92]
+    K_z = stiff.K_global[np.ix_(z_dofs, z_dofs)]
+    off_diag = K_z - np.diag(np.diag(K_z))
+    print("K_z boyut:", K_z.shape)
+    print("K_z köşegen dışı max:", np.abs(off_diag).max())
+    print("K_z köşegen dışı sıfır olmayan:", (np.abs(off_diag) > 1e-6).sum())
+
+
+    phi = modal.mode_shapes
+    for m in range(modal.n_modes):
+        z_component = np.abs(phi[z_rows, m]).max()
+        print(f"Mod {m+1}: Z max |φ| = {z_component:.3e}, Z toplam |φ| = {np.abs(phi[z_rows, m]).sum():.3e}")
+
+    # ------------------------------------------------------------------
+    # 4) SAP2000 period karşılaştırma
+    # ------------------------------------------------------------------
     if sap_file:
         from tools.sap2000_mass_compare import compare_modal_periods
         compare_modal_periods(sap_file, modal)
 
-    # --- Ek: K[0:6, 6:12] ve spy ---
-    print("\n--- Düğüm 1-2 bağlantı (K[0:6, 6:12]) ---")
-    np.set_printoptions(precision=2, suppress=False, linewidth=250)
-    print(stiff.K_global[0:6, 6:12])
+    # ------------------------------------------------------------------
+    # 5) K yapısal teşhis (küçük modellerde anlamlı)
+    # ------------------------------------------------------------------
+    K = stiff.K_global
+    if K.shape[0] <= 24:
+        print("\n--- Düğüm 1-2 bağlantı (K[0:6, 6:12]) ---")
+        np.set_printoptions(precision=2, suppress=False, linewidth=250)
+        print(K[0:6, 6:12])
 
     print("\n--- K spy yoğunluğu ---")
-    K = stiff.K_global
     off = (np.abs(K - np.diag(np.diag(K))) > 1e-6).sum()
     print(f"Off-diagonal sıfır olmayan: {off} / {K.size}  ({off/K.size*100:.2f}%)")
+
+    # ------------------------------------------------------------------
+    # 6) Kütle tutarlılık kontrolü (mass_assembly ile çapraz)
+    # ------------------------------------------------------------------
+    # --- Kütle tutarlılığı (consistent-aware) ---
+    print("\n--- Kütle tutarlılığı ---")
+    from core.analysis.validation import _total_mass_consistent
+
+    M_total_ton = _total_mass_consistent(mass.M_global)   # Σ_ij M_ij (UX bloğu)
+    node_total_ton = sum(mass.node_masses.values()) / MEGAGRAM
+    print(hdr(f"Σ M_ij (UX, ton): {M_total_ton:.4f}"))
+    print(hdr(f"node_masses (ton): {node_total_ton:.4f}"))
+    if node_total_ton > 0:
+        rel = abs(M_total_ton - node_total_ton) / node_total_ton
+        print(hdr(f"Göreli fark: {rel:.3e}"))
+        if rel > 1e-3:
+            print(hdr("⚠️  KÜTLE KORUNUMU BOZUK — consistent montajda eksiklik olabilir"))
+        else:
+            print(hdr("✅ Kütle korunumu tam"))
 
     return modal
 
@@ -300,10 +387,10 @@ def report_modal(scn, stiff, mass, fixed_dofs, sap_file: str | None = None):
 # MAIN
 # ============================================================================
 def main():
-    from core.units import G_M_S2, KG_PER_TON
-    print(f"from core.units import.... G_M_S2: {G_M_S2} KG_PER_TON: {KG_PER_TON}")
+    from core.units import G_M_S2, MEGAGRAM
+    print(f"from core.units import....1 m/s² = 1000 mm/s².... \nG_M_S2: {G_M_S2} MEGAGRAM: {MEGAGRAM}")
 
-    s2k_path = sys.argv[1] if len(sys.argv) > 1 else "tests/simple_ba1.s2k"
+    s2k_path = sys.argv[1] if len(sys.argv) > 1 else "tests/simple_ba1s.$2k"
     sap_file = sys.argv[2] if len(sys.argv) > 2 else None
 
     print(f"\n{'='*70}\nDosya: {s2k_path}\n{'='*70}")
@@ -316,10 +403,30 @@ def main():
     from tools.s2k import S2KLoader
     p = S2KLoader(s2k_path).load()
     scn = p.scene
+    node1 = list(scn.nodes.values())[0]
+    count = 0
+    for f in scn.frames.values():
+        if f.node_i is node1 or f.node_j is node1:
+            count += 1
+            dx = f.node_j.x - f.node_i.x
+            dy = f.node_j.y - f.node_i.y
+            dz = f.node_j.z - f.node_i.z
+            L = f.get_length()
+            print(f"Frame {f.label}: dx={dx:.0f}, dy={dy:.0f}, dz={dz:.0f}, L={L:.0f}")
+    print(f"Düğüm 1'e bağlı frame sayısı: {count}")
+    # Mesnetli düğümlerin restraint'leri
+    for key, n in scn.nodes.items():
+        r = getattr(n, "restraint", None)
+        if r and all(getattr(r, d, False) for d in ("ux","uy","uz","rx","ry","rz")):
+            print(f"Node {key}: tamamen sabit")
+        elif r:
+            partial = [d for d in ("ux","uy","uz","rx","ry","rz") if getattr(r, d, False)]
+            print(f"Node {key}: kısmi mesnet {partial}")
 
+        
     # Bölümler — sıralı, tek geçiş
-    safe(lambda: report_model(scn), "model")
-    safe(lambda: report_dofs_and_restraints(scn), "dofs")
+    # safe(lambda: report_model(scn), "model")
+    # safe(lambda: report_dofs_and_restraints(scn), "dofs")
 
     mass_holder = {}
     stiff_holder = {}
@@ -333,16 +440,36 @@ def main():
         stiff_holder["s"] = report_stiffness(scn, p)
     safe(_stiff, "stiffness")
 
-    safe(lambda: report_local_frame(scn), "local_frame")
+    # safe(lambda: report_local_frame(scn), "local_frame")
 
     def _fixed():
         fixed_holder["f"] = report_fixed_dofs(scn)
     safe(_fixed, "fixed_dofs")
+    # debug script sonunda geçici
+    stiff = report_stiffness(scn, p)
 
     def _modal():
         report_modal(scn, stiff_holder["s"], mass_holder["m"],
                      fixed_holder["f"], sap_file=sap_file)
     safe(_modal, "modal")
+
+    
+    # Serbest düğümlerin K köşegenleri
+    free_node_keys = [k for k, n in scn.nodes.items() 
+                    if not (getattr(n, "restraint", None) and 
+                            all(getattr(n.restraint, d, False) for d in ("ux","uy","uz","rx","ry","rz")))]
+    print(f"Serbest düğüm sayısı: {len(free_node_keys)}")
+    for k in free_node_keys[:5]:
+        n = scn.nodes[k]
+        dofs = n.dof_indices
+        print(f"Node {k}: K[UX]={stiff.K_global[dofs[0],dofs[0]]:.0f}, "
+            f"K[UY]={stiff.K_global[dofs[1],dofs[1]]:.0f}, "
+            f"K[UZ]={stiff.K_global[dofs[2],dofs[2]]:.0f}")
+
+
+    print("K[2,3] UX-UX:", stiff.K_global[6, 12])
+    print("K[2,3] UY-UY:", stiff.K_global[7, 13])
+    print("K[2,3] UZ-UZ:", stiff.K_global[8, 14])
 
     print(f"\n{'='*70}\nBitti\n{'='*70}")
 

@@ -85,7 +85,6 @@ class ShaderProgram:
                 #logger.debug(f"[{self.name}] Uniform '{name}' not found")
         return self._uniform_cache[name]
     
-    # get_loc'u KALDIR veya get_uniform_location'a yönlendir
     def get_loc(self, name: str) -> int:
         return self.get_uniform_location(name)
     

@@ -26,6 +26,7 @@ from PIL import Image
 from assets.icons_base64 import ICON_DATA
 
 from inspector import InspectorWindow
+from ui.joint_load_panel import JointLoadPanel
 from ui.sd_convert_panel import SDConvertPanel
 from ui.visibility_panel import VisibilityPanel
 from ui.view_filter_panel import ViewFilterPanel
@@ -41,7 +42,7 @@ from ui.load_display_panel import LoadDisplayPanel
 from ui.plane_plot_panel import PlanePlotPanel
 from ui.plane_manager_panel import PlaneManagerPanel
 from ui.s2k_panel import S2KPanel
-
+from ui.render_settings_panel import RenderSettingsPanel
 
 # ======================================================================
 # Panel Kayıtları
@@ -114,6 +115,17 @@ PANEL_SPECS = [
 
     # --- Görünüm ---
     {
+    "name":       "render_settings",
+    "cls":        RenderSettingsPanel,
+    "title":      "Render Ayarları",
+    "category":   "Görünüm",
+    "quick":      True,
+    "shortcut":   "F7",
+    "menu_label": "Render Ayarları",
+    "icon":       "sliders",       # ICON_DATA'da varsa; yoksa "settings" kullan
+    "context":    ["renderer", "scene"],       # renderer gerektirir
+},
+    {
         "name":       "grid",
         "cls":        GridPanel,
         "title":      "Grid Ayarları",
@@ -152,7 +164,7 @@ PANEL_SPECS = [
         "quick":      False,
         "shortcut":   "F6",
         "menu_label": "Görünüm Filtresi",
-        "icon":       "filter","context": [],
+        "icon":       "filter","context": ["camera"],
     },
     {
         "name":       "plane_manager",
@@ -176,6 +188,17 @@ PANEL_SPECS = [
     },
 
     # --- Yükler ---
+    {
+    "name":       "assign_joint_load",
+    "cls":        JointLoadPanel,
+    "title":      "Noktasal Yük (Joint)",
+    "category":   "Yükler",
+    "quick":      True,
+    "shortcut":   None,
+    "menu_label": "Noktasal Yük",
+    "icon":       "arrow-up",
+    "context":    ["selection_nodes", "patterns"],
+},
     {
         "name":       "assign_area_load",
         "cls":        LoadAssignPanel,

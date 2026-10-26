@@ -64,6 +64,11 @@ class LoadRenderer:
         self.fill_alpha = 0.28
         self.show_arrows = True
         self.show_fill = True
+        self._point_force_scale = 50.0   # mm/kN — her update'te güncellenir
+
+        self.show_frame_loads = True
+        self.show_point_loads = True
+
     # ==================================================================
     # INIT
     # ==================================================================
@@ -159,8 +164,7 @@ class LoadRenderer:
     # ==================================================================
     # UPDATE — vertex üretimi
     # ==================================================================
-    def update(self, scene, camera_scale: float = 1.0):
-        """Vertex buffer'ları doldur. Line ve triangle AYRI."""
+    def update(self, scene, camera_scale: float = 1.0, scene_size: float = 1.0):
         if not self._initialized:
             self.init_gl()
 
@@ -169,29 +173,45 @@ class LoadRenderer:
             self.tri_count = 0
             return
 
-        # Bu güncellemede hangi pattern'lar var?
         self.available_patterns = self._scan_patterns(scene)
 
-        lines = []   # line vertex'leri (2 nokta = 1 segment)
-        tris = []    # triangle vertex'leri (3 nokta = 1 üçgen)
+        lines = []
+        tris = []
 
-        for frame in scene.frames.values():
-            if not getattr(frame, "is_visible", True):
-                continue
+        # --- Frame yayılı yükleri (değişmez) ---
+        if self.show_frame_loads:
+            for frame in scene.frames.values():
+                ...
 
-            load_sets = getattr(frame, "dist_load_sets", None)
-            if load_sets:
-                for ls in load_sets.values():
-                    pat = getattr(ls, "pattern_name", "?")
+        # --- Point loads: ÖLÇEĞİ ÖNCE HESAPLA ---
+        if self.show_point_loads:
+            # Maksimum yük büyüklüğü (filtre uygulanmış)
+            point_load_max = 1.0
+            for node in scene.nodes.values():
+                if not getattr(node, "is_visible", True):
+                    continue
+                for pl in getattr(node, "loads", None) or []:
+                    pat = getattr(pl, "pattern_name", "?")
                     if self.active_pattern and pat != self.active_pattern:
                         continue
-                    self._emit_load_set(frame, ls, lines, tris, camera_scale)
-            else:
-                for dl in getattr(frame, "dist_loads", []) or []:
-                    pat = getattr(dl, "pattern_name", "?")
+                    mag = abs(pl.fx) + abs(pl.fy) + abs(pl.fz)
+                    if mag > point_load_max:
+                        point_load_max = mag
+
+            # Ok boyu: sahnenin %5'i (max yük için)
+            target_arrow_len = max(scene_size, 1.0) * 0.05
+            self._point_force_scale = target_arrow_len / point_load_max
+
+            # Şimdi her yükü çiz
+            for node in scene.nodes.values():
+                if not getattr(node, "is_visible", True):
+                    continue
+                for pl in getattr(node, "loads", None) or []:
+                    pat = getattr(pl, "pattern_name", "?")
                     if self.active_pattern and pat != self.active_pattern:
                         continue
-                    self._emit_legacy(frame, dl, lines, tris, camera_scale)
+                    self._emit_point_load(node, pl, lines, tris, camera_scale)
+        
 
         # Line buffer
         if lines:
@@ -222,6 +242,12 @@ class LoadRenderer:
                 pats.update(load_sets.keys())
             for dl in getattr(frame, "dist_loads", []) or []:
                 p = getattr(dl, "pattern_name", None)
+                if p:
+                    pats.add(p)
+
+        for node in scene.nodes.values():              # ← YENİ
+            for pl in getattr(node, "loads", None) or []:
+                p = getattr(pl, "pattern_name", None)
                 if p:
                     pats.add(p)
         return sorted(pats)
@@ -525,3 +551,73 @@ class LoadRenderer:
         if dir_raw == "3":
             return e3
         return e2  # varsayılan Local 2
+
+    def _emit_point_load(self, node, pl, lines, tris, cam_scale):
+        """
+        PointLoad görselleştir:
+        - Fx, Fy, Fz → dünya ekseni yönünde ok
+        - Mx, My, Mz → şimdilik atla (torus dilimi karmaşık)
+        Ok boyu: |F| * scale (kamera bağımsız dünya birimi)
+        """
+        origin = np.array([node.x, node.y, node.z], dtype=float)
+        color = self._pattern_color(getattr(pl, "pattern_name", "?"))
+
+        
+
+        components = [
+            (pl.fx, np.array([1.0, 0.0, 0.0])),
+            (pl.fy, np.array([0.0, 1.0, 0.0])),
+            (pl.fz, np.array([0.0, 0.0, 1.0])),
+        ]
+        for val, axis in components:
+            if abs(val) < 1e-9:
+                continue
+            length = float(val) * self._point_force_scale * self.profile_scale
+            self._emit_arrow_3d(origin, axis, length, color, lines, tris)
+
+        # Moment — opsiyonel, atla. İstersen eksen etrafında yay çiz.
+
+    def _emit_arrow_3d(self, origin, direction, length, color, lines, tris):
+        """
+        origin'den `direction` yönünde `length` boyunda 3D ok.
+        Negatif length → ters yön.
+        Gövde: line. Ok başı: üçgen (tri).
+        """
+        d = np.array(direction, dtype=float)
+        n = np.linalg.norm(d)
+        if n < 1e-9:
+            return
+        d = d / n
+
+        L = float(length)
+        if abs(L) < 1e-9:
+            return
+
+        o = np.array(origin, dtype=float)
+        tip = o + d * L
+        hb = o + d * (L * 0.85)   # ok başı tabanı
+
+        # Gövde
+        self._push_line(lines, o, hb, color)
+
+        # Ok başı için dik vektörler
+        perp = self._perp_vector(d)
+        side = np.cross(d, perp)
+        slen = np.linalg.norm(side)
+        if slen < 1e-9:
+            return
+        side = side / slen
+
+        head_w = abs(L) * 0.10
+        left  = hb + side * head_w
+        right = hb - side * head_w
+
+        self._push_tri(tris, tip, left, right, color)
+
+    @staticmethod
+    def _perp_vector(d):
+        """d'ye dik herhangi bir birim vektör."""
+        a = np.array([0.0, 0.0, 1.0]) if abs(d[2]) < 0.9 else np.array([0.0, 1.0, 0.0])
+        p = np.cross(d, a)
+        n = np.linalg.norm(p)
+        return p / n if n > 1e-9 else np.array([1.0, 0.0, 0.0])

@@ -1,13 +1,16 @@
 # core/analysis/stiffness_assembly.py
 """
-Rijitlik Matrisi Toplama — TEK Çıkış: StiffnessAssembly (Frame + Area 3D Shell Simetrik)
+Rijitlik Matrisi Toplama — TEK Çıkış: StiffnessAssembly (Frame Timoshenko + Area 3D Shell Simetrik)
 
 Birim Sözleşmesi (units.py):
-    E  [MPa = N/mm²]
-    A  [mm²]
-    I  [mm⁴]
-    L  [mm]
-    → K  [N/mm] (öteleme), [N·mm/rad] (rotasyon)
+    E   [MPa = N/mm²]
+    G   [MPa = N/mm²]
+    A   [mm²]
+    AS2 [mm²] (Kesme alanı - y yönü)
+    AS3 [mm²] (Kesme alanı - z yönü)
+    I   [mm⁴]
+    L   [mm]
+    → K [N/mm] (öteleme), [N·mm/rad] (rotasyon)
 """
 from __future__ import annotations
 
@@ -40,9 +43,11 @@ def local_stiffness(
     L: float,
     release_i: Optional[Dict[str, bool]] = None,
     release_j: Optional[Dict[str, bool]] = None,
-    use_shear_deform: bool = False,
+    use_shear_deform: bool = True,
 ) -> np.ndarray:
-    """3D Çubuk 12x12 Lokal Rijitlik Matrisi."""
+    """
+    3D Çubuk 12x12 Lokal Rijitlik Matrisi (Timoshenko Kesme Deformasyonu Destekli).
+    """
     if L <= 0:
         raise ValueError(f"Geçersiz eleman uzunluğu L={L}")
 
@@ -53,7 +58,7 @@ def local_stiffness(
     def rel(d: Dict[str, bool], code: str) -> bool:
         return bool(d.get(code, False))
 
-    # Eksenel
+    # 1. Eksenel (UX: 0, 6)
     if not (rel(ri, "R1") or rel(rj, "R1")):
         EA_L = E * A / L
         k[0, 0] += EA_L
@@ -61,7 +66,7 @@ def local_stiffness(
         k[0, 6] -= EA_L
         k[6, 0] -= EA_L
 
-    # Burulma
+    # 2. Burulma (RX: 3, 9)
     if not (rel(ri, "R4") or rel(rj, "R4")):
         GJ_L = G * J / L
         k[3, 3] += GJ_L
@@ -69,7 +74,7 @@ def local_stiffness(
         k[3, 9] -= GJ_L
         k[9, 3] -= GJ_L
 
-    # Eğilme I33
+    # 3. Eğilme Yönü 1 (I33 - UY/RZ düzlemi: 1, 5, 7, 11)
     phi3 = 0.0
     if use_shear_deform and G > 0 and AS2 > 0 and I33 > 0:
         phi3 = (12.0 * E * I33) / (G * AS2 * L**2)
@@ -79,12 +84,12 @@ def local_stiffness(
     c3 = (4.0 + phi3) * E * I33 / (denom3 * L)
     d3 = (2.0 - phi3) * E * I33 / (denom3 * L)
 
-    k[1, 1] += a3; k[1, 5] += b3; k[1, 7] -= a3; k[1, 11] += b3
-    k[5, 1] += b3; k[5, 5] += c3; k[5, 7] -= b3; k[5, 11] += d3
-    k[7, 1] -= a3; k[7, 5] -= b3; k[7, 7] += a3; k[7, 11] -= b3
+    k[1, 1] += a3;  k[1, 5] += b3;  k[1, 7] -= a3;  k[1, 11] += b3
+    k[5, 1] += b3;  k[5, 5] += c3;  k[5, 7] -= b3;  k[5, 11] += d3
+    k[7, 1] -= a3;  k[7, 5] -= b3;  k[7, 7] += a3;  k[7, 11] -= b3
     k[11, 1] += b3; k[11, 5] += d3; k[11, 7] -= b3; k[11, 11] += c3
 
-    # Eğilme I22
+    # 4. Eğilme Yönü 2 (I22 - UZ/RY düzlemi: 2, 4, 8, 10)
     phi2 = 0.0
     if use_shear_deform and G > 0 and AS3 > 0 and I22 > 0:
         phi2 = (12.0 * E * I22) / (G * AS3 * L**2)
@@ -94,9 +99,9 @@ def local_stiffness(
     c2 = (4.0 + phi2) * E * I22 / (denom2 * L)
     d2 = (2.0 - phi2) * E * I22 / (denom2 * L)
 
-    k[2, 2] += a2; k[2, 4] -= b2; k[2, 8] -= a2; k[2, 10] -= b2
-    k[4, 2] -= b2; k[4, 4] += c2; k[4, 8] += b2; k[4, 10] += d2
-    k[8, 2] -= a2; k[8, 4] += b2; k[8, 8] += a2; k[8, 10] += b2
+    k[2, 2] += a2;  k[2, 4] -= b2;  k[2, 8] -= a2;  k[2, 10] -= b2
+    k[4, 2] -= b2;  k[4, 4] += c2;  k[4, 8] += b2;  k[4, 10] += d2
+    k[8, 2] -= a2;  k[8, 4] += b2;  k[8, 8] += a2;  k[8, 10] += b2
     k[10, 2] -= b2; k[10, 4] += d2; k[10, 8] += b2; k[10, 10] += c2
 
     return 0.5 * (k + k.T)
@@ -140,9 +145,6 @@ def transformation_matrix(
 
 
 def triangle_shell_stiffness_3d(nodes: list, thickness: float, material) -> np.ndarray:
-    """
-    3 düğümlü 3D kabuk elemanı (Membran + Eğilme) 18x18 simetrik global rijitlik matrisi.
-    """
     n = len(nodes)
     if n < 3:
         return np.zeros((0, 0))
@@ -173,7 +175,6 @@ def triangle_shell_stiffness_3d(nodes: list, thickness: float, material) -> np.n
         e2 = np.array([0, 1, 0])
 
     R = np.vstack([e1, e2, e3])
-
     T = np.zeros((18, 18), dtype=float)
     for i in range(6):
         T[i*3:(i+1)*3, i*3:(i+1)*3] = R
@@ -186,7 +187,6 @@ def triangle_shell_stiffness_3d(nodes: list, thickness: float, material) -> np.n
 
     k_loc = np.zeros((18, 18), dtype=float)
 
-    # Membran D matrisi (CST)
     D_m = (E * t / (1.0 - nu**2)) * np.array([
         [1.0, nu, 0.0],
         [nu, 1.0, 0.0],
@@ -218,18 +218,24 @@ def triangle_shell_stiffness_3d(nodes: list, thickness: float, material) -> np.n
             k_loc[6*i+1, 6*j]   = K_membrane_local[2*i+1, 2*j]
             k_loc[6*i+1, 6*j+1] = K_membrane_local[2*i+1, 2*j+1]
 
-    # Plak Eğilme ve Stabilizasyon Bileşeni (Sayısal patlamayı önlemek için kontrollü ölçek)
-    D_b = (E * t**3 / (12.0 * (1.0 - nu**2)))
-    bend_val = max(D_b * area * 0.01, 1.0)
+    # D_b = (E * t**3 / (12.0 * (1.0 - nu**2)))
+    # bend_val = max(D_b * area * 0.01, 1.0)
+
+    # Plak eğilme rijitliği (N·mm)
+    D_b = E * t**3 / (12.0 * (1.0 - nu**2))
+    # Karakteristik uzunluk
+    L_char = np.sqrt(area)
+    # Rijitlik ölçeği (N/mm)
+    bend_val = D_b / (L_char**2) * 0.02
+
+    #######
+
     for i in range(3):
         for dof_idx in (2, 3, 4, 5):
             idx = 6*i + dof_idx
             k_loc[idx, idx] += bend_val
 
-    # Yerel matris simetrizasyonu
     k_loc = 0.5 * (k_loc + k_loc.T)
-
-    # Global dönüşüm ve global simetrizasyon
     k_glob = T.T @ k_loc @ T
     return 0.5 * (k_glob + k_glob.T)
 
@@ -246,6 +252,8 @@ def build_stiffness(
     validate: bool = True,
     use_shear_deform: bool = False,
 ) -> StiffnessAssembly:
+    print(f"[STIFF] use_shear_deform = {use_shear_deform}")
+
     ensure_dof_indices(scene)
     num_dofs = len(scene.nodes) * 6
 
@@ -271,7 +279,6 @@ def build_stiffness(
         else:
             skipped.append((str(getattr(area, "label", f"Area {area_key}")), err))
 
-    # Global K matrisi kesin simetri güvencesi
     K = 0.5 * (K + K.T)
 
     asm = StiffnessAssembly(
@@ -292,7 +299,7 @@ def build_stiffness(
 
 
 def _assemble_frame(
-    frame, K: np.ndarray, num_dofs: int, use_shear_deform: bool = False
+    frame, K: np.ndarray, num_dofs: int, use_shear_deform: bool = True
 ) -> Optional[str]:
     sec = getattr(frame, "section", None)
     if not sec:

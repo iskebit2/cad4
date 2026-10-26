@@ -1,34 +1,28 @@
 # domain/definition.py
 """
-SAP2000 uyumlu tanım sınıfları
-- Material, Section, LinkProp, LoadPattern, LoadCase, Combo, Restraint
+SAP2000 uyumlu tanım sınıfları.
+
+Birim sözleşmesi (core.units):
+    Model her zaman project.unit_system'de.
+    convert_project_units(project, target) __unit_schema__ ile dönüştürür.
+    __unit_schema__: {field_path: Dimension} — boyutsuz alanlar None.
 """
 from __future__ import annotations
 
-import dataclasses
-from dataclasses import dataclass, field, asdict
-
-from typing import Optional, Dict, Any, List, Tuple, Type
-import typing
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 
 import glm
 import numpy as np
-from data.seismic import get_tsc2018_site_coefficients
-# ============================================================================
-# RE-EXPORT (s2k_utils.py'nin beklediği tüm isimler)
-# ============================================================================
+
+from core.units import Dimension, DENSITY_STEEL
 from data.enums import (
-    DistType,
-    LinkPropType,
-    LoadDirection,
-    MatType,
-    PropAreaType,
-    SectionCutDefinedBy,
-    SectionCutResultType,
-    SectionType,
-    SpectrumSourceType,
+    DistType, LinkPropType, LoadDirection, MatType,
+    PropAreaType, SectionCutDefinedBy, SectionCutResultType,
+    SectionType, SpectrumSourceType,
 )
-from data.unit_enums import DENSITY_STEEL
+from data.seismic import get_tsc2018_site_coefficients
+
 
 __all__ = [
     # enums (re-export)
@@ -45,26 +39,6 @@ __all__ = [
     "SiteInformation", "SpectrumFunction", "StaticLoadAssignment",
 ]
 
-# domain/definition.py (başına)
-
-# ============================================================================
-# BİRİM SÖZLEŞMESİ (tek doğruluk kaynağı)
-# ============================================================================
-# Uzunluk      : mm
-# Kuvvet       : N
-# Gerilme      : MPa (= N/mm²)
-# Moment       : N·mm
-# Kütle        : kg   (yoğunluk kg/mm³ ise hacim mm³ → kg)
-# Yoğunluk     : kg/mm³
-# Yerçekimi ivmesi g : 9810 mm/s²
-#
-# Material.density [kg/mm³] — çelik 7.85e-6, beton 2.5e-6
-# Section.profile_params['Area'] [mm²]
-# Section.profile_params['I33','I22','J'] [mm⁴]
-# MassSource katkıları kg cinsinden; rapor ton'a çevirirken /1000.
-# ============================================================================
-
-
 
 # ============================================================================
 # MATERIAL
@@ -74,36 +48,48 @@ class Material:
     name: str = "DEFAULT"
     mat_type: MatType = MatType.STEEL
     color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
-    E1: float = 2.1e5     # MPa (çelik 210 GPa)
+
+    E1: float = 2.1e5
     E2: float = 2.1e5
     E3: float = 2.1e5
-    G12: float = 8.1e4    # MPa (G = E / (2(1+ν)))
+    G12: float = 8.1e4
     G13: float = 8.1e4
     G23: float = 8.1e4
     nu12: float = 0.3
     nu13: float = 0.3
     nu23: float = 0.3
     density: float = DENSITY_STEEL   # kg/mm³
+    fy: float = 235.0
+    fu: float = 360.0
+
+    __unit_schema__ = {
+        "E1": Dimension.STRESS, "E2": Dimension.STRESS, "E3": Dimension.STRESS,
+        "G12": Dimension.STRESS, "G13": Dimension.STRESS, "G23": Dimension.STRESS,
+        "density": Dimension.MASS_DENSITY,
+        "fy": Dimension.STRESS, "fu": Dimension.STRESS,
+        "nu12": None, "nu13": None, "nu23": None,
+    }
 
     @property
-    def E(self) -> float:
-        return self.E1
+    def E(self) -> float: return self.E1
+
     @property
-    def G(self) -> float:
-        return self.G12
+    def G(self) -> float: return self.G12
+
     @property
-    def nu(self) -> float:
-        return self.nu12
+    def nu(self) -> float: return self.nu12
+
 
 DEFAULT_MATERIAL = Material(
     name="DEFAULT_STEEL",
     mat_type=MatType.STEEL,
-    E1=2.1e8,
-    G12=8.1e7,
+    E1=2.1e5,
+    G12=8.1e4,
     nu12=0.3,
-    density=DENSITY_STEEL   # kg/mm³
-
+    density=DENSITY_STEEL,
 )
+
+
 # ============================================================================
 # SECTION
 # ============================================================================
@@ -115,18 +101,58 @@ class Section:
     material: Optional[Material] = None
     color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
 
-    # YENİ: Katalogdan gelen hesaplanmış özellikler (analiz için)
     catalog_props: Dict[str, float] = field(default_factory=dict)
-    catalog_source: str = ""    # "CSI Euro - W" gibi
+    catalog_source: str = ""
+    sd_section: Optional["SDSection"] = None
 
-    sd_section: Optional["SDSection"] = None   # ileri referans
-    
+    __unit_schema__ = {
+        # profile_params
+        "profile_params.Area": Dimension.AREA,
+        "profile_params.I33": Dimension.I4,
+        "profile_params.I22": Dimension.I4,
+        "profile_params.J": Dimension.I4,
+        "profile_params.I23": Dimension.I4,
+        "profile_params.AS2": Dimension.AREA,
+        "profile_params.AS3": Dimension.AREA,
+        "profile_params.h": Dimension.LENGTH,
+        "profile_params.b": Dimension.LENGTH,
+        "profile_params.tw": Dimension.LENGTH,
+        "profile_params.tf": Dimension.LENGTH,
+        "profile_params.t": Dimension.LENGTH,
+        "profile_params.ro": Dimension.LENGTH,
+        "profile_params.ri": Dimension.LENGTH,
+        "profile_params.d": Dimension.LENGTH,
+        "profile_params.t2b": Dimension.LENGTH,
+        "profile_params.tfb": Dimension.LENGTH,
+        "profile_params.S33Top": Dimension.I3,
+        "profile_params.S33Bot": Dimension.I3,
+        "profile_params.S22Left": Dimension.I3,
+        "profile_params.S22Right": Dimension.I3,
+        "profile_params.Z33": Dimension.I3,
+        "profile_params.Z22": Dimension.I3,
+        "profile_params.R33": Dimension.I3,
+        "profile_params.R22": Dimension.I3,
+        "profile_params.Cw": Dimension.I4,
+        "profile_params.n": None,
+        # catalog_props
+        "catalog_props.Area": Dimension.AREA,
+        "catalog_props.I33": Dimension.I4,
+        "catalog_props.I22": Dimension.I4,
+        "catalog_props.J": Dimension.I4,
+        "catalog_props.h": Dimension.LENGTH,
+        "catalog_props.b": Dimension.LENGTH,
+        "catalog_props.tw": Dimension.LENGTH,
+        "catalog_props.tf": Dimension.LENGTH,
+    }
+
     def __post_init__(self):
         if self.material is None:
             self.material = DEFAULT_MATERIAL
 
 
-
+# ============================================================================
+# AREA SECTION
+# ============================================================================
 @dataclass
 class AreaSection:
     name: str = ""
@@ -150,75 +176,65 @@ class AreaSection:
 
     params: Dict = field(default_factory=dict)
 
+    __unit_schema__ = {
+        "thickness": Dimension.LENGTH,
+    }
+
     @property
     def modifiers(self):
         return (
-            self.membrane_f11,
-            self.membrane_f22,
-            self.membrane_f12,
-            self.bending_m11,
-            self.bending_m22,
-            self.bending_m12,
-            self.shear_v13,
-            self.shear_v23,
-            self.mass,
-            self.weight,
+            self.membrane_f11, self.membrane_f22, self.membrane_f12,
+            self.bending_m11, self.bending_m22, self.bending_m12,
+            self.shear_v13, self.shear_v23, self.mass, self.weight,
         )
-    
+
 
 # ============================================================================
 # LINK PROPERTIES
 # ============================================================================
 @dataclass
-class LinkProperty:
-    name: str = ""
-    prop_type: LinkPropType = LinkPropType.LINEAR
-
-    dof: Tuple[bool, ...] = ()
-    fixed: Tuple[bool, ...] = ()
-
-    ke: Tuple[float, ...] = ()
-    ce: Tuple[float, ...] = ()
-
-    params: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
 class LinkProp:
     name: str = "LINK1"
     prop_type: LinkPropType = LinkPropType.LINEAR
 
+
 @dataclass
 class LinkPropLinear(LinkProp):
-    """Linear link property - DOF bazlı stiffness ve damping"""
     prop_type: LinkPropType = LinkPropType.LINEAR
     DOF: Dict[str, bool] = field(default_factory=lambda: {
         "U1": True, "U2": True, "U3": True,
-        "R1": True, "R2": True, "R3": True
+        "R1": True, "R2": True, "R3": True,
     })
-
     Fixed: Dict[str, bool] = field(default_factory=dict)
-
     Ke: Dict[str, float] = field(default_factory=lambda: {
         "U1": 0.0, "U2": 0.0, "U3": 0.0,
-        "R1": 0.0, "R2": 0.0, "R3": 0.0
+        "R1": 0.0, "R2": 0.0, "R3": 0.0,
     })
-
     Ce: Dict[str, float] = field(default_factory=lambda: {
         "U1": 0.0, "U2": 0.0, "U3": 0.0,
-        "R1": 0.0, "R2": 0.0, "R3": 0.0
+        "R1": 0.0, "R2": 0.0, "R3": 0.0,
     })
+
+    __unit_schema__ = {
+        "Ke.U1": Dimension.FORCE,
+        "Ke.U2": Dimension.FORCE,
+        "Ke.U3": Dimension.FORCE,
+        "Ke.R1": Dimension.MOMENT,
+        "Ke.R2": Dimension.MOMENT,
+        "Ke.R3": Dimension.MOMENT,
+    }
 
     def __post_init__(self):
         self.DOF = self.DOF or {"U1": True, "U2": True, "U3": True,
                                 "R1": True, "R2": True, "R3": True}
         self.Fixed = self.Fixed or {}
-        self.Ke = self.Ke or {"U1": 0, "U2": 0, "U3": 0,
-                              "R1": 0, "R2": 0, "R3": 0}
-        self.Ce = self.Ce or {"U1": 0, "U2": 0, "U3": 0,
-                              "R1": 0, "R2": 0, "R3": 0}
+        self.Ke = self.Ke or {"U1": 0, "U2": 0, "U3": 0, "R1": 0, "R2": 0, "R3": 0}
+        self.Ce = self.Ce or {"U1": 0, "U2": 0, "U3": 0, "R1": 0, "R2": 0, "R3": 0}
 
 
+# ============================================================================
+# RESTRAINT
+# ============================================================================
 @dataclass
 class Restraint:
     ux: bool = False
@@ -228,43 +244,36 @@ class Restraint:
     ry: bool = False
     rz: bool = False
 
-    DOF_ORDER = ('ux', 'uy', 'uz', 'rx', 'ry', 'rz')
+    DOF_ORDER = ("ux", "uy", "uz", "rx", "ry", "rz")
 
     @classmethod
-    def from_list(cls, values):
-        return cls(*values)
+    def from_list(cls, values): return cls(*values)
 
-    def is_free(self):
-        return not any(self.as_list())
+    def is_free(self): return not any(self.as_list())
 
-    def is_fully_fixed(self):
-        return all(self.as_list())
+    def is_fully_fixed(self): return all(self.as_list())
 
-    def fixed_dofs(self):
-        return [name for name in self.DOF_ORDER if getattr(self, name)]
+    def fixed_dofs(self): return [n for n in self.DOF_ORDER if getattr(self, n)]
 
-    def free_dofs(self):
-        return [name for name in self.DOF_ORDER if not getattr(self, name)]
+    def free_dofs(self): return [n for n in self.DOF_ORDER if not getattr(self, n)]
 
-    def as_list(self):
-        return [getattr(self, dof) for dof in self.DOF_ORDER]
+    def as_list(self): return [getattr(self, d) for d in self.DOF_ORDER]
 
-    def as_dict(self):
-        return {dof: getattr(self, dof) for dof in self.DOF_ORDER}
+    def as_dict(self): return {d: getattr(self, d) for d in self.DOF_ORDER}
 
     def as_int_mask(self):
         mask = 0
-        for i, dof in enumerate(self.DOF_ORDER):
-            if getattr(self, dof):
+        for i, d in enumerate(self.DOF_ORDER):
+            if getattr(self, d):
                 mask |= (1 << i)
         return mask
 
+
 # ============================================================================
-# CONFIG DATACLASSES
+# CONFIG
 # ============================================================================
 @dataclass
 class WindConfig:
-    # TS EN 1991-1-4
     vb0: float = 28.0
     terrain_category: str = "III"
     z0: float = 0.0
@@ -273,17 +282,21 @@ class WindConfig:
     cpi_positive: float = 0.2
     cpi_negative: float = -0.3
 
+    __unit_schema__ = {"vb0": Dimension.ACCEL, "z0": Dimension.LENGTH, "z1": Dimension.LENGTH, "z2": Dimension.LENGTH}
+
+
 @dataclass
 class SnowConfig:
-    # TS EN 1991-1-3
     sk: float = 0.75
     exposure_coefficient: float = 1.0
     thermal_coefficient: float = 1.0
     shape_coefficient: float = 0.8
 
+    __unit_schema__ = {"sk": Dimension.AREA_LOAD}
+
+
 @dataclass
 class SeismicConfig:
-    # TBDY 2018
     ss: float = 0.0
     s1: float = 0.0
     soil_class: str = "ZD"
@@ -292,11 +305,15 @@ class SeismicConfig:
     behavior_factor: float = 8.0
     overstrength_factor: float = 3.0
 
+    __unit_schema__ = {}
+
+
 @dataclass
 class ProjectConfig:
     wind: WindConfig = field(default_factory=WindConfig)
     snow: SnowConfig = field(default_factory=SnowConfig)
     seismic: SeismicConfig = field(default_factory=SeismicConfig)
+
 
 @dataclass
 class GeneralProjectInfo:
@@ -324,74 +341,53 @@ class SiteInformation:
     subgrade_modulus_kn_m3: float = 15000.0
     extra_items: Dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class ProjectInfo:
     name: str = "Untitled"
     description: str = ""
     author: str = ""
 
-@dataclass
-class LoadManager:
-    pass
 
 @dataclass
-class WindDirectionResult:
-    w_dir: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-    q_p: float = 0.0
-    q_b: float = 0.0
-    z_ref: float = 0.0
-    e: float = 0.0
-    geometry: Dict[str, Any] = field(default_factory=dict)
-    zones_data: List[Dict[str, Any]] = field(default_factory=list)
+class LoadManager: pass
 
 @dataclass
-class WindAnalysisResult:
-    directions: Dict[str, WindDirectionResult] = field(default_factory=dict)
-    active_direction: Optional[Tuple[float, float, float]] = None
+class ReportManager: pass
+
 
 @dataclass
 class AnalysisManager:
-    wind: WindAnalysisResult = field(default_factory=WindAnalysisResult)
+    wind: Any = None
     snow: Any = None
     seismic: Any = None
 
-@dataclass
-class ReportManager:
-    pass
 
 @dataclass
 class GridPlaneDef:
-    """Kullanıcı tanımlı eğik grid düzlemi."""
     name: str = ""
     origin: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-    # Düzlemin normal vektörü (birim, otomatik normalize)
     normal: Tuple[float, float, float] = (0.0, 0.0, 1.0)
-    # Yerel U ekseni (normal'e dik, otomatik ortonormalize)
     u_axis: Tuple[float, float, float] = (1.0, 0.0, 0.0)
-    # U ve V yönünde grid aralığı (yerel birim)
     spacing_u: float = 1000.0
     spacing_v: float = 1000.0
-    # Kaç çizgi çizilecek (her yönde)
     count_u: int = 20
     count_v: int = 20
-    # Görsel
     visible: bool = True
     color: Tuple[float, float, float] = (0.55, 0.55, 0.60)
     locked: bool = False
 
     def get_uv_frame(self):
-        """Ortonormal (origin, U, V, N) frame döner."""
         n = glm.normalize(glm.vec3(*self.normal))
         u = glm.vec3(*self.u_axis)
-        # U'yu N'e dik hale getir
         u = u - n * glm.dot(u, n)
         if glm.length(u) < 1e-6:
-            # Dejenere — dünya X kullan
             u = glm.vec3(1, 0, 0) - n * n.x
         u = glm.normalize(u)
         v = glm.cross(n, u)
         return glm.vec3(*self.origin), u, v, n
-    
+
+
 @dataclass
 class GridConfig:
     x_coords: List[float] = field(default_factory=lambda: [0.0, 1000.0])
@@ -400,11 +396,15 @@ class GridConfig:
     origin_x: float = 0.0
     origin_y: float = 0.0
     origin_z: float = 0.0
-    planes_visibility: Dict[str, bool] = field(default_factory=lambda: {"XY": True, "XZ": False, "YZ": False})
+    planes_visibility: Dict[str, bool] = field(default_factory=lambda: {
+        "XY": True, "XZ": False, "YZ": False,
+    })
+
 
 @dataclass
 class QuadDefinition:
     points: List[Tuple[float, float, float]] = field(default_factory=list)
+
 
 @dataclass
 class SectionCut:
@@ -412,41 +412,46 @@ class SectionCut:
     defined_by: SectionCutDefinedBy = SectionCutDefinedBy.QUAD
     group: str = "All"
     result_type: SectionCutResultType = SectionCutResultType.ANALYSIS
-
     default_loc: bool = True
-
     global_x: float = 0.0
     global_y: float = 0.0
     global_z: float = 0.0
-
     angle_a: float = 0.0
     angle_b: float = 0.0
     angle_c: float = 0.0
-
     elem_side: str = "Positive"
-
     quad: Optional[QuadDefinition] = None
 
-# -------------------------------------------------------------------------
-# LOAD PATTERNS & CASES
-# -------------------------------------------------------------------------
+    __unit_schema__ = {
+        "global_x": Dimension.LENGTH,
+        "global_y": Dimension.LENGTH,
+        "global_z": Dimension.LENGTH,
+    }
+
+
+# ============================================================================
+# LOAD PATTERN / CASE / COMBO
+# ============================================================================
 @dataclass
 class LoadPattern:
-    """TABLE: LOAD PATTERN DEFINITIONS"""
     name: str = ""
     design_type: str = "Dead"
     self_wt_mult: float = 0.0
 
+    __unit_schema__ = {"self_wt_mult": None}   # boyutsuz
+
+
 @dataclass
 class StaticLoadAssignment:
-    """TABLE: CASE - STATIC 1 - LOAD ASSIGNMENTS"""
     load_type: str = "Load pattern"
     load_name: str = ""
     load_sf: float = 1.0
 
+    __unit_schema__ = {"load_sf": None}
+
+
 @dataclass
 class LoadCase:
-    """TABLE: LOAD CASE DEFINITIONS"""
     name: str = ""
     case_type: str = "LinStatic"
     initial_cond: str = "Zero"
@@ -456,9 +461,11 @@ class LoadCase:
     run_case: bool = True
     static_assignments: List[StaticLoadAssignment] = field(default_factory=list)
 
+    __unit_schema__ = {"static_assignments.load_sf": None}
+
+
 @dataclass
 class ModalCase:
-    """TABLE: CASE - MODAL 1 - GENERAL"""
     name: str = ""
     mode_type: str = "Eigen"
     max_num_modes: int = 12
@@ -468,13 +475,14 @@ class ModalCase:
     eigen_tol: float = 1e-9
     auto_shift: bool = True
 
-# -------------------------------------------------------------------------
-# COMBINATIONS
-# -------------------------------------------------------------------------
+
 @dataclass
 class ComboItem:
     case_or_pattern_name: str = ""
     scale_factor: float = 1.0
+
+    __unit_schema__ = {"scale_factor": None}
+
 
 @dataclass
 class LoadCombination:
@@ -483,10 +491,10 @@ class LoadCombination:
     auto_design: bool = False
     items: List[ComboItem] = field(default_factory=list)
 
-    
-# -------------------------------------------------------------------------
-# JOINT LOADS
-# -------------------------------------------------------------------------
+
+# ============================================================================
+# JOINT / FRAME / AREA LOADS
+# ============================================================================
 @dataclass
 class PointLoad:
     pattern_name: str = ""
@@ -497,9 +505,12 @@ class PointLoad:
     my: float = 0.0
     mz: float = 0.0
 
-# -------------------------------------------------------------------------
-# FRAME LOADS
-# -------------------------------------------------------------------------
+    __unit_schema__ = {
+        "fx": Dimension.FORCE, "fy": Dimension.FORCE, "fz": Dimension.FORCE,
+        "mx": Dimension.MOMENT, "my": Dimension.MOMENT, "mz": Dimension.MOMENT,
+    }
+
+
 @dataclass
 class FramePointLoad:
     pattern_name: str = ""
@@ -510,6 +521,12 @@ class FramePointLoad:
     is_relative: bool = True
     coordinate_system: str = "GLOBAL"
 
+    __unit_schema__ = {
+        "value": Dimension.FORCE,   # veya MOMENT — force_or_moment'a göre
+        "distance": Dimension.LENGTH,
+    }
+
+
 @dataclass
 class LoadSegment:
     x1: float = 0.0
@@ -517,8 +534,15 @@ class LoadSegment:
     q1: float = 0.0
     q2: float = 0.0
 
+    __unit_schema__ = {
+        "q1": Dimension.LINE_LOAD,
+        "q2": Dimension.LINE_LOAD,
+        "x1": None, "x2": None,   # relative
+    }
+
     def to_points(self):
         return [(self.x1, self.q1), (self.x2, self.q2)]
+
 
 @dataclass
 class FrameDistributedLoad:
@@ -530,7 +554,7 @@ class FrameDistributedLoad:
     direction: LoadDirection = LoadDirection.GLOBAL_Z
     is_relative: bool = True
     coordinate_system: str = "GLOBAL"
-    dist_type: str = "one_way"      # ← YENİ: "one_way" veya "two_way"
+    dist_type: str = "one_way"
     segments: List[LoadSegment] = field(default_factory=list)
 
     def add_segment(self, x1: float, x2: float, q1: float, q2: float):
@@ -541,40 +565,21 @@ class FrameDistributedLoad:
         self.segments.clear()
 
     def to_sap_loads(self):
-        out = []
-        for seg in self.segments:
-            out.append(FrameDistributedLoad(
+        return [
+            FrameDistributedLoad(
                 pattern_name=self.pattern_name,
                 coord_sys=self.coord_sys,
                 load_dir=self.load_dir,
                 mode=self.mode,
                 force_or_moment=self.force_or_moment,
-                direction=self.direction,           # ← EKLENDİ
+                direction=self.direction,
                 is_relative=self.is_relative,
                 coordinate_system=self.coordinate_system,
                 dist_type=self.dist_type,
                 segments=[seg],
-            ))
-        return out
-
-    @classmethod
-    def from_sap_loads(cls, loads):
-        if not loads:
-            return cls()
-        first = loads[0]
-        s = cls(
-            pattern_name=first.pattern_name,
-            coord_sys=first.coord_sys,
-            load_dir=first.load_dir,
-            mode=first.mode,
-            is_relative=getattr(first, "is_relative", True),
-            coordinate_system=getattr(first, "coordinate_system", "GLOBAL"),
-            dist_type=getattr(first, "dist_type", "one_way"),   # ← YENİ
-        )
-        for ld in loads:
-            for seg in ld.segments:
-                s.add_segment(seg.x1, seg.x2, seg.q1, seg.q2)
-        return s
+            )
+            for seg in self.segments
+        ]
 
 
 @dataclass
@@ -584,6 +589,10 @@ class FrameGravityLoad:
     multiplier_y: float = 0.0
     multiplier_z: float = 0.0
 
+    __unit_schema__ = {
+        "multiplier_x": None, "multiplier_y": None, "multiplier_z": None,
+    }
+
 
 @dataclass
 class FrameTemperatureLoad:
@@ -591,9 +600,9 @@ class FrameTemperatureLoad:
     temp_type: str = "Temperature"
     val: float = 0.0
 
-# -------------------------------------------------------------------------
-# AREA LOADS
-# -------------------------------------------------------------------------
+    __unit_schema__ = {"val": Dimension.TEMP}
+
+
 @dataclass
 class AreaGravityLoad:
     pattern_name: str = ""
@@ -601,9 +610,13 @@ class AreaGravityLoad:
     multiplier_y: float = 0.0
     multiplier_z: float = 0.0
 
+
 @dataclass
 class AreaRefTemperatureLoad:
     temp: float = 0.0
+
+    __unit_schema__ = {"temp": Dimension.TEMP}
+
 
 @dataclass
 class AreaStrainLoad:
@@ -611,11 +624,17 @@ class AreaStrainLoad:
     component: str = "S11"
     val: float = 0.0
 
+    __unit_schema__ = {"val": None}
+
+
 @dataclass
 class AreaSurfacePressureLoad:
     pattern_name: str = ""
     face: str = "BOTTOM"
     pressure: float = 0.0
+
+    __unit_schema__ = {"pressure": Dimension.AREA_LOAD}
+
 
 @dataclass
 class AreaTemperatureLoad:
@@ -623,12 +642,18 @@ class AreaTemperatureLoad:
     temp_type: str = "Temperature"
     val: float = 0.0
 
+    __unit_schema__ = {"val": Dimension.TEMP}
+
+
 @dataclass
 class AreaUniformLoad:
     pattern_name: str = ""
     direction: LoadDirection = LoadDirection.GLOBAL_Z
     value: float = 0.0
     coordinate_system: str = "GLOBAL"
+
+    __unit_schema__ = {"value": Dimension.AREA_LOAD}
+
 
 @dataclass
 class AreaUniformToFrameLoad:
@@ -638,6 +663,9 @@ class AreaUniformToFrameLoad:
     dist_type: DistType = DistType.ONE_WAY
     coordinate_system: str = "GLOBAL"
 
+    __unit_schema__ = {"value": Dimension.AREA_LOAD}
+
+
 @dataclass
 class AreaWindPressureLoad:
     pattern_name: str = ""
@@ -645,12 +673,14 @@ class AreaWindPressureLoad:
     windward: bool = True
     dist_type: str = "To Joints"
 
-# -------------------------------------------------------------------------
-# SEISMIC
-# -------------------------------------------------------------------------
+    __unit_schema__ = {"cp": None}
+
+
+# ============================================================================
+# SEISMIC / SPECTRUM
+# ============================================================================
 @dataclass
 class SpectrumFunction:
-    """Tepki Spektrumu Fonksiyon Tanımları"""
     name: str = ""
     source_type: SpectrumSourceType = SpectrumSourceType.USER
     damp: float = 0.05
@@ -668,6 +698,8 @@ class SpectrumFunction:
     data_type: str = "Period vs Accel"
     points: List[Tuple[float, float]] = field(default_factory=list)
 
+    __unit_schema__ = {}   # spektrum değerleri boyutsuz (g), periyot s
+
     def __post_init__(self):
         if self.source_type == SpectrumSourceType.TSC_2018 and not self.points:
             self.generate_tbdy2018_points()
@@ -676,14 +708,11 @@ class SpectrumFunction:
         self.fs, self.f1 = get_tsc2018_site_coefficients(self.ss, self.s1, self.site_class)
         sds = self.ss * self.fs
         sd1 = self.s1 * self.f1
-
         ta = 0.2 * (sd1 / sds) if sds > 0 else 0.0
         tb = (sd1 / sds) if sds > 0 else 0.0
-
         self.points.clear()
         max_t = max(self.tl + 2.0, 8.0)
         dt = max_t / num_points
-
         for i in range(num_points + 1):
             t = i * dt
             if 0 <= t < ta:
@@ -694,12 +723,11 @@ class SpectrumFunction:
                 sae = sd1 / t
             else:
                 sae = (sd1 * self.tl) / (t ** 2)
-
             if t < tb:
-                ra = self.d_coeff + (self.r_coeff / self.i_coeff - self.d_coeff) * (t / tb) if tb > 0 else self.r_coeff / self.i_coeff
+                ra = (self.d_coeff + (self.r_coeff / self.i_coeff - self.d_coeff) * (t / tb)
+                      if tb > 0 else self.r_coeff / self.i_coeff)
             else:
                 ra = self.r_coeff / self.i_coeff
-
             sa_design = sae / ra if ra > 0 else sae
             self.points.append((round(t, 4), round(sa_design, 6)))
 
@@ -719,12 +747,16 @@ class SpectrumFunction:
                 return sa0 + (sa1 - sa0) * (period - t0) / (t1 - t0)
         return 0.0
 
+
 @dataclass
 class ResponseSpectrumLoadAssignment:
     load_name: str = ""
     function_name: str = ""
     angle: float = 0.0
     sf: float = 9810.0
+
+    __unit_schema__ = {"sf": Dimension.ACCEL}
+
 
 @dataclass
 class ResponseSpectrumCase:
@@ -734,6 +766,7 @@ class ResponseSpectrumCase:
     damping: float = 0.05
     eccentricity: float = 0.0
     assignments: List[ResponseSpectrumLoadAssignment] = field(default_factory=list)
+
 
 @dataclass
 class AutoSeismicTSC2018:
@@ -752,23 +785,29 @@ class AutoSeismicTSC2018:
     fs: float = 1.3
     f1: float = 1.5
 
+
+# ============================================================================
+# SD SECTION
+# ============================================================================
 @dataclass
 class SDPolygonPoint:
     x: float = 0.0
     y: float = 0.0
     radius: float = 0.0
 
+    __unit_schema__ = {"x": Dimension.LENGTH, "y": Dimension.LENGTH, "radius": Dimension.LENGTH}
+
+
 @dataclass
 class SDShape:
     name: str = ""
-    shape_kind: str = "Polygon"        # "Polygon" | "SolidRect" | "Pipe" | ...
+    shape_kind: str = "Polygon"
     material: str = ""
     z_order: int = 1
-    fill_color: Tuple[float,float,float] = (0.8,0.8,0.8)
-    # polygon için
+    fill_color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
     points: List[SDPolygonPoint] = field(default_factory=list)
-    # diğer shape'ler için ham parametreler
     params: Dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class SDSection:
@@ -777,31 +816,42 @@ class SDSection:
     base_material: str = ""
     axis_angle: float = 90.0
     shapes: List[SDShape] = field(default_factory=list)
-    # donatı (opsiyonel, tablo 02/03/18/19)
     edge_rebars: List[dict] = field(default_factory=list)
     corner_rebars: List[dict] = field(default_factory=list)
     line_rebars: List[dict] = field(default_factory=list)
     rect_rebars: List[dict] = field(default_factory=list)
     fiber: dict = field(default_factory=dict)
 
+
+# ============================================================================
+# MASS ASSEMBLY (analiz çıktısı — birim dönüşümü YOK, her zaman kg/N)
+# ============================================================================
 @dataclass
 class MassContribution:
-    """Tek bir kütle kaynağı. Rapor ve debug için."""
-    source_type: str      # "frame_self" | "frame_load" | "area_self" | ...
+    source_type: str
     element_id: int
     element_label: str
-    pattern: str          # "" self için
+    pattern: str
     mass_kg: float
+
 
 @dataclass
 class MassAssembly:
-    """Kütle toplamanın tek çıkışı."""
     num_dofs: int
-    M_global: np.ndarray              # köşegen, kg
-    node_masses: Dict[str, float]     # kg, key = scene.nodes anahtarı
+    M_global: np.ndarray
+    node_masses: Dict[str, float]
     contributions: List[MassContribution]
-    # Özet
     total_self_kg: float = 0.0
     total_dead_kg: float = 0.0
     total_live_kg: float = 0.0
     n_live: float = 0.3
+
+@dataclass
+class WindDirectionResult:
+    w_dir: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    q_p: float = 0.0
+    q_b: float = 0.0
+    z_ref: float = 0.0
+    e: float = 0.0
+    geometry: Dict[str, Any] = field(default_factory=dict)
+    zones_data: List[Dict[str, Any]] = field(default_factory=list)

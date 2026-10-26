@@ -28,7 +28,7 @@ def handle_grid_lines(ctx: LoadContext, df: pd.DataFrame) -> None:
             ctx.grid_lines.append({
                 "coord_sys": sys_name,
                 "id": line_id,
-                "ordinate": ctx.units.L(ordinate),
+                "ordinate": ordinate,
                 "axis_dir": axis_dir,
                 "bubble": str(r.get("Bubble", "")).strip(),
             })

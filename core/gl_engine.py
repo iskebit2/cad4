@@ -28,7 +28,7 @@ from core.marquee_selector import MarqueeSelector
 from core.draw_manager import DrawManager
 from render.snapsquare import SnapSquareRenderer
 from core.edit.edit_controller import EditController
-from tools.smart_plane_analysis import SmartPlaneAnalyzer
+# from tools.smart_plane_analysis import SmartPlaneAnalyzer
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)

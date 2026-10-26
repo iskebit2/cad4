@@ -31,7 +31,6 @@ def handle_link_props(ctx: LoadContext, df: pd.DataFrame) -> None:
 
 
 def handle_link_props_linear(ctx: LoadContext, df: pd.DataFrame) -> None:
-    uc = ctx.units
     for _, r in df.iterrows():
         name = str(r.get("LinkProp", r.get("Link", ""))).strip()
         if not name:
@@ -39,12 +38,13 @@ def handle_link_props_linear(ctx: LoadContext, df: pd.DataFrame) -> None:
         prop = ctx.link_props.setdefault(name, LinkPropLinear(name=name))
         if not isinstance(prop, LinkPropLinear):
             continue
+
+        # S2K birimi — float, dönüşüm yok
         for i, dof in enumerate(("u1", "u2", "u3", "rx", "ry", "rz"), start=1):
             k_val = _safe_float(r, f"K{i}", _safe_float(r, f"Stiff{i}", 0.0))
             c_val = _safe_float(r, f"C{i}", _safe_float(r, f"Damp{i}", 0.0))
-            k_converted = uc.F(k_val) if i <= 3 else uc.M(k_val)
             if hasattr(prop, f"stiff_{dof}"):
-                setattr(prop, f"stiff_{dof}", k_converted)
+                setattr(prop, f"stiff_{dof}", k_val)
             if hasattr(prop, f"damp_{dof}"):
                 setattr(prop, f"damp_{dof}", c_val)
 

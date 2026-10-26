@@ -1,22 +1,23 @@
 # tools/s2k/scene_builder.py
 """
 Scene inşası: node/frame/area/link + load assignment.
-Ham DataFrame'leri (ctx.df_*) okur, scene'e yazar.
+S2K değerleri `float` (S2K birimi) — ProjectBuilder dönüştürür.
 """
+from __future__ import annotations
+
 import logging
 from collections import defaultdict
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import pandas as pd
 
 from tools.s2k.context import LoadContext
-from tools.s2k.units_adapter import UnitConverter
-from domain.element import Node, Frame, Area, Link
+from tools.s2k.handlers.loads import _sap_frame_dir_code
+from domain.element import Area, Frame, Link, Node
 from domain.definition import (
-    PointLoad, FrameGravityLoad, FrameDistributedLoad, LoadDirection,
     AreaUniformLoad, AreaUniformToFrameLoad, DistType,
+    FrameDistributedLoad, FrameGravityLoad, LoadDirection, PointLoad,
 )
-from geometry.scenebuilder import SceneBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,9 @@ def _safe_float(row, key, default=0.0):
         return default
 
 
+# ============================================================================
+# YARDIMCILAR — parse
+# ============================================================================
 def _parse_restraints(df: pd.DataFrame) -> Dict[str, dict]:
     if df is None or df.empty:
         return {}
@@ -102,34 +106,46 @@ def _parse_link_assign(df) -> Dict[str, str]:
     return out
 
 
-def _get_fallback_section(builder, ctx) -> str:
-    if ctx.sections:
-        return next(iter(ctx.sections.keys()))
+def _sap_area_dir(s: str) -> LoadDirection:
+    return {
+        "1": LoadDirection.LOCAL_1, "2": LoadDirection.LOCAL_2, "3": LoadDirection.LOCAL_3,
+        "X": LoadDirection.GLOBAL_X, "Y": LoadDirection.GLOBAL_Y, "Z": LoadDirection.GLOBAL_Z,
+        "GX": LoadDirection.GLOBAL_X, "GY": LoadDirection.GLOBAL_Y, "GZ": LoadDirection.GLOBAL_Z,
+        "GRAV": LoadDirection.GRAVITY, "GRAVITY": LoadDirection.GRAVITY,
+        "PX": LoadDirection.PROJECTED_X, "PY": LoadDirection.PROJECTED_Y, "PZ": LoadDirection.PROJECTED_Z,
+    }.get(str(s).strip().upper(), LoadDirection.GRAVITY)
+
+
+def _fallback_section_name(builder, ctx) -> str:
+    """Hiç section yoksa builder'a DEFAULT ekle."""
+    if builder.sections:
+        return next(iter(builder.sections.keys()))
     from data.enums import SectionType
-    from domain.definition import Section
-    default = Section(name="DEFAULT", profile_type=SectionType.RECT,
-                      profile_params={"h": 200.0, "b": 100.0}, color=(0.5, 0.5, 0.5))
-    ctx.sections["DEFAULT"] = default
-    builder.project.add_section(default)
+    builder.add_section(
+        "DEFAULT", profile_type=SectionType.RECT,
+        profile_params={"h": 200.0, "b": 100.0}, color=(0.5, 0.5, 0.5),
+    )
+    ctx.sections.setdefault("DEFAULT", builder.sections["DEFAULT"])
     return "DEFAULT"
 
 
 # ============================================================================
 # NODE / FRAME / AREA / LINK
 # ============================================================================
-def create_nodes(builder: SceneBuilder, ctx: LoadContext) -> Dict[str, Node]:
+def create_nodes(builder, ctx: LoadContext) -> Dict[str, Node]:
+    """Node'ları S2K biriminde yarat (float)."""
     if ctx.df_joints is None or ctx.df_joints.empty:
         return {}
     restraints = _parse_restraints(ctx.df_restraints)
-    out = {}
+    out: Dict[str, Node] = {}
     for _, row in ctx.df_joints.iterrows():
         jid = str(row.get("Joint", "")).strip()
         if not jid:
             continue
         try:
-            x = ctx.units.L(float(row.get("XorR", row.get("X", 0))))
-            y = ctx.units.L(float(row.get("Y", 0)))
-            z = ctx.units.L(float(row.get("Z", 0)))
+            x = float(row.get("XorR", row.get("X", 0)))
+            y = float(row.get("Y", 0))
+            z = float(row.get("Z", 0))
         except (ValueError, TypeError):
             logger.warning("[Node] %s: geçersiz koordinat", jid)
             continue
@@ -137,14 +153,15 @@ def create_nodes(builder: SceneBuilder, ctx: LoadContext) -> Dict[str, Node]:
     return out
 
 
-def create_frames(builder, ctx, node_map) -> Tuple[Dict[str, Frame], int]:
+def create_frames(builder, ctx: LoadContext, node_map: Dict[str, Node]) -> Tuple[Dict[str, Frame], int]:
     if ctx.df_frame_conn is None or ctx.df_frame_conn.empty:
         return {}, 0
     assign = _parse_frame_assign(ctx.df_frame_assign, ctx)
     releases = _parse_frame_release(ctx.df_frame_release)
-    fallback = _get_fallback_section(builder, ctx)
+    fallback = _fallback_section_name(builder, ctx)
 
-    out, count = {}, 0
+    out: Dict[str, Frame] = {}
+    count = 0
     for _, row in ctx.df_frame_conn.iterrows():
         fid = str(row.get("Frame", "")).strip()
         ji = str(row.get("JointI", "")).strip()
@@ -152,11 +169,13 @@ def create_frames(builder, ctx, node_map) -> Tuple[Dict[str, Frame], int]:
         if not fid or ji not in node_map or jj not in node_map:
             continue
         sect, rot = assign.get(fid, ("", 0.0))
-        if not sect or sect not in ctx.sections:
+        if not sect or sect not in builder.sections:
             sect = fallback
         try:
-            frame = builder.create_frame(node_map[ji], node_map[jj], sect,
-                                         rotation_deg=rot, label=fid)
+            frame = builder.create_frame(
+                node_map[ji], node_map[jj], sect,
+                rotation_deg=rot, label=fid,
+            )
             if fid in releases:
                 frame.release_i = releases[fid]["i"]
                 frame.release_j = releases[fid]["j"]
@@ -167,11 +186,11 @@ def create_frames(builder, ctx, node_map) -> Tuple[Dict[str, Frame], int]:
     return out, count
 
 
-def create_areas(builder, ctx, node_map) -> Tuple[Dict[str, Area], int]:
+def create_areas(builder, ctx: LoadContext, node_map: Dict[str, Node]) -> Tuple[Dict[str, Area], int]:
     if ctx.df_area_conn is None or ctx.df_area_conn.empty:
         return {}, 0
     assign = _parse_area_assign(ctx.df_area_assign)
-    out = {}
+    out: Dict[str, Area] = {}
     for _, row in ctx.df_area_conn.iterrows():
         aid = str(row.get("Area", "")).strip()
         joints = [node_map[j] for i in range(1, 5)
@@ -180,15 +199,20 @@ def create_areas(builder, ctx, node_map) -> Tuple[Dict[str, Area], int]:
             continue
         sname = assign.get(aid, "")
         sdata = ctx.area_sections.get(sname, {})
-        area = builder.create_area(joints, thickness=sdata.get("thickness", 100.0),
-                                   label=f"A{aid}")
-        area.material = sdata.get("material")
-        area.section_name = sname
-        out[aid] = area
+        try:
+            area = builder.create_area(
+                joints, thickness=sdata.get("thickness", 100.0),
+                label=f"A{aid}",
+            )
+            area.material = sdata.get("material")
+            area.section_name = sname
+            out[aid] = area
+        except Exception as e:
+            logger.error("[Area] %s: %s", aid, e, exc_info=True)
     return out, len(out)
 
 
-def create_links(builder, ctx, node_map) -> int:
+def create_links(builder, ctx: LoadContext, node_map: Dict[str, Node]) -> int:
     if ctx.df_link_conn is None or ctx.df_link_conn.empty:
         return 0
     prop_map = _parse_link_assign(ctx.df_link_assign)
@@ -203,8 +227,11 @@ def create_links(builder, ctx, node_map) -> int:
         if not lid or ji not in node_map or jj not in node_map:
             continue
         try:
-            builder.create_link(node_map[ji], node_map[jj],
-                                prop_name=prop_map.get(lid, default_prop), label=lid)
+            builder.create_link(
+                node_map[ji], node_map[jj],
+                prop_name=prop_map.get(lid, default_prop),
+                label=lid,
+            )
             count += 1
         except Exception as e:
             logger.warning("[Link] %s: %s", lid, e)
@@ -220,7 +247,7 @@ def assign_loads(ctx: LoadContext, node_map, frame_map, area_map) -> None:
     _load_area_loads(ctx, area_map)
 
 
-def _load_joint_loads(ctx, node_map):
+def _load_joint_loads(ctx: LoadContext, node_map):
     if ctx.df_joint_loads is None or ctx.df_joint_loads.empty:
         return
     for _, r in ctx.df_joint_loads.iterrows():
@@ -229,16 +256,16 @@ def _load_joint_loads(ctx, node_map):
             continue
         node.loads.append(PointLoad(
             pattern_name=str(r.get("LoadPat", "DEFAULT")).strip(),
-            fx=ctx.units.F(_safe_float(r, "F1")),
-            fy=ctx.units.F(_safe_float(r, "F2")),
-            fz=ctx.units.F(_safe_float(r, "F3")),
-            mx=ctx.units.M(_safe_float(r, "M1")),
-            my=ctx.units.M(_safe_float(r, "M2")),
-            mz=ctx.units.M(_safe_float(r, "M3")),
+            fx=_safe_float(r, "F1"),
+            fy=_safe_float(r, "F2"),
+            fz=_safe_float(r, "F3"),
+            mx=_safe_float(r, "M1"),
+            my=_safe_float(r, "M2"),
+            mz=_safe_float(r, "M3"),
         ))
 
 
-def _load_frame_loads(ctx, frame_map):
+def _load_frame_loads(ctx: LoadContext, frame_map):
     # Gravity
     if ctx.df_frame_gravity is not None and not ctx.df_frame_gravity.empty:
         for _, r in ctx.df_frame_gravity.iterrows():
@@ -273,9 +300,6 @@ def _load_frame_loads(ctx, frame_map):
         ftype = str(r.get("Type", "Force")).upper()
         v1 = _safe_float(r, "FOverLA", 0.0)
         v2 = _safe_float(r, "FOverLB", v1)
-        if ftype == "FORCE":
-            v1 = ctx.units.w(v1)
-            v2 = ctx.units.w(v2)
         per_frame[fid].append({
             "pattern": pat, "csys": csys, "load_dir": load_dir,
             "is_rel": is_rel, "x1": x1, "x2": x2, "v1": v1, "v2": v2,
@@ -300,7 +324,7 @@ def _load_frame_loads(ctx, frame_map):
             frame.dist_loads.extend(load_set.to_sap_loads())
 
 
-def _load_area_loads(ctx, area_map):
+def _load_area_loads(ctx: LoadContext, area_map):
     if ctx.df_area_uniform is not None and not ctx.df_area_uniform.empty:
         for _, r in ctx.df_area_uniform.iterrows():
             area = area_map.get(str(r.get("Area", "")).strip())
@@ -308,7 +332,7 @@ def _load_area_loads(ctx, area_map):
                 area.uniform_loads.append(AreaUniformLoad(
                     pattern_name=str(r.get("LoadPat", "DEFAULT")).strip(),
                     direction=_sap_area_dir(str(r.get("Dir", "Gravity"))),
-                    value=ctx.units.area_w(_safe_float(r, "UnifLoad")),
+                    value=_safe_float(r, "UnifLoad"),
                 ))
     if ctx.df_area_uniform_to_frame is not None and not ctx.df_area_uniform_to_frame.empty:
         for _, r in ctx.df_area_uniform_to_frame.iterrows():
@@ -317,17 +341,16 @@ def _load_area_loads(ctx, area_map):
                 area.uniform_to_frame_loads.append(AreaUniformToFrameLoad(
                     pattern_name=str(r.get("LoadPat", "DEFAULT")).strip(),
                     direction=_sap_area_dir(str(r.get("Dir", "Gravity"))),
-                    value=ctx.units.area_w(_safe_float(r, "UnifLoad")),
+                    value=_safe_float(r, "UnifLoad"),
                     dist_type=DistType.from_input(r.get("DistType", "One way")),
                     coordinate_system=str(r.get("CoordSys", "GLOBAL")).strip(),
                 ))
-
-
-def _sap_area_dir(s: str) -> LoadDirection:
-    return {
-        "1": LoadDirection.LOCAL_1, "2": LoadDirection.LOCAL_2, "3": LoadDirection.LOCAL_3,
-        "X": LoadDirection.GLOBAL_X, "Y": LoadDirection.GLOBAL_Y, "Z": LoadDirection.GLOBAL_Z,
-        "GX": LoadDirection.GLOBAL_X, "GY": LoadDirection.GLOBAL_Y, "GZ": LoadDirection.GLOBAL_Z,
-        "GRAV": LoadDirection.GRAVITY, "GRAVITY": LoadDirection.GRAVITY,
-        "PX": LoadDirection.PROJECTED_X, "PY": LoadDirection.PROJECTED_Y, "PZ": LoadDirection.PROJECTED_Z,
-    }.get(str(s).strip().upper(), LoadDirection.GRAVITY)
+                
+def assign_joint_loads(ctx, node_map):
+    """ctx.joint_loads'u node.loads'a bağla."""
+    for joint_name, loads in ctx.joint_loads.items():
+        node = node_map.get(joint_name)
+        if node is None:
+            continue
+        node.loads.extend(loads)
+    return len(ctx.joint_loads)

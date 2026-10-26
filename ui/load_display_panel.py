@@ -43,7 +43,7 @@ class LoadDisplayPanel(BasePanel):
         # Tip filtreleri
         self.show_frame_loads = True
         self.show_area_loads = False    # henüz yok
-        self.show_point_loads = False   # henüz yok
+        self.show_point_loads = True   # henüz yok
 
         # Pattern
         self.active_pattern: Optional[str] = None   # None = hepsi
@@ -129,31 +129,27 @@ class LoadDisplayPanel(BasePanel):
         imgui.text_colored("Yük Tipi", 0.8, 0.8, 0.6, 1.0)
         imgui.spacing()
 
-        # Frame
         changed, self.show_frame_loads = imgui.checkbox(
             "Frame (kiriş/kolon) yayılı yükler", self.show_frame_loads
         )
         if changed:
             self._apply()
 
-        # Area
+        # Area — hâlâ disabled
         imgui.push_style_color(imgui.COLOR_TEXT, 0.5, 0.5, 0.5, 1.0)
         changed, self.show_area_loads = imgui.checkbox(
             "Area (yüzey) yükler (yakında)", self.show_area_loads
         )
         if changed:
-            # Henüz desteklenmiyor
             self.show_area_loads = False
         imgui.pop_style_color(1)
 
-        # Point
-        imgui.push_style_color(imgui.COLOR_TEXT, 0.5, 0.5, 0.5, 1.0)
+        # Point — AKTİF
         changed, self.show_point_loads = imgui.checkbox(
-            "Point (nokta) yükler (yakında)", self.show_point_loads
+            "Point (nokta) yükler", self.show_point_loads
         )
         if changed:
-            self.show_point_loads = False
-        imgui.pop_style_color(1)
+            self._apply()
 
     # ------------------------------------------------------------------
     # 3. PATTERN FİLTRESİ
@@ -354,6 +350,12 @@ class LoadDisplayPanel(BasePanel):
                 if p:
                     pats.add(p)
 
+        for n in self.scene.nodes.values():
+            for pl in getattr(n, "loads", None) or []:
+                p = getattr(pl, "pattern_name", None)
+                if p:
+                    pats.add(p)
+
         self.available_patterns = sorted(pats)
         self._pattern_signature = tuple(self.available_patterns)
 
@@ -367,22 +369,37 @@ class LoadDisplayPanel(BasePanel):
             self.clear_pattern_combo_idx = 0
 
     def _count_pattern_usage(self, pattern: str) -> int:
-        """Sahnedeki kaç elemanda bu pattern var."""
         if not self.scene or not pattern:
             return 0
         count = 0
         for f in self.scene.frames.values():
             if pattern in (getattr(f, "dist_load_sets", {}) or {}):
                 count += 1
+        for n in self.scene.nodes.values():                     # ← YENİ
+            for pl in getattr(n, "loads", None) or []:
+                if getattr(pl, "pattern_name", None) == pattern:
+                    count += 1
+                    break
         return count
 
     def _apply(self):
         """Renderer'a tüm ayarları uygula."""
         if self.renderer:
+            # 1. KATMAN — SceneRenderer.show['loads']
+            if hasattr(self.renderer, "set_loads_enabled"):
+                self.renderer.set_loads_enabled(self.show_loads)
+            elif hasattr(self.renderer, "set_show"):
+                self.renderer.set_show('loads', self.show_loads)
+
+            # 2. KATMAN — LoadRenderer
             lr = getattr(self.renderer, "load_renderer", None)
             if lr:
                 lr.enabled = self.show_loads
                 lr.active_pattern = self.active_pattern
+                if hasattr(lr, "show_frame_loads"):
+                    lr.show_frame_loads = self.show_frame_loads
+                if hasattr(lr, "show_point_loads"):
+                    lr.show_point_loads = self.show_point_loads
                 # Yeni özellikler
                 if hasattr(lr, "profile_scale"):
                     lr.profile_scale = self.profile_scale
@@ -400,10 +417,37 @@ class LoadDisplayPanel(BasePanel):
             self.scene.mark_dirty()
             if self.renderer and hasattr(self.renderer, "load_renderer"):
                 try:
-                    self.renderer.load_renderer.update(self.scene, camera_scale=1.0)
+                    cam_scale = self.renderer._compute_cam_scale() if hasattr(self.renderer, "_compute_cam_scale") else 1.0
+                    scene_size = getattr(self.renderer, "size", 1.0)
+                    self.renderer.load_renderer.update(
+                        self.scene,
+                        camera_scale=cam_scale,
+                        scene_size=scene_size,
+                    )
                 except Exception:
                     pass
 
         # Dış callback
         if callable(self.on_change):
             self.on_change()
+
+    def set_context(self, ctx: dict):
+        self.scene = ctx.get("scene")
+        self.renderer = ctx.get("renderer")
+
+        if self.renderer:
+            lr = getattr(self.renderer, "load_renderer", None)
+            # 1. katman — SceneRenderer.show['loads']
+            self.show_loads = bool(self.renderer.show.get("loads", False))
+            # 2. katman — LoadRenderer
+            if lr:
+                self.show_frame_loads = bool(getattr(lr, "show_frame_loads", True))
+                self.show_point_loads = bool(getattr(lr, "show_point_loads", True))
+                self.active_pattern = getattr(lr, "active_pattern", None)
+                self.profile_scale = float(getattr(lr, "profile_scale", 1.0))
+                self.line_width = float(getattr(lr, "line_width", 2.0))
+                self.fill_alpha = float(getattr(lr, "fill_alpha", 0.28))
+                self.show_arrows = bool(getattr(lr, "show_arrows", True))
+                self.show_fill = bool(getattr(lr, "show_fill", True))
+
+        self._refresh_patterns()

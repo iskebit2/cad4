@@ -53,19 +53,19 @@ def handle_material_props(ctx: LoadContext, df: pd.DataFrame) -> None:
 
 
 def handle_material_mech(ctx: LoadContext, df: pd.DataFrame) -> None:
-    uc = ctx.units
+    
     for _, row in df.iterrows():
         name = str(row.get("Material", "")).strip()
         if not name:
             continue
         mat = ctx.materials.setdefault(name, Material(name=name))
 
-        E = uc.E(_safe_float(row, "E1", 2.0e5))
-        G = uc.E(_safe_float(row, "G12", 8.1e4))
+        E = _safe_float(row, "E1", 2.0e5)
+        G = _safe_float(row, "G12", 8.1e4)
         mat.E1 = mat.E2 = mat.E3 = E
         mat.G12 = mat.G13 = mat.G23 = G
         mat.nu12 = mat.nu13 = mat.nu23 = _safe_float(row, "U12", 0.3)
-        mat.density = uc.density(_safe_float(row, "UnitMass", 0.0))
+        mat.density = _safe_float(row, "UnitMass", 0.0)
 
         logger.debug("[Mat] %s: E=%.3f MPa, G=%.3f MPa, ρ=%.3e kg/mm³",
                      name, mat.E1, mat.G12, mat.density)

@@ -45,7 +45,9 @@ def _final_color_for(element):
     if hasattr(element, 'color') and element.color:
         c = element.color
         return list(c[:3]) if len(c) >= 3 else [0.7, 0.7, 0.7]
-
+    if hasattr(element, 'restraint') and element.restraint and not element.restraint.is_free():
+        return [1.0, 0.55, 0.1]   # restraint turuncu
+    
     # Fallback (eski tip bazlı)
     if hasattr(element, 'section') and hasattr(element.section, 'color'):
         return list(element.section.color[:3])

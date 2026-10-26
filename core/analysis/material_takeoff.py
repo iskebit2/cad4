@@ -9,9 +9,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from data.unit_enums import (
-    G_MM_S2, KG_PER_TON, mass_to_weight_kN,
-)
+from core.units import G_M_S2, KG_PER_TON
 from domain.element import Area, Frame, Link
 from domain.scene import Scene
 
@@ -28,16 +26,21 @@ class ElementWeight:
     material_name: str
     section_name: str
 
-    length: float = 0.0         # mm
-    area: float = 0.0           # mm² (kesit veya düzlem alanı)
+    length: float = 0.0         # mm (kanonik)
+    area: float = 0.0           # mm²
     volume: float = 0.0         # mm³
     density: float = 0.0        # kg/mm³
     mass_kg: float = 0.0
-    weight_kN: float = 0.0
+    weight_N: float = 0.0       # ← SI, N
 
     @property
     def mass_ton(self) -> float:
-        return self.mass_kg / KG_PER_TON
+        return self.mass_kg / 1000.0
+
+    @property
+    def weight_N(self) -> float:
+        """Geriye dönük uyumluluk — N / 1000."""
+        return self.weight_N / 1000.0
 
 
 @dataclass
@@ -66,7 +69,7 @@ class TakeoffResult:
 
     @property
     def total_weight_kN(self) -> float:
-        return sum(e.weight_kN for e in self.elements)
+        return sum(e.weight_N for e in self.elements)
 
 
 # ============================================================================
@@ -108,7 +111,7 @@ def _frame_weight(frame: Frame) -> Optional[ElementWeight]:
 
     volume = A * L                     # mm³
     mass_kg = volume * rho             # kg
-    weight_kN = mass_to_weight_kN(mass_kg)
+    weight_N = mass_kg * G_M_S2
 
     return ElementWeight(
         unique_id=frame.unique_id,
@@ -117,7 +120,7 @@ def _frame_weight(frame: Frame) -> Optional[ElementWeight]:
         material_name=getattr(mat, "name", "(tanımsız)"),
         section_name=getattr(sec, "name", "(tanımsız)"),
         length=L, area=A, volume=volume, density=rho,
-        mass_kg=mass_kg, weight_kN=weight_kN,
+        mass_kg=mass_kg, weight_N=weight_N,
     )
 
 
@@ -137,7 +140,7 @@ def _area_weight(area: Area) -> Optional[ElementWeight]:
 
     volume = geom_A * th
     mass_kg = volume * rho
-    weight_kN = mass_to_weight_kN(mass_kg)
+    weight_N = mass_kg * G_M_S2
 
     return ElementWeight(
         unique_id=area.unique_id,
@@ -146,7 +149,7 @@ def _area_weight(area: Area) -> Optional[ElementWeight]:
         material_name=getattr(mat, "name", "(tanımsız)"),
         section_name=str(getattr(area, "section_name", "") or f"t={th:.1f}"),
         length=0.0, area=geom_A, volume=volume, density=rho,
-        mass_kg=mass_kg, weight_kN=weight_kN,
+        mass_kg=mass_kg, weight_N=weight_N,
     )
 
 
@@ -170,7 +173,7 @@ def compute_takeoff(scene: Scene) -> TakeoffResult:
             result.by_material[mat] = MaterialSummary(material_name=mat)
         s = result.by_material[mat]
         s.total_mass_kg += e.mass_kg
-        s.total_weight_kN += e.weight_kN
+        s.total_weight_kN += e.weight_N
         s.total_volume += e.volume
         s.element_count += 1
         s.elements.append(e)
@@ -178,12 +181,12 @@ def compute_takeoff(scene: Scene) -> TakeoffResult:
     for e in result.elements:
         if e.element_type not in result.by_type:
             result.by_type[e.element_type] = {
-                "count": 0, "mass_kg": 0.0, "weight_kN": 0.0,
+                "count": 0, "mass_kg": 0.0, "weight_N": 0.0,
             }
         t = result.by_type[e.element_type]
         t["count"] += 1
         t["mass_kg"] += e.mass_kg
-        t["weight_kN"] += e.weight_kN
+        t["weight_N"] += e.weight_N
 
     logger.info(
         f"[Takeoff] {len(result.elements)} eleman, "
@@ -227,7 +230,7 @@ def takeoff_to_dataframes(result: TakeoffResult):
             "A (mm²)": round(e.area, 1),
             "V (mm³)": round(e.volume, 0),
             "Kütle (kg)": round(e.mass_kg, 3),
-            "Ağırlık (kN)": round(e.weight_kN, 5),
+            "Ağırlık (kN)": round(e.weight_N, 5),
         })
     elements_df = pd.DataFrame(elements_data)
 

@@ -7,26 +7,27 @@ Birleşik S2K İçe/Dışa Aktarma Paneli.
 - Export: sahne/kapsam seç → dosya seç → tablo içeriklerini önizle → yaz
 - Ortak: dosya seçici, log alanı, tablo önizleme ağacı
 """
-
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional, Callable, Set
+from typing import Callable, Dict, List, Optional, Set
 
 import imgui
 import pandas as pd
 
 from ui.base_panel import BasePanel
 from ui.file_dialog import ImGuiFileDialog
-from tools.s2kloader import S2KParser
-from tools.s2k_utils import build_router, build_sorted_router
-from tools.s2k_exporter import S2KExporter
 from domain.project import Project
 from logging_config import CadLogger
 
+from tools.s2k import S2KLoader, S2KParser, LoadContext
+from tools.s2k.handlers import build_router, build_sorted_router
+from tools.s2k_exporter import S2KExporter
+
 logger = CadLogger.get(__name__)
 
-CORE_DEPENDENCIES = {
+
+CORE_DEPENDENCIES: Set[str] = {
     "MATERIAL PROPERTIES 01 - GENERAL",
     "FRAME SECTION PROPERTIES 01 - GENERAL",
     "JOINT COORDINATES",
@@ -49,29 +50,27 @@ class S2KPanel(BasePanel):
         self.visible = False
         self.mode = self.MODE_IMPORT
 
-        # Dosya seçici
         self.file_dialog = ImGuiFileDialog()
 
-        # Callback'ler
         self.on_import_complete = on_import_complete
         self.get_project = get_project
         self.get_selected_elements = get_selected_elements
 
-        # --- IMPORT durumu ---
+        # --- IMPORT ---
         self.import_path: Optional[str] = None
         self.parser: Optional[S2KParser] = None
         self.import_tables: Dict[str, pd.DataFrame] = {}
         self.selected_tables: Dict[str, bool] = {}
         self.is_parsed = False
 
-        # --- EXPORT durumu ---
+        # --- EXPORT ---
         self.export_path: Optional[str] = None
-        self.export_scope = "all"        # "all" | "selected"
+        self.export_scope = "all"          # "all" | "selected"
         self.export_text: Optional[str] = None
-        self.export_table_summary: List[tuple] = []  # [(name, row_count)]
+        self.export_table_summary: List[tuple] = []   # [(name, row_count)]
         self.export_table_selected: Dict[str, bool] = {}
 
-        # --- Ortak log ---
+        # --- LOG ---
         self.log_messages: List[str] = []
 
     # ==================================================================
@@ -108,9 +107,7 @@ class S2KPanel(BasePanel):
             mode="open",
             filters=[".s2k", ".S2K", ".$2k"],
             title="S2K Dosyası Seç",
-            initial_dir=os.path.dirname(self.import_path)
-            if self.import_path
-            else os.getcwd(),
+            initial_dir=os.path.dirname(self.import_path) if self.import_path else os.getcwd(),
             on_select=self._load_import_file,
         )
 
@@ -119,17 +116,16 @@ class S2KPanel(BasePanel):
             mode="save",
             filters=[".s2k"],
             title="S2K Olarak Kaydet",
-            initial_dir=os.path.dirname(self.export_path)
-            if self.export_path
-            else os.getcwd(),
+            initial_dir=os.path.dirname(self.export_path) if self.export_path else os.getcwd(),
             default_name="model.s2k",
             on_select=self._set_export_path,
         )
 
     # ==================================================================
-    # IMPORT MANTIĞI
+    # IMPORT
     # ==================================================================
     def _load_import_file(self, file_path: str):
+        """S2K dosyasını parse et, tablo listesini hazırla."""
         self.import_path = file_path
         self.log_messages.clear()
         self.selected_tables.clear()
@@ -156,67 +152,87 @@ class S2KPanel(BasePanel):
             else:
                 self._log_warn("Section Cut tablosu yok.")
 
-            self._log_info(
-                f"Ayrıştırma başarılı: {len(all_tables)} tablo."
-            )
+            self._log_info(f"Ayrıştırma başarılı: {len(all_tables)} tablo.")
         except Exception as e:
             logger.exception("S2K parse hatası")
             self._log_error(f"S2K okuma hatası: {e}")
 
     def _execute_import(self):
+        """Seçili tabloları ctx'ye aktar, scene'i inşa et, callback'i tetikle."""
         if not self.parser:
             self._log_error("Aktarılacak dosya seçilmedi.")
             return
 
-        from tools.s2k_utils import LoadContext
-        from tools.s2kloader import build_scene_into_project
+        ctx = self._run_handlers()
 
+        # Scene inşası — loader'ın public API'si üzerinden (birim dönüşümü dahil)
+        loader = S2KLoader()          # parser'a gerek yok, ctx hazır
+        try:
+            new_project = loader.load_from_context(ctx)
+        except Exception:
+            logger.exception("[Import] Scene inşası başarısız")
+            self._log_error("Model oluşturulurken hata oluştu.")
+            return
+
+        scn = new_project.scene
+        self._log_info(
+            f"✓ Model inşa edildi: {len(scn.frames)} çubuk, {len(scn.nodes)} düğüm"
+        )
+
+        if not callable(self.on_import_complete):
+            logger.error("[Import] on_import_complete bağlı değil")
+            self._log_error("Callback bağlı değil — panel CadApp üzerinden açılmalı.")
+            return
+
+        try:
+            logger.info("[Import] callback tetikleniyor...")
+            self.on_import_complete(new_project)
+            logger.info("[Import] callback tamamlandı")
+            self._log_info("İçe aktarma tamamlandı.")
+        except Exception:
+            logger.exception("[Import] callback hatası")
+            self._log_error("Callback sırasında hata oluştu.")
+
+    def _run_handlers(self) -> LoadContext:
+        """Seçili tabloları sıralı + kalan router ile ctx'ye aktar."""
         ctx = LoadContext()
         router = build_router()
         processed: Set[str] = set()
 
+        # Öncelikli tablolar
         for name, handler in build_sorted_router():
-            if name in self.import_tables and self.selected_tables.get(name, False) \
-                    and not self.import_tables[name].empty:
-                processed.add(name)
-                try:
-                    handler(ctx, self.import_tables[name])
-                    self._log_info(f"✓ {name}")
-                except Exception as e:
-                    logger.exception(f"Handler hatası: {name}")
-                    self._log_error(f"✗ {name}: {e}")
+            if not self._should_process(name):
+                continue
+            processed.add(name)
+            self._apply_handler(ctx, name, self.import_tables[name], handler)
 
+        # Kalan tablolar
         for name, df in self.import_tables.items():
-            if name in processed or not self.selected_tables.get(name, False) or df.empty:
+            if name in processed or not self._should_process(name):
                 continue
             handler = router.get(name)
             if handler:
-                try:
-                    handler(ctx, df)
-                    self._log_info(f"✓ {name} (kalan)")
-                except Exception as e:
-                    logger.exception(f"Handler hatası: {name}")
-                    self._log_error(f"✗ {name}: {e}")
+                self._apply_handler(ctx, name, df, handler)
 
+        return ctx
+
+    def _should_process(self, name: str) -> bool:
+        return (
+            name in self.import_tables
+            and self.selected_tables.get(name, False)
+            and not self.import_tables[name].empty
+        )
+
+    def _apply_handler(self, ctx: LoadContext, name: str, df: pd.DataFrame, handler):
         try:
-            new_project = build_scene_into_project(ctx, Project())
-            scn = new_project.scene
-            self._log_info(
-                f"Model inşa edildi: "
-                f"{len(getattr(scn, 'frames', {}))} çubuk, "
-                f"{len(getattr(scn, 'nodes', {}))} düğüm"
-            )
-            if not callable(self.on_import_complete):
-                self._log_error("on_import_complete callback bağlı değil.")
-                return
-            self.on_import_complete(new_project)
-            self._log_info("İçe aktarma tamamlandı.")
+            handler(ctx, df)
+            self._log_info(f"✓ {name}")
         except Exception as e:
-            logger.exception("Model inşa hatası")
-            self._log_error(f"Model oluşturma hatası: {e}")
+            logger.exception("[Import] Handler hatası: %s", name)
+            self._log_error(f"✗ {name}: {e}")
 
     # ==================================================================
-    # EXPORT MANTIĞI
+    # EXPORT
     # ==================================================================
     def _set_export_path(self, file_path: str):
         self.export_path = file_path
@@ -293,7 +309,6 @@ class S2KPanel(BasePanel):
         if not path:
             self._log_error("Kayıt yolu seçilmedi.")
             return
-
         try:
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(self.export_text)
@@ -330,7 +345,6 @@ class S2KPanel(BasePanel):
         self._draw_log_area()
         imgui.end()
 
-    # ------------------------------------------------------------------
     def _draw_mode_selector(self):
         if imgui.radio_button("İçe Aktar (Import)", self.mode == self.MODE_IMPORT):
             self.mode = self.MODE_IMPORT
@@ -338,9 +352,7 @@ class S2KPanel(BasePanel):
         if imgui.radio_button("Dışa Aktar (Export)", self.mode == self.MODE_EXPORT):
             self.mode = self.MODE_EXPORT
 
-    # ------------------------------------------------------------------
     def _draw_import_ui(self):
-        # Dosya satırı
         name = os.path.basename(self.import_path) if self.import_path else "Henüz dosya seçilmedi"
         imgui.text_colored(f"Dosya: {name}", 0.4, 0.8, 1.0)
         imgui.same_line()
@@ -351,7 +363,6 @@ class S2KPanel(BasePanel):
             imgui.text_colored("Bir S2K dosyası seçin.", 0.8, 0.8, 0.3)
             return
 
-        # Hızlı seçim
         if imgui.button("Tümünü Seç"):
             for k in self.selected_tables:
                 self.selected_tables[k] = True
@@ -385,9 +396,7 @@ class S2KPanel(BasePanel):
         if imgui.button("Kapat", width=80, height=30):
             self.close()
 
-    # ------------------------------------------------------------------
     def _draw_export_ui(self):
-        # Kapsam
         imgui.text("Kapsam:")
         imgui.same_line()
         if imgui.radio_button("Tüm Sahne", self.export_scope == "all"):
@@ -396,7 +405,6 @@ class S2KPanel(BasePanel):
         if imgui.radio_button("Sadece Seçili", self.export_scope == "selected"):
             self.export_scope = "selected"
 
-        # Dosya satırı
         path = self.export_path or "Henüz dosya seçilmedi"
         imgui.text_colored(f"Kayıt: {path}", 0.4, 0.8, 1.0)
         imgui.same_line()
@@ -416,10 +424,7 @@ class S2KPanel(BasePanel):
             imgui.text("Oluşan Tablolar (önizleme):")
             imgui.begin_child("##ExportTableList", 0.0, 240.0, border=True)
             for tbl_name, count in self.export_table_summary:
-                imgui.text_colored(
-                    f"{tbl_name}  [{count} satır]",
-                    0.75, 0.9, 0.75, 1.0,
-                )
+                imgui.text_colored(f"{tbl_name}  [{count} satır]", 0.75, 0.9, 0.75, 1.0)
             imgui.end_child()
 
             imgui.separator()
@@ -431,7 +436,6 @@ class S2KPanel(BasePanel):
         if imgui.button("Kapat", width=80, height=26):
             self.close()
 
-    # ------------------------------------------------------------------
     def _draw_log_area(self):
         imgui.text("Günlük:")
         imgui.begin_child("##LogArea", 0.0, 130.0, border=True)

@@ -90,29 +90,21 @@ class NodeBuilder:
         
         return Rz @ Ry @ Rx
     
-    def determine_support_symbols(self, restraint: Optional[Restraint]) -> Dict[str, Optional[str]]:
-        """Restraint -> şekil belirleme"""
+    def determine_support_symbols(self, restraint):
         symbols = {"x": None, "y": None, "z": None}
-        
-        if restraint is None or not restraint.uz:
+        if restraint is None:
             return symbols
         
-        # X ekseni
         if not restraint.ux:
             symbols["x"] = "circle"
         else:
             symbols["x"] = "triangle" if not restraint.ry else "square"
-        
-        # Y ekseni
         if not restraint.uy:
             symbols["y"] = "circle"
         else:
             symbols["y"] = "triangle" if not restraint.rx else "square"
-        
-        # Z ekseni
         if restraint.uz:
             symbols["z"] = "square" if restraint.rz else "circle"
-        
         return symbols
     
     def build(self, node: Node) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -122,28 +114,14 @@ class NodeBuilder:
         
         verts = []
         idxs = []
-        
-        # Restraint yoksa veya free ise küçük küp
         if node.restraint is None or node.restraint.is_free():
             self._add_cube(center, verts, idxs)
-        else:
-            # Mesnet sembollerini ekle
-            symbols = self.determine_support_symbols(node.restraint)
-            
-            # X ekseni sembolü
-            if symbols["x"]:
-                matrix = self._local_matrix(x_deg=90)  # X eksenine yatır
-                self._add_symbol(symbols["x"], matrix, [0, 0, -self.size/2], center, verts, idxs)
-            
-            # Y ekseni sembolü
-            if symbols["y"]:
-                matrix = self._local_matrix(x_deg=90, z_deg=90)  # Y eksenine yatır
-                self._add_symbol(symbols["y"], matrix, [0, 0, -self.size/2], center, verts, idxs)
-            
-            # Z ekseni sembolü
-            if symbols["z"]:
-                matrix = self._local_matrix()  # Düz (Z ekseni)
-                self._add_symbol(symbols["z"], matrix, [0, 0, -self.size], center, verts, idxs)
+        # else: boş — RestraintRenderer çizecek
+        if not verts:
+            return (np.array([], dtype=np.float32),
+                    np.array([], dtype=np.float32),
+                    np.array([], dtype=np.uint32))
+        
         
         # Renkler
         vertex_count = len(verts) // 9
@@ -237,3 +215,31 @@ class NodeBuilder:
             0.0, 0.0, 1.0,
             center[0], center[1], center[2]
         ], dtype=np.float32)
+
+    def build_restraint_only(self, node: Node) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Sadece restraint sembollerini üret (free node küpü YOK)."""
+        if node.restraint is None or node.restraint.is_free():
+            return (np.array([], dtype=np.float32),
+                    np.array([], dtype=np.float32),
+                    np.array([], dtype=np.uint32))
+
+        center = np.array([node.x, node.y, node.z], dtype=np.float32)
+        verts, idxs = [], []
+        symbols = self.determine_support_symbols(node.restraint)
+
+        if symbols["x"]:
+            m = self._local_matrix(x_deg=90)
+            self._add_symbol(symbols["x"], m, [0, 0, -self.size/2], center, verts, idxs)
+        if symbols["y"]:
+            m = self._local_matrix(x_deg=90, z_deg=90)
+            self._add_symbol(symbols["y"], m, [0, 0, -self.size/2], center, verts, idxs)
+        if symbols["z"]:
+            m = self._local_matrix()
+            self._add_symbol(symbols["z"], m, [0, 0, -self.size], center, verts, idxs)
+
+        vc = len(verts) // 9
+        color = np.array([1.0, 0.55, 0.1], dtype=np.float32)   # turuncu
+        colors = np.tile(color, (vc, 1))
+        return (np.array(verts, dtype=np.float32),
+                colors,
+                np.array(idxs, dtype=np.uint32))

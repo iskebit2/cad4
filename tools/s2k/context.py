@@ -1,18 +1,13 @@
 # tools/s2k/context.py
-"""
-LoadContext — S2K handler'larının veri topladığı merkezi kutu.
-Sadece VERİ taşır; iş mantığı handler'larda.
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from tools.s2k.units_adapter import UnitConverter
 from domain.definition import (
-    GeneralProjectInfo, SiteInformation,
+    GeneralProjectInfo, PointLoad, SiteInformation,
     Material, Section, LinkProp,
     LoadPattern, LoadCase, ModalCase, LoadCombination,
     SpectrumFunction, ResponseSpectrumCase, AutoSeismicTSC2018,
@@ -22,10 +17,10 @@ from domain.definition import (
 
 @dataclass
 class LoadContext:
-    """Tüm handler'ların veri topladığı merkezi kutu."""
+    """S2K handler'larının veri topladığı merkezi kutu."""
 
-    # --- Birim ---
-    units: UnitConverter = field(default_factory=UnitConverter)
+    # --- S2K CurrUnits (string) ---
+    units_source_string: str = "N, mm, C"
 
     # --- Proje bilgisi ---
     project_info: Dict[str, Any] = field(
@@ -48,27 +43,25 @@ class LoadContext:
 
     # --- Spektrum ---
     spectrum_functions: Dict[str, SpectrumFunction] = field(default_factory=dict)
-    response_spectrum_cases: Dict[str, ResponseSpectrumCase] = field(default_factory=dict)
-    auto_seismics: Dict[str, AutoSeismicTSC2018] = field(default_factory=dict)
+    response_spectrum_cases: Dict[str, Any] = field(default_factory=dict)
+    auto_seismics: Dict[str, Any] = field(default_factory=dict)
 
     # --- Kütle / kesit ---
     mass_source_map: Dict[str, float] = field(default_factory=dict)
-    section_cuts: Dict[str, SectionCut] = field(default_factory=dict)
+    section_cuts: Dict[str, Any] = field(default_factory=dict)
 
     # --- Diğer ---
     diaphragms: Dict[str, dict] = field(default_factory=dict)
     frame_modifiers: Dict[str, dict] = field(default_factory=dict)
     frame_design_procs: Dict[str, str] = field(default_factory=dict)
     frame_auto_mesh: Dict[str, dict] = field(default_factory=dict)
-
     joint_added_mass: Dict[str, dict] = field(default_factory=dict)
     frame_insertion_points: Dict[str, dict] = field(default_factory=dict)
     frame_end_offsets: Dict[str, dict] = field(default_factory=dict)
     frame_section_rebar: Dict[str, dict] = field(default_factory=dict)
     rebar_sizes: Dict[str, dict] = field(default_factory=dict)
-
     sd_sections: Dict[str, SDSection] = field(default_factory=dict)
-
+    joint_loads: Dict[str, List[PointLoad]] = field(default_factory=dict)
     joint_constraints: Dict[str, str] = field(default_factory=dict)
     grid_lines: List[dict] = field(default_factory=list)
 

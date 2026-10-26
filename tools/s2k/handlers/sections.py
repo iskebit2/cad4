@@ -1,23 +1,32 @@
 # tools/s2k/handlers/sections.py
 """
 FRAME/AREA SECTION PROPERTIES, AUTO SELECT, SD geometry.
-Birim dönüşümü UnitConverter üzerinden; doğrulama section_checks ile.
+
+Birim sözleşmesi: S2K değerleri `float` (S2K CurrUnits).
+`ProjectBuilder` S2K biriminde yaratır, `finalize_and_convert(N_MM)` dönüştürür.
+Doğrulama `tools.section_checks.check_section` ile.
 """
+from __future__ import annotations
+
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
 from tools.s2k.context import LoadContext
-from tools.s2k.units_adapter import validate_section_properties
-from data.enums import SectionType, MatType
-from domain.definition import Section, Material, SDShape, SDPolygonPoint, SDSection
+from data.enums import MatType, SectionType
+from domain.definition import (
+    Material, Section, SDShape, SDPolygonPoint, SDSection,
+)
 from tools.section_checks import check_section
 
 logger = logging.getLogger(__name__)
 
 
-def _safe_float(row, key, default=0.0):
+# ============================================================================
+# YARDIMCILAR
+# ============================================================================
+def _safe_float(row, key, default=0.0) -> float:
     val = row.get(key)
     if val is None or str(val).strip() in ("", "None", "nan"):
         return default
@@ -27,7 +36,7 @@ def _safe_float(row, key, default=0.0):
         return default
 
 
-def _color_from_string(s: str) -> tuple:
+def _color_from_string(s: str) -> Tuple[float, float, float]:
     color_map = {
         "Red": (1, 0, 0), "Green": (0, 1, 0), "Blue": (0, 0, 1),
         "Yellow": (1, 1, 0), "Cyan": (0, 1, 1), "Magenta": (1, 0, 1),
@@ -37,81 +46,125 @@ def _color_from_string(s: str) -> tuple:
     return color_map.get(s, (0.8, 0.8, 0.8))
 
 
-# ============================================================================
-# SAP Shape → SectionType + params
-# ============================================================================
-def _map_sap_to_local(row, uc) -> Tuple[SectionType, Dict[str, float]]:
-    s_type = str(row.get("Shape", "Rectangle")).strip()
+def _dim_modifier(row, key: str, default: float = 1.0) -> float:
+    """Boyutsuz modifier — 0 ise default."""
+    v = _safe_float(row, key, default)
+    return v if v != 0 else default
 
-    def L(k, d=0.0):  return uc.L(_safe_float(row, k, d))
-    def L2(k, d=0.0): return uc.L2(_safe_float(row, k, d))
-    def L3(k, d=0.0): return uc.L3(_safe_float(row, k, d))
-    def L4(k, d=0.0): return uc.L4(_safe_float(row, k, d))
-    def dim(k, d=1.0):
-        v = _safe_float(row, k, d)
-        return v if v != 0 else d
 
-    # Ortak analiz özellikleri
+# ============================================================================
+# SAP Shape → SectionType + params (S2K birimi — float)
+# ============================================================================
+def _map_sap_to_local(row) -> Tuple[SectionType, Dict[str, float]]:
+    """SAP satırını SectionType + params'a çevir. Değerler S2K biriminde (float)."""
+    shape = str(row.get("Shape", "Rectangle")).strip()
+
+    # Ortak analiz özellikleri — S2K birimi
     analysis = {
-        "Area": L2("Area"),
-        "J":    L4("TorsConst"),
-        "I33":  L4("I33"),
-        "I22":  L4("I22"),
-        "I23":  L4("I23"),
-        "AS2":  L2("AS2"),
-        "AS3":  L2("AS3"),
-        "S33Top": L3("S33Top"), "S33Bot": L3("S33Bot"),
-        "S22Left": L3("S22Left"), "S22Right": L3("S22Right"),
-        "Z33": L3("Z33"), "Z22": L3("Z22"),
-        "R33": L3("R33"), "R22": L3("R22"),
-        "Cw":  L4("Cw"),
-        "AMod": dim("AMod"), "A2Mod": dim("A2Mod"), "A3Mod": dim("A3Mod"),
-        "JMod": dim("JMod"), "I2Mod": dim("I2Mod"), "I3Mod": dim("I3Mod"),
-        "MMod": dim("MMod"), "WMod": dim("WMod"),
+        "Area":    _safe_float(row, "Area"),
+        "J":       _safe_float(row, "TorsConst"),
+        "I33":     _safe_float(row, "I33"),
+        "I22":     _safe_float(row, "I22"),
+        "I23":     _safe_float(row, "I23"),
+        "AS2":     _safe_float(row, "AS2"),
+        "AS3":     _safe_float(row, "AS3"),
+        "S33Top":  _safe_float(row, "S33Top"),
+        "S33Bot":  _safe_float(row, "S33Bot"),
+        "S22Left": _safe_float(row, "S22Left"),
+        "S22Right": _safe_float(row, "S22Right"),
+        "Z33":     _safe_float(row, "Z33"),
+        "Z22":     _safe_float(row, "Z22"),
+        "R33":     _safe_float(row, "R33"),
+        "R22":     _safe_float(row, "R22"),
+        "Cw":      _safe_float(row, "Cw"),
+        "AMod":    _dim_modifier(row, "AMod", 1.0),
+        "A2Mod":   _dim_modifier(row, "A2Mod", 1.0),
+        "A3Mod":   _dim_modifier(row, "A3Mod", 1.0),
+        "JMod":    _dim_modifier(row, "JMod", 1.0),
+        "I2Mod":   _dim_modifier(row, "I2Mod", 1.0),
+        "I3Mod":   _dim_modifier(row, "I3Mod", 1.0),
+        "MMod":    _dim_modifier(row, "MMod", 1.0),
+        "WMod":    _dim_modifier(row, "WMod", 1.0),
     }
 
-    if s_type in ("I/Wide Flange", "I"):
+    if shape in ("I/Wide Flange", "I"):
         return SectionType.I, {
-            "h": L("t3", 200), "b": L("t2", 100),
-            "tw": L("tw", 10), "tf": L("tf", 14),
+            "h": _safe_float(row, "t3", 200),
+            "b": _safe_float(row, "t2", 100),
+            "tw": _safe_float(row, "tw", 10),
+            "tf": _safe_float(row, "tf", 14),
             **analysis,
         }
-    if s_type in ("Tee", "T"):
+    if shape in ("Tee", "T"):
         return SectionType.T, {
-            "h": L("t3", 200), "b": L("t2", 100),
-            "tw": L("tw", 10), "tf": L("tf", 14),
+            "h": _safe_float(row, "t3", 200),
+            "b": _safe_float(row, "t2", 100),
+            "tw": _safe_float(row, "tw", 10),
+            "tf": _safe_float(row, "tf", 14),
             **analysis,
         }
-    if s_type in ("Rectangle", "Rectangular"):
-        return SectionType.RECT, {"h": L("t3", 200), "b": L("t2", 100), **analysis}
-    if s_type in ("Pipe", "Circular", "Circle"):
-        d = L("t3", 120); tw = L("tw", 10)
-        return SectionType.PIPE, {"ro": d/2, "ri": max(0.1, (d - 2*tw)/2), "n": 24, **analysis}
-    if s_type in ("Channel", "C"):
+    if shape in ("Rectangle", "Rectangular"):
+        return SectionType.RECT, {
+            "h": _safe_float(row, "t3", 200),
+            "b": _safe_float(row, "t2", 100),
+            **analysis,
+        }
+    if shape in ("Pipe", "Circular", "Circle"):
+        d = _safe_float(row, "t3", 120)
+        tw = _safe_float(row, "tw", 10)
+        return SectionType.PIPE, {
+            "ro": d / 2.0,
+            "ri": max(0.1, (d - 2.0 * tw) / 2.0),
+            "n": 24,
+            **analysis,
+        }
+    if shape in ("Channel", "C"):
         return SectionType.C, {
-            "h": L("t3", 100), "b": L("t2", 80),
-            "t": L("tw", 6), "tf": L("tf", 6),
+            "h": _safe_float(row, "t3", 100),
+            "b": _safe_float(row, "t2", 80),
+            "t": _safe_float(row, "tw", 6),
+            "tf": _safe_float(row, "tf", 6),
             **analysis,
         }
-    if s_type in ("Angle", "L"):
+    if shape in ("Angle", "L"):
         return SectionType.L, {
-            "h": L("t3", 100), "b": L("t2", 80), "t": L("tw", 8),
+            "h": _safe_float(row, "t3", 100),
+            "b": _safe_float(row, "t2", 80),
+            "t": _safe_float(row, "tw", 8),
             **analysis,
         }
-    if s_type in ("Tube", "Box", "Box/Tube"):
+    if shape in ("Tube", "Box", "Box/Tube"):
         return SectionType.TUBE, {
-            "h": L("t3", 200), "b": L("t2", 100), "t": L("tw", 10),
+            "h": _safe_float(row, "t3", 200),
+            "b": _safe_float(row, "t2", 100),
+            "t": _safe_float(row, "tw", 10),
             **analysis,
         }
-    if s_type in ("SD Section", "General"):
+    if shape in ("SD Section", "General"):
         return SectionType.CUSTOM, {**analysis}
 
-    logger.warning("[SectionMap] Bilinmeyen Shape=%r, RECT fallback", s_type)
-    return SectionType.RECT, {"h": L("t3", 200), "b": L("t2", 100), **analysis}
+    logger.warning("[SectionMap] Bilinmeyen Shape=%r, RECT fallback", shape)
+    return SectionType.RECT, {
+        "h": _safe_float(row, "t3", 200),
+        "b": _safe_float(row, "t2", 100),
+        **analysis,
+    }
+
+
+def _resolve_material(ctx: LoadContext, mat_name: str) -> Optional[Material]:
+    """S2K biriminde material — handler'lar `float` doldurur."""
+    mat_name = str(mat_name or "").strip()
+    if not mat_name or mat_name.lower() == "nan":
+        return None
+    mat = ctx.materials.get(mat_name)
+    if mat is None:
+        mat = Material(name=mat_name, mat_type=MatType.STEEL)
+        ctx.materials[mat_name] = mat
+    return mat
 
 
 # ============================================================================
-# HANDLERS
+# FRAME SECTION
 # ============================================================================
 def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
     name_col = next((c for c in ("SectionName", "Section", "Name") if c in df.columns), None)
@@ -128,16 +181,12 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
             continue
 
         try:
-            s_type, s_params = _map_sap_to_local(row, ctx.units)
+            s_type, s_params = _map_sap_to_local(row)
         except Exception as e:
             logger.error("[FrameProps] '%s' dönüşüm HATASI: %s", sect_name, e, exc_info=True)
             continue
 
-        mat_name = str(row.get("Material", "")).strip()
-        mat = ctx.materials.get(mat_name) if mat_name else None
-        if mat is None and mat_name:
-            mat = Material(name=mat_name, mat_type=MatType.STEEL)
-            ctx.materials[mat_name] = mat
+        mat = _resolve_material(ctx, row.get("Material", ""))
 
         section = Section(
             name=sect_name,
@@ -148,19 +197,18 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
         )
         ctx.sections[sect_name] = section
 
-        # --- DOĞRULAMA: analitik + birim kontrolü ---
-        for msg in validate_section_properties(section):
-            logger.warning("[SectionCheck] %s", msg)
-            ctx.warnings.append(msg)
+        # Doğrulama — analitik + katalog + değişmezler
         try:
-            # Tek doğrulama — analitik + katalog + değişmezler + birim şüphesi
             for msg in check_section(section, strict=False):
                 logger.warning("[SectionCheck] %s", msg)
                 ctx.warnings.append(msg)
         except Exception as e:
-            logger.debug("[SectionCheck-Deep] atlandı: %s", e)
+            logger.debug("[SectionCheck] atlandı: %s", e)
 
 
+# ============================================================================
+# AUTO SELECT
+# ============================================================================
 def handle_auto_select_lists(ctx: LoadContext, df: pd.DataFrame) -> None:
     for _, row in df.iterrows():
         list_name = str(row.get("ListName", "")).strip()
@@ -169,18 +217,21 @@ def handle_auto_select_lists(ctx: LoadContext, df: pd.DataFrame) -> None:
             ctx.auto_select_lists.setdefault(list_name, []).append(member)
 
 
+# ============================================================================
+# AREA SECTION
+# ============================================================================
 def handle_area_props(ctx: LoadContext, df: pd.DataFrame) -> None:
-    uc = ctx.units
     for _, row in df.iterrows():
         name = str(row.get("Section", "")).strip()
         if not name:
             continue
-        thickness = uc.L(_safe_float(row, "Thickness", 0.1))
+        thickness = _safe_float(row, "Thickness", 0.1)   # S2K birimi
         mat_name = str(row.get("Material", "")).strip()
         mat = ctx.materials.get(mat_name) if mat_name else None
         if mat is None and mat_name:
             mat = Material(name=mat_name)
             ctx.materials[mat_name] = mat
+
         ctx.area_sections[name] = {
             "material": mat,
             "thickness": thickness,
@@ -207,6 +258,7 @@ def handle_sd_general(ctx: LoadContext, df: pd.DataFrame) -> None:
 def handle_sd_polygon(ctx: LoadContext, df: pd.DataFrame) -> None:
     if df is None or df.empty:
         return
+
     grouped: Dict[Tuple[str, str], list] = {}
     for _, row in df.iterrows():
         sec = str(row.get("SectionName", "")).strip()
@@ -222,14 +274,16 @@ def handle_sd_polygon(ctx: LoadContext, df: pd.DataFrame) -> None:
 
         pts = [
             SDPolygonPoint(
-                x=ctx.units.L(_safe_float(r, "X")),
-                y=ctx.units.L(_safe_float(r, "Y")),
-                radius=ctx.units.L(_safe_float(r, "Radius")),
+                x=_safe_float(r, "X"),
+                y=_safe_float(r, "Y"),
+                radius=_safe_float(r, "Radius"),
             )
             for r in rows
         ]
-        shape = SDShape(name=shp, shape_kind="Polygon", material=mat,
-                        z_order=z_order, fill_color=color, points=pts)
+        shape = SDShape(
+            name=shp, shape_kind="Polygon", material=mat,
+            z_order=z_order, fill_color=color, points=pts,
+        )
         sd = ctx.sd_sections.setdefault(sec, SDSection(name=sec))
         sd.shapes.append(shape)
 
@@ -243,9 +297,9 @@ def handle_sd_rebar_rect(ctx: LoadContext, df: pd.DataFrame) -> None:
         sd.rect_rebars.append({
             "shape": str(r.get("ShapeName", "")).strip(),
             "material": str(r.get("ShapeMat", "")).strip(),
-            "x_center": ctx.units.L(_safe_float(r, "XCenter")),
-            "y_center": ctx.units.L(_safe_float(r, "YCenter")),
-            "height": ctx.units.L(_safe_float(r, "Height")),
-            "width": ctx.units.L(_safe_float(r, "Width")),
+            "x_center": _safe_float(r, "XCenter"),
+            "y_center": _safe_float(r, "YCenter"),
+            "height": _safe_float(r, "Height"),
+            "width": _safe_float(r, "Width"),
             "rotation": _safe_float(r, "Rotation"),
         })

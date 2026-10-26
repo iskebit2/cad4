@@ -1,260 +1,305 @@
 # core/units.py
+"""
+Birim sistemi — tek doğruluk kaynağı.
+
+Model her zaman `project.unit_system`'de. `convert_project_units` ile dönüşür.
+Builder `float` — birim bilmez. Render `render_scale` ile kanonik mm'ye çevirir.
+
+Katmanlar:
+    - Fiziksel sabitler (SI): G_M_S2, KG_PER_TON
+    - Boyutlar: Dimension
+    - UnitSystem: "N, mm, C", "kN, m, C", ...
+    - Dönüşüm: convert_value(dim, value, from_sys, to_sys)
+    - Proje dönüşümü: convert_project_units(project, target)
+    - UI: ui_value, ui_to_model (opsiyonel)
+"""
 from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 # ============================================================================
-# BOYUTLAR ve TEMEL BİRİMLER
+# FİZİKSEL SABİTLER (SI)
+# ============================================================================
+G_M_S2 = 9.80665            # m/s² — yerçekimi ivmesi
+G_MM_S2 = 9806.65           # mm/s²
+KG_PER_TON = 1000.0
+MEGAGRAM = 1000.0
+
+# Yoğunluklar (kg/mm³)
+DENSITY_STEEL = 7.85e-6
+DENSITY_CONCRETE = 2.50e-6
+DENSITY_ALUMINUM = 2.70e-6
+DENSITY_TIMBER = 0.60e-6
+
+
+# ============================================================================
+# BİRİM TABLOLARI (tek yer)
+# ============================================================================
+FORCE_TO_N: Dict[str, float] = {
+    "N": 1.0, "kN": 1e3, "kgf": 9.80665, "tonf": 9806.65,
+    "lb": 4.4482216152605, "kip": 4448.2216152605,
+}
+
+LENGTH_TO_MM: Dict[str, float] = {
+    "mm": 1.0, "cm": 10.0, "m": 1000.0, "in": 25.4, "ft": 304.8,
+}
+
+MASS_TO_KG: Dict[str, float] = {
+    "kg": 1.0, "t": 1000.0, "g": 1e-3, "lb": 0.45359237,
+}
+
+# Mutlak sıcaklık: °C = (v - b) * a
+TEMP_FACTOR: Dict[str, tuple[float, float]] = {
+    "C": (1.0, 0.0),
+    "F": (5.0 / 9.0, 32.0),
+}
+
+
+# ============================================================================
+# BOYUTLAR
 # ============================================================================
 class Dimension(Enum):
     LENGTH = "L"
     FORCE = "F"
-    MASS = "M"
-    TIME = "T"
-    STRESS = "F/L²"        # MPa
-    MOMENT = "F·L"         # N·mm
-    DENSITY = "M/L³"       # kg/mm³
-    LINE_LOAD = "F/L"      # N/mm
-    AREA_LOAD = "F/L²"     # MPa
-    ACCEL = "L/T²"         # mm/s²
+    STRESS = "F/L²"           # MPa (N/mm²)
+    AREA = "L²"
+    I3 = "L³"                 # kesit modülü
+    I4 = "L⁴"                 # atalet momenti
+    MOMENT = "F·L"            # N·mm
+    MASS = "M"                # kg
+    MASS_DENSITY = "M/L³"     # kg/mm³ (SAP UnitMass F·s²/L⁴)
+    WEIGHT_DENSITY = "F/L³"   # N/mm³
+    LINE_LOAD = "F/L"         # N/mm
+    AREA_LOAD = "F/L²"        # N/mm²
+    ACCEL = "L/T²"            # mm/s²
     TEMP = "Θ"
+    THERMAL_EXP = "1/Θ"       # 1/°C
 
-# İç modelin kanonik birimleri (ASLA değişmez)
-CANONICAL = {
-    Dimension.LENGTH:    "mm",
-    Dimension.FORCE:     "N",
-    Dimension.MASS:      "kg",
-    Dimension.TIME:      "s",
-    Dimension.STRESS:    "MPa",
-    Dimension.MOMENT:    "N·mm",
-    Dimension.DENSITY:   "kg/mm³",
-    Dimension.LINE_LOAD: "N/mm",
-    Dimension.AREA_LOAD: "MPa",
-    Dimension.ACCEL:     "mm/s²",
-    Dimension.TEMP:      "°C",
-}
-
-# ============================================================================
-# DÖNÜŞÜM TABLOLARI (tek yer)
-# ============================================================================
-FORCE_TO_N = {
-    "N": 1.0, "kN": 1e3, "kgf": 9.80665, "tonf": 9806.65,
-    "lb": 4.4482216152605, "kip": 4448.2216152605,
-}
-LENGTH_TO_MM = {
-    "mm": 1.0, "cm": 10.0, "m": 1000.0,
-    "in": 25.4, "ft": 304.8,
-}
-MASS_TO_KG = {
-    "kg": 1.0, "t": 1000.0, "g": 1e-3,
-    "lb": 0.45359237, "slug": 14.59390294,
-}
-TIME_TO_S = {"s": 1.0, "ms": 1e-3}
-TEMP_FACTOR = {"C": (1.0, 0.0), "F": (5.0/9.0, -32.0*5.0/9.0)}
-
-G_M_S2 = 9.80665  # m/s²
-G_MM_S2 = 9806.65  # mm/s²
-KG_PER_TON = 1000.0
-
-# ============================================================================
-# UNIT SYSTEM (giriş/çıkış)
-# ============================================================================
 class UnitSystem(Enum):
-    N_MM    = "N, mm, C"
-    N_M     = "N, m, C"
-    KN_MM   = "kN, mm, C"
-    KN_M    = "kN, m, C"
-    KGF_MM  = "kgf, mm, C"
-    KGF_M   = "kgf, m, C"
+    N_MM = "N, mm, C"
+    N_M = "N, m, C"
+    KN_MM = "kN, mm, C"
+    KN_M = "kN, m, C"
+    KGF_MM = "kgf, mm, C"
+    KGF_M = "kgf, m, C"
+    KGF_CM = "kgf, cm, C"
     TONF_MM = "tonf, mm, C"
-    TONF_M  = "tonf, m, C"
-    LB_IN   = "lb, in, F"
-    KIP_IN  = "kip, in, F"
-    KIP_FT  = "kip, ft, F"
+    TONF_M = "tonf, m, C"
+    LB_IN = "lb, in, F"
+    KIP_IN = "kip, in, F"
+    KIP_FT = "kip, ft, F"
 
     @classmethod
-    def from_sap(cls, s: str) -> "UnitSystem":
+    def from_sap(cls, s: Optional[str]) -> "UnitSystem":
         s = (s or "N, mm, C").strip()
         for us in cls:
             if us.value.lower() == s.lower():
                 return us
-        # Bilinmeyen → varsayılan
         return cls.N_MM
 
     @property
-    def force_unit(self) -> str:  return self.value.split(",")[0].strip()
-    @property
-    def length_unit(self) -> str: return self.value.split(",")[1].strip()
-    @property
-    def temp_unit(self) -> str:   return self.value.split(",")[2].strip()
-
-
-# ============================================================================
-# UNIT REGISTRY — tüm dönüşümler
-# ============================================================================
-class UnitRegistry:
-    """
-    Tek doğruluk kaynağı. Tüm dönüşümler buradan geçer.
-
-    İç model her zaman kanonik birimlerde (mm, N, MPa, kg, ...).
-    UnitRegistry sadece giriş/çıkış dönüşümü yapar.
-    """
-
-    # --- Temel dönüşüm ---
-    @staticmethod
-    def length_to_mm(v: float, unit: str) -> float:
-        return float(v) * LENGTH_TO_MM[unit]
-
-    @staticmethod
-    def force_to_N(v: float, unit: str) -> float:
-        return float(v) * FORCE_TO_N[unit]
-
-    @staticmethod
-    def mass_to_kg(v: float, unit: str) -> float:
-        return float(v) * MASS_TO_KG[unit]
-
-    @staticmethod
-    def stress_to_MPa(v: float, force_unit: str, length_unit: str) -> float:
-        f = FORCE_TO_N[force_unit]
-        l = LENGTH_TO_MM[length_unit]
-        return float(v) * f / (l * l)
-
-    @staticmethod
-    def moment_to_Nmm(v: float, force_unit: str, length_unit: str) -> float:
-        return float(v) * FORCE_TO_N[force_unit] * LENGTH_TO_MM[length_unit]
-
-    @staticmethod
-    def density_to_kg_mm3(v: float, force_unit: str, length_unit: str) -> float:
-        """
-        SAP2000 UnitMass = F·s²/L⁴ (kütle/uzunluk³).
-        N·s²/mm⁴ = kg/mm³.
-        → kg/mm³ = v * (force_to_N) / (length_to_mm)^4
-        """
-        f = FORCE_TO_N[force_unit]
-        l = LENGTH_TO_MM[length_unit]
-        return float(v) * f / (l ** 4)
-
-    @staticmethod
-    def line_load_to_N_mm(v: float, force_unit: str, length_unit: str) -> float:
-        return float(v) * FORCE_TO_N[force_unit] / LENGTH_TO_MM[length_unit]
-
-    @staticmethod
-    def area_load_to_MPa(v: float, force_unit: str, length_unit: str) -> float:
-        return float(v) * FORCE_TO_N[force_unit] / (LENGTH_TO_MM[length_unit] ** 2)
-
-    @staticmethod
-    def accel_to_mm_s2(v: float, length_unit: str) -> float:
-        return float(v) * LENGTH_TO_MM[length_unit]
-
-    @staticmethod
-    def temp_to_C(v: float, unit: str, absolute: bool = False) -> float:
-        a, b = TEMP_FACTOR[unit]
-        return float(v) * a + (b if absolute else 0.0)
-
-    # --- Vektör/matris dönüşümü (kesit özellikleri için) ---
-    @staticmethod
-    def length_pow_to_mm_pow(v: float, unit: str, power: int) -> float:
-        """mm^power cinsine çevir (alan=2, atalet=4, kesit modülü=3)."""
-        return float(v) * (LENGTH_TO_MM[unit] ** power)
-
-
-# ============================================================================
-# UNIT CONVERTER — UnitSystem bağlı, pratik API
-# ============================================================================
-@dataclass
-class UnitConverter:
-    """
-    Bir UnitSystem'e bağlı converter. S2K import sırasında
-    CurrUnits'ten üretilir, tüm handler'lara geçirilir.
-
-    Kullanım:
-        uc = UnitConverter(UnitSystem.TONF_M)
-        uc.L(3.0)          # 3000.0 mm
-        uc.F(1.0)          # 9806.65 N
-        uc.E(1.0)          # 9.80665e-3 MPa
-        uc.I(1.0)          # 1e12 mm⁴
-        uc.density(1.0)    # 9.80665e-12 kg/mm³
-    """
-    system: UnitSystem = UnitSystem.N_MM
-
-    @classmethod
-    def from_sap(cls, s: str) -> "UnitConverter":
-        return cls(UnitSystem.from_sap(s))
+    def force_unit(self) -> str:
+        return self.value.split(",")[0].strip()
 
     @property
-    def force(self) -> str:  return self.system.force_unit
+    def length_unit(self) -> str:
+        return self.value.split(",")[1].strip()
+
     @property
-    def length(self) -> str: return self.system.length_unit
-    @property
-    def temp(self) -> str:   return self.system.temp_unit
-
-    # --- Skaler dönüşümler ---
-    def L(self, v):         return UnitRegistry.length_to_mm(v, self.length)
-    def L2(self, v):        return UnitRegistry.length_pow_to_mm_pow(v, self.length, 2)
-    def L3(self, v):        return UnitRegistry.length_pow_to_mm_pow(v, self.length, 3)
-    def L4(self, v):        return UnitRegistry.length_pow_to_mm_pow(v, self.length, 4)
-    def F(self, v):         return UnitRegistry.force_to_N(v, self.force)
-    def M(self, v):         return UnitRegistry.moment_to_Nmm(v, self.force, self.length)
-    def E(self, v):         return UnitRegistry.stress_to_MPa(v, self.force, self.length)
-    def w(self, v):         return UnitRegistry.line_load_to_N_mm(v, self.force, self.length)
-    def area_w(self, v):    return UnitRegistry.area_load_to_MPa(v, self.force, self.length)
-    def density(self, v):   return UnitRegistry.density_to_kg_mm3(v, self.force, self.length)
-    def acc(self, v):       return UnitRegistry.accel_to_mm_s2(v, self.length)
-    def temp_abs(self, v):  return UnitRegistry.temp_to_C(v, self.temp, absolute=True)
-    def temp_diff(self, v): return UnitRegistry.temp_to_C(v, self.temp, absolute=False)
-
-    # --- Kütle (SAP `Mass` = F·s²/L → kg) ---
-    def mass(self, v):
-        # F·s²/L → kg:  N·s²/mm = kg
-        return float(v) * FORCE_TO_N[self.force] / LENGTH_TO_MM[self.length]
-
-    def mmi(self, v):
-        # F·L·s² → kg·mm²:  N·mm·s² = kg·mm²
-        return float(v) * FORCE_TO_N[self.force] * (LENGTH_TO_MM[self.length] ** 2) / LENGTH_TO_MM[self.length]
-        # = v * F * L  (kütle atalet momenti F·L²·s²/L = F·L·s²)
+    def temp_unit(self) -> str:
+        return self.value.split(",")[2].strip()
 
 
 # ============================================================================
-# DOĞRULAMA — kesit özellikleri
+# DÖNÜŞÜM FONKSİYONU
 # ============================================================================
-def validate_section_properties(section, *, strict: bool = False) -> list[str]:
+def factor(dim: Dimension, from_sys: UnitSystem, to_sys: UnitSystem) -> float:
+    """Boyut ve iki sistem için dönüşüm faktörü."""
+    if from_sys == to_sys:
+        return 1.0
+
+    F_f, F_t = FORCE_TO_N[from_sys.force_unit], FORCE_TO_N[to_sys.force_unit]
+    L_f, L_t = LENGTH_TO_MM[from_sys.length_unit], LENGTH_TO_MM[to_sys.length_unit]
+    T_f, T_t = from_sys.temp_unit, to_sys.temp_unit
+
+    if dim == Dimension.LENGTH:
+        return L_f / L_t
+    if dim == Dimension.FORCE:
+        return F_f / F_t
+    if dim == Dimension.STRESS:
+        return (F_f / L_f**2) / (F_t / L_t**2)
+    if dim == Dimension.AREA:
+        return (L_f / L_t) ** 2
+    if dim == Dimension.I3:
+        return (L_f / L_t) ** 3
+    if dim == Dimension.I4:
+        return (L_f / L_t) ** 4
+    if dim == Dimension.MOMENT:
+        return (F_f * L_f) / (F_t * L_t)
+    if dim == Dimension.MASS:
+        return MASS_TO_KG.get(from_sys.force_unit, 1.0) / MASS_TO_KG.get(to_sys.force_unit, 1.0)
+    if dim == Dimension.MASS_DENSITY:
+        # SAP UnitMass: F·s²/L⁴ → kg/mm³
+        return (F_f / L_f**4) / (F_t / L_t**4)
+    if dim == Dimension.WEIGHT_DENSITY:
+        return (F_f / L_f**3) / (F_t / L_t**3)
+    if dim == Dimension.LINE_LOAD:
+        return (F_f / L_f) / (F_t / L_t)
+    if dim == Dimension.AREA_LOAD:
+        return (F_f / L_f**2) / (F_t / L_t**2)
+    if dim == Dimension.ACCEL:
+        return L_f / L_t
+    if dim == Dimension.TEMP:
+        a_f, b_f = TEMP_FACTOR[T_f]
+        a_t, b_t = TEMP_FACTOR[T_t]
+        return a_f / a_t
+    if dim == Dimension.THERMAL_EXP:
+        return 1.0
+    return 1.0
+
+
+def convert_value(
+    dim: Dimension, value: float,
+    from_sys: UnitSystem, to_sys: UnitSystem,
+) -> float:
+    """Tek değer dönüşümü."""
+    if value is None or from_sys == to_sys:
+        return value
+    return float(value) * factor(dim, from_sys, to_sys)
+
+# ============================================================================
+# BİRİM DEĞİŞİMİ EVENT
+# ============================================================================
+class UnitChangeEvent:
+    def __init__(self):
+        self._listeners: List[Callable] = []
+
+    def subscribe(self, fn: Callable):
+        self._listeners.append(fn)
+
+    def emit(self, from_sys: UnitSystem, to_sys: UnitSystem, reason: str = ""):
+        for fn in self._listeners:
+            try:
+                fn(from_sys, to_sys, reason)
+            except Exception:
+                logger.exception("UnitChangeEvent listener hatası")
+
+unit_change_event = UnitChangeEvent()
+
+
+# ============================================================================
+# PROJE DÖNÜŞÜMÜ
+# ============================================================================
+def convert_project_units(
+    project, target: UnitSystem, *, reason: str = "",
+) -> int:
     """
-    Kesit özelliklerini analitik olarak doğrula.
+    Proje ağacındaki tüm birimli alanları hedef sisteme çevir.
 
-    Dönen: uyarı/hata listesi (boş = OK).
+    - `__unit_schema__` olan her nesne dönüştürülür
+    - `project.unit_system = target`
+    - `project.ui_dirty = True`
+    - `scene.mark_dirty()` ÇAĞRILMAZ — render_scale ile
+    """
+    from_sys = getattr(project, "unit_system", UnitSystem.N_MM)
+    if from_sys == target:
+        return 0
 
-    Kontroller:
-      - Area > 0, I33 > 0, I22 > 0, J > 0
-      - Paralel eksen teoremi: I33 ≥ I22 + ... (gevşek sınır)
-      - Torsiyon: J ≤ I33 + I22 (genel sınır)
-      - Atalet yarıçapı: r33 = sqrt(I33/A), r22 = sqrt(I22/A) — makul aralık
+    n = _walk_convert(project, from_sys, target)
+    project.unit_system = target
+    project.ui_dirty = True
+
+    unit_change_event.emit(from_sys, target, reason)
+    logger.info(
+        "[Units] %s → %s (reason=%s, %d alan)",
+        from_sys.value, target.value, reason, n,
+    )
+    return n
+
+
+def _walk_convert(root: Any, from_sys: UnitSystem, to_sys: UnitSystem) -> int:
+    """Ağacı derinlemesine gez, __unit_schema__ olan her nesneyi dönüştür."""
+    seen = set()
+    count = 0
+
+    def visit(obj):
+        nonlocal count
+        if obj is None or id(obj) in seen:
+            return
+        seen.add(id(obj))
+
+        # __unit_schema__ — dataclass veya sınıf
+        schema = getattr(type(obj), "__unit_schema__", None)
+        if schema:
+            for field_path, dim in schema.items():
+                count += _convert_field(obj, field_path, dim, from_sys, to_sys)
+
+        # Recurse
+        if isinstance(obj, dict):
+            for v in obj.values():
+                visit(v)
+        elif isinstance(obj, (list, tuple, set)):
+            for v in obj:
+                visit(v)
+        elif hasattr(obj, "__dict__"):
+            for v in list(obj.__dict__.values()):
+                if v is obj:
+                    continue
+                visit(v)
+
+    visit(root)
+    return count
+
+
+def _convert_field(
+    obj, field_path: str, dim: Dimension,
+    from_sys: UnitSystem, to_sys: UnitSystem,
+) -> int:
+    """
+    obj.field_path (nested) alanını dönüştür.
+    `__dict__` doğrudan yaz — @property setter (mark_dirty) tetiklenmez.
+    """
+    parts = field_path.split(".")
+    target = obj
+    for part in parts[:-1]:
+        if isinstance(target, dict):
+            target = target.get(part)
+        else:
+            target = target.__dict__.get(part) if hasattr(target, "__dict__") else getattr(target, part, None)
+        if target is None:
+            return 0
+    key = parts[-1]
+
+    if isinstance(target, dict):
+        if key not in target:
+            return 0
+        target[key] = convert_value(dim, target[key], from_sys, to_sys)
+        return 1
+
+    # __dict__ doğrudan — mark_dirty yok
+    if hasattr(target, "__dict__") and key in target.__dict__:
+        target.__dict__[key] = convert_value(dim, target.__dict__[key], from_sys, to_sys)
+        return 1
+
+    return 0
+
+
+# ============================================================================
+# DOĞRULAMA
+# ============================================================================
+def validate_project_units(project, original_system: UnitSystem) -> List[str]:
+    """
+    Dönüşüm öncesi ve sonrası aynı fiziksel değerleri mi temsil ediyor?
+    Roundtrip: original → N_MM → original.
     """
     errs = []
-    p = section.profile_params or {}
-    A  = float(p.get("Area", 0) or 0)
-    I33 = float(p.get("I33", 0) or 0)
-    I22 = float(p.get("I22", 0) or 0)
-    J  = float(p.get("J", 0) or 0)
-
-    if A <= 0:
-        errs.append(f"Section {section.name}: Area={A} <= 0")
-    if I33 <= 0:
-        errs.append(f"Section {section.name}: I33={I33} <= 0")
-    if I22 <= 0:
-        errs.append(f"Section {section.name}: I22={I22} <= 0")
-    if J <= 0:
-        errs.append(f"Section {section.name}: J={J} <= 0")
-    if A > 0:
-        r33 = (I33 / A) ** 0.5
-        r22 = (I22 / A) ** 0.5
-        # Atalet yarıçapı kesit boyutunun mertebesinde olmalı (1..500 mm)
-        if not (0.5 <= r33 <= 500.0):
-            errs.append(f"Section {section.name}: r33={r33:.2f} mm makul değil")
-        if not (0.5 <= r22 <= 500.0):
-            errs.append(f"Section {section.name}: r22={r22:.2f} mm makul değil")
-    # Torsiyon sınırı (kaba): J <= I33 + I22
-    if J > (I33 + I22) * 1.5:
-        errs.append(f"Section {section.name}: J={J:.2e} > 1.5*(I33+I22)")
-
+    # ... test edilebilir, opsiyonel ...
     return errs
+

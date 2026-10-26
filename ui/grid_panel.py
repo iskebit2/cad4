@@ -8,6 +8,9 @@ from data.enums import GridPlane
 from domain.definition import GridPlaneDef
 from ui.base_panel import BasePanel
 
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
+
 class GridPanel(BasePanel):
     PLANES = [GridPlane.XY, GridPlane.XZ, GridPlane.YZ]
         

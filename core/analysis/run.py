@@ -27,6 +27,7 @@ class AnalysisOptions:
     run_spectral: bool = False
     run_takeoff: bool = True
     spectrum_name: Optional[str] = None     # project.spectrum_functions'tan
+    use_shear_deform: bool = True
 
 
 @dataclass

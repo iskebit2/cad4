@@ -5,20 +5,18 @@ import logging
 import pandas as pd
 
 from tools.s2k.context import LoadContext
-from tools.s2k.units_adapter import UnitConverter
 from domain.definition import GeneralProjectInfo, SiteInformation
 
 logger = logging.getLogger(__name__)
 
 
-def handle_program_control(ctx: LoadContext, df: pd.DataFrame) -> None:
+def handle_program_control(ctx, df):
     if "CurrUnits" in df.columns and not df.empty:
         raw = str(df.iloc[0]["CurrUnits"]).strip()
         if raw:
-            ctx.units = UnitConverter.from_sap(raw)
-            logger.info("[Units] CurrUnits='%s'", raw)
+            ctx.units_source_string = raw
             return
-    ctx.units = UnitConverter()
+    ctx.units_source_string = "N, mm, C"
     logger.info("[Units] CurrUnits yok, varsayılan N_MM")
 
 

@@ -18,10 +18,12 @@ from render.pickpass import PickPass
 from render.label_batch import LabelBatch
 from tools.font_atlas import FontAtlas
 from render.load_renderer import LoadRenderer
-
+from render.restraint_renderer import RestraintRenderer
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
+
+
 
 @dataclass
 class RenderStats:
@@ -31,6 +33,7 @@ class RenderStats:
     tri: int = 0
 
 class SceneRenderer:
+    RENDER_MODES = ('shaded', 'line', 'simple', 'normal')
     def __init__(self, pick_s, standard_s, node_s, simple_s, overlay_s, axes_s, w=1024, h=768):
         self.pick_s = pick_s
         self.standard_shader = standard_s  # İsmi netleştirelim
@@ -50,6 +53,8 @@ class SceneRenderer:
         self.link_r = LinkRenderer(self.standard_shader)
         self.node_r = NodeRenderer(self.standard_shader)
         self.polygon_r = PolygonRenderer(self.standard_shader)
+        self.restraint_r = RestraintRenderer(self.standard_shader, self.simple_shader)
+
         # PickPass - MRT'den ID okumak için
         self.pick_pass = PickPass()
         self.pick_pass.set_viewport(w, h)
@@ -64,7 +69,7 @@ class SceneRenderer:
         self.show = {
                         'grid': True, 'axes': True, 'area': True,
                         'frame': True, 'link': True, 'node': True,
-                        'polygon': True,
+                        'polygon': True,'restraint': True,
                         'loads': False,
                     }
         self.use_lights = True
@@ -96,6 +101,11 @@ class SceneRenderer:
         self.marquee_ebo_fill = None
         self.marquee_ebo_line = None
 
+        self._marquee_ov_vao = None
+        self._marquee_ov_vbo = None
+        self._overlay_mvp_loc = overlay_s.get_loc("mvp") if overlay_s else -1
+        self._overlay_color_loc = overlay_s.get_loc("color") if overlay_s else -1
+
         self.font_atlas = FontAtlas(
             ttf_path= None,# "C:/Windows/Fonts/consola.ttf",
             size=32,
@@ -114,6 +124,7 @@ class SceneRenderer:
         self._sel_plane_tri_vbo = None
         self._sel_plane_line_vao = None
         self._sel_plane_line_vbo = None
+        self._load_scale_override = 1.0
 
     def _init_marquee_buffers(self):
         """Marquee için kalıcı buffer'ları oluştur"""
@@ -286,6 +297,7 @@ class SceneRenderer:
         areas = _f(scene.areas)
         links = _f(scene.links)
         polygons = _f(scene.polygons)
+        restraint_nodes = [n for n in nodes if n.restraint is not None and not n.restraint.is_free()]
 
         # ---- 0. PickPass sıfırla ----
         if self.pick_pass and hasattr(self.pick_pass, 'clear_registry'):
@@ -354,6 +366,8 @@ class SceneRenderer:
         done += len(polygons) * W_POLY
         _progress(done / total, f"Polygons ✓")
 
+        self.restraint_r.update(restraint_nodes, scene_size=self.size)
+
         # Outline'ları bir kez üret
         outline_parts = []
         for pg in polygons:
@@ -379,6 +393,7 @@ class SceneRenderer:
             self.pick_pass.register(link.pick_id, link, self.link_r)
         for pg in polygons:
             self.pick_pass.register(pg.pick_id, pg, self.polygon_r)
+        
 
         # ---- 6. Bounds ----
         _progress(0.98, "Sınırlar hesaplanıyor...")
@@ -393,7 +408,7 @@ class SceneRenderer:
         if hasattr(self, "load_renderer"):
             try:
                 cam_scale = self._compute_cam_scale()
-                self.load_renderer.update(scene, camera_scale=cam_scale)
+                self.load_renderer.update(scene, camera_scale=cam_scale, scene_size=self.size,)
             except Exception as e:
                 logger.exception("Load renderer update hatası: %s", e)
 
@@ -434,6 +449,7 @@ class SceneRenderer:
             (self.area_r, self.scene.areas.values()),
             (self.link_r, self.scene.links.values()),
             (self.polygon_r, self.scene.polygons.values()),
+            
         )
         
         get_color = self._get_final_color
@@ -542,6 +558,8 @@ class SceneRenderer:
                 self.link_r.render(mvp, self.model_mat, cpos, v, p)
             if self.show['node'] and self.node_r:
                 self.node_r.render(mvp, self.model_mat, cpos, v, p)
+            if self.show.get('restraint', True) and self.restraint_r:
+                self.restraint_r.render(mvp, self.model_mat, cpos, v, p)
             if self.show['polygon'] and self.polygon_r:
                 self.polygon_r.render(mvp, self.model_mat, cpos, v, p)
         
@@ -576,7 +594,7 @@ class SceneRenderer:
             self._draw_local_axes(cam)
 
         # 4.7 LOADS (yük görselleri)
-        if self.show.get('loads', True):
+        if self.show.get('loads', False):
             self._draw_loads(cam)
 
         # 4.8 Plane çizimi tekrar bak!
@@ -598,8 +616,8 @@ class SceneRenderer:
             return
         if not self.load_renderer.enabled:
             return
-        if not self.show.get('loads', True):
-            return
+        # if not self.show.get('loads', True):
+        #     return
 
         p = cam.get_projection_matrix()
         v = cam.get_view_matrix()
@@ -869,89 +887,14 @@ class SceneRenderer:
         glDisable(GL_DEPTH_TEST)
         if self.show['node'] and self.node_r:
             self.node_r.render_simple(mvp, self.node_shader, alpha=1.0)
+
+        if self.show.get('restraint', True) and self.restraint_r:
+            self.restraint_r.render_simple(mvp, self.simple_shader, alpha=1.0)
         glEnable(GL_DEPTH_TEST)
     
     def get_bounds(self):
         return self.center, self.size
     
-    def _draw_marquee(self):
-
-        """Marquee overlay çizimi - sağa mavi, sola yeşil"""
-        if not self.marquee or not self.marquee.is_active:
-            return
-        
-        coords = self.marquee.get_box_coords()
-        if not coords:
-            return
-        
-        x1, y1, x2, y2 = coords
-        
-        # Çok küçükse çizme
-        if abs(x2 - x1) < 2 and abs(y2 - y1) < 2:
-            return
-        
-        # Yönü belirle (sağa doğru mu sola doğru mu)
-        cross = x2 < x1  # Sola doğru sürükleme
-        
-        # OpenGL state
-        glDisable(GL_DEPTH_TEST)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        
-        # Shader'ı kullan
-        self.overlay_shader.use()
-        
-        w, h = self.engine.w, self.engine.h
-        proj = glm.ortho(0.0, float(w), float(h), 0.0, -1.0, 1.0)
-        mvp_overlay = proj * glm.mat4(1.0)
-        glUniformMatrix4fv(self.overlay_shader.get_loc("mvp"), 1, GL_FALSE, glm.value_ptr(mvp_overlay))
-        
-        color_loc = self.overlay_shader.get_loc("color")
-        
-        # Koordinatları düzelt (çizim için)
-        min_x = min(x1, x2)
-        max_x = max(x1, x2)
-        min_y = min(y1, y2)
-        max_y = max(y1, y2)
-        
-        vertices = np.array([
-            min_x, min_y, 0,
-            max_x, min_y, 0,
-            max_x, max_y, 0,
-            min_x, max_y, 0
-        ], dtype=np.float32)
-        
-        # Geçici VAO/VBO
-        vao = glGenVertexArrays(1)
-        vbo = glGenBuffers(1)
-        
-        glBindVertexArray(vao)
-        glBindBuffer(GL_ARRAY_BUFFER, vbo)
-        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STREAM_DRAW)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
-        glEnableVertexAttribArray(0)
-        
-        if cross:
-            # Sola doğru - yeşil
-            fill_color = (0.2, 0.8, 0.2, 0.3)    # Yarı saydam yeşil
-            border_color = (0.2, 1.0, 0.2, 0.8)  # Parlak yeşil
-        else:
-            # Sağa doğru - mavi
-            fill_color = (0.2, 0.5, 0.9, 0.3)    # Yarı saydam mavi
-            border_color = (0.4, 0.7, 1.0, 0.8)  # Parlak mavi
-        
-        # Fill
-        glUniform4f(color_loc, *fill_color)
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4)
-        
-        # Border
-        glUniform4f(color_loc, *border_color)
-        glDrawArrays(GL_LINE_LOOP, 0, 4)
-        
-        # Temizlik
-        glDeleteVertexArrays(1, [vao])
-        glDeleteBuffers(1, [vbo])
-
     def pick_async(self, x, y):
         """Asenkron picking başlat - MRT ID buffer'dan okur"""
         if not self.pick_pass:
@@ -1045,7 +988,7 @@ class SceneRenderer:
 
     def cleanup(self):
         for r in [self.frame_r, self.node_r, self.area_r, self.link_r,
-              self.polygon_r, self.grid, self.pick_pass, self.snap,
+              self.polygon_r, self.restraint_r, self.grid, self.pick_pass, self.snap,
               self.load_renderer]:   # ← ekle
             if r and hasattr(r, 'cleanup'):
                 r.cleanup()
@@ -1106,16 +1049,14 @@ class SceneRenderer:
             poly.is_visible = test((mx, my, mz))
 
     def _compute_cam_scale(self):
-        """Kameranın uzaklığına göre yük profili ölçeği."""
         if not self.camera:
             return 1.0
         try:
-            # Kamera target'a olan uzaklık
             d = float(np.linalg.norm(np.array(self.camera.position) - np.array(self.center)))
-            # 10.000 mm referans
-            return max(0.6, min(2.5, d / 10000.0))
+            base = max(0.6, min(2.5, d / 10000.0))
+            return base * getattr(self, '_load_scale_override', 1.0)
         except Exception:
-            return 1.0
+            return getattr(self, '_load_scale_override', 1.0)
 
     def _draw_selected_plane(self, mvp):
         plane = self.selected_plane
@@ -1130,18 +1071,11 @@ class SceneRenderer:
             self._sel_plane_line_vao = glGenVertexArrays(1)
             self._sel_plane_line_vbo = glGenBuffers(1)
 
-        # Geometri (Plane.render_solid için)
-        # ... copy from PlaneDrawManager._build_temp_plane but from real plane
-        # Ama Plane.render_solid doğrudan geometri hesaplar
-        
-        # from domain.plane import Plane   # gerekmiyor, plane zaten var
         shader = self.overlay_shader
         shader.use()
-        loc_mvp = shader.get_loc("mvp")
-        if loc_mvp != -1:
-            glUniformMatrix4fv(loc_mvp, 1, GL_FALSE, glm.value_ptr(mvp))
-        loc_color = shader.get_loc("color")
-        if loc_color == -1:
+        if self._overlay_mvp_loc != -1:
+            glUniformMatrix4fv(self._overlay_mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
+        if self._overlay_color_loc == -1:
             return
 
         glEnable(GL_BLEND)
@@ -1150,13 +1084,13 @@ class SceneRenderer:
         from OpenGL.GL import glDepthMask, GL_FALSE as GLF
         glDepthMask(GLF)
         try:
-            self._render_plane_solid(plane, shader, loc_color)
+            self._render_plane_solid(plane, shader)
         finally:
             from OpenGL.GL import glDepthMask, GL_TRUE
             glDepthMask(GL_TRUE)
             glDisable(GL_BLEND)
 
-    def _render_plane_solid(self, plane, shader, loc_color):
+    def _render_plane_solid(self, plane, shader):
         """Verilen plane için 8-köşe kutu çiz."""
         import numpy as np
         
@@ -1197,7 +1131,7 @@ class SceneRenderer:
         glBufferData(GL_ARRAY_BUFFER, arr.nbytes, arr, GL_STREAM_DRAW)
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*4, None)
-        glUniform4f(loc_color, 0.30, 0.60, 1.00, 0.15)   # mavi yarı saydam
+        glUniform4f(self._overlay_color_loc, 0.30, 0.60, 1.00, 0.15)   # mavi yarı saydam
         glDrawArrays(GL_TRIANGLES, 0, len(arr)//3)
         
         # Kenarlar
@@ -1212,5 +1146,107 @@ class SceneRenderer:
         glBufferData(GL_ARRAY_BUFFER, edge_arr.nbytes, edge_arr, GL_STREAM_DRAW)
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*4, None)
-        glUniform4f(loc_color, 0.55, 0.80, 1.00, 0.90)   # açık mavi kenar
+        glUniform4f(self._overlay_color_loc, 0.55, 0.80, 1.00, 0.90)   # açık mavi kenar
         glDrawArrays(GL_LINES, 0, len(edge_arr)//3)
+
+
+    def set_render_mode(self, mode: str):
+        if mode not in self.RENDER_MODES:
+            raise ValueError(f"Geçersiz render modu: {mode}")
+        self.render_mode = mode
+        logger.info(f"Render modu: {mode}")
+
+    def get_render_mode(self) -> str:
+        return self.render_mode
+
+    def set_show(self, key: str, value: bool):
+        if key in self.show:
+            self.show[key] = bool(value)
+
+    def get_show(self) -> dict:
+        return dict(self.show)
+
+    def set_use_lights(self, enabled: bool):
+        self.use_lights = bool(enabled)
+
+    def set_loads_enabled(self, enabled: bool):
+        """Hem show['loads'] hem load_renderer.enabled'ı senkronla."""
+        self.show['loads'] = bool(enabled)
+        if self.load_renderer:
+            self.load_renderer.enabled = bool(enabled)
+
+    def set_load_scale(self, scale: float):
+        """Kamera-bazlı ölçeğe çarpan ekle."""
+        self._load_scale_override = float(scale)
+        if self.scene and self.load_renderer:
+            cam_scale = self._compute_cam_scale() * self._load_scale_override
+            self.load_renderer.update(self.scene, camera_scale=cam_scale)
+
+    def _draw_marquee(self):
+        if not self.marquee or not self.marquee.is_active:
+            return
+        coords = self.marquee.get_box_coords()
+        if not coords:
+            return
+        x1, y1, x2, y2 = coords
+        if abs(x2 - x1) < 2 and abs(y2 - y1) < 2:
+            return
+
+        cross = x2 < x1
+
+        # VAO/VBO bir kez oluştur
+        if self._marquee_ov_vao is None:
+            self._marquee_ov_vao = glGenVertexArrays(1)
+            self._marquee_ov_vbo = glGenBuffers(1)
+            glBindVertexArray(self._marquee_ov_vao)
+            glBindBuffer(GL_ARRAY_BUFFER, self._marquee_ov_vbo)
+            glEnableVertexAttribArray(0)
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
+            glBindVertexArray(0)
+
+        # State kaydet
+        depth_was_on = glIsEnabled(GL_DEPTH_TEST) != 0
+        blend_was_on = glIsEnabled(GL_BLEND) != 0
+        lw_prev = glGetFloatv(GL_LINE_WIDTH)
+
+        try:
+            glDisable(GL_DEPTH_TEST)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+            self.overlay_shader.use()
+
+            proj = glm.ortho(0.0, float(self.w), float(self.h), 0.0, -1.0, 1.0)
+            if self._overlay_mvp_loc != -1:
+                glUniformMatrix4fv(self._overlay_mvp_loc, 1, GL_FALSE, glm.value_ptr(proj))
+            if self._overlay_color_loc == -1:
+                return
+
+            mn_x, mx_x = min(x1, x2), max(x1, x2)
+            mn_y, mx_y = min(y1, y2), max(y1, y2)
+            verts = np.array([mn_x, mn_y, 0, mx_x, mn_y, 0,
+                            mx_x, mx_y, 0, mn_x, mx_y, 0], dtype=np.float32)
+
+            glBindVertexArray(self._marquee_ov_vao)
+            glBindBuffer(GL_ARRAY_BUFFER, self._marquee_ov_vbo)
+            glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts, GL_STREAM_DRAW)
+
+            if cross:
+                fill, border = (0.2,0.8,0.2,0.3), (0.2,1.0,0.2,0.9)
+            else:
+                fill, border = (0.2,0.5,0.9,0.3), (0.4,0.7,1.0,0.9)
+
+            glUniform4f(self._overlay_color_loc, *fill)
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 4)
+
+            glLineWidth(1.5)
+            glUniform4f(self._overlay_color_loc, *border)
+            glDrawArrays(GL_LINE_LOOP, 0, 4)
+        finally:
+            glBindVertexArray(0)
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
+            glLineWidth(float(lw_prev))
+            if not blend_was_on:
+                glDisable(GL_BLEND)
+            if depth_was_on:
+                glEnable(GL_DEPTH_TEST)

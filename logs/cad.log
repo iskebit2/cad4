@@ -1,0 +1,46 @@
+2026-10-26 03:06:55 [INFO    ] cad.main: ================================================================
+2026-10-26 03:06:55 [INFO    ] cad.main: CAD4 başlatılıyor
+2026-10-26 03:06:55 [INFO    ] cad.main: Python   : 3.12.10
+2026-10-26 03:06:55 [INFO    ] cad.main: Dizin    : D:\Program\cad4
+2026-10-26 03:06:55 [INFO    ] cad.main: Log dos. : D:\Program\cad4\logs\cad.log
+2026-10-26 03:06:55 [INFO    ] cad.main: ================================================================
+2026-10-26 03:06:55 [INFO    ] cad.main: [1/3] CadWindow oluşturuluyor...
+2026-10-26 03:06:59 [INFO    ] cad.app.cad_window: Pencere oluşturuldu: 1280x800
+2026-10-26 03:06:59 [INFO    ] cad.main: [2/3] CadApp oluşturuluyor...
+2026-10-26 03:06:59 [DEBUG   ] cad.ui.theme: [font] io.font_default atanamadı: 'imgui.core._IO' object has no attribute 'font_default'
+2026-10-26 03:06:59 [DEBUG   ] cad.ui.theme: [font] YÜKLENDİ: segoeui.ttf  boyut=16
+2026-10-26 03:06:59 [DEBUG   ] cad.ui.theme: [font] glyph_range: <imgui.core.GlyphRanges object at 0x000001EDE3B50BD0>
+2026-10-26 03:06:59 [INFO    ] cad.data.section_catalog: [Catalog] steel_sections_W.json: 195 kesit yüklendi (W)
+2026-10-26 03:06:59 [INFO    ] cad.data.section_catalog: [Catalog] steel_sections_C.json: 34 kesit yüklendi (C)
+2026-10-26 03:06:59 [INFO    ] cad.data.section_catalog: [Catalog] steel_sections_L.json: 154 kesit yüklendi (L)
+2026-10-26 03:06:59 [INFO    ] cad.data.section_catalog: [Catalog] steel_sections_P.json: 23 kesit yüklendi (P)
+2026-10-26 03:06:59 [INFO    ] cad.data.section_catalog: [Catalog] Toplam 406 kesit
+2026-10-26 03:06:59 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
+2026-10-26 03:06:59 [INFO    ] cad.main: [3/3] Ana döngü başlıyor
+2026-10-26 03:06:59 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-10-26 03:06:59 [DEBUG   ] cad.tools.font_atlas: [Atlas] 200x340 kaydedildi: _atlas_debug.png
+2026-10-26 03:06:59 [DEBUG   ] cad.tools.font_atlas: [Atlas] pixel min/max: 0/255
+2026-10-26 03:06:59 [DEBUG   ] cad.tools.font_atlas: [Atlas] texture id=5
+2026-10-26 03:06:59 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-10-26 03:06:59 [DEBUG   ] cad.render.restraint_renderer: [RestraintRenderer] boş — buffer'lar temizlendi
+2026-10-26 03:06:59 [DEBUG   ] cad.tools.gridsystem: [GridSystem] set_coords çağrıldı! Gelen X: [0.0, 1000.0], Y: [0.0, 1000.0], Z: [0.0, 1000.0]
+2026-10-26 03:07:17 [DEBUG   ] cad.app.cad_app: [prep] plane_manager context_keys=[] ctx_keys=[] frames=0
+2026-10-26 03:07:17 [DEBUG   ] cad.ui.plane_manager_panel: [PM] _selected_plane: _selected_name None
+2026-10-26 03:07:28 [INFO    ] cad.ui.plane_manager_panel: [PlaneMgr] Yeni plane: Plane_y0 (assoc=0, depth=±500)
+2026-10-26 03:07:28 [DEBUG   ] cad.ui.plane_manager_panel: [PM] _selected_plane: name=Plane_y0, plane=Plane(id=015037, name='Plane_y0', depth=[-500.0,+500.0], assoc=0, pending=0)
+2026-10-26 03:07:36 [INFO    ] cad.ui.plane_manager_panel: [PlaneMgr] Silindi: Plane_y0
+2026-10-26 03:07:36 [DEBUG   ] cad.ui.plane_manager_panel: [PM] _selected_plane: _selected_name None
+2026-10-26 03:07:40 [DEBUG   ] cad.app.cad_app: [prep] s2k_panel context_keys=[] ctx_keys=[] frames=0
+2026-10-26 03:07:46 [INFO    ] cad.ui.s2k_panel: [Import] callback tetikleniyor...
+2026-10-26 03:07:46 [DEBUG   ] cad.render.restraint_renderer: [RestraintRenderer] elements=6 shaded_icount=108 simple_icount=108 size=1.0
+2026-10-26 03:07:46 [DEBUG   ] cad.render.restraint_renderer: [RestraintRenderer] elements=6 shaded_icount=108 simple_icount=108 size=328.6
+2026-10-26 03:07:46 [DEBUG   ] cad.tools.gridsystem: [GridSystem] set_coords çağrıldı! Gelen X: [0.0, 6000.0, 11000.0], Y: [0.0, 7000.0], Z: [0.0, 3000.0, 6500.0, 10000.0]
+2026-10-26 03:07:46 [INFO    ] cad.app.cad_app: [S2K] Import tamam
+2026-10-26 03:07:46 [INFO    ] cad.ui.s2k_panel: [Import] callback tamamlandı
+2026-10-26 03:07:46 [DEBUG   ] cad.render.restraint_renderer: [RestraintRenderer] elements=6 shaded_icount=108 simple_icount=108 size=340.0
+2026-10-26 03:07:53 [INFO    ] cad.app.cad_app: [KeyDown] key=96 ctrl=False ui_captured=False
+2026-10-26 03:07:53 [INFO    ] cad.app.cad_app: [KeyDown] key=256 ctrl=False ui_captured=False
+2026-10-26 03:07:53 [INFO    ] cad.app.cad_app: [KeyDown] key=96 ctrl=False ui_captured=False
+2026-10-26 03:07:54 [INFO    ] cad.app.cad_app: [KeyDown] key=256 ctrl=False ui_captured=False
+2026-10-26 03:07:55 [INFO    ] cad.main: [3/3] Ana döngü bitti
+2026-10-26 03:07:55 [INFO    ] cad.main: Çıkış kodu: 0

@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from data.unit_enums import KG_PER_TON
+from core.units import KG_PER_TON
 from .mass_assembly import build_mass, MassAssembly
 from .stiffness_assembly import build_stiffness, StiffnessAssembly
 from .solver import StructuralSolver, ModalResult
@@ -108,6 +108,7 @@ def run_analysis(
     spectrum=None,
     *,
     validate: bool = True,
+    use_shear_deform: bool = True, # Varsayılan olarak aktif
 ) -> StructuralAnalysisResult:
     """
     Tam analiz zinciri: mass → stiffness → modal (+ spectrum).
@@ -124,7 +125,7 @@ def run_analysis(
     mass_asm = build_mass(scene, project, n_live=n_live, validate=validate)
 
     # --- 2. Stiffness ---
-    stiff_asm = build_stiffness(scene, project, validate=validate)
+    stiff_asm = build_stiffness(scene, project, validate=validate, use_shear_deform=use_shear_deform)
 
     # --- 3. Mesnetli DOF'lar ---
     fixed_dofs = _collect_fixed_dofs(scene)
