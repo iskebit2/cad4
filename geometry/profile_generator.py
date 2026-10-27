@@ -62,9 +62,9 @@ class ProfileGenerator:
             try:
                 section_type = SectionType(section_type.upper())
             except ValueError:
-                #logger.debug(f"Uyarı: Bilinmeyen kesit tipi '{section_type}', RECT kullanılıyor")
+                #pass(f"Uyarı: Bilinmeyen kesit tipi '{section_type}', RECT kullanılıyor")
                 section_type = SectionType.RECT
-        # #logger.debug(f"[ProfileGenerator] section_type: {section_type}")
+        # #pass(f"[ProfileGenerator] section_type: {section_type}")
 
         # Parametreleri doğrula
         validated_params = self._validate_params(section_type, params)
@@ -72,7 +72,7 @@ class ProfileGenerator:
         # Üretici fonksiyonu bul
         if section_type in self._generators:
             points = self._generators[section_type](validated_params)
-            # #logger.debug(f"[ProfileGenerator] Üretici fonksiyonu bul: {points}")
+            # #pass(f"[ProfileGenerator] Üretici fonksiyonu bul: {points}")
         else:
             # Varsayılan: RECT
             points = self._rect_profile(validated_params)
@@ -264,22 +264,13 @@ class ProfileGenerator:
             )
             if poly is not None:
                 pts = [(float(p.x), float(p.y)) for p in poly.points]
-                logger.debug(
-                    f"[ProfileGenerator] SD Section '{getattr(sd, 'name', '?')}': "
-                    f"Polygon '{poly.name}' → {len(pts)} köşe"
-                )
                 return pts
-            logger.debug(
-                f"[ProfileGenerator] SD Section '{getattr(sd, 'name', '?')}': "
-                f"Polygon shape bulunamadı, fallback"
-            )
 
         # 2) Ham nokta listesi
         if 'points' in params and params['points']:
             return params['points']
 
         # 3) Fallback
-        logger.debug("[ProfileGenerator] CUSTOM: ne sd_section ne points, fallback kare")
         return self._default_profile(params)
     
     def _default_profile(self, params: dict) -> List[Tuple[float, float]]:

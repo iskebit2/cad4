@@ -6,7 +6,7 @@ Kullanım:
     dlg = ImGuiFileDialog()
     dlg.open(mode="open", filters=[".json"],
              title="Proje Aç",
-             on_select=lambda path: logger.debug("Seçildi:", path))
+             on_select=lambda path: pass("Seçildi:", path))
     # her frame:
     dlg.draw()
 

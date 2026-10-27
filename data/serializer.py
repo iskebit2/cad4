@@ -251,9 +251,7 @@ class DomainJSONEncoder(json.JSONEncoder):
 
 
 def save_project_file(project: Any, path: Path) -> None:
-    logger.info(f"[Save Debug] Proje diske yazılıyor: {path.name}")
-    logger.debug(f"[SERIALIZER DEBUG] Kaydedilen project.grid Y listesi: {project.grid.y_coords}")
-    
+   
     scene = project.scene
     scene_payload = {
         "show_local_axes": scene.show_local_axes,
@@ -266,7 +264,7 @@ def save_project_file(project: Any, path: Path) -> None:
         "links": [_encode(l) for l in scene.links.values()],
         "polygons": [_encode(p) for p in scene.polygons.values() if not getattr(p, "is_temporary", False)],
     }
-    logger.info(f"[Save Debug] -> Scene kaydediliyor: {len(scene.nodes)} düğüm, {len(scene.frames)} çubuk, {len(scene.areas)} alan, {len(scene.links)} link, {len(scene.polygons)} poligon")
+    
 
     u_sys = project.unit_system
     u_sys_val = u_sys.value if isinstance(u_sys, Enum) else u_sys
@@ -303,16 +301,16 @@ def save_project_file(project: Any, path: Path) -> None:
         "frame_auto_mesh": project.frame_auto_mesh,
         "planes": [_encode_plane(p) for p in project.planes.values()],
     }
-    logger.info(f"[Save Debug] -> Tanımlar kaydediliyor: {len(project.materials)} malzeme, {len(project.sections)} kesit, {len(project.load_patterns)} load pattern")
+    
 
     content = json.dumps(payload, cls=DomainJSONEncoder, indent=2, ensure_ascii=False)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("project.json", content)
-    logger.info(f"[Save Debug] ✅ Proje başarıyla zip içine paketlendi: {path}")
+    
 
 
 def load_project_file(path: Path) -> Any:
-    logger.info(f"[Load Debug] Proje dosyadan okunuyor: {path.name}")
+    
     from domain.project import Project
 
     with zipfile.ZipFile(path, "r") as zf:
@@ -371,7 +369,7 @@ def load_project_file(path: Path) -> Any:
     proj.frame_auto_mesh = payload.get("frame_auto_mesh", {})
     proj.mass_source_map = payload.get("mass_source_map", {})
     
-    logger.info(f"[Load Debug] -> Tanımlar yüklendi: {len(proj.materials)} malzeme, {len(proj.sections)} kesit, {len(proj.load_patterns)} load pattern")
+    
 
     # Scene ve Elemanları İki Aşamalı Güvenli İnşa Et
     scene_data = payload.get("scene", {})
@@ -398,7 +396,7 @@ def load_project_file(path: Path) -> Any:
                     scene_obj.add_node(node)
                     node_map[node.unique_id] = node
                     node_map[str(node.unique_id)] = node
-        logger.info(f"[Load Debug] -> Geri yüklenen tekil düğüm (node) sayısı: {len(node_map)}")
+        
 
         def resolve_node(ref) -> Optional[Node]:
             if isinstance(ref, Node):
@@ -438,7 +436,7 @@ def load_project_file(path: Path) -> Any:
                     scene_obj.add_frame(frame)
                     added_frame_ids.add(frame.unique_id)
                     loaded_frames_count += 1
-        logger.info(f"[Load Debug] -> Geri yüklenen çubuk (frame) sayısı: {loaded_frames_count}")
+        
 
         # 3. Aşama: Area'lar
         loaded_areas_count = 0
@@ -454,7 +452,7 @@ def load_project_file(path: Path) -> Any:
                     scene_obj.add_area(area)
                     added_area_ids.add(area.unique_id)
                     loaded_areas_count += 1
-        logger.info(f"[Load Debug] -> Geri yüklenen alan (area) sayısı: {loaded_areas_count}")
+        
 
         # 4. Aşama: Link'ler
         loaded_links_count = 0
@@ -470,7 +468,7 @@ def load_project_file(path: Path) -> Any:
                     scene_obj.add_link(link)
                     added_link_ids.add(link.unique_id)
                     loaded_links_count += 1
-        logger.info(f"[Load Debug] -> Geri yüklenen link sayısı: {loaded_links_count}")
+        
 
         # 5. Aşama: Polygon'lar
         loaded_polygons_count = 0
@@ -486,7 +484,7 @@ def load_project_file(path: Path) -> Any:
                     scene_obj.add_polygon(poly)
                     added_poly_ids.add(poly.unique_id)
                     loaded_polygons_count += 1
-        logger.info(f"[Load Debug] -> Geri yüklenen poligon sayısı: {loaded_polygons_count}")
+        
         
     raw_planes = payload.get("planes", [])
     loaded_planes = {}
@@ -497,9 +495,9 @@ def load_project_file(path: Path) -> Any:
         except Exception as e:
             logger.warning(f"[Load Debug] Plane yüklenemedi: {e}")
     proj.planes = loaded_planes
-    logger.info(f"[Load Debug] -> Geri yüklenen plane sayısı: {len(loaded_planes)}")
+    
 
     proj.scene = scene_obj
     proj.scene.project = proj
-    logger.info(f"[Load Debug] ✅ Proje başarıyla diskten okundu ve belleğe inşa edildi: {path.name}")
+    
     return proj

@@ -90,13 +90,13 @@ class PlaneManagerPanel(BasePanel):
     def _selected_plane(self) -> Optional[Plane]:
         proj = self._project()
         if not proj:
-            logger.debug("[PM] _selected_plane: proj None")
+            
             return None
         if not self._selected_name:
-            logger.debug("[PM] _selected_plane: _selected_name None")
+            
             return None
         plane = proj.planes.get(self._selected_name)
-        logger.debug(f"[PM] _selected_plane: name={self._selected_name}, plane={plane}")
+        
         return plane
 
     def _scene_nodes_by_id(self) -> dict:

@@ -18,7 +18,7 @@ def node_to_values(node) -> Dict[str, Any]:
     return {
         "label": node.label,
         "is_visible": node.is_visible,
-        "color": list(node.color[:3]),
+        "color": list(node.color[:3]) if node.color else None,
         "x": float(node.x), "y": float(node.y), "z": float(node.z),
         "restraint": (node.restraint.as_dict()
                       if node.restraint else
@@ -143,7 +143,7 @@ def frame_to_values(frame) -> Dict[str, Any]:
     return {
         "label": frame.label,
         "is_visible": frame.is_visible,
-        "color": list(frame.color[:3]),
+        "color": list(frame.color[:3]) if frame.color else None,
         "rotation_deg": float(getattr(frame, "rotation_deg", 0.0)),
         # --- Kesit: nesne (dict değil) ---
         "section": sec,
@@ -208,7 +208,7 @@ def area_to_values(area) -> Dict[str, Any]:
     return {
         "label": area.label,
         "is_visible": area.is_visible,
-        "color": list(area.color[:3]),
+        "color": list(area.color[:3]) if area.color else None,
         "thickness": float(area.thickness),
         "material": mat,   # ← NESNE
         "section_name": getattr(area, "section_name", ""),

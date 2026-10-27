@@ -45,7 +45,7 @@ class FrameBuilder:
         if getattr(section, 'sd_section', None) is not None:
             params["sd_section"] = section.sd_section
 
-        # logger.debug(
+        # pass(
         #                 f"[FrameBuilder-DIAG] section='{section.name}' "
         #                 f"type={section.profile_type} "
         #                 f"sd={'VAR' if getattr(section, 'sd_section', None) else 'YOK'} "

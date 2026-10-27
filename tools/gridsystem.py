@@ -60,7 +60,7 @@ class GridSystem:
         self.rebuild_all()
 
     def set_coords(self, x_list, y_list, z_list):
-        logger.debug(f"[GridSystem] set_coords çağrıldı! Gelen X: {x_list}, Y: {y_list}, Z: {z_list}")
+
         if x_list: self.x_coords = sorted(list(set(x_list)))
         if y_list: self.y_coords = sorted(list(set(y_list)))
         if z_list: self.z_coords = sorted(list(set(z_list)))

@@ -1,245 +1,310 @@
 # geometry/node_builder.py
-import numpy as np
-from typing import Tuple, Dict, Optional
-from domain.definition import Restraint
-from domain.element import Node
-import math
+"""Node geometri üretici.
 
-def normalize(v):
-    n = np.linalg.norm(v)
-    if n < 1e-10:
-        return np.array([0, 0, 1])
-    return v / n
+Node için iki ayrı iş:
+  - build()              → shaded mesh (free node: küp; restraint: sembol)
+  - build_simple_points() → simple mod için 1 nokta
+
+Vertex layout her ikisinde de 9 float:
+    pos3 (local) + normal3 + center3 (global)
+
+`standard.vert` `isConstantSize=1` iken aCenter + aPos*factor hesaplar;
+`isConstantSize=0` iken mvp * aPos (global) hesaplar. NodeRenderer
+`isConstantSize=1` kullandığı için aPos local kalabilir.
+"""
+from __future__ import annotations
+
+import math
+from typing import Dict, Optional, Tuple
+
+import numpy as np
+
+from domain.element import Node
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
+
+# 9-float vertex: pos3 + normal3 + center3
+_STRIDE = 9
+
 
 class NodeBuilder:
+    """Node mesh'i (küp veya restraint sembolleri) üretir."""
+
+    SEGMENTS = 16   # daire sembolü için segment sayısı
+
     def __init__(self):
-        # Birim şekiller (XY düzlemi, z=0, merkezde)
-        self.size = 1.0  # Node boyutu
-        self.segments = 16
+        self.size: float = 1.0
         self.shapes: Dict[str, np.ndarray] = {}
+        self._rot_cache: Dict[Tuple[float, float, float], np.ndarray] = {}
         self._rebuild_shapes()
 
-    def _rebuild_shapes(self):
-        """self.size'a göre şekilleri yeniden üret"""
-        radius = self.size / 2
-        self.shapes = {
-            "triangle": np.array([
-                [0, radius, 0],
-                [radius, -radius, 0],
-                [-radius, -radius, 0]
-            ], dtype=np.float32),
-
-            "square": np.array([
-                [-radius, radius, 0],
-                [radius, radius, 0],
-                [radius, -radius, 0],
-                [-radius, -radius, 0]
-            ], dtype=np.float32),
-
-            "circle": self._create_circle(radius),
-        }
-
+    # ==================================================================
+    # PUBLIC
+    # ==================================================================
     def set_size(self, size: float) -> bool:
-        """
-        Node sembol boyutunu ayarla.
-        Returns: True -> gerçekten değişti, False -> zaten aynıydı
-        """
+        """Sembol boyutunu ayarla. True dönerse gerçekten değişti."""
         size = float(size)
-        if size <= 0:
-            return False
-        if abs(self.size - size) < 1e-6:
+        if size <= 0 or abs(self.size - size) < 1e-6:
             return False
         self.size = size
         self._rebuild_shapes()
         return True
-    
-    def _create_circle(self, radius):
-        """Daire oluştur - merkezde, çevre noktaları"""
-        circle = []
-        # Merkez nokta (0,0,0)
-        circle.append([0, 0, 0])
-        # Çevre noktaları
-        for i in range(self.segments):
-            angle = 2 * math.pi * i / self.segments
-            circle.append([radius * math.cos(angle), radius * math.sin(angle), 0])
-        return np.array(circle, dtype=np.float32)
-    
-    def _local_matrix(self, x_deg=0, y_deg=0, z_deg=0):
-        """Euler açılarından rotasyon matrisi"""
-        theta_x = math.radians(x_deg)
-        theta_y = math.radians(y_deg)
-        theta_z = math.radians(z_deg)
-        
-        Rx = np.array([
-            [1, 0, 0],
-            [0, math.cos(theta_x), -math.sin(theta_x)],
-            [0, math.sin(theta_x), math.cos(theta_x)]
-        ], dtype=np.float32)
-        
-        Ry = np.array([
-            [math.cos(theta_y), 0, math.sin(theta_y)],
-            [0, 1, 0],
-            [-math.sin(theta_y), 0, math.cos(theta_y)]
-        ], dtype=np.float32)
-        
-        Rz = np.array([
-            [math.cos(theta_z), -math.sin(theta_z), 0],
-            [math.sin(theta_z), math.cos(theta_z), 0],
-            [0, 0, 1]
-        ], dtype=np.float32)
-        
-        return Rz @ Ry @ Rx
-    
-    def determine_support_symbols(self, restraint):
-        symbols = {"x": None, "y": None, "z": None}
-        if restraint is None:
-            return symbols
-        
-        if not restraint.ux:
-            symbols["x"] = "circle"
-        else:
-            symbols["x"] = "triangle" if not restraint.ry else "square"
-        if not restraint.uy:
-            symbols["y"] = "circle"
-        else:
-            symbols["y"] = "triangle" if not restraint.rx else "square"
-        if restraint.uz:
-            symbols["z"] = "square" if restraint.rz else "circle"
-        return symbols
-    
+
     def build(self, node: Node) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Node için 9'lu vertex yapısı: pos3 + norm3 + center3"""
+        """
+        Shaded mesh. Returns (verts, colors, indices).
+
+        Free node  → küçük küp
+        Restraint  → semboller (küp yok)
+
+        Boş dönerse NodeRenderer bu node'u atlar.
+        """
         center = np.array([node.x, node.y, node.z], dtype=np.float32)
-        
-        
-        verts = []
-        idxs = []
+
+        vlist: list = []
+        ilist: list = []
+
         if node.restraint is None or node.restraint.is_free():
-            self._add_cube(center, verts, idxs)
-        # else: boş — RestraintRenderer çizecek
-        if not verts:
-            return (np.array([], dtype=np.float32),
-                    np.array([], dtype=np.float32),
-                    np.array([], dtype=np.uint32))
+            self._add_cube(center, vlist, ilist)
+        else:
+            self._add_restraint_symbols(node.restraint, center, vlist, ilist)
         
         
-        # Renkler
-        vertex_count = len(verts) // 9
-        color = np.array([1, 1, 0] if node.is_selected else [0.2, 0.2, 0.2], dtype=np.float32)
-        colors = np.tile(color, (vertex_count, 1))
-        
-        return np.array(verts, dtype=np.float32), colors, np.array(idxs, dtype=np.uint32)
-    
-    def _add_symbol(self, shape_name, rotation_matrix, offset, center, verts, idxs):
-        """Sembol ekle - yerel koordinatlarda, sonra center+offset eklenir"""
-        shape = self.shapes[shape_name].copy()
-        
-        # Rotasyon uygula (yerel)
-        rotated = shape @ rotation_matrix.T
-        
-        # Offset ekle (yerel) ve center ekle (global)
-        for i, v in enumerate(rotated):
-            # Yerel pozisyon = rotated + offset
-            local_pos = v + np.array(offset)
-            
-            if shape_name == "circle" and i == 0:
-                # Circle'ın merkez noktası
-                self._add_to_verts(local_pos, [0, 0, 1], center, verts)
-            elif shape_name == "circle":
-                # Circle'ın çevre noktaları
-                self._add_to_verts(local_pos, [0, 0, 1], center, verts)
-            else:
-                # Triangle/Square için tüm noktalar
-                self._add_to_verts(local_pos, [0, 0, 1], center, verts)
-        
-        # İndeksleri oluştur
-        n = len(rotated)
-        base = len(verts) // 9 - n
-        
-        if shape_name == "triangle":
-            # Triangle: tek üçgen
-            idxs.extend([base, base+1, base+2])
-        
-        elif shape_name == "square":
-            # Square: iki üçgen
-            idxs.extend([base, base+1, base+2, base, base+2, base+3])
-        
-        elif shape_name == "circle":
-            # Circle: merkez + çevre üçgenleri
-            center_idx = base
-            for i in range(1, n):
-                next_i = i + 1 if i < n-1 else 1
-                idxs.extend([center_idx, base + i, base + next_i])
-    
-    def _add_to_verts(self, p_local, normal, center, verts):
-        """9'lu yapıya uygun veri ekler - p_local center'a göre OFFSET"""
-        verts.extend([
-            p_local[0], p_local[1], p_local[2],  # aPos (center'a göre offset)
-            normal[0], normal[1], normal[2],     # aNormal
-            center[0], center[1], center[2]      # aCenter (global pozisyon)
-        ])
-    
-    def _add_cube(self, center, verts, idxs):
-        """Küçük küp - free node için"""
-        half = self.size * 0.4 / 2
-        corners = np.array([
-            [-1, -1, -1], [ 1, -1, -1], [ 1,  1, -1], [-1,  1, -1],
-            [-1, -1,  1], [ 1, -1,  1], [ 1,  1,  1], [-1,  1,  1]
-        ], dtype=np.float32) * half
-        
-        faces = [
-            [0, 1, 2, 3], [4, 5, 6, 7], [0, 4, 7, 3],
-            [1, 5, 6, 2], [0, 1, 5, 4], [3, 2, 6, 7]
-        ]
-        face_normals = [
-            [0, 0, -1], [0, 0, 1], [-1, 0, 0],
-            [1, 0, 0], [0, -1, 0], [0, 1, 0]
-        ]
-        
-        for i, face in enumerate(faces):
-            normal = face_normals[i]
-            base = len(verts) // 9
-            for idx in face:
-                # corners[idx] zaten center'a göre offset
-                self._add_to_verts(corners[idx], normal, center, verts)
-            idxs.extend([base, base+1, base+2, base, base+2, base+3])
+        if node.restraint is None or node.restraint.is_free():
+            self._add_cube(center, vlist, ilist)
+        else:
+            self._add_restraint_symbols(node.restraint, center, vlist, ilist)
+
+        if not vlist:
+            empty_f = np.array([], dtype=np.float32)
+            empty_u = np.array([], dtype=np.uint32)
+            return empty_f, empty_f, empty_u
+
+        vc = len(vlist) // _STRIDE
+        # Base renk — gerçek renk NodeRenderer.update_colors ile uygulanır
+        color = np.array([0.2, 0.2, 0.2], dtype=np.float32)
+        colors = np.tile(color, (vc, 1))
+
+        return (
+            np.asarray(vlist, dtype=np.float32),
+            colors,
+            np.asarray(ilist, dtype=np.uint32),
+        )
 
     def build_simple_points(self, node: Node) -> np.ndarray:
-        """
-        Node için sadece 1 nokta döner.
-        format: pos3 + normal3 + center3 = 9 float (NodeBuilder ile uyumlu)
-        """
-        center = np.array([node.x, node.y, node.z], dtype=np.float32)
+        """Simple modda node → 1 nokta (9 float)."""
         return np.array([
-            center[0], center[1], center[2],
+            node.x, node.y, node.z,
             0.0, 0.0, 1.0,
-            center[0], center[1], center[2]
+            node.x, node.y, node.z,
         ], dtype=np.float32)
 
-    def build_restraint_only(self, node: Node) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Sadece restraint sembollerini üret (free node küpü YOK)."""
-        if node.restraint is None or node.restraint.is_free():
-            return (np.array([], dtype=np.float32),
-                    np.array([], dtype=np.float32),
-                    np.array([], dtype=np.uint32))
+    # ==================================================================
+    # SHAPES
+    # ==================================================================
+    def _rebuild_shapes(self):
+        radius = self.size / 2.0
+        self.shapes = {
+            "triangle": np.array([
+                [0.0,      radius,  0.0],
+                [radius,  -radius,  0.0],
+                [-radius, -radius,  0.0],
+            ], dtype=np.float32),
+            "square": np.array([
+                [-radius,  radius, 0.0],
+                [ radius,  radius, 0.0],
+                [ radius, -radius, 0.0],
+                [-radius, -radius, 0.0],
+            ], dtype=np.float32),
+            "circle": self._create_circle(radius),
+        }
 
-        center = np.array([node.x, node.y, node.z], dtype=np.float32)
-        verts, idxs = [], []
-        symbols = self.determine_support_symbols(node.restraint)
+    def _create_circle(self, radius: float) -> np.ndarray:
+        pts = [[0.0, 0.0, 0.0]]
+        for i in range(self.SEGMENTS):
+            a = 2.0 * math.pi * i / self.SEGMENTS
+            pts.append([radius * math.cos(a), radius * math.sin(a), 0.0])
+        return np.asarray(pts, dtype=np.float32)
+
+    # ==================================================================
+    # RESTRAINT SEMBOLLERI
+    # ==================================================================
+    def _add_restraint_symbols(self, restraint, center, vlist, ilist):
+        symbols = self.determine_support_symbols(restraint)
+        half = self.size * 0.5
 
         if symbols["x"]:
-            m = self._local_matrix(x_deg=90)
-            self._add_symbol(symbols["x"], m, [0, 0, -self.size/2], center, verts, idxs)
+            m = self._rot(90, 0, 0)
+            self._add_symbol(symbols["x"], m, [0, 0, -half], center, vlist, ilist)
         if symbols["y"]:
-            m = self._local_matrix(x_deg=90, z_deg=90)
-            self._add_symbol(symbols["y"], m, [0, 0, -self.size/2], center, verts, idxs)
+            m = self._rot(90, 0, 90)
+            self._add_symbol(symbols["y"], m, [0, 0, -half], center, vlist, ilist)
         if symbols["z"]:
-            m = self._local_matrix()
-            self._add_symbol(symbols["z"], m, [0, 0, -self.size], center, verts, idxs)
+            m = self._rot(0, 0, 0)
+            self._add_symbol(symbols["z"], m, [0, 0, -self.size], center, vlist, ilist)
 
-        vc = len(verts) // 9
-        color = np.array([1.0, 0.55, 0.1], dtype=np.float32)   # turuncu
-        colors = np.tile(color, (vc, 1))
-        return (np.array(verts, dtype=np.float32),
-                colors,
-                np.array(idxs, dtype=np.uint32))
+    def determine_support_symbols(self, restraint) -> Dict[str, Optional[str]]:
+        """Restraint → her eksende kullanılacak şekil."""
+        if restraint is None:
+            return {"x": None, "y": None, "z": None}
+
+        return {
+            "x": (
+                "circle" if not restraint.ux
+                else ("triangle" if not restraint.ry else "square")
+            ),
+            "y": (
+                "circle" if not restraint.uy
+                else ("triangle" if not restraint.rx else "square")
+            ),
+            "z": (
+                None if not restraint.uz
+                else ("square" if restraint.rz else "circle")
+            ),
+        }
+
+    def _add_symbol(self, shape_name, rot, offset, center, vlist, ilist):
+        shape = self.shapes[shape_name]
+        rotated = shape @ rot.T
+        offset_np = np.asarray(offset, dtype=np.float32)
+        local = rotated + offset_np
+
+        base = len(vlist) // _STRIDE
+        n = len(local)
+
+        for p in local:
+            vlist.extend((
+                float(p[0]), float(p[1]), float(p[2]),
+                0.0, 0.0, 1.0,
+                float(center[0]), float(center[1]), float(center[2]),
+            ))
+
+        if shape_name == "triangle":
+            ilist.extend([base, base + 1, base + 2])
+        elif shape_name == "square":
+            ilist.extend([base, base + 1, base + 2, base, base + 2, base + 3])
+        elif shape_name == "circle":
+            for i in range(1, n):
+                nxt = i + 1 if i < n - 1 else 1
+                ilist.extend([base, base + i, base + nxt])
+
+    # ==================================================================
+    # FREE NODE KÜPÜ
+    # ==================================================================
+    def _add_cube(self, center, vlist, ilist):
+        half = self.size * 0.4 / 2.0
+
+        corners = np.array([
+            [-1, -1, -1], [ 1, -1, -1], [ 1,  1, -1], [-1,  1, -1],
+            [-1, -1,  1], [ 1, -1,  1], [ 1,  1,  1], [-1,  1,  1],
+        ], dtype=np.float32) * half
+
+        faces = (
+            (0, 1, 2, 3, (0, 0, -1)),
+            (4, 5, 6, 7, (0, 0,  1)),
+            (0, 4, 7, 3, (-1, 0, 0)),
+            (1, 5, 6, 2, ( 1, 0, 0)),
+            (0, 1, 5, 4, (0, -1, 0)),
+            (3, 2, 6, 7, (0,  1, 0)),
+        )
+
+        cx, cy, cz = float(center[0]), float(center[1]), float(center[2])
+
+        for a, b, c, d, normal in faces:
+            base = len(vlist) // _STRIDE
+            for idx in (a, b, c, d):
+                p = corners[idx]
+                vlist.extend((
+                    float(p[0]), float(p[1]), float(p[2]),
+                    float(normal[0]), float(normal[1]), float(normal[2]),
+                    cx, cy, cz,
+                ))
+            ilist.extend([base, base + 1, base + 2, base, base + 2, base + 3])
+
+    # ==================================================================
+    # ROTASYON CACHE
+    # ==================================================================
+    def _rot(self, x_deg: float, y_deg: float, z_deg: float) -> np.ndarray:
+        key = (float(x_deg), float(y_deg), float(z_deg))
+        cached = self._rot_cache.get(key)
+        if cached is not None:
+            return cached
+
+        rx = math.radians(x_deg)
+        ry = math.radians(y_deg)
+        rz = math.radians(z_deg)
+
+        Rx = np.array([
+            [1, 0, 0],
+            [0, math.cos(rx), -math.sin(rx)],
+            [0, math.sin(rx),  math.cos(rx)],
+        ], dtype=np.float32)
+        Ry = np.array([
+            [ math.cos(ry), 0, math.sin(ry)],
+            [ 0,            1, 0],
+            [-math.sin(ry), 0, math.cos(ry)],
+        ], dtype=np.float32)
+        Rz = np.array([
+            [math.cos(rz), -math.sin(rz), 0],
+            [math.sin(rz),  math.cos(rz), 0],
+            [0, 0, 1],
+        ], dtype=np.float32)
+
+        result = (Rz @ Ry @ Rx).astype(np.float32)
+        self._rot_cache[key] = result
+        return result
+
+    def build_simple_restraint_lines(self, node: Node) -> np.ndarray:
+        """
+        Restraint'li node için çizgi tabanlı sembol.
+        Returns 6-float vertex array (pos3 + pad3) — global koordinat.
+        Free node → boş array.
+        """
+        if node.restraint is None or node.restraint.is_free():
+            return np.array([], dtype=np.float32)
+
+        # Sembol boyutu — NodeBuilder.size'ın bir kısmı
+        s = self.size * 10
+        cx, cy, cz = node.x, node.y, node.z
+
+        lines: list = []   # her eleman 6 float (2 vertex × 3)
+
+        def add_seg(a, b):
+            lines.extend([
+                a[0], a[1], a[2], 0.0, 0.0, 0.0,
+                b[0], b[1], b[2], 0.0, 0.0, 0.0,
+            ])
+
+        r = node.restraint
+
+        # Z ekseninde sembol
+        if r.uz:
+            if r.rx and r.ry and r.rz:
+                # --- FIXED: Ters T ---
+                # Yatay zemin (X ekseninde, altında)
+                add_seg((cx - s, cy, cz - s), (cx + s, cy, cz - s))
+                # Dikey çubuk (node'a kadar)
+                add_seg((cx, cy, cz - s), (cx, cy, cz))
+                # Küçük yatay tarama (T'nin ortası)
+                add_seg((cx - s * 0.3, cy, cz - s * 0.5), (cx + s * 0.3, cy, cz - s * 0.5))
+            elif not r.rx and not r.ry and not r.rz:
+                # --- PINNED: İçi boş üçgen ---
+                # Taban (yatay)
+                add_seg((cx - s, cy, cz - s), (cx + s, cy, cz - s))
+                # Sol kenar
+                add_seg((cx - s, cy, cz - s), (cx, cy, cz))
+                # Sağ kenar
+                add_seg((cx + s, cy, cz - s), (cx, cy, cz))
+            else:
+                # --- ROLLER: İçi boş daire ---
+                add_seg((cx - s, cy, cz - s), (cx + s, cy, cz - s))  # zemin
+                n = 16
+                prev = None
+                for i in range(n + 1):
+                    a = 2.0 * math.pi * i / n
+                    p = (cx + s * math.cos(a), cy, cz - s + s * math.sin(a))
+                    if prev is not None:
+                        add_seg(prev, p)
+                    prev = p
+
+        return np.array(lines, dtype=np.float32)

@@ -174,7 +174,7 @@ class Engine:
             self.renderer.resize(self.w, self.h)
         if self.pick_pass:
             self.pick_pass.set_viewport(self.w, self.h)
-        logger.debug("[Engine] Pencere boyutu değiştirildi: %dx%d", self.w, self.h)
+
 
     
     def load_model(self, builder):
@@ -243,7 +243,7 @@ class Engine:
             return False
         try:
             pick_id, _, _ = self.renderer.check_pick()
-            #logger.debug(f"[PICK] check_pick → {pick_id}")
+            #pass(f"[PICK] check_pick → {pick_id}")
             if pick_id is not None:
                 self.pending_pick_check = False
                 self._update_hover(pick_id)
@@ -256,14 +256,14 @@ class Engine:
         return False
 
     def handle_pick_from_hover(self, ctrl=False):
-        #logger.debug(f"[HOOK] hover_id={self.hover_id} ctrl={ctrl}")
+        #pass(f"[HOOK] hover_id={self.hover_id} ctrl={ctrl}")
         if self.hover_id > 0 and self.renderer and self.renderer.pick_pass:
             element = self.renderer.get_element_from_id(self.hover_id)
-            #logger.debug(f"[HOOK] element={type(element).__name__ if element else None}")
+            #pass(f"[HOOK] element={type(element).__name__ if element else None}")
             if element:
                 self.sel_mgr.select(element, additive=ctrl)
         # else:
-            #logger.debug(f"[HOOK] hover_id=0 → işlem yok")
+            #pass(f"[HOOK] hover_id=0 → işlem yok")
 
     def update_world_pos(self, x, y):
         if not self.cam or not self.input:

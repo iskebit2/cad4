@@ -29,40 +29,59 @@ from domain.element import (
     Link,
     Polygon
 )
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 # =================================================================
 # ORTAK RENK MANTIĞI (tek kaynak)
 # =================================================================
 
-# render/base_renderer.py
-
 def _final_color_for(element):
-    """Elementin son rengini döndür (daima RGB)."""
-    if element.is_selected:
-        return [1.0, 0.5, 0.0]   # Turuncu — seçili
+    """
+    Elementin son rengini döndür (RGB 3-tuple).
+    Öncelik: seçim > element.color > section.color > prop.color > tip fallback.
+    """
+    if getattr(element, "is_selected", False):
+        return (1.0, 0.5, 0.0)
 
-    # Ortak color alanı varsa onu kullan
-    if hasattr(element, 'color') and element.color:
-        c = element.color
-        return list(c[:3]) if len(c) >= 3 else [0.7, 0.7, 0.7]
-    if hasattr(element, 'restraint') and element.restraint and not element.restraint.is_free():
-        return [1.0, 0.55, 0.1]   # restraint turuncu
-    
-    # Fallback (eski tip bazlı)
-    if hasattr(element, 'section') and hasattr(element.section, 'color'):
-        return list(element.section.color[:3])
-    elif hasattr(element, 'thickness'):
-        return [0.5, 0.8, 1.0]
-    elif hasattr(element, 'propname'):
-        return [0.0, 1.0, 0.0]
-    else:
-        return [1.0, 1.0, 1.0]
+    def _valid(c):
+        if c is None:
+            return None
+        try:
+            if len(c) >= 3:
+                return (float(c[0]), float(c[1]), float(c[2]))
+        except (TypeError, IndexError, ValueError):
+            pass
+        return None
 
-from logging_config import CadLogger
+    # 1. Element kendi rengi (kullanıcı değiştirdiyse)
+    c = _valid(getattr(element, "color", None))
+    if c is not None:
+        return c
 
-from logging_config import CadLogger
+    # 2. Frame / Area section rengi
+    sec = getattr(element, "section", None)
+    if sec is not None:
+        c = _valid(getattr(sec, "color", None))
+        if c is not None:
+            return c
 
-logger = CadLogger.get(__name__)
+    # 3. Link prop rengi (link.prop yoksa propname → project lookup yok, atla)
+    prop = getattr(element, "prop", None)
+    if prop is not None:
+        c = _valid(getattr(prop, "color", None))
+        if c is not None:
+            return c
+
+    # 4. Tip bazlı fallback
+    if hasattr(element, "thickness"):
+        return (0.5, 0.8, 1.0)   # Area
+    if getattr(element, "propname", None):
+        return (0.0, 1.0, 0.0)   # Link
+    return (0.7, 0.7, 0.7)       # Node / genel
+
+
+
 
 T = TypeVar("T")
 
@@ -175,7 +194,7 @@ class BaseRenderer(ABC, Generic[T]):
         dirty = [e for e in self.elements if e.needs_update]
         if not dirty:
             return
-        # # #logger.debug(f"{self.__class__.__name__}: {len(dirty)} dirty element - sadece renkler güncelleniyor")
+        # # #pass(f"{self.__class__.__name__}: {len(dirty)} dirty element - sadece renkler güncelleniyor")
         
         # Ortak renk fonksiyonu — SceneRenderer._get_final_color ile aynı mantık
         self._refresh_colors()
@@ -272,11 +291,11 @@ class BaseRenderer(ABC, Generic[T]):
         Ana geometri + line geometri + simple geometri tek geçişte hazırlanır.
         """
         
-        #logger.debug("FrameRenderer.update: %d element geldi", len(raw))
+        #pass("FrameRenderer.update: %d element geldi", len(raw))
         
         self.elements = [e for e in raw if e.is_visible]
-        #logger.debug(f"    → {len(self.elements)} görünür element")
-        #logger.debug("→ %d görünür element",len(self.elements))
+        #pass(f"    → {len(self.elements)} görünür element")
+        #pass("→ %d görünür element",len(self.elements))
 
         self.elem_to_idx.clear()
         self.elem_to_vcount.clear()
@@ -402,7 +421,7 @@ class BaseRenderer(ABC, Generic[T]):
 
             self._upload_simple(sv_all, sc_all, sid_all)
 
-            # logger.debug(
+            # pass(
             #     "%s: simple_vcount=%s, draw_mode=%s",
             #     self.__class__.__name__,
             #     self.simple_vcount,
@@ -913,76 +932,6 @@ class LinkRenderer(BaseRenderer[Link]):
         if loc != -1:
             glUniform1i(loc, 0)
 
-        super().render(mvp, model, cam_pos, view, proj)
-
-
-# =================================================================
-# NODE
-# =================================================================
-
-class NodeRenderer(BaseRenderer[Node]):
-
-    def __init__(self, shader):
-        super().__init__(shader)
-        self.builder = NodeBuilder()
-        self.vertex_stride = 9 * 4
-        self.has_center = True
-        self.simple_draw_mode = GL_POINTS
-        self.point_size = 4.0   # piksel
-
-    def set_node_size(self, size: float) -> bool:
-        """Shaded mesh boyutu (dünya birimi)."""
-        return self.builder.set_size(size)
-
-    def set_point_size(self, px: float) -> bool:
-        """Simple modda nokta boyutu (piksel)."""
-        px = float(px)
-        if px <= 0 or abs(self.point_size - px) < 1e-6:
-            return False
-        self.point_size = px
-        return True
-
-    def build(self, n):
-        return self.builder.build(n)
-
-    def build_simple(self, n):
-        v = self.builder.build_simple_points(n)
-        c = np.array([_final_color_for(n)], dtype=np.float32)
-        return v, c
-
-    def render_simple(self, mvp, shader, color=None, alpha=0.5):
-        if not self.simple_vao or self.simple_vcount == 0:
-            return
-        shader.use()
-
-        # Sadece node_shader'da olan uniform'ları set et
-        loc = shader.get_loc("pointSize")
-        if loc != -1:
-            glUniform1f(loc, self.point_size)
-
-        loc = shader.get_loc("mvp")
-        if loc != -1:
-            glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
-
-        # useVertexColor/alpha/objectColor'ı ARAMA — node_shader'da yok
-
-        glBindVertexArray(self.simple_vao)
-        glEnable(GL_PROGRAM_POINT_SIZE)
-        glDrawArrays(GL_POINTS, 0, self.simple_vcount)
-        glDisable(GL_PROGRAM_POINT_SIZE)
-        glBindVertexArray(0)
-
-    def draw_mode(self):
-        return GL_TRIANGLES
-
-    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
-        self.shader.use()
-        ps_loc = self.shader.get_loc("pointSize")
-        if ps_loc != -1:
-            glUniform1f(ps_loc, self.point_size)
-        a_loc = self.shader.get_loc("alpha")
-        if a_loc != -1:
-            glUniform1f(a_loc, 1.0)
         super().render(mvp, model, cam_pos, view, proj)
 
 # =================================================================

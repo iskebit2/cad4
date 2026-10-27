@@ -156,7 +156,7 @@ class CadApp:
 
     def _context_resolvers(self) -> Dict[str, callable]:
         eng = self.engine
-        logger.info("[ctx] engine=%r renderer=%r", eng, getattr(eng, "renderer", "YOK") if eng else None)
+        # logger.info("[ctx] engine=%r renderer=%r", eng, getattr(eng, "renderer", "YOK") if eng else None)
         scn = eng.scene if eng else None
         renderer = eng.renderer if eng else None
         camera = eng.cam if eng else None
@@ -200,8 +200,7 @@ class CadApp:
     def _prepare_panel_before_open(self, name, panel):
         keys = self.panels[name].get("context", [])
         ctx = self._resolve_panel_context(keys)
-        logger.debug(f"[prep] {name} context_keys={keys} ctx_keys={list(ctx.keys())} "
-            f"frames={len(ctx.get('selection_frames', []))}")
+        
         panel.set_context(ctx)
 
     def toggle_panel(self, name: str):
@@ -378,7 +377,10 @@ class CadApp:
             "draw_poly":  lambda: bool(self.engine and self.engine.draw_mgr and self.engine.draw_mgr.is_active),
             "draw_plane": lambda: bool(self.engine and getattr(self.engine, "plane_draw_mgr", None) and self.engine.plane_draw_mgr.is_active),
             "local_axes": lambda: bool(self.engine and self.engine.scene and self.engine.scene.show_local_axes),
-            "show_loads": lambda: bool(self.engine and self.engine.renderer and self.engine.renderer.show.get("loads", False)),
+            "show_loads": lambda: bool(
+                                        self.engine and self.engine.renderer and self.engine.renderer.load_renderer
+                                        and self.engine.renderer.load_renderer.enabled
+                                    ),
             "show_only":  lambda: self._show_only_ids is not None,
         }
         for name in self.panels:
@@ -440,7 +442,7 @@ class CadApp:
         logger.info("[File] Yeni proje")
 
     def _load_project(self, path: str):
-        logger.debug("....", path)
+        
         try:
             self.set_project(Project.load(path))
             if self.engine:
@@ -634,15 +636,8 @@ class CadApp:
 
     def _toggle_loads_visibility(self):
         r = self.engine.renderer if self.engine else None
-        if not r:
-            return
-        cur = bool(r.show.get("loads", False))
-        if hasattr(r, "set_loads_enabled"):
-            r.set_loads_enabled(not cur)
-        else:
-            r.show["loads"] = not cur
-            if hasattr(r, "load_renderer"):
-                r.load_renderer.enabled = not cur
+        if r and r.load_renderer:
+            r.set_loads_enabled(not r.load_renderer.enabled)
             
 
     def toggle_show_only(self):

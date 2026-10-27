@@ -19,7 +19,7 @@ def _make_demo_scene():
         project = Project()
         return project.scene
     except Exception as e:
-        logger.debug(f"[demo] domain yüklenemedi, boş sahne: {e}")
+        pass(f"[demo] domain yüklenemedi, boş sahne: {e}")
         return None
 
 
@@ -33,7 +33,7 @@ def main():
     from inspector.window import InspectorWindow
 
     if not glfw.init():
-        logger.debug("glfw.init başarısız")
+        pass("glfw.init başarısız")
         sys.exit(1)
 
     window = glfw.create_window(1200, 800, "Inspector Demo", None, None)

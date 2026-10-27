@@ -14,16 +14,27 @@ _PERSISTENT_GLYPH_RANGES = None
 
 
 def _make_glyph_ranges():
-    """Türkçe + ok işaretleri ve temel semboller için güvenli glyph range."""
+    """Türkçe + teknik semboller + UI ikonları için genişletilmiş range."""
     global _PERSISTENT_GLYPH_RANGES
     ranges = [
-        0x0020, 0x00FF,  # Temel Latin + Latin Eki
-        0x0100, 0x017F,  # Genişletilmiş Latin (Türkçe)
-        0x2000, 0x206F,  # Noktalama
-        0x2190, 0x21FF,  # Oklar
-        0x25A0, 0x25FF,  # Geometrik Şekiller (▲, ▼, vb.)
-        0x25B0, 0x25DF,  # ▲, >, ▼, < ok varyasyonları ve bloklar
-        0
+        0x0020, 0x00FF,  # Latin-1 (Türkçe temel)
+        0x0100, 0x017F,  # Latin Extended-A
+        0x0180, 0x024F,  # Latin Extended-B
+        0x0370, 0x03FF,  # Yunanca (α β γ Δ σ ε)
+        0x2000, 0x206F,  # Genel noktalama
+        0x2070, 0x209F,  # Üst/alt simgeler (¹²³, ₁₂₃)
+        0x20A0, 0x20CF,  # Para birimleri (€ £ ₺)
+        0x2100, 0x214F,  # Letterlike (℃ № ℄)
+        0x2150, 0x218F,  # Number forms (⅓ ⅔)
+        0x2190, 0x21FF,  # Oklar (→ ← ↑ ↓ ↔)
+        0x2200, 0x22FF,  # Matematik (≤ ≥ ≠ ≈ ∞ √ ∑ ∫ ∂)
+        0x2300, 0x23FF,  # Teknik (⌂ ⌐ ⌘ ⏎)
+        0x2500, 0x257F,  # Box drawing (─ │ ┌ ┐ └ ┘)
+        0x25A0, 0x25FF,  # Geometrik (▲ ▼ ◀ ▶ ● ○ ◆ ◇ ■ □)
+        0x2600, 0x26FF,  # Semboller (⚙ ⚡ ⚠ ☀ ☁)
+        0x2700, 0x27BF,  # Dingbats (✓ ✔ ✗ ✘ ✚)
+        0x2B00, 0x2BFF,  # Misc arrows
+        0,
     ]
     _PERSISTENT_GLYPH_RANGES = imgui.core.GlyphRanges(ranges)
     return _PERSISTENT_GLYPH_RANGES
@@ -52,7 +63,6 @@ def load_fonts(font_size: int = 16,
 
     if not path:
         io.fonts.add_font_default()
-        logger.debug("[font] TTF bulunamadı, varsayılan")
         return {"font": None, "path": None, "size": font_size}
 
     # Glyph range — global referans
@@ -60,24 +70,23 @@ def load_fonts(font_size: int = 16,
 
     # Font yükle (font_config=None, ranges pozisyonel)
     font_obj = io.fonts.add_font_from_file_ttf(path, font_size, None, ranges)
+    w, h = io.fonts.texture_width, io.fonts.texture_height
+    logger.warning("[font] atlas boyutu: %dx%d", w, h)
+    logger.warning("[font] font yüklendi: %r, impl=%r", font_obj, type(impl).__name__ if impl else None)
 
-    # KRİTİK: bu fontu VARSAYILAN yap
-    try:
-        io.font_default = font_obj
-        logger.debug(f"[font] varsayılan yapıldı: {os.path.basename(path)}")
-    except Exception as e:
-        logger.debug(f"[font] io.font_default atanamadı: {e}")
-
+    # refresh_font_texture varsa çağır
     if impl is not None:
-        try:
-            impl.refresh_font_texture()
-        except Exception:
-            pass
-
-    logger.debug(f"[font] YÜKLENDİ: {os.path.basename(path)}  boyut={font_size}")
-
-    # KRİTİK — hangi glyph range uygulanıyor?
-    logger.debug(f"[font] glyph_range: {ranges}")   # pyimgui'de __str__ var mı bilmiyorum
+        if hasattr(impl, "refresh_font_texture"):
+            try:
+                impl.refresh_font_texture()
+                logger.warning("[font] refresh_font_texture OK")
+            except Exception as e:
+                logger.error("[font] refresh hatası: %s", e)
+        else:
+            logger.error("[font] impl'de refresh_font_texture YOK! metotlar: %s",
+                         [m for m in dir(impl) if "font" in m.lower()])
+    else:
+        logger.error("[font] impl=None")
 
     return {"font": font_obj, "path": path, "size": font_size}
 

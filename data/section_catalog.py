@@ -120,7 +120,4 @@ def load_catalog_from_dir(data_dir: Path) -> Dict[str, Section]:
             result[sec.name] = sec
             count += 1
 
-        logger.info(f"[Catalog] {fname}: {count} kesit yüklendi ({family})")
-
-    logger.info(f"[Catalog] Toplam {len(result)} kesit")
     return result

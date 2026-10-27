@@ -67,5 +67,4 @@ def handle_material_mech(ctx: LoadContext, df: pd.DataFrame) -> None:
         mat.nu12 = mat.nu13 = mat.nu23 = _safe_float(row, "U12", 0.3)
         mat.density = _safe_float(row, "UnitMass", 0.0)
 
-        logger.debug("[Mat] %s: E=%.3f MPa, G=%.3f MPa, ρ=%.3e kg/mm³",
-                     name, mat.E1, mat.G12, mat.density)
+        

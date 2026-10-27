@@ -36,6 +36,7 @@ class Toolbar:
             self._draw_registry_menus()
             self._draw_quick_icons()
             self._draw_widgets()
+            imgui.text("Test: → ← ≤ ≥ ✓ ✗ ⚙ ▲ ▼ ● ○ ☀ ⚠ ℃ α β Δ ³ ₂ ▶ ◀ ▴ ▾ ▸ ◂")
             imgui.end_main_menu_bar()
 
     # ==================================================================

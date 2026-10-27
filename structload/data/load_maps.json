@@ -1,0 +1,116 @@
+{
+  "version": "1.1",
+  "source": "TS 498 / Hazır Kütüphane",
+  "conversion": {
+    "from": "kgf/m²",
+    "to": "kN/m²",
+    "factor": 0.00980665,
+    "rounding": 2
+  },
+  "categories": {
+    "olü_yuk_kaplama": {
+      "label": "Ölü Yükler - Kaplama",
+      "load_type": "G",
+      "items": [
+        { "name": "Kullanıcı Tanımlı", "kgf": 150.0 },
+        { "name": "Marley Kaplama",    "kgf": 143.15 },
+        { "name": "Fayans Kaplama",    "kgf": 170.0 },
+        { "name": "Karo Kaplama",      "kgf": 212.0 },
+        { "name": "Düşük Döşeme",      "kgf": 532.0 },
+        { "name": "Çatı",              "kgf": 149.0 },
+        { "name": "Merdiven",          "kgf": 192.0 }
+      ]
+    },
+    "hareketli_yukler": {
+      "label": "Hareketli Yükler (TS 498)",
+      "load_type": "Q",
+      "items": [
+        { "name": "Kullanıcı Tanımlı", "kgf": 200.0 },
+        { "name": "Zaman zaman kullanılan çatılar", "kgf": 200.0 },
+        { "name": "Konut, teras, oda ve koridorlar", "kgf": 200.0 },
+        { "name": "Konutlarda 50 m²'ye kadar dükkanlar / hastane odaları", "kgf": 200.0 },
+        { "name": "Konut toleransını kullanması ve çiçeklik yapılması", "kgf": 350.0 },
+        { "name": "Hastane mutfakları, muayene odaları, poliklinik odaları", "kgf": 350.0 },
+        { "name": "Sınıflar, amfiler, yatakhaneler", "kgf": 350.0 },
+        { "name": "Konut merdivenleri (sahanlık ve merdiven girişleri dahil)", "kgf": 350.0 },
+        { "name": "Camiler", "kgf": 500.0 },
+        { "name": "Tiyatrolar ve sinemalar", "kgf": 500.0 },
+        { "name": "Mağazalar", "kgf": 500.0 },
+        { "name": "Toplantı ve bekleme salonları", "kgf": 500.0 },
+        { "name": "Spor, dans ve sergi salonları", "kgf": 500.0 },
+        { "name": "Tribünler (oturma yeri sabit olan)", "kgf": 500.0 },
+        { "name": "Lokantalar", "kgf": 500.0 },
+        { "name": "Kütüphaneler", "kgf": 500.0 },
+        { "name": "Arşivler", "kgf": 500.0 },
+        { "name": "Hafif ağırlıklı atölyeler", "kgf": 500.0 },
+        { "name": "Büyük mutfaklar, kantinler", "kgf": 500.0 },
+        { "name": "Mezbahalar", "kgf": 500.0 },
+        { "name": "Fırınlar", "kgf": 500.0 },
+        { "name": "Büyükbaş hayvan ahırları", "kgf": 500.0 },
+        { "name": "Balkonlar (10 m²'ye kadar)", "kgf": 500.0 },
+        { "name": "Büro, hastane, okul, tiyatro, sinema gibi genel yapı koridorları", "kgf": 500.0 },
+        { "name": "Umumi açık yapılarda merdivenler", "kgf": 500.0 },
+        { "name": "Tribünler (oturma yeri sabit olmayan)", "kgf": 750.0 },
+        { "name": "Garajlar (toplam ağırlığı 2.5 tona kadar araçlar için)", "kgf": 500.0 }
+      ]
+    },
+    "hazir_kiris_senaryolari": {
+      "label": "Kiriş / Duvar Senaryoları",
+      "load_type": "G",
+      "items": [
+        {
+          "name": "40 cm Yığma Kireçtaşı Duvar (Çift Yüz Sıvalı)",
+          "wall_height_m": 3.20,
+          "beam_depth_m": 0.40,
+          "layers": [
+            { "mat": "sıva_kireç", "thickness_m": 0.025, "label": "İç Kireç Sıva" },
+            { "mat": "kireçtaşı",  "thickness_m": 0.400, "label": "Kireçtaşı Beden Duvarı" },
+            { "mat": "sıva_kireç", "thickness_m": 0.030, "label": "Dış Horasan Sıva" }
+          ]
+        },
+        {
+          "name": "10 cm CLT Panel + Taş Cephe Kaplaması",
+          "wall_height_m": 2.80,
+          "beam_depth_m": 0.30,
+          "layers": [
+            { "mat": "bölme_alçıpan",       "label": "İç Alçıpan Kaplama" },
+            { "mat": "ahşap_clt",            "thickness_m": 0.10, "label": "CLT Taşıyıcı Panel" },
+            { "mat": "su_yalıtımı_membran",  "label": "Nefes Alan Yalıtım" },
+            { "mat": "cephe_taş",            "label": "Mekanik Askılı Taş Cephe" }
+          ]
+        },
+        {
+          "name": "20 cm Betonarme Perde (Çift Yüz Sıvalı)",
+          "wall_height_m": 3.00,
+          "beam_depth_m": 0.50,
+          "layers": [
+            { "mat": "sıva_çimento", "thickness_m": 0.020, "label": "İç Çimento Sıva" },
+            { "mat": "betonarme",    "thickness_m": 0.200, "label": "Betonarme Perde" },
+            { "mat": "sıva_çimento", "thickness_m": 0.020, "label": "Dış Çimento Sıva" }
+          ]
+        },
+        {
+          "name": "13.5 cm Delikli Tuğla Duvar (Çift Yüz Sıvalı)",
+          "wall_height_m": 2.80,
+          "beam_depth_m": 0.40,
+          "layers": [
+            { "mat": "sıva_alçı",   "thickness_m": 0.015, "label": "İç Alçı Sıva" },
+            { "mat": "tuğla_delikli", "thickness_m": 0.135, "label": "Delikli Tuğla Duvar" },
+            { "mat": "sıva_çimento", "thickness_m": 0.020, "label": "Dış Çimento Sıva" }
+          ]
+        },
+        {
+          "name": "Gazbeton Duvar + Isı Yalıtımı + Sıva",
+          "wall_height_m": 2.80,
+          "beam_depth_m": 0.40,
+          "layers": [
+            { "mat": "sıva_alçı",       "thickness_m": 0.015, "label": "İç Alçı Sıva" },
+            { "mat": "gazbeton",        "thickness_m": 0.200, "label": "Gazbeton Duvar" },
+            { "mat": "izolasyon_xps",                          "label": "XPS Isı Yalıtımı" },
+            { "mat": "cephe_sıva",                             "label": "Dış Cephe Sıvası" }
+          ]
+        }
+      ]
+    }
+  }
+}

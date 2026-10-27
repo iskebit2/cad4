@@ -120,7 +120,7 @@ for i, path in enumerate(files):
         ).pack()
 
     except Exception as exc:
-        logger.debug(f"Okunamadı: {path} - {exc}")
+        pass(f"Okunamadı: {path} - {exc}")
 
 for col in range(COLUMNS):
     scroll_frame.grid_columnconfigure(col, weight=1)
@@ -133,8 +133,8 @@ def on_mousewheel(event):
 
 canvas.bind_all("<MouseWheel>", on_mousewheel)
 
-logger.debug(f"ICON_DIR: {ICON_DIR}")
-logger.debug(f"Bulunan PNG sayısı: {len(files)}")
+pass(f"ICON_DIR: {ICON_DIR}")
+pass(f"Bulunan PNG sayısı: {len(files)}")
 
 if not files:
     tk.Label(

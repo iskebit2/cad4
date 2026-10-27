@@ -417,7 +417,7 @@ class LabelBatch:
             ay = text_h_px * ky
 
 
-        # logger.debug(f"[DBG anchors] anchors={anchors!r} ax={ax[:2]} ay={ay[:2]} text_w_px={text_w_px[:2]} text_h_px={text_h_px[:2]}")
+        # pass(f"[DBG anchors] anchors={anchors!r} ax={ax[:2]} ay={ay[:2]} text_w_px={text_w_px[:2]} text_h_px={text_h_px[:2]}")
 
         
         # --- 4. Kamera eksenleri ---
@@ -469,7 +469,7 @@ class LabelBatch:
         gw = gw_g * fs_g
         gh = gh_g * fs_g
 
-        # logger.debug(f"[DBG gx] ax_g={ax_g[:2]} cursor_x_px={cursor_x_px[:2]} gx={gx[:2]} gy={gy[:2]}")
+        # pass(f"[DBG gx] ax_g={ax_g[:2]} cursor_x_px={cursor_x_px[:2]} gx={gx[:2]} gy={gy[:2]}")
         
         x0 = gx * wpp_g
         y0 = gy * wpp_g

@@ -380,4 +380,4 @@ class PickPass:
             self.pbos = [None, None]
             
         except Exception as e:
-            logger.debug(f"Cleanup hatası: {e}")
+            logger.error(f"Cleanup hatası: {e}")

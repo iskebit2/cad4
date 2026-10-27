@@ -213,13 +213,11 @@ class FontAtlas:
             return self.texture_id
 
         # ---- DEBUG: atlas'ı diske kaydet ----
-        try:
-            from PIL import Image
-            Image.fromarray(self.pixels, mode="L").save("_atlas_debug.png")
-            logger.debug(f"[Atlas] {self.width}x{self.height} kaydedildi: _atlas_debug.png")
-            logger.debug(f"[Atlas] pixel min/max: {self.pixels.min()}/{self.pixels.max()}")
-        except Exception as e:
-            logger.debug(f"[Atlas] debug kaydedilemedi: {e}")
+        # try:
+        #     from PIL import Image
+        #     Image.fromarray(self.pixels, mode="L").save("assets/_atlas_debug.png")
+        # except Exception as e:
+        #     logger.error(f"[Atlas] debug kaydedilemedi: {e}")
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
@@ -244,7 +242,7 @@ class FontAtlas:
 
         glBindTexture(GL_TEXTURE_2D, 0)
         self.texture_id = tex
-        logger.debug(f"[Atlas] texture id={tex}")
+
         return tex
 
     # ------------------------------------------------------------------

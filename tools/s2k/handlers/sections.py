@@ -37,13 +37,63 @@ def _safe_float(row, key, default=0.0) -> float:
 
 
 def _color_from_string(s: str) -> Tuple[float, float, float]:
+    """S2K Color alanı → (R, G, B) 0-1 aralığında.
+
+    Desteklenen formatlar:
+        - İsimli: "Red", "Cyan", "Gray8Dark", ...
+        - Windows BGR sayısal: 16711808, 4227200, ...
+        - Hex: "#FF0080"
+    """
+    if not s:
+        return (0.8, 0.8, 0.8)
+
+    s_clean = str(s).strip()
+
+    # 1. Sayısal (Windows BGR)
+    try:
+        value = int(s_clean)
+        r = (value & 0xFF) / 255.0
+        g = ((value >> 8) & 0xFF) / 255.0
+        b = ((value >> 16) & 0xFF) / 255.0
+        return (r, g, b)
+    except (ValueError, TypeError):
+        pass
+
+    # 2. Hex "#FF0080"
+    if s_clean.startswith("#") and len(s_clean) == 7:
+        try:
+            r = int(s_clean[1:3], 16) / 255.0
+            g = int(s_clean[3:5], 16) / 255.0
+            b = int(s_clean[5:7], 16) / 255.0
+            return (r, g, b)
+        except ValueError:
+            pass
+
+    # 3. İsimli renkler (case-insensitive)
     color_map = {
-        "Red": (1, 0, 0), "Green": (0, 1, 0), "Blue": (0, 0, 1),
-        "Yellow": (1, 1, 0), "Cyan": (0, 1, 1), "Magenta": (1, 0, 1),
-        "White": (1, 1, 1), "Black": (0, 0, 0),
-        "Gray8Dark": (0.3, 0.3, 0.3), "Gray8Light": (0.7, 0.7, 0.7),
+        "red": (1.0, 0.0, 0.0),
+        "green": (0.0, 1.0, 0.0),
+        "blue": (0.0, 0.0, 1.0),
+        "yellow": (1.0, 1.0, 0.0),
+        "cyan": (0.0, 1.0, 1.0),
+        "magenta": (1.0, 0.0, 1.0),
+        "white": (1.0, 1.0, 1.0),
+        "black": (0.0, 0.0, 0.0),
+        "orange": (1.0, 0.5, 0.0),
+        "pink": (1.0, 0.75, 0.8),
+        "purple": (0.5, 0.0, 0.5),
+        "brown": (0.6, 0.4, 0.2),
+        "gray": (0.5, 0.5, 0.5),
+        "grey": (0.5, 0.5, 0.5),
+        "gray8dark": (0.3, 0.3, 0.3),
+        "gray8light": (0.7, 0.7, 0.7),
     }
-    return color_map.get(s, (0.8, 0.8, 0.8))
+    c = color_map.get(s_clean.lower())
+    if c is not None:
+        return c
+
+    logger.warning("[Color] Bilinmeyen format: %r → default", s_clean)
+    return (0.8, 0.8, 0.8)
 
 
 def _dim_modifier(row, key: str, default: float = 1.0) -> float:
@@ -143,7 +193,7 @@ def _map_sap_to_local(row) -> Tuple[SectionType, Dict[str, float]]:
     if shape in ("SD Section", "General"):
         return SectionType.CUSTOM, {**analysis}
 
-    logger.warning("[SectionMap] Bilinmeyen Shape=%r, RECT fallback", shape)
+    logger.info("[SectionMap] Bilinmeyen Shape=%r, RECT fallback", shape)
     return SectionType.RECT, {
         "h": _safe_float(row, "t3", 200),
         "b": _safe_float(row, "t2", 100),
@@ -167,12 +217,16 @@ def _resolve_material(ctx: LoadContext, mat_name: str) -> Optional[Material]:
 # FRAME SECTION
 # ============================================================================
 def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
+        
     name_col = next((c for c in ("SectionName", "Section", "Name") if c in df.columns), None)
     if name_col is None:
         logger.error("[FrameProps] İsim kolonu yok: %s", list(df.columns))
         return
 
     for _, row in df.iterrows():
+
+
+
         sect_name = str(row.get(name_col, "")).strip()
         if not sect_name:
             continue
@@ -187,6 +241,9 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
             continue
 
         mat = _resolve_material(ctx, row.get("Material", ""))
+        raw_color = str(row.get("Color", ""))
+        parsed = _color_from_string(raw_color)
+        logger.info("[ColorImport] sec=%s raw=%r parsed=%s", sect_name, raw_color, parsed)
 
         section = Section(
             name=sect_name,
@@ -200,10 +257,10 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
         # Doğrulama — analitik + katalog + değişmezler
         try:
             for msg in check_section(section, strict=False):
-                logger.warning("[SectionCheck] %s", msg)
+                logger.info("[SectionCheck] %s", msg)
                 ctx.warnings.append(msg)
         except Exception as e:
-            logger.debug("[SectionCheck] atlandı: %s", e)
+            logger.error("[SectionCheck] atlandı: %s", e)
 
 
 # ============================================================================

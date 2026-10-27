@@ -68,7 +68,7 @@ class ShaderProgram:
     def use(self):
         if self.program:
             glUseProgram(self.program)
-            # # #logger.debug(f"[Shader] Activated: {self.name} (ID: {self.program})")
+            # # #pass(f"[Shader] Activated: {self.name} (ID: {self.program})")
     
     def set_int(self, name: str, value: int):
         loc = self.get_uniform_location(name)
@@ -82,7 +82,7 @@ class ShaderProgram:
             loc = glGetUniformLocation(self.program, name)
             self._uniform_cache[name] = loc
             # if loc == -1:
-                #logger.debug(f"[{self.name}] Uniform '{name}' not found")
+                #pass(f"[{self.name}] Uniform '{name}' not found")
         return self._uniform_cache[name]
     
     def get_loc(self, name: str) -> int:
@@ -139,9 +139,9 @@ class ShaderProgram:
         try:
             if self.program != 0 and glIsProgram(self.program):
                 glDeleteProgram(self.program)
-                # #logger.debug(f"[{self.name}] Shader temizlendi")
+                # #pass(f"[{self.name}] Shader temizlendi")
         except Exception as e:
-            logger.debug(f"[{self.name}] Cleanup hatası: {e}")
+            logger.error(f"[{self.name}] Cleanup hatası: {e}")
         finally:
             self.program = 0
             self._uniform_cache.clear()

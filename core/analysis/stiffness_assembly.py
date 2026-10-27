@@ -106,41 +106,27 @@ def local_stiffness(
 
     return 0.5 * (k + k.T)
 
-
-def transformation_matrix(
-    p1: Tuple[float, float, float],
-    p2: Tuple[float, float, float],
-    beta_deg: float = 0.0,
-) -> Tuple[np.ndarray, float]:
+def transformation_matrix(p1, p2, beta_deg=0.0, up_global=(0.0, 0.0, 1.0)):
+    import math
     p1 = np.asarray(p1, dtype=float)
     p2 = np.asarray(p2, dtype=float)
     v = p2 - p1
     L = float(np.linalg.norm(v))
     if L < 1e-9:
         raise ValueError(f"Sıfır uzunluklu eleman: L={L}")
-
     e1 = v / L
-    dx, dy, dz = e1
-
-    if abs(dz) > 0.9999:
-        sign = 1.0 if dz > 0 else -1.0
-        e2 = np.array([0.0, sign, 0.0])
-        e3 = np.array([-sign, 0.0, 0.0])
-    else:
-        D = math.hypot(dx, dy)
-        e2 = np.array([-dy / D, dx / D, 0.0])
-        e3 = np.cross(e1, e2)
-
+    up = np.asarray(up_global, dtype=float)
+    if abs(np.dot(e1, up)) > 0.9999:
+        up = np.array([0.0, 1.0, 0.0]) if abs(e1[2]) > 0.9999 else np.array([0.0, 0.0, 1.0])
+    e3 = np.cross(e1, up)
+    e3 /= np.linalg.norm(e3)
+    e2 = np.cross(e3, e1)
     if abs(beta_deg) > 1e-12:
         a = math.radians(beta_deg)
         ca, sa = math.cos(a), math.sin(a)
         e2, e3 = ca * e2 + sa * e3, -sa * e2 + ca * e3
-
     R = np.vstack([e1, e2, e3])
-    T = np.zeros((12, 12), dtype=float)
-    for i in range(4):
-        T[i * 3 : (i + 1) * 3, i * 3 : (i + 1) * 3] = R
-
+    T = np.kron(np.eye(4), R)
     return T, L
 
 

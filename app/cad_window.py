@@ -98,7 +98,7 @@ class CadWindow:
         glfw.set_char_callback(w, self._cb_char)
         glfw.set_window_focus_callback(self.window, self._cb_focus)
 
-        # #logger.debug("GLFW callback'leri başarıyla bağlandı.")
+        # #pass("GLFW callback'leri başarıyla bağlandı.")
 
     def _cb_resize(self, win, w, h):
         self.fb_width, self.fb_height = w, h

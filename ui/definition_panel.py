@@ -448,7 +448,8 @@ class DefinitionPanel(BasePanel):
             changed, new_color = color_edit3(name, cur or (0.8, 0.8, 0.8))
             if changed:
                 setattr(obj, name, new_color)
-            return changed
+                if hasattr(self, "_on_section_color_changed"):
+                    self._on_section_color_changed(obj)
         
         # --- Enum ---
         if _is_enum_type(tp):
@@ -740,9 +741,17 @@ class DefinitionPanel(BasePanel):
 
         if old_name and old_name != new_name and old_name in container:
             del container[old_name]
+
+        # Kaydetmeden önce: eski nesneyi al
+        old_obj = container.get(new_name)
+
         container[new_name] = self._draft
         self._selected_name = new_name
         self._is_new = False
+
+        # --- YENİ: Scene referanslarını güncelle ---
+        if old_obj is not None and old_obj is not self._draft:
+            self._relink_scene_refs(type(self._draft), new_name, self._draft, old_obj)
 
         if project.scene:
             project.scene.mark_dirty()
@@ -1058,3 +1067,63 @@ class DefinitionPanel(BasePanel):
             self.app._on_selection_changed(scn.get_selected())
         except Exception:
             logger.exception("on_selection_changed çağrısı hatası")
+
+    def _on_section_color_changed(self, section):
+        app = getattr(self, "app", None)
+        eng = getattr(app, "engine", None) if app else None
+        scn = getattr(eng, "scene", None) if eng else None
+        if not scn or not eng.renderer:
+            return
+
+        target_name = getattr(section, "name", None)
+        if not target_name:
+            return
+
+        n_dirty = 0
+        for f in scn.frames.values():
+            sec = getattr(f, "section", None)
+            if sec is None:
+                continue
+            # isim eşleşmesi (kopya olsa bile çalışır)
+            if sec is section or sec.name == target_name:
+                f.needs_update = True
+                n_dirty += 1
+
+        if n_dirty:
+            eng.renderer.update_dirty()
+
+        logger.info("[DefPanel] '%s' → %d frame güncellendi", target_name, n_dirty)
+
+    def _relink_scene_refs(self, cls, name, new_obj, old_obj):
+        """Kaydedilen nesneyi scene'deki elementlere yeniden bağla."""
+        app = getattr(self, "app", None)
+        eng = getattr(app, "engine", None) if app else None
+        scn = getattr(eng, "scene", None) if eng else None
+        if not scn:
+            return
+
+        n_frames = n_areas = 0
+        if cls is Section:
+            for f in scn.frames.values():
+                if getattr(f, "section", None) is old_obj:
+                    f.section = new_obj
+                    f.needs_update = True
+                    n_frames += 1
+            for a in scn.areas.values():
+                if getattr(a, "section", None) is old_obj:
+                    a.section = new_obj
+                    a.needs_update = True
+                    n_areas += 1
+        elif cls is Material:
+            # Material → section.material ilişkisi
+            project = getattr(app, "current_project", None)
+            if project:
+                for sec in project.sections.values():
+                    if getattr(sec, "material", None) is old_obj:
+                        sec.material = new_obj
+
+        if eng.renderer and (n_frames or n_areas):
+            eng.renderer.update_dirty()
+
+        logger.info("[DefPanel] Referanslar güncellendi: %d frame, %d area",
+                    n_frames, n_areas)

@@ -13,12 +13,12 @@ from render.lightingsystem import LightingSystem
 from tools.gizmo import GizmoAxes
 from tools.gridsystem import GridSystem
 from domain.scene import Scene
-from render.base_renderer import PolygonRenderer, _final_color_for, BaseRenderer, FrameRenderer, NodeRenderer, AreaRenderer, LinkRenderer
+from render.base_renderer import PolygonRenderer, _final_color_for, BaseRenderer, FrameRenderer, AreaRenderer, LinkRenderer
+from render.node_renderer import NodeRenderer
 from render.pickpass import PickPass
 from render.label_batch import LabelBatch
 from tools.font_atlas import FontAtlas
 from render.load_renderer import LoadRenderer
-from render.restraint_renderer import RestraintRenderer
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
@@ -53,7 +53,7 @@ class SceneRenderer:
         self.link_r = LinkRenderer(self.standard_shader)
         self.node_r = NodeRenderer(self.standard_shader)
         self.polygon_r = PolygonRenderer(self.standard_shader)
-        self.restraint_r = RestraintRenderer(self.standard_shader, self.simple_shader)
+        
 
         # PickPass - MRT'den ID okumak için
         self.pick_pass = PickPass()
@@ -69,8 +69,7 @@ class SceneRenderer:
         self.show = {
                         'grid': True, 'axes': True, 'area': True,
                         'frame': True, 'link': True, 'node': True,
-                        'polygon': True,'restraint': True,
-                        'loads': False,
+                        'polygon': True,
                     }
         self.use_lights = True
         
@@ -91,7 +90,7 @@ class SceneRenderer:
         self.mrt_id_texture = None
         self.mrt_depth_rbo = None
         self._create_mrt_fbo(w, h)
-        #logger.debug(f"[scenerenderer__INIT__] MRT FBO oluşturuldu: {w}x{h}")
+        #pass(f"[scenerenderer__INIT__] MRT FBO oluşturuldu: {w}x{h}")
         # PickPass'e ana FBO'yu bildir
         self.pick_pass.set_main_fbo(self.mrt_fbo)
         # Marquee için buffer'lar
@@ -158,7 +157,7 @@ class SceneRenderer:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
         
         self.marquee_initialized = True
-        # #logger.debug("Marquee buffer'ları oluşturuldu")
+        # #pass("Marquee buffer'ları oluşturuldu")
     
     def _create_mrt_fbo(self, w, h):
         """MRT FBO'su oluştur"""
@@ -196,7 +195,7 @@ class SceneRenderer:
                 raise RuntimeError(f"MRT FBO tamamlanamadı: {status}")
             
             glBindFramebuffer(GL_FRAMEBUFFER, 0)
-            #logger.debug(f"[scenerenderer_create_mrt_fbo] MRT FBO oluşturuldu: {w}x{h}")
+            #pass(f"[scenerenderer_create_mrt_fbo] MRT FBO oluşturuldu: {w}x{h}")
             
         except Exception as e:
             logger.error(f"MRT FBO oluşturma hatası: {e}")
@@ -275,7 +274,7 @@ class SceneRenderer:
         # MRT FBO'sunu yeniden boyutlandır
         self._cleanup_mrt()
         self._create_mrt_fbo(w, h)
-        #logger.debug(f"[resize] çağrıldı... _create_mrt_fbo yeniden oluşturuldu: {w}x{h}")
+        #pass(f"[resize] çağrıldı... _create_mrt_fbo yeniden oluşturuldu: {w}x{h}")
         if self.pick_pass:
             self.pick_pass.set_main_fbo(self.mrt_fbo)
     
@@ -297,7 +296,7 @@ class SceneRenderer:
         areas = _f(scene.areas)
         links = _f(scene.links)
         polygons = _f(scene.polygons)
-        restraint_nodes = [n for n in nodes if n.restraint is not None and not n.restraint.is_free()]
+        
 
         # ---- 0. PickPass sıfırla ----
         if self.pick_pass and hasattr(self.pick_pass, 'clear_registry'):
@@ -366,7 +365,7 @@ class SceneRenderer:
         done += len(polygons) * W_POLY
         _progress(done / total, f"Polygons ✓")
 
-        self.restraint_r.update(restraint_nodes, scene_size=self.size)
+        
 
         # Outline'ları bir kez üret
         outline_parts = []
@@ -398,6 +397,19 @@ class SceneRenderer:
         # ---- 6. Bounds ----
         _progress(0.98, "Sınırlar hesaplanıyor...")
         self._update_bounds()
+
+        # ---- 6.5 Node boyutu ----
+        if self.node_r and self.size > 0:
+            # isConstantSize=1 ile uyumlu "size" = yaklaşık ekran oranı
+            # (pointScale=0.002, size=1 → ~5-10 piksel)
+            # Görünür olması için 20-40 arası
+            desired = 20.0
+            if self.node_r.set_node_size(desired):
+                for n in nodes:
+                    n.mark_dirty()
+                self.node_r.update(nodes)
+                self.node_r.update_colors(nodes, self._get_final_color)
+                self.node_r.update_simple_colors(nodes, self._get_final_color)
 
         # ---- 7. Renkleri uygula (final_color_for ile) ----
         self.update_sel()
@@ -548,6 +560,9 @@ class SceneRenderer:
             if r:
                 r.render_mode = mode
 
+        logger.info("mode=%s show_node=%s node_r.icount=%d",
+            self.render_mode, self.show.get('node'), self.node_r.icount if self.node_r else -1)
+        
         # Elementleri çiz
         if self.render_mode in ('shaded', 'normal'):
             if self.show['area'] and self.area_r:
@@ -558,11 +573,9 @@ class SceneRenderer:
                 self.link_r.render(mvp, self.model_mat, cpos, v, p)
             if self.show['node'] and self.node_r:
                 self.node_r.render(mvp, self.model_mat, cpos, v, p)
-            if self.show.get('restraint', True) and self.restraint_r:
-                self.restraint_r.render(mvp, self.model_mat, cpos, v, p)
             if self.show['polygon'] and self.polygon_r:
                 self.polygon_r.render(mvp, self.model_mat, cpos, v, p)
-        
+
         elif self.render_mode == 'line':
             self._render_line(mvp, v, p)
         
@@ -594,8 +607,7 @@ class SceneRenderer:
             self._draw_local_axes(cam)
 
         # 4.7 LOADS (yük görselleri)
-        if self.show.get('loads', False):
-            self._draw_loads(cam)
+        self._draw_loads(cam)
 
         # 4.8 Plane çizimi tekrar bak!
         if self.plane_draw_mgr and self.plane_draw_mgr.is_active:
@@ -612,12 +624,11 @@ class SceneRenderer:
 
     def _draw_loads(self, cam):
         """Frame yüklerini overlay olarak çiz."""
-        if not self.scene or not self.load_renderer:
+        if not self.scene:
             return
         if not self.load_renderer.enabled:
             return
-        # if not self.show.get('loads', True):
-        #     return
+        
 
         p = cam.get_projection_matrix()
         v = cam.get_view_matrix()
@@ -887,9 +898,12 @@ class SceneRenderer:
         glDisable(GL_DEPTH_TEST)
         if self.show['node'] and self.node_r:
             self.node_r.render_simple(mvp, self.node_shader, alpha=1.0)
+            # ── Restraint çizgileri ──
+            if self.show.get('restraint', True):
+                self.node_r.render_simple_restraint_lines(mvp, self.simple_shader, alpha=1.0)
+        glEnable(GL_DEPTH_TEST)
 
-        if self.show.get('restraint', True) and self.restraint_r:
-            self.restraint_r.render_simple(mvp, self.simple_shader, alpha=1.0)
+        
         glEnable(GL_DEPTH_TEST)
     
     def get_bounds(self):
@@ -988,7 +1002,7 @@ class SceneRenderer:
 
     def cleanup(self):
         for r in [self.frame_r, self.node_r, self.area_r, self.link_r,
-              self.polygon_r, self.restraint_r, self.grid, self.pick_pass, self.snap,
+              self.polygon_r, self.grid, self.pick_pass, self.snap,
               self.load_renderer]:   # ← ekle
             if r and hasattr(r, 'cleanup'):
                 r.cleanup()
@@ -1060,7 +1074,7 @@ class SceneRenderer:
 
     def _draw_selected_plane(self, mvp):
         plane = self.selected_plane
-        logger.debug(f"[sel_plane] render: plane={plane}")
+        
         if plane is None or self.overlay_shader is None:
             return
 
@@ -1170,8 +1184,6 @@ class SceneRenderer:
         self.use_lights = bool(enabled)
 
     def set_loads_enabled(self, enabled: bool):
-        """Hem show['loads'] hem load_renderer.enabled'ı senkronla."""
-        self.show['loads'] = bool(enabled)
         if self.load_renderer:
             self.load_renderer.enabled = bool(enabled)
 

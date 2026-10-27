@@ -55,7 +55,7 @@ class LoadRenderer:
         # Alternatif: bir liste
         self.available_patterns: list[str] = []
 
-        self.enabled = True
+        self.enabled = False
         self.active_pattern: str | None = None
 
         # Görsel ayarlar
@@ -180,8 +180,26 @@ class LoadRenderer:
 
         # --- Frame yayılı yükleri (değişmez) ---
         if self.show_frame_loads:
+            n_frames_with_sets = 0
+            n_sets_total = 0
             for frame in scene.frames.values():
-                ...
+                if not getattr(frame, "is_visible", True):
+                    continue
+                load_sets = getattr(frame, "dist_load_sets", None)
+                if not load_sets:
+                    continue
+                n_frames_with_sets += 1
+                for pat, ls in load_sets.items():
+                    if self.active_pattern and pat != self.active_pattern:
+                        logger.warning("[LR.skip] pattern filter: pat=%s active=%s",
+                                    pat, self.active_pattern)
+                        continue
+                    n_sets_total += 1
+                    logger.warning("[LR.emit] frame=%s pat=%s segments=%d",
+                                frame.label, pat, len(getattr(ls, "segments", [])))
+                    self._emit_load_set(frame, ls, lines, tris, camera_scale)
+            logger.warning("[LR] frames_with_sets=%d, sets_emitted=%d, active_pattern=%s",
+                        n_frames_with_sets, n_sets_total, self.active_pattern)
 
         # --- Point loads: ÖLÇEĞİ ÖNCE HESAPLA ---
         if self.show_point_loads:
@@ -232,6 +250,10 @@ class LoadRenderer:
             self.tri_count = 0
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
+        logger.warning("[LR.update] show_frame=%s show_point=%s lines_v=%d tris_v=%d",
+               self.show_frame_loads, self.show_point_loads,
+               len(lines) // 6 if lines else 0,
+               len(tris) // 3 if tris else 0)
 
     def _scan_patterns(self, scene) -> list[str]:
         """Sahnedeki tüm pattern isimlerini topla."""
@@ -257,6 +279,11 @@ class LoadRenderer:
     # ==================================================================
     def _emit_load_set(self, frame, ls, lines, tris, cam_scale):
         segments = getattr(ls, "segments", None) or []
+        logger.warning("[LR.emit] frame=%s pattern=%s segments=%d q1=%s",
+                   getattr(frame, "label", "?"),
+                   getattr(ls, "pattern_name", "?"),
+                   len(segments),
+                   segments[0].q1 if segments else "—")
         if not segments:
             return
 
@@ -406,6 +433,8 @@ class LoadRenderer:
                 right = hb - side * head_w
 
                 self._push_tri(tris, tip, left, right, color)
+                logger.warning("[LR.profile] frame=%s L=%.2f profile_h=%.2f",
+               frame.label, L, profile_h)
 
     @staticmethod
     def _interp(pts, xr):

@@ -37,7 +37,7 @@ class CreateElementCommand(Command):
             # Redo — aynı objeyi geri koy
             self.scene.restore_element(self.created)
 
-        #logger.debug(f"[CreateCmd] {self.element_type} eklendi")
+        #pass(f"[CreateCmd] {self.element_type} eklendi")
 
     def undo(self):
         if self.created is None:
@@ -48,7 +48,7 @@ class CreateElementCommand(Command):
                 "(bağlı eleman olabilir)"
             )
             raise RuntimeError("Geri alınamadı: bağlı eleman var")
-        #logger.debug(f"[CreateCmd] {self.element_type} geri alındı")
+        #pass(f"[CreateCmd] {self.element_type} geri alındı")
 
     @property
     def name(self) -> str:

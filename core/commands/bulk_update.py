@@ -36,7 +36,7 @@ class BulkUpdateCommand(Command):
             if hasattr(element, "mark_dirty"):
                 element.mark_dirty()
 
-        #logger.debug(f"[BulkUpdate] {len(self.plan)} eleman güncellendi")
+        #pass(f"[BulkUpdate] {len(self.plan)} eleman güncellendi")
 
     def undo(self):
         """Ters sırayla eski değerleri geri koy."""
@@ -47,7 +47,7 @@ class BulkUpdateCommand(Command):
             if hasattr(element, "mark_dirty"):
                 element.mark_dirty()
 
-        #logger.debug(f"[BulkUpdate] {len(self.plan)} eleman geri alındı")
+        #pass(f"[BulkUpdate] {len(self.plan)} eleman geri alındı")
 
     @property
     def name(self) -> str:

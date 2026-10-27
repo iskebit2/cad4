@@ -46,7 +46,7 @@ class DeleteElementsCommand(Command):
             if self.scene.remove_element(e):
                 self.deleted.append(e)
         
-        #logger.debug(
+        #pass(
         #     f"[DeleteCmd] {len(self.deleted)} silindi, "
         #     f"{len(self.rejected)} reddedildi"
         # )
@@ -56,7 +56,7 @@ class DeleteElementsCommand(Command):
         for e in self.deleted:
             self.scene.restore_element(e)
         
-        #logger.debug(f"[DeleteCmd] {len(self.deleted)} geri alındı")
+        #pass(f"[DeleteCmd] {len(self.deleted)} geri alındı")
     
     @property
     def name(self) -> str:

@@ -431,23 +431,20 @@ class LoadDisplayPanel(BasePanel):
         if callable(self.on_change):
             self.on_change()
 
-    def set_context(self, ctx: dict):
+    def set_context(self, ctx):
         self.scene = ctx.get("scene")
         self.renderer = ctx.get("renderer")
+        lr = getattr(self.renderer, "load_renderer", None) if self.renderer else None
+        if lr:
+            self.show_loads = bool(lr.enabled)
+        
+            self.show_frame_loads = bool(getattr(lr, "show_frame_loads", True))
+            self.show_point_loads = bool(getattr(lr, "show_point_loads", True))
+            self.active_pattern = getattr(lr, "active_pattern", None)
+            self.profile_scale = float(getattr(lr, "profile_scale", 1.0))
+            self.line_width = float(getattr(lr, "line_width", 2.0))
+            self.fill_alpha = float(getattr(lr, "fill_alpha", 0.28))
+            self.show_arrows = bool(getattr(lr, "show_arrows", True))
+            self.show_fill = bool(getattr(lr, "show_fill", True))
 
-        if self.renderer:
-            lr = getattr(self.renderer, "load_renderer", None)
-            # 1. katman — SceneRenderer.show['loads']
-            self.show_loads = bool(self.renderer.show.get("loads", False))
-            # 2. katman — LoadRenderer
-            if lr:
-                self.show_frame_loads = bool(getattr(lr, "show_frame_loads", True))
-                self.show_point_loads = bool(getattr(lr, "show_point_loads", True))
-                self.active_pattern = getattr(lr, "active_pattern", None)
-                self.profile_scale = float(getattr(lr, "profile_scale", 1.0))
-                self.line_width = float(getattr(lr, "line_width", 2.0))
-                self.fill_alpha = float(getattr(lr, "fill_alpha", 0.28))
-                self.show_arrows = bool(getattr(lr, "show_arrows", True))
-                self.show_fill = bool(getattr(lr, "show_fill", True))
-
-        self._refresh_patterns()
+            self._refresh_patterns()

@@ -99,12 +99,11 @@ class RenderSettingsPanel(BasePanel):
                 r.set_show(k, v)
 
         # --- Loads (özel: iki katman senkron) ---
-        changed, v = imgui.checkbox("Loads", r.show.get("loads", False))
+        changed, v = imgui.checkbox("Loads", r.load_renderer.enabled if r.load_renderer else False)
         if changed:
             if hasattr(r, "set_loads_enabled"):
                 r.set_loads_enabled(v)
-            else:
-                r.set_show("loads", v)
+            
 
     def _draw_nodes(self):
         r = self.renderer

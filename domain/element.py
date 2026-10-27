@@ -48,7 +48,7 @@ class Element:
         self.needs_update = needs_update
         self.pick_id = self.unique_id
         self.element_type = None
-        self.color = list(color) if color is not None else [0.7, 0.7, 0.7, 0.7]
+        self.color = list(color) if color is not None else None
         self.show_axes_override: Optional[bool] = None
 
     def toggle_selection(self):
@@ -171,10 +171,8 @@ class Frame(Element):
         "rotation_deg": None,   # açı — boyutsuz
     }
 
-    def __init__(self, node_i: Node, node_j: Node, section: D.Section,
-                 rotation_deg: float = 0.0, label: str = "", color=None):
-        if color is None and section is not None and hasattr(section, "color"):
-            color = list(section.color[:3])
+    def __init__(self, node_i, node_j, section, rotation_deg=0.0, label="", color=None):
+        
         super().__init__(label, color=color)
         self.element_type = "Frame"
         self.node_i = node_i
@@ -262,7 +260,7 @@ class Area(Element):
     }
 
     def __init__(self, nodes: List[Node], thickness: float, label: str = "", color=None):
-        super().__init__(label, color=color or [0.5, 0.8, 1.0])
+        super().__init__(label, color)
         self.element_type = "Area"
         self.nodes = list(nodes)
         self.thickness = float(thickness)
@@ -278,6 +276,13 @@ class Area(Element):
         self.uniform_to_frame_loads: List[Any] = []
         self.wind_pressures: List[Any] = []
 
+    @property
+    def section(self):
+        proj = getattr(getattr(self, "_scene", None), "project", None)
+        if proj and self.section_name:
+            return proj.sections.get(self.section_name)
+        return None
+
 
 # ============================================================================
 # LINK
@@ -285,7 +290,7 @@ class Area(Element):
 class Link(Element):
     def __init__(self, node_i: Node, node_j: Node, propname: str = "LINK1",
                  label: str = "", color=None):
-        super().__init__(label, color=color or [0.5, 0.5, 0.5])
+        super().__init__(label, color)
         self.element_type = "Link"
         self.node_i = node_i
         self.node_j = node_j

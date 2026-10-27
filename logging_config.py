@@ -162,8 +162,14 @@ class CadLogger:
             log_dir = Path(cls._env("CAD_LOG_DIR", "logs"))
             log_dir.mkdir(parents=True, exist_ok=True)
 
+            log_path = log_dir / "cad.log"
+
+            # Her yeni süreçte aktif log dosyasını açıkça boşalt.
+            with log_path.open("w", encoding="utf-8"):
+                pass
+
             file_h = RotatingFileHandler(
-                log_dir / "cad.log",
+                log_path,
                 maxBytes=4_000_000,
                 backupCount=5,
                 encoding="utf-8",
@@ -173,11 +179,14 @@ class CadLogger:
                 fmt="%(asctime)s [%(levelname)-8s] %(name)s: %(message)s",
                 datefmt="%Y-%m-%d %H:%M:%S",
             ))
-            # Dosyada tekrarı azalt (ama traceback'ler korunur)
             file_h.addFilter(DuplicateMessageFilter())
             root.addHandler(file_h)
-        except Exception as e:  # noqa: BLE001
-            print(f"[CadLogger] Dosya handler kurulamadı: {e}", file=sys.stderr)
+
+        except Exception as e:
+            print(
+                f"[CadLogger] Dosya handler kurulamadı: {e}",
+                file=sys.stderr,
+            )
 
     # ------------------------------------------------------------------
     @classmethod

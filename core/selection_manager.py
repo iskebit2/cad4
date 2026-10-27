@@ -30,9 +30,9 @@ class SelectionManager:
         
     def _update_geometry_renderers(self, scene):
         """Geometriyi güncelle (eleman ekleme/silme/değiştirme için)"""
-        #logger.debug("[SelectionManager] _update_geometry_renderers called")
+        #pass("[SelectionManager] _update_geometry_renderers called")
         if self.r:
-            #logger.debug(f"  Calling scene_renderer.update_geo()")
+            #pass(f"  Calling scene_renderer.update_geo()")
             self.r.update_geo(scene)
         else:
             logger.warning("  No scene_renderer available!")

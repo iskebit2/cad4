@@ -220,8 +220,7 @@ class PlaneDrawManager:
             self._last_mouse_y = y
 
     def on_mouse_click(self, x, y) -> bool:
-        logger.debug(f"[PDM] on_mouse_click: ({x:.0f},{y:.0f}) → hover={self.hover_node.label if self.hover_node else None}")
-        """True döndürürse tıklama yutulur (başka yere gitmesin)."""
+
         if not self.is_active:
             return False
 
@@ -239,7 +238,6 @@ class PlaneDrawManager:
 
             if self.stage == self.STAGE_P1:
                 if node is self.p0:
-                    logger.debug("[PDM] p1 == p0, reddet")
                     return True
 
                 # Doğrudan node ile U hesabı (p1 henüz set edilmedi)
@@ -260,7 +258,6 @@ class PlaneDrawManager:
 
             if self.stage == self.STAGE_P2:
                 if node is self.p0 or node is self.p1:
-                    logger.debug("[PDM] p2 == p0/p1, reddet")
                     return True
 
                 old_p2 = self.p2
@@ -419,7 +416,7 @@ class PlaneDrawManager:
                 best_node = node
 
         # if nearest:
-        #     logger.debug(f"[FIND] en yakın: {nearest[3]} "
+        #     pass(f"[FIND] en yakın: {nearest[3]} "
         #                 f"ekran=({nearest[1]:.0f},{nearest[2]:.0f}) "
         #                 f"mesafe={nearest[0]**0.5:.1f}px")
         # else:
