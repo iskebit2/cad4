@@ -4,8 +4,9 @@ Element ↔ dict dönüşümleri.
 
 Ana uygulama bu modülü çağırır; ImGui tarafında sadece dict dolaşır.
 """
-from typing import Any, Dict
-from data.enums import PolygonType, SectionType
+from typing import Any
+
+from data.enums import PolygonType
 from domain.definition import FrameDistributedLoad
 from ui.schema import get_path, set_path
 
@@ -14,7 +15,7 @@ MIXED = "__MIXED__"   # çakışmayacak bir string (nadir)
 # ------------------------------------------------------------------
 # NODE
 # ------------------------------------------------------------------
-def node_to_values(node) -> Dict[str, Any]:
+def node_to_values(node) -> dict[str, Any]:
     return {
         "label": node.label,
         "is_visible": node.is_visible,
@@ -28,9 +29,9 @@ def node_to_values(node) -> Dict[str, Any]:
     }
 
 
-def values_to_node(node, v: Dict[str, Any]):
+def values_to_node(node, v: dict[str, Any]):
     node.label = v.get("label", node.label)
-    node.color = list(v.get("color", node.color))[:3]
+    node.color = list(v.get("color", node.color)) if node.color else None
     node.is_visible = bool(v.get("is_visible", node.is_visible))
     node.x = float(v.get("x", node.x))
     node.y = float(v.get("y", node.y))
@@ -103,7 +104,7 @@ def _text_to_segments(text: str):
     return segs
 
 
-def frame_to_values(frame) -> Dict[str, Any]:
+def frame_to_values(frame) -> dict[str, Any]:
     sec = getattr(frame, "section", None)
     sets = getattr(frame, "dist_load_sets", {}) or {}
 
@@ -120,7 +121,7 @@ def frame_to_values(frame) -> Dict[str, Any]:
 
     # dist_loads'tan reconstruct — FrameDistributedLoadSet YOK
     if not sets_list and getattr(frame, "dist_loads", None):
-        by_pattern: Dict[str, list] = {}
+        by_pattern: dict[str, list] = {}
         for dl in frame.dist_loads:
             by_pattern.setdefault(dl.pattern_name, []).append(dl)
         for pat_name, dls in by_pattern.items():
@@ -152,9 +153,9 @@ def frame_to_values(frame) -> Dict[str, Any]:
     }
 
 
-def values_to_frame(frame, v: Dict[str, Any]):
+def values_to_frame(frame, v: dict[str, Any]):
     frame.label = v.get("label", frame.label)
-    frame.color = list(v.get("color", frame.color))[:3]
+    frame.color = list(v.get("color", frame.color)) if frame.color else None
     frame.is_visible = bool(v.get("is_visible", frame.is_visible))
     frame.rotation_deg = float(v.get("rotation_deg", frame.rotation_deg))
 
@@ -170,7 +171,7 @@ def values_to_frame(frame, v: Dict[str, Any]):
         if not hasattr(frame, "dist_load_sets"):
             frame.dist_load_sets = {}
 
-        new_sets: Dict[str, FrameDistributedLoad] = {}
+        new_sets: dict[str, FrameDistributedLoad] = {}
         for item in sets_v:
             if not isinstance(item, dict):
                 continue
@@ -203,7 +204,7 @@ def values_to_frame(frame, v: Dict[str, Any]):
 # ------------------------------------------------------------------
 # AREA
 # ------------------------------------------------------------------
-def area_to_values(area) -> Dict[str, Any]:
+def area_to_values(area) -> dict[str, Any]:
     mat = getattr(area, "material", None)
     return {
         "label": area.label,
@@ -215,9 +216,9 @@ def area_to_values(area) -> Dict[str, Any]:
     }
 
 
-def values_to_area(area, v: Dict[str, Any]):
+def values_to_area(area, v: dict[str, Any]):
     area.label = v.get("label", area.label)
-    area.color = list(v.get("color", area.color))[:3]
+    area.color = list(v.get("color", area.color)) if area.color else None
     area.is_visible = bool(v.get("is_visible", area.is_visible))
     area.thickness = float(v.get("thickness", area.thickness))
 
@@ -235,18 +236,18 @@ def values_to_area(area, v: Dict[str, Any]):
 # ------------------------------------------------------------------
 # LINK
 # ------------------------------------------------------------------
-def link_to_values(link) -> Dict[str, Any]:
+def link_to_values(link) -> dict[str, Any]:
     return {
         "label": link.label,
         "is_visible": link.is_visible,
-        "color": list(link.color[:3]),
+        "color": list(link.color[:3]) if link.color else None,
         "propname": getattr(link, "propname", ""),
     }
 
 
-def values_to_link(link, v: Dict[str, Any]):
+def values_to_link(link, v: dict[str, Any]):
     link.label = v.get("label", link.label)
-    link.color = list(v.get("color", link.color))[:3]
+    link.color = list(v.get("color", link.color)) if link.color else None
     link.is_visible = bool(v.get("is_visible", link.is_visible))
     link.propname = v.get("propname", link.propname)
     link.mark_dirty()
@@ -255,14 +256,14 @@ def values_to_link(link, v: Dict[str, Any]):
 # ------------------------------------------------------------------
 # POLYGON
 # ------------------------------------------------------------------
-def polygon_to_values(poly) -> Dict[str, Any]:
+def polygon_to_values(poly) -> dict[str, Any]:
     pt = getattr(poly, "poly_type", None)
     loads = getattr(poly, "uniform_to_frame_loads", [])
     return {
         "label": poly.label,
         "is_visible": poly.is_visible,
         "is_temporary": getattr(poly, "is_temporary", False),
-        "color": list(poly.color[:3]),
+        "color": list(poly.color[:3]) if poly.color else None,
         "poly_type": pt.name if hasattr(pt, "name") else str(pt),
         "windplane": dict(getattr(poly, "windplane", {}) or {}),
         "associated_frame_ids": list(getattr(poly, "associated_frame_ids", [])),
@@ -280,9 +281,9 @@ def polygon_to_values(poly) -> Dict[str, Any]:
     }
 
 
-def values_to_polygon(poly, v: Dict[str, Any]):
+def values_to_polygon(poly, v: dict[str, Any]):
     poly.label = v.get("label", poly.label)
-    poly.color = list(v.get("color", poly.color))[:3]
+    poly.color = list(v.get("color", poly.color)) if poly.color else None
     poly.is_visible = bool(v.get("is_visible", poly.is_visible))
     poly.is_temporary = bool(v.get("is_temporary", getattr(poly, "is_temporary", False)))
     ids = v.get("associated_frame_ids")
@@ -303,7 +304,7 @@ def values_to_polygon(poly, v: Dict[str, Any]):
     # Yükleri güncelle
     loads_v = v.get("uniform_to_frame_loads")
     if isinstance(loads_v, list):
-        from domain.definition import AreaUniformToFrameLoad, LoadDirection, DistType
+        from domain.definition import AreaUniformToFrameLoad, DistType, LoadDirection
         new_loads = []
         for l_dict in loads_v:
             if isinstance(l_dict, dict):
@@ -345,7 +346,7 @@ _ADAPTERS = {
 }
 
 
-def element_to_values(element) -> Dict[str, Any]:
+def element_to_values(element) -> dict[str, Any]:
     et = getattr(element, "element_type", None)
     pair = _ADAPTERS.get(et)
     if pair is None:
@@ -358,7 +359,7 @@ def element_to_values(element) -> Dict[str, Any]:
     return pair[0](element)
 
 
-def values_to_element(element, v: Dict[str, Any]):
+def values_to_element(element, v: dict[str, Any]):
     et = getattr(element, "element_type", None)
     pair = _ADAPTERS.get(et)
     if pair is None:

@@ -7,8 +7,8 @@ Load Display Panel — Frame/Area yük görselleştirme kontrolü.
 - Renk seçenekleri
 - Seçili elemanlardan yük temizleme
 """
-import imgui
-from typing import Optional, Callable, List, Set
+
+from imgui_bundle import imgui
 
 from ui.base_panel import BasePanel
 
@@ -46,8 +46,8 @@ class LoadDisplayPanel(BasePanel):
         self.show_point_loads = True   # henüz yok
 
         # Pattern
-        self.active_pattern: Optional[str] = None   # None = hepsi
-        self.available_patterns: List[str] = []
+        self.active_pattern: str | None = None   # None = hepsi
+        self.available_patterns: list[str] = []
 
         # Görsel ayarlar
         self.profile_scale = 1.0        # 0.3 .. 3.0
@@ -58,7 +58,7 @@ class LoadDisplayPanel(BasePanel):
 
         # Temizleme
         self.clear_pattern_combo_idx = 0
-        self.clear_patterns: List[str] = []
+        self.clear_patterns: list[str] = []
 
         # Önbellek
         self._pattern_signature = None
@@ -73,12 +73,21 @@ class LoadDisplayPanel(BasePanel):
         self._refresh_patterns()
         super().open()
 
+    def set_loads_visible(self, enabled: bool, renderer=None, scene=None):
+        """Set the canonical load-visibility state and synchronize rendering."""
+        if renderer is not None:
+            self.renderer = renderer
+        if scene is not None:
+            self.scene = scene
+        self.show_loads = bool(enabled)
+        self._apply()
+
     # ------------------------------------------------------------------
     # DRAW
     # ------------------------------------------------------------------
     def draw_content(self):
         if not self.scene:
-            imgui.text_colored("Sahne bağlı değil.", 0.7, 0.5, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.5, 0.5, 1.0), 'Sahne bağlı değil.')
             return
 
         # --- Master toggle ---
@@ -112,21 +121,20 @@ class LoadDisplayPanel(BasePanel):
 
         imgui.same_line()
         if self.show_loads:
-            imgui.text_colored("✓", 0.4, 0.9, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.4, 0.9, 0.5, 1.0), '✓')
         else:
-            imgui.text_colored("✗", 0.9, 0.4, 0.4, 1.0)
-
+            imgui.text_colored(imgui.ImVec4(0.9, 0.4, 0.4, 1.0), '✗')
         imgui.same_line(250)
-        imgui.text_colored(
-            f"Toplam pattern: {len(self.available_patterns)}",
-            0.6, 0.7, 0.8, 1.0
-        )
+        imgui.text_colored(imgui.ImVec4(0.6, 0.7, 0.8, 1.0), f'Toplam pattern: {len(self.available_patterns)}')
+
+
+
 
     # ------------------------------------------------------------------
     # 2. TIP FİLTRESİ
     # ------------------------------------------------------------------
     def _draw_type_filter(self):
-        imgui.text_colored("Yük Tipi", 0.8, 0.8, 0.6, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.8, 0.8, 0.6, 1.0), 'Yük Tipi')
         imgui.spacing()
 
         changed, self.show_frame_loads = imgui.checkbox(
@@ -136,7 +144,7 @@ class LoadDisplayPanel(BasePanel):
             self._apply()
 
         # Area — hâlâ disabled
-        imgui.push_style_color(imgui.COLOR_TEXT, 0.5, 0.5, 0.5, 1.0)
+        imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.5, 0.5, 0.5, 1.0))
         changed, self.show_area_loads = imgui.checkbox(
             "Area (yüzey) yükler (yakında)", self.show_area_loads
         )
@@ -155,13 +163,13 @@ class LoadDisplayPanel(BasePanel):
     # 3. PATTERN FİLTRESİ
     # ------------------------------------------------------------------
     def _draw_pattern_filter(self):
-        imgui.text_colored("Pattern Filtresi", 0.8, 0.8, 0.6, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.8, 0.8, 0.6, 1.0), 'Pattern Filtresi')
         imgui.spacing()
 
         # "<Tümü>" + pattern listesi
         items = ["<Tümü>"] + self.available_patterns
         if not self.available_patterns:
-            imgui.text_colored("(Pattern bulunamadı)", 0.6, 0.6, 0.6, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0), '(Pattern bulunamadı)')
             return
 
         # Aktif index
@@ -189,23 +197,25 @@ class LoadDisplayPanel(BasePanel):
                     color = lr._pattern_color(self.active_pattern)
                     imgui.same_line()
                     imgui.color_button(
-                        "##pat_color", color[0], color[1], color[2], 1.0,
-                        imgui.COLOR_EDIT_NO_LABEL, 20, 20
+                        "##pat_color",
+                        imgui.ImVec4(color[0], color[1], color[2], 1.0),
+                        imgui.ColorEditFlags_.no_label,
+                        imgui.ImVec2(20, 20),
                     )
                 except Exception:
                     pass
 
         # Kısayol butonlar
         imgui.spacing()
-        avail = imgui.get_content_region_available_width()
+        avail = imgui.get_content_region_avail().x
         btn_w = (avail - 8) / 2.0
 
-        if imgui.button("Tümünü Seç", width=btn_w):
+        if imgui.button("Tümünü Seç", imgui.ImVec2(btn_w, 0)):
             self.active_pattern = None
             self._apply()
 
         imgui.same_line()
-        if imgui.button("WIND Filtrele", width=btn_w):
+        if imgui.button("WIND Filtrele", imgui.ImVec2(btn_w, 0)):
             wind_pats = [p for p in self.available_patterns
                          if p.upper().startswith("WIND")]
             if wind_pats:
@@ -216,7 +226,7 @@ class LoadDisplayPanel(BasePanel):
     # 4. GÖRSEL AYARLAR
     # ------------------------------------------------------------------
     def _draw_visual_settings(self):
-        imgui.text_colored("Görsel Ayarlar", 0.8, 0.8, 0.6, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.8, 0.8, 0.6, 1.0), 'Görsel Ayarlar')
         imgui.spacing()
 
         # Ölçek
@@ -270,13 +280,13 @@ class LoadDisplayPanel(BasePanel):
     # 5. TEMİZLEME
     # ------------------------------------------------------------------
     def _draw_clear_section(self):
-        imgui.text_colored("Yük Temizleme", 1.0, 0.6, 0.5, 1.0)
+        imgui.text_colored(imgui.ImVec4(1.0, 0.6, 0.5, 1.0), 'Yük Temizleme')
         imgui.spacing()
 
         # Temizlenecek pattern seçimi
         items = ["<Seçili pattern>"] + self.available_patterns
         if not self.available_patterns:
-            imgui.text_colored("(Pattern yok)", 0.6, 0.6, 0.6, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0), '(Pattern yok)')
             return
 
         imgui.push_item_width(-1)
@@ -292,37 +302,45 @@ class LoadDisplayPanel(BasePanel):
             pattern_to_clear = self.available_patterns[self.clear_pattern_combo_idx - 1]
 
         if not pattern_to_clear:
-            imgui.text_colored(
-                "⚠ Önce bir pattern seçin veya listeden seçin",
-                1.0, 0.7, 0.4, 1.0
-            )
+            imgui.text_colored(imgui.ImVec4(1.0, 0.7, 0.4, 1.0), '⚠ Önce bir pattern seçin veya listeden seçin')
+
+
+
             return
 
         imgui.spacing()
 
         # Kaç elemanda bu pattern var?
         count = self._count_pattern_usage(pattern_to_clear)
-        imgui.text_colored(
-            f"'{pattern_to_clear}' → {count} elemanda var",
-            0.7, 0.85, 0.9, 1.0
-        )
+        imgui.text_colored(imgui.ImVec4(0.7, 0.85, 0.9, 1.0), f"'{pattern_to_clear}' → {count} elemanda var")
+
+
+
 
         imgui.spacing()
-        avail = imgui.get_content_region_available_width()
+        avail = imgui.get_content_region_avail().x
 
         # Seçili elemlerden temizle
-        imgui.push_style_color(imgui.COLOR_BUTTON, 0.65, 0.30, 0.30, 1.0)
-        imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.80, 0.40, 0.40, 1.0)
-        if imgui.button("Seçili Elemanlardan Sil", width=-1):
+        imgui.push_style_color(
+            imgui.Col_.button, imgui.ImVec4(0.65, 0.30, 0.30, 1.0)
+        )
+        imgui.push_style_color(
+            imgui.Col_.button_hovered, imgui.ImVec4(0.80, 0.40, 0.40, 1.0)
+        )
+        if imgui.button("Seçili Elemanlardan Sil", imgui.ImVec2(-1, 0)):
             if callable(self.on_clear_loads):
                 n = self.on_clear_loads(pattern_to_clear)
                 self._refresh_patterns()
         imgui.pop_style_color(2)
 
         # Tüm sahneden temizle
-        imgui.push_style_color(imgui.COLOR_BUTTON, 0.55, 0.20, 0.20, 1.0)
-        imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.70, 0.28, 0.28, 1.0)
-        if imgui.button("Tüm Sahneden Sil", width=-1):
+        imgui.push_style_color(
+            imgui.Col_.button, imgui.ImVec4(0.55, 0.20, 0.20, 1.0)
+        )
+        imgui.push_style_color(
+            imgui.Col_.button_hovered, imgui.ImVec4(0.70, 0.28, 0.28, 1.0)
+        )
+        if imgui.button("Tüm Sahneden Sil", imgui.ImVec2(-1, 0)):
             if imgui.is_item_hovered():
                 imgui.set_tooltip("Bu pattern'ı tüm frame'lerden kaldırır")
             if callable(self.on_clear_all):
@@ -339,7 +357,7 @@ class LoadDisplayPanel(BasePanel):
             self.available_patterns = []
             return
 
-        pats: Set[str] = set()
+        pats: set[str] = set()
         for f in self.scene.frames.values():
             sets = getattr(f, "dist_load_sets", None)
             if sets:
@@ -385,16 +403,10 @@ class LoadDisplayPanel(BasePanel):
     def _apply(self):
         """Renderer'a tüm ayarları uygula."""
         if self.renderer:
-            # 1. KATMAN — SceneRenderer.show['loads']
             if hasattr(self.renderer, "set_loads_enabled"):
                 self.renderer.set_loads_enabled(self.show_loads)
-            elif hasattr(self.renderer, "set_show"):
-                self.renderer.set_show('loads', self.show_loads)
-
-            # 2. KATMAN — LoadRenderer
             lr = getattr(self.renderer, "load_renderer", None)
             if lr:
-                lr.enabled = self.show_loads
                 lr.active_pattern = self.active_pattern
                 if hasattr(lr, "show_frame_loads"):
                     lr.show_frame_loads = self.show_frame_loads
@@ -416,16 +428,17 @@ class LoadDisplayPanel(BasePanel):
         if self.scene:
             self.scene.mark_dirty()
             if self.renderer and hasattr(self.renderer, "load_renderer"):
-                try:
-                    cam_scale = self.renderer._compute_cam_scale() if hasattr(self.renderer, "_compute_cam_scale") else 1.0
-                    scene_size = getattr(self.renderer, "size", 1.0)
-                    self.renderer.load_renderer.update(
-                        self.scene,
-                        camera_scale=cam_scale,
-                        scene_size=scene_size,
-                    )
-                except Exception:
-                    pass
+                cam_scale = (
+                    self.renderer._compute_cam_scale()
+                    if hasattr(self.renderer, "_compute_cam_scale")
+                    else 1.0
+                )
+                scene_size = getattr(self.renderer, "size", 1.0)
+                self.renderer.load_renderer.update(
+                    self.scene,
+                    camera_scale=cam_scale,
+                    scene_size=scene_size,
+                )
 
         # Dış callback
         if callable(self.on_change):
@@ -436,8 +449,6 @@ class LoadDisplayPanel(BasePanel):
         self.renderer = ctx.get("renderer")
         lr = getattr(self.renderer, "load_renderer", None) if self.renderer else None
         if lr:
-            self.show_loads = bool(lr.enabled)
-        
             self.show_frame_loads = bool(getattr(lr, "show_frame_loads", True))
             self.show_point_loads = bool(getattr(lr, "show_point_loads", True))
             self.active_pattern = getattr(lr, "active_pattern", None)

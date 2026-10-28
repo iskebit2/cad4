@@ -1,6 +1,5 @@
 # inspector/widgets/string_select_widget.py
-
-import imgui
+from imgui_bundle import imgui
 
 from inspector.widgets.base import Widget
 

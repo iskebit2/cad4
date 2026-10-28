@@ -1,10 +1,11 @@
 # geometry/area_builder.py
-import numpy as np
-from typing import Tuple, List
-from domain.element import Area
-import mapbox_earcut as earcut
 
+import mapbox_earcut as earcut
+import numpy as np
+
+from domain.element import Area
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 def normalize(v):
@@ -14,7 +15,7 @@ def normalize(v):
     return v / n
 
 class AreaBuilder:
-    def build(self, area: Area) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def build(self, area: Area) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         points = np.array([[n.x, n.y, n.z] for n in area.nodes], dtype=np.float32)
         if len(points) < 3: return np.array([]), np.array([]), np.array([])
         

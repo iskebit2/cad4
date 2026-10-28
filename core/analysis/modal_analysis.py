@@ -5,8 +5,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from core.units import G_MM_S2
-from .solver import ModalResult
 
+from .solver import ModalResult
 
 # ============================================================
 # SPEKTRAL MOD SONUCU

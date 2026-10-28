@@ -1,4 +1,3 @@
-import math
 
 # Ahşap kereste verileri
 ahsap_data = {

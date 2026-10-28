@@ -11,31 +11,26 @@ Geliştirmeler:
 """
 
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
-from kivy.uix.spinner import Spinner
-from kivy.uix.popup import Popup
-from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
-from kivy.uix.togglebutton import ToggleButton
-from kivy.properties import StringProperty, NumericProperty, ListProperty
+from kivy.graphics import Color, Line, Rectangle
 from kivy.metrics import dp
-from kivy.graphics import Color, Rectangle, Line
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.spinner import Spinner
+from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
+from kivy.uix.textinput import TextInput
+from kivy.uix.togglebutton import ToggleButton
 
-from structload.data.material_data import MATERIAL_WEIGHTS, LIVE_LOADS
+from structload.data.material_data import LIVE_LOADS, MATERIAL_WEIGHTS
 from structload.data.preset_loader import PresetLibrary
-
-from structload.loads.load_definition import LoadDefinition, LoadComponent
-from structload.loads.load_manager import LoadManager
-
-from structload.utils.status_manager import status
-from structload.utils.report_dataframe import ReportDataFrame
-from structload.gui.status_bar import StatusBar
 from structload.gui.debug_panel import DebugPanel
-
+from structload.gui.status_bar import StatusBar
+from structload.loads.load_definition import LoadComponent, LoadDefinition
+from structload.loads.load_manager import LoadManager
+from structload.utils.report_dataframe import ReportDataFrame
+from structload.utils.status_manager import status
 
 # ============================================================
 # GLOBAL LOAD MANAGER
@@ -72,7 +67,6 @@ def benzersiz_id_uret(prefix: str) -> str:
     while f"{prefix}{sayi:02d}" in mevcut:
         sayi += 1
     return f"{prefix}{sayi:02d}"
-#
 
 
 # ------------------------------------------------------------------
@@ -1510,8 +1504,6 @@ class ElemanAtamaPaneli(BoxLayout):
 
 # gui/panels.py içindeki RaporPaneli'ni bununla değiştirin
 
-from pathlib import Path
-from structload.utils.my_document import myDocument  # opsiyonel, yoksa try/except
 
 # ============================================================
 # RAPOR PANELİ (ReportDataFrame + Word Export)
@@ -1941,9 +1933,9 @@ class RaporPaneli(BoxLayout):
     # ==========================================================
     def _debug_df_yazdir(self, instance):
         for i, df in enumerate(self._tables, 1):
-            pass(f"\n===== Tablo {i}: {df.custom_title} =====")
-            pass(df.to_string())
-            pass(f"Shape: {df.shape}, Columns: {list(df.columns)}")
+            print(f"\n===== Tablo {i}: {df.custom_title} =====")
+            print(df.to_string())
+            print(f"Shape: {df.shape}, Columns: {list(df.columns)}")
 
 # ============================================================
 # DEAD / LIVE CONFIG EXPORT

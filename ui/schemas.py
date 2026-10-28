@@ -1,7 +1,8 @@
 # ui/schemas.py
 """Her element tipi için hazır şemalar."""
-from ui.schema import FieldSpec, GroupSpec
 from data.enums import PolygonType
+from ui.schema import FieldSpec, GroupSpec
+
 
 def node_schema():
     return [

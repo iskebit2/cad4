@@ -1,6 +1,7 @@
 # inspector/widgets/section_widget.py
-import imgui
-from inspector.widgets.base import Widget, DrawContext
+from imgui_bundle import imgui
+
+from inspector.widgets.base import DrawContext, Widget
 
 
 class SectionWidget(Widget):
@@ -9,12 +10,12 @@ class SectionWidget(Widget):
     def draw(self, field, ctx: DrawContext) -> bool:
         catalog = getattr(ctx, "catalog", None)
         if catalog is None:
-            imgui.text_colored("(catalog yok)", 0.8, 0.4, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.8, 0.4, 0.4, 1.0), '(catalog yok)')
             return False
 
         names = catalog.list_sections()
         if not names:
-            imgui.text_colored("(tanımlı section yok)", 0.7, 0.7, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.7, 0.5, 1.0), '(tanımlı section yok)')
             return False
 
         # "IPE300  [I 150×300]" gibi label

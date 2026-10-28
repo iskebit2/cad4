@@ -1,6 +1,7 @@
 # inspector/widgets/info_widget.py
-import imgui
-from inspector.widgets.base import Widget, DrawContext
+from imgui_bundle import imgui
+
+from inspector.widgets.base import DrawContext, Widget
 
 
 class InfoWidget(Widget):
@@ -10,14 +11,14 @@ class InfoWidget(Widget):
     def draw(self, field, ctx: DrawContext) -> bool:
         imgui.align_text_to_frame_padding()
         imgui.text(field.label or field.key)
-        imgui.same_line(position=140)
+        imgui.same_line(140)
 
         source_key = getattr(field, "source_key", "section")
         sec = ctx.get(source_key)
 
         # --- Güvenli erişim ---
         if sec is None:
-            imgui.text_colored("(yok)", 0.6, 0.6, 0.6, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0), '(yok)')
             return False
 
         # dict ise attribute yerine dict-erişimi kullan
@@ -37,7 +38,7 @@ class InfoWidget(Widget):
             if v is not None:
                 parts.append(f"{k}={float(v):g}")
 
-        imgui.text_colored("  ".join(parts), 0.65, 0.75, 0.55, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.65, 0.75, 0.55, 1.0), '  '.join(parts))
         if imgui.is_item_hovered():
             mat = _attr(sec, "material", None)
             mat_name = _attr(mat, "name", "-") if mat else "-"

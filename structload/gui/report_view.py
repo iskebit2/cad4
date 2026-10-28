@@ -1,14 +1,15 @@
 # gui/report_view.py
 import io
-from logging_config import CadLogger
+import logging
+
+from kivy.core.image import Image as CoreImage
+from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.metrics import dp, sp
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
 from kivy.uix.image import Image
-from kivy.graphics import Color, RoundedRectangle, Rectangle
-from kivy.core.image import Image as CoreImage
-from kivy.metrics import dp, sp
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
 
 # Varsayılan Tema ve Font Tanimlari (main'den devralınabilir veya override edilebilir)
 THEME = {
@@ -23,6 +24,7 @@ THEME = {
     "tbl_row_odd": (0.11, 0.13, 0.17, 1),
 }
 from kivy.core.text import LabelBase
+
 LabelBase.register(
     name="CustomFont", 
     fn_regular="assets/fonts/Roboto-Regular.ttf"  # Kendi ttf yolun
@@ -234,8 +236,7 @@ class ReportView(CardContainer):
                     bold=row["bold"],
                 )
                 w = max(MIN_CELL_W, min(w + 2 * CELL_PAD_X, MAX_CELL_W))
-                if w > col_widths[i]:
-                    col_widths[i] = w
+                col_widths[i] = max(col_widths[i], w)
 
         # ---------- 3) SATIR YÜKSEKLİKLERİNİ ÖNCEDEN HESAPLA ----------
         # Her satır için: hücre metni sütun genişliğine göre kaç satıra kırılır?

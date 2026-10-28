@@ -10,19 +10,18 @@ Sorumluluk:
 UI çizmez, imgui bilmez. Sadece iş mantığı.
 """
 
-from logging_config import CadLogger
-from typing import Any, Dict, List, Optional
 
 from domain.element import Node
-from inspector.selection import SelectionModel
 from inspector.schema_bridge import (
     MIXED,
     element_to_values,
     elements_to_common_values,
-    schema_for,
     multi_schema_for,
+    schema_for,
     values_to_element,
 )
+from inspector.selection import SelectionModel
+from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
@@ -51,7 +50,7 @@ class InspectorController:
         self.catalog = catalog
         self.selection = SelectionModel()
         self.schema = []
-        self.filter_type: Optional[str] = None
+        self.filter_type: str | None = None
         self.filter_assoc_only = None
 
     @property
@@ -105,7 +104,7 @@ class InspectorController:
         self.filter_type = type_name
         self._rebuild_from_filter()
 
-    def selection_counts_by_type(self) -> Dict[str, int]:
+    def selection_counts_by_type(self) -> dict[str, int]:
         """Seçimdeki her tipten kaç tane var."""
         counts = {}
         for e in self.selection.elements:

@@ -2,10 +2,15 @@
 """LOAD PATTERN, CASE, COMBO, MASS SOURCE."""
 import pandas as pd
 
-from tools.s2k.context import LoadContext
 from domain.definition import (
-    LoadPattern, LoadCase, ModalCase, LoadCombination, ComboItem, StaticLoadAssignment,
+    ComboItem,
+    LoadCase,
+    LoadCombination,
+    LoadPattern,
+    ModalCase,
+    StaticLoadAssignment,
 )
+from tools.s2k.context import LoadContext
 
 
 def _safe_float(row, key, default=0.0):

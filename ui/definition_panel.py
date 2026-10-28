@@ -9,24 +9,37 @@ from __future__ import annotations
 
 import dataclasses
 import types
-import typing
 from dataclasses import fields, is_dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union, get_origin, get_args, get_type_hints
+from typing import (
+    Any,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
-import imgui
+from imgui_bundle import imgui
+
+from data.enums import LinkPropType, SectionType
+from domain.definition import (
+    AutoSeismicTSC2018,
+    LinkProp,
+    LinkPropLinear,
+    LoadCase,
+    LoadCombination,
+    LoadPattern,
+    Material,
+    ModalCase,
+    ResponseSpectrumCase,
+    Section,
+    SectionCut,
+    SpectrumFunction,
+)
+from logging_config import CadLogger
+from tools.section_preview import draw_section_preview
 from ui.base_panel import BasePanel
 from ui.widgets.color_picker import color_edit3
-from domain.definition import (
-    Material, Section, LoadPattern, LoadCase,
-    ModalCase, LoadCombination, SpectrumFunction,
-    ResponseSpectrumCase, AutoSeismicTSC2018,
-    LinkProp, LinkPropLinear,
-    LinkProp, SectionCut,
-)
-from tools.section_preview import draw_section_preview
-from data.enums import LinkPropType, SectionType, MatType
-from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
@@ -34,7 +47,7 @@ logger = CadLogger.get(__name__)
 # ============================================================================
 # YARDIMCILAR
 # ============================================================================
-def _unique_name(container: Dict, base: str) -> str:
+def _unique_name(container: dict, base: str) -> str:
     """'{base}_{n}' formatında benzersiz isim üret."""
     if base not in container:
         return base
@@ -82,7 +95,7 @@ def _name_attr(obj) -> str:
 # DEFINITION REGISTRY
 # ============================================================================
 # (cls, container_attr, label, factory, clone)
-DEFINITIONS: List[Tuple] = [
+DEFINITIONS: list[tuple] = [
     (Material, "materials", "Malzemeler",
         lambda p: Material(name=_unique_name(p.materials, "MALZEME")),
         lambda m: dataclasses.replace(m, color=tuple(m.color))),
@@ -151,7 +164,7 @@ DEFINITIONS: List[Tuple] = [
 
 
 # Kesit tipi varsayılan parametreleri
-_DEFAULT_SECTION_PARAMS: Dict[SectionType, Dict[str, float]] = {
+_DEFAULT_SECTION_PARAMS: dict[SectionType, dict[str, float]] = {
     SectionType.RECT:    {"h": 300.0, "b": 600.0},
     SectionType.CIRCLE:  {"d": 400.0},
     SectionType.PIPE:    {"d": 400.0, "t": 20.0},
@@ -175,20 +188,20 @@ class DefinitionPanel(BasePanel):
         self.on_changed = None                 # Callable[[str], None]
 
         self._current_idx: int = 0
-        self._selected_name: Optional[str] = None
+        self._selected_name: str | None = None
         self._draft: Any = None
         self._is_new: bool = False
         self._search: str = ""
-        self._confirm_delete_name: Optional[str] = None
+        self._confirm_delete_name: str | None = None
 
         # Her frame'de temizlenir, o frame'deki tespitleri tutar
         self._render_errors: set[str] = set()
         self._unsupported_fields: set[str] = set()
 
         # Tip çözümleme cache'i: (cls) -> {field_name: type}
-        self._hints_cache: Dict[type, Dict[str, Any]] = {}
+        self._hints_cache: dict[type, dict[str, Any]] = {}
 
-        self._catalog_search: Dict[int, str] = {}
+        self._catalog_search: dict[int, str] = {}
     # -----------------------------------------------------------------
     # LIFECYCLE
     # -----------------------------------------------------------------
@@ -207,7 +220,7 @@ class DefinitionPanel(BasePanel):
     # -----------------------------------------------------------------
     # TYPE HINTS — cache'li
     # -----------------------------------------------------------------
-    def _get_hints(self, cls) -> Dict[str, Any]:
+    def _get_hints(self, cls) -> dict[str, Any]:
         cached = self._hints_cache.get(cls)
         if cached is not None:
             return cached
@@ -230,7 +243,7 @@ class DefinitionPanel(BasePanel):
         self._render_errors.clear()
         self._unsupported_fields.clear()
 
-        imgui.set_next_window_size(1000, 680, imgui.FIRST_USE_EVER)
+        imgui.set_next_window_size(imgui.ImVec2(1000, 680), imgui.Cond_.first_use_ever)
         expanded, opened = imgui.begin("Tanım Yöneticisi", True)
         if not opened:
             self.close()
@@ -239,7 +252,7 @@ class DefinitionPanel(BasePanel):
 
         project = getattr(self.app, "current_project", None)
         if project is None:
-            imgui.text_colored("Proje yok.", 1, 0.5, 0.5)
+            imgui.text_colored(imgui.ImVec4(1, 0.5, 0.5, 1.0), 'Proje yok.')
             imgui.end()
             return
 
@@ -252,7 +265,7 @@ class DefinitionPanel(BasePanel):
         self._draw_toolbar(container)
         imgui.separator()
 
-        imgui.columns(2, "def_cols", border=True)
+        imgui.columns(2, "def_cols", borders=True)
         self._draw_list(container)
         imgui.next_column()
         self._draw_editor(cls, container, project)
@@ -286,14 +299,14 @@ class DefinitionPanel(BasePanel):
         imgui.same_line()
         can_dup = self._selected_name in container
         if not can_dup:
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1)
+            imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1))
         if imgui.button("Kopyala") and can_dup:
             self._duplicate(container)
         if not can_dup:
             imgui.pop_style_color()
         imgui.same_line()
         if not can_dup:
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1)
+            imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1))
         if imgui.button("Sil") and can_dup:
             self._confirm_delete_name = self._selected_name
         if not can_dup:
@@ -307,7 +320,7 @@ class DefinitionPanel(BasePanel):
         cls, _, _, _, _ = DEFINITIONS[self._current_idx]
         can_select = (cls in (Section, Material) and self._selected_name is not None)
         if not can_select:
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1)
+            imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1))
         if imgui.button("Seç ▾" if cls is Section else "Seç") and can_select:
             if cls is Section:
                 imgui.open_popup("##select_by_section_popup")
@@ -321,10 +334,10 @@ class DefinitionPanel(BasePanel):
         # Section için popup
         if cls is Section and can_select:
             if imgui.begin_popup("##select_by_section_popup"):
-                if imgui.menu_item("Frame'leri Seç")[0]:
+                if imgui.menu_item("Frame'leri Seç", "", False)[0]:
                     self._select_by_section(self._selected_name, target="frames")
                     imgui.close_current_popup()
-                if imgui.menu_item("Area'ları Seç")[0]:
+                if imgui.menu_item("Area'ları Seç", "", False)[0]:
                     self._select_by_section(self._selected_name, target="areas")
                     imgui.close_current_popup()
                 imgui.end_popup()
@@ -334,7 +347,9 @@ class DefinitionPanel(BasePanel):
     # -----------------------------------------------------------------
     def _draw_list(self, container):
         imgui.text(f"Toplam: {len(container)}")
-        imgui.begin_child("def_list", 0, 0, border=True)
+        imgui.begin_child(
+            "def_list", imgui.ImVec2(0, 0), imgui.ChildFlags_.borders
+        )
         q = self._search.lower()
         for name in sorted(container.keys()):
             if q and q not in name.lower():
@@ -371,18 +386,18 @@ class DefinitionPanel(BasePanel):
         name_val = str(getattr(obj, name_key, "") or "")
         is_name_valid = bool(name_val.strip())
         if self._is_new and name_val in container:
-            imgui.text_colored("⚠ Bu isimde kayıt zaten var!", 1, 0.5, 0.3)
+            imgui.text_colored(imgui.ImVec4(1, 0.5, 0.3, 1.0), '⚠ Bu isimde kayıt zaten var!')
             is_name_valid = False
 
         # Aksiyonlar
         if not is_name_valid:
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1)
-        if imgui.button("Uygula", width=120) and is_name_valid:
+            imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1))
+        if imgui.button("Uygula", imgui.ImVec2(120, 0)) and is_name_valid:
             self._apply(container, project, name_key)
         if not is_name_valid:
             imgui.pop_style_color()
         imgui.same_line()
-        if imgui.button("İptal", width=120):
+        if imgui.button("İptal", imgui.ImVec2(120, 0)):
             self._clear_draft()
 
     # -----------------------------------------------------------------
@@ -401,7 +416,7 @@ class DefinitionPanel(BasePanel):
             msg = f"{type(obj).__name__}.{name}: {type(e).__name__}: {e}"
             logger.warning(f"[DefinitionPanel] Render hata — {msg}")
             self._render_errors.add(msg)
-            imgui.text_colored(f"{name}: ⚠ render hata", 1, 0.5, 0.3)
+            imgui.text_colored(imgui.ImVec4(1, 0.5, 0.3, 1.0), f'{name}: ⚠ render hata')
             if imgui.is_item_hovered():
                 imgui.set_tooltip(msg)
             return False
@@ -422,7 +437,7 @@ class DefinitionPanel(BasePanel):
                 self._draw_section_catalog_popup(obj)
                 # Avatar
                 imgui.spacing()
-                imgui.text_colored("Önizleme:", 0.6, 0.7, 0.85)
+                imgui.text_colored(imgui.ImVec4(0.6, 0.7, 0.85, 1.0), 'Önizleme:')
                 draw_section_preview(obj, avail_w=160, avail_h=120)
                 return changed
         # --- LinkProp özel ---
@@ -534,7 +549,7 @@ class DefinitionPanel(BasePanel):
         cur_name = getattr(cur, "name", "") if cur else ""
         changed = False
         if imgui.begin_combo(name, cur_name or "<yok>"):
-            if imgui.selectable("<yok>", not cur):
+            if imgui.selectable("<yok>", not cur)[0]:
                 setattr(obj, name, None)
                 changed = True
             for k, v in sorted(ref.items()):
@@ -569,7 +584,7 @@ class DefinitionPanel(BasePanel):
         display_val = type(cur).__name__ if cur is not None else "None"
         imgui.text_disabled(f"{name}: [{display_val}]")
         imgui.same_line()
-        imgui.text_colored("(desteklenmiyor)", 1, 0.7, 0.3)
+        imgui.text_colored(imgui.ImVec4(1, 0.7, 0.3, 1.0), '(desteklenmiyor)')
         if imgui.is_item_hovered():
             imgui.set_tooltip(f"Tip: {display_tp}\nDeğer: {repr(cur)[:200]}")
         self._unsupported_fields.add(f"{type(obj).__name__}.{name} ({display_tp})")
@@ -601,7 +616,7 @@ class DefinitionPanel(BasePanel):
     # ÖZEL: SECTION profile_params
     # -----------------------------------------------------------------
     def _draw_section_params(self, section) -> bool:
-        imgui.text_colored("Profil Parametreleri (mm)", 0.7, 0.9, 0.7)
+        imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), 'Profil Parametreleri (mm)')
         p = section.profile_params
         st = section.profile_type
         changed = False
@@ -647,7 +662,7 @@ class DefinitionPanel(BasePanel):
         # Eğer katalogdan gelmişse, gerçek değerler:
         if section.catalog_props:
             imgui.separator()
-            imgui.text_colored(f"Katalog: {section.catalog_source}", 0.6, 0.8, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.6, 0.8, 1.0, 1.0), f'Katalog: {section.catalog_source}')
             for key in ("A", "I33", "I22", "J", "Z33", "Z22"):
                 v = section.catalog_props.get(key)
                 if v is not None:
@@ -679,8 +694,7 @@ class DefinitionPanel(BasePanel):
                 return pi * r**2, I, I, 2 * I
             if st == SectionType.PIPE:
                 r, ri = d / 2, d / 2 - t
-                if ri < 0:
-                    ri = 0
+                ri = max(ri, 0)
                 I = pi * (r**4 - ri**4) / 4
                 return pi * (r**2 - ri**2), I, I, 2 * I
         except Exception:
@@ -690,7 +704,7 @@ class DefinitionPanel(BasePanel):
     # -----------------------------------------------------------------
     # YARDIMCI: CONTAINER BULMA
     # -----------------------------------------------------------------
-    def _find_container_by_type(self, cls, project) -> Optional[dict]:
+    def _find_container_by_type(self, cls, project) -> dict | None:
         if project is None:
             return None
         for d in DEFINITIONS:
@@ -772,7 +786,7 @@ class DefinitionPanel(BasePanel):
         if imgui.begin_popup_modal("Silme Onayı", True)[0]:
             imgui.text(f"'{self._confirm_delete_name}' silinsin mi?")
             imgui.separator()
-            if imgui.button("Evet, sil", width=120):
+            if imgui.button("Evet", imgui.ImVec2(120, 0)):
                 container.pop(self._confirm_delete_name, None)
                 self._confirm_delete_name = None
                 self._clear_draft()
@@ -785,7 +799,7 @@ class DefinitionPanel(BasePanel):
                         logger.exception("on_changed callback hata")
                 imgui.close_current_popup()
             imgui.same_line()
-            if imgui.button("Vazgeç", width=120):
+            if imgui.button("Vazgeç", imgui.ImVec2(120, 0)):
                 self._confirm_delete_name = None
                 imgui.close_current_popup()
             imgui.end_popup()
@@ -799,13 +813,13 @@ class DefinitionPanel(BasePanel):
             return
         imgui.separator()
         label = f"⚠ Desteklenmeyen / hatalı alanlar ({total})"
-        if imgui.collapsing_header(label)[0]:
+        if imgui.collapsing_header(label):
             if self._render_errors:
-                imgui.text_colored("Hatalar:", 1, 0.5, 0.3)
+                imgui.text_colored(imgui.ImVec4(1, 0.5, 0.3, 1.0), 'Hatalar:')
                 for msg in sorted(self._render_errors):
                     imgui.bullet_text(msg)
             if self._unsupported_fields:
-                imgui.text_colored("Desteklenmeyen tipler:", 1, 0.7, 0.3)
+                imgui.text_colored(imgui.ImVec4(1, 0.7, 0.3, 1.0), 'Desteklenmeyen tipler:')
                 for msg in sorted(self._unsupported_fields):
                     imgui.bullet_text(msg)
 
@@ -829,7 +843,7 @@ class DefinitionPanel(BasePanel):
             imgui.open_popup(popup_id)
 
         if imgui.begin_popup(popup_id):
-            imgui.text_colored(catalog["label"], 0.7, 0.9, 0.7)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), catalog['label'])
             imgui.separator()
             for item in catalog["items"]:
                 is_current = (material.name == item)
@@ -855,7 +869,7 @@ class DefinitionPanel(BasePanel):
 
         catalog = getattr(self.app, "section_catalog", {})
         if not catalog:
-            imgui.text_colored("Kesit kataloğu boş.", 1, 0.6, 0.3)
+            imgui.text_colored(imgui.ImVec4(1, 0.6, 0.3, 1.0), 'Kesit kataloğu boş.')
             imgui.end_popup()
             return False
 
@@ -961,7 +975,7 @@ class DefinitionPanel(BasePanel):
         dofs = ["U1", "U2", "U3", "R1", "R2", "R3"]
         changed = False
 
-        imgui.text_colored(name, 0.7, 0.9, 0.7)
+        imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), name)
 
         if name in ("DOF", "Fixed"):
             # 6 DOF checkbox yan yana

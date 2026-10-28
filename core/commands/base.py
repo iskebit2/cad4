@@ -1,7 +1,6 @@
 # core/commands/base.py
 from abc import ABC, abstractmethod
 from collections import deque
-from logging_config import CadLogger
 
 from logging_config import CadLogger
 
@@ -14,12 +13,10 @@ class Command(ABC):
     @abstractmethod
     def execute(self):
         """İşlemi uygula."""
-        pass
     
     @abstractmethod
     def undo(self):
         """İşlemi geri al."""
-        pass
     
     def redo(self):
         """Yeniden uygula (varsayılan: execute)."""

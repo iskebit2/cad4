@@ -6,13 +6,57 @@ Frame Distributed Load Atama Paneli - Segment Bazlı (v2)
 - +/- butonları küçük ikon tarzı
 - Frame üzerinde kalıcı saklama
 """
-import imgui
 import math
-from typing import List, Optional, Callable
+from collections.abc import Callable
+
+from imgui_bundle import imgui
+
 from data.enums import SAP_DIR_LABELS
 from domain.definition import FrameDistributedLoad, LoadSegment
 from domain.element import Frame
 from ui.base_panel import BasePanel
+
+
+class _DrawListAdapter:
+    def __init__(self, draw_list):
+        self._draw_list = draw_list
+
+    def add_rect_filled(self, x1, y1, x2, y2, color):
+        self._draw_list.add_rect_filled(
+            imgui.ImVec2(x1, y1), imgui.ImVec2(x2, y2), color
+        )
+
+    def add_rect(self, x1, y1, x2, y2, color, rounding=0.0, flags=0, thickness=1.0):
+        self._draw_list.add_rect(
+            imgui.ImVec2(x1, y1), imgui.ImVec2(x2, y2), color,
+            rounding, flags, thickness,
+        )
+
+    def add_line(self, x1, y1, x2, y2, color, thickness=1.0):
+        self._draw_list.add_line(
+            imgui.ImVec2(x1, y1), imgui.ImVec2(x2, y2), color, thickness
+        )
+
+    def add_quad_filled(self, x1, y1, x2, y2, x3, y3, x4, y4, color):
+        self._draw_list.add_quad_filled(
+            imgui.ImVec2(x1, y1), imgui.ImVec2(x2, y2),
+            imgui.ImVec2(x3, y3), imgui.ImVec2(x4, y4), color,
+        )
+
+    def add_circle_filled(self, x, y, radius, color):
+        self._draw_list.add_circle_filled(imgui.ImVec2(x, y), radius, color)
+
+    def add_circle(self, x, y, radius, color, num_segments=0, thickness=1.0):
+        self._draw_list.add_circle(
+            imgui.ImVec2(x, y), radius, color, num_segments, thickness
+        )
+
+    def add_text(self, x, y, color, text):
+        self._draw_list.add_text(imgui.ImVec2(x, y), color, text)
+
+
+def _color_u32(r, g, b, a=1.0):
+    return imgui.get_color_u32(imgui.ImVec4(r, g, b, a))
 
 
 class FrameLoadPanel(BasePanel):
@@ -42,11 +86,11 @@ class FrameLoadPanel(BasePanel):
         self.is_relative = True
 
         self.active_set: FrameDistributedLoad = FrameDistributedLoad()
-        self.target_frames: List[Frame] = []
+        self.target_frames: list[Frame] = []
 
-        self.selected_segment_idx: Optional[int] = None
-        self.hovered_segment_idx: Optional[int] = None
-        self.dragging: Optional[tuple] = None
+        self.selected_segment_idx: int | None = None
+        self.hovered_segment_idx: int | None = None
+        self.dragging: tuple | None = None
 
         self.max_q = 10.0
         self.min_q = 0.0
@@ -67,7 +111,7 @@ class FrameLoadPanel(BasePanel):
                 self.pattern_name = patterns[0]
         self.set_target_frames(frames)
             
-    def open(self, patterns: List[str] = None, target_frames: List[Frame] = None):
+    def open(self, patterns: list[str] = None, target_frames: list[Frame] = None):
         self.visible = True
         
 
@@ -75,7 +119,7 @@ class FrameLoadPanel(BasePanel):
         self.visible = False
         self.dragging = None
 
-    def set_target_frames(self, frames: List[Frame]):
+    def set_target_frames(self, frames: list[Frame]):
         self.target_frames = frames
         self._load_from_target()
 
@@ -174,10 +218,10 @@ class FrameLoadPanel(BasePanel):
 
         # Pencereyi ekranın %65'ine yay
         io = imgui.get_io()
-        w = min(max(int(io.display_size[0] * 0.55), 720), 1100)
-        h = min(max(int(io.display_size[1] * 0.85), 640), 950)
-        imgui.set_next_window_size(w, h, imgui.FIRST_USE_EVER)
-        imgui.set_next_window_position(80, 60, imgui.FIRST_USE_EVER)
+        w = min(max(int(io.display_size.x * 0.55), 720), 1100)
+        h = min(max(int(io.display_size.y * 0.85), 640), 950)
+        imgui.set_next_window_size(imgui.ImVec2(w, h), imgui.Cond_.first_use_ever)
+        imgui.set_next_window_pos(imgui.ImVec2(80, 60), imgui.Cond_.first_use_ever)
 
         expanded, opened = imgui.begin("Frame Distributed Load", True)
         if not opened:
@@ -201,11 +245,11 @@ class FrameLoadPanel(BasePanel):
     # ------------------------------------------------------------------
     def _draw_header(self):
         
-        imgui.text_colored("Hedef Frame'ler:", 0.7, 0.8, 0.9, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.7, 0.8, 0.9, 1.0), "Hedef Frame'ler:")
         if not self.target_frames:
             imgui.same_line()
-            imgui.text_colored("(Seçili frame yok — sahne üzerinden seçin)",
-                               1.0, 0.5, 0.3, 1.0)
+            imgui.text_colored(imgui.ImVec4(1.0, 0.5, 0.3, 1.0), '(Seçili frame yok — sahne üzerinden seçin)')
+
         else:
             labels = [getattr(f, "label", None) or f"F_{f.unique_id}"
                       for f in self.target_frames[:6]]
@@ -213,8 +257,8 @@ class FrameLoadPanel(BasePanel):
             if len(self.target_frames) > 6:
                 text += f" ... (+{len(self.target_frames) - 6})"
             imgui.same_line()
-            imgui.text_colored(f"{len(self.target_frames)} adet: {text}",
-                               0.5, 0.9, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.5, 0.9, 0.5, 1.0), f'{len(self.target_frames)} adet: {text}')
+
 
     # ------------------------------------------------------------------
     def _draw_load_settings(self):
@@ -287,26 +331,32 @@ class FrameLoadPanel(BasePanel):
     # CANVAS
     # ------------------------------------------------------------------
     def _draw_canvas(self):
-        imgui.text_colored("Segment Diyagramı:", 0.8, 0.8, 0.6, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.8, 0.8, 0.6, 1.0), 'Segment Diyagramı:')
         imgui.same_line()
-        imgui.text_colored("(sol tık sürükle: tutamaç | Ctrl+tık: böl | sağ tık: sil)",
-                           0.55, 0.55, 0.6, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.55, 0.55, 0.6, 1.0), '(sol tık sürükle: tutamaç | Ctrl+tık: böl | sağ tık: sil)')
 
-        avail = imgui.get_content_region_available_width()
+
+        avail = imgui.get_content_region_avail().x
         canvas_w = max(self.CANVAS_WIDTH, avail - 10)
 
         cpos = imgui.get_cursor_screen_pos()
-        imgui.invisible_button("##canvas", canvas_w, self.CANVAS_HEIGHT)
+        imgui.invisible_button(
+            "##canvas", imgui.ImVec2(canvas_w, self.CANVAS_HEIGHT)
+        )
         cend = imgui.get_item_rect_max()
 
-        dl = imgui.get_window_draw_list()
-        dl.add_rect_filled(cpos[0], cpos[1], cend[0], cend[1],
-                           imgui.get_color_u32_rgba(0.09, 0.11, 0.15, 1.0))
-        dl.add_rect(cpos[0], cpos[1], cend[0], cend[1],
-                    imgui.get_color_u32_rgba(0.28, 0.32, 0.38, 1.0), 0, 1.5)
+        dl = _DrawListAdapter(imgui.get_window_draw_list())
+        dl.add_rect_filled(
+            cpos.x, cpos.y, cend.x, cend.y,
+            _color_u32(0.09, 0.11, 0.15),
+        )
+        dl.add_rect(
+            cpos.x, cpos.y, cend.x, cend.y,
+            _color_u32(0.28, 0.32, 0.38), thickness=1.5,
+        )
 
-        ox = cpos[0] + self.CANVAS_PADDING
-        oy = cpos[1] + self.CANVAS_PADDING
+        ox = cpos.x + self.CANVAS_PADDING
+        oy = cpos.y + self.CANVAS_PADDING
         cw = canvas_w - 2 * self.CANVAS_PADDING
         ch = self.CANVAS_HEIGHT - 2 * self.CANVAS_PADDING
         beam_y = oy + ch
@@ -315,15 +365,17 @@ class FrameLoadPanel(BasePanel):
         self._canvas_size = (cw, ch)
 
         self._draw_grid(dl, ox, oy, cw, ch)
-        dl.add_line(ox, beam_y, ox + cw, beam_y,
-                    imgui.get_color_u32_rgba(0.95, 0.95, 0.95, 1.0), 3.0)
+        dl.add_line(
+            ox, beam_y, ox + cw, beam_y,
+            _color_u32(0.95, 0.95, 0.95), 3.0,
+        )
 
         self._draw_segments(dl, ox, oy, cw, ch, beam_y)
         self._draw_axis_labels(dl, ox, oy, cw, ch)
         self._handle_canvas_input(ox, oy, cw, ch, beam_y, cpos, cend)
 
     def _draw_grid(self, dl, ox, oy, cw, ch):
-        gc = imgui.get_color_u32_rgba(0.20, 0.22, 0.28, 1.0)
+        gc = _color_u32(0.20, 0.22, 0.28)
         for i in range(5):
             x = ox + cw * (i / 4.0)
             dl.add_line(x, oy, x, oy + ch, gc, 1.0)
@@ -349,31 +401,31 @@ class FrameLoadPanel(BasePanel):
             y1 = self._q_to_y(seg.q1, oy, ch, beam_y)
             y2 = self._q_to_y(seg.q2, oy, ch, beam_y)
 
-            fill = imgui.get_color_u32_rgba(base[0], base[1], base[2], alpha)
+            fill = _color_u32(base[0], base[1], base[2], alpha)
             dl.add_quad_filled(x1, y1, x2, y2, x2, beam_y, x1, beam_y, fill)
 
-            lc = imgui.get_color_u32_rgba(*base, 1.0)
+            lc = _color_u32(*base)
             thick = 3.0 if is_sel else (2.5 if is_hov else 2.0)
             dl.add_line(x1, y1, x2, y2, lc, thick)
 
-            edge = imgui.get_color_u32_rgba(*base, 0.6)
+            edge = _color_u32(*base, 0.6)
             dl.add_line(x1, y1, x1, beam_y, edge, 1.2)
             dl.add_line(x2, y2, x2, beam_y, edge, 1.2)
 
             for (hx, hy) in [(x1, y1), (x2, y2)]:
                 dl.add_circle_filled(hx, hy, self.POINT_RADIUS,
-                                     imgui.get_color_u32_rgba(1, 1, 1, 1))
+                                     _color_u32(1, 1, 1))
                 dl.add_circle(hx, hy, self.POINT_RADIUS,
-                              imgui.get_color_u32_rgba(*base, 1), 0, 2.0)
+                              _color_u32(*base), 0, 2.0)
 
             # Etiketler
             mid_x = (x1 + x2) * 0.5
             top_y = min(y1, y2)
             dl.add_text(mid_x - 35, top_y - 18,
-                        imgui.get_color_u32_rgba(1, 0.95, 0.7, 1),
+                        _color_u32(1, 0.95, 0.7),
                         f"q={seg.q1:.2f}→{seg.q2:.2f}")
             dl.add_text(mid_x - 35, beam_y + 22,
-                        imgui.get_color_u32_rgba(0.7, 0.7, 0.75, 1),
+                        _color_u32(0.7, 0.7, 0.75),
                         f"x={seg.x1:.2f}→{seg.x2:.2f}")
 
     def _draw_axis_labels(self, dl, ox, oy, cw, ch):
@@ -381,14 +433,14 @@ class FrameLoadPanel(BasePanel):
         for i in range(5):
             x = ox + cw * (i / 4.0)
             dl.add_text(x - 14, beam_y + 5,
-                        imgui.get_color_u32_rgba(0.6, 0.6, 0.6, 1),
+                        _color_u32(0.6, 0.6, 0.6),
                         f"{i*0.25:.2f}")
         q_range = max(self.max_q - self.min_q, 1e-6)
         for i in range(5):
             y = oy + ch * (i / 4.0)
             q_val = self.max_q - q_range * (i / 4.0)
             dl.add_text(ox - 45, y - 8,
-                        imgui.get_color_u32_rgba(0.6, 0.6, 0.6, 1),
+                        _color_u32(0.6, 0.6, 0.6),
                         f"{q_val:.2f}")
 
     # ------------------------------------------------------------------
@@ -397,8 +449,10 @@ class FrameLoadPanel(BasePanel):
     def _handle_canvas_input(self, ox, oy, cw, ch, beam_y, cpos, cend):
         io = imgui.get_io()
         mouse = io.mouse_pos
-        in_canvas = (cpos[0] <= mouse[0] <= cend[0] and
-                     cpos[1] <= mouse[1] <= cend[1])
+        in_canvas = (
+            cpos.x <= mouse.x <= cend.x
+            and cpos.y <= mouse.y <= cend.y
+        )
 
         if not in_canvas:
             self.hovered_segment_idx = None
@@ -502,7 +556,7 @@ class FrameLoadPanel(BasePanel):
     # SEGMENT TABLOSU
     # ------------------------------------------------------------------
     def _draw_segment_table(self):
-        imgui.text_colored("Segment Listesi:", 0.8, 0.8, 0.6, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.8, 0.8, 0.6, 1.0), 'Segment Listesi:')
         imgui.same_line()
 
         if imgui.small_button("+##add"):
@@ -525,27 +579,24 @@ class FrameLoadPanel(BasePanel):
             imgui.set_tooltip("Seçili segmenti sil")
 
         imgui.same_line()
-        imgui.text_colored(f"({len(self.active_set.segments)} segment)",
-                        0.6, 0.6, 0.7, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.7, 1.0), f'({len(self.active_set.segments)} segment)')
+
 
         # --- Tablo başlangıcı ---
-        table_flags = 0
-        # pyimgui'de mevcut olanları dene (varsa)
-        if hasattr(imgui, 'TABLE_BORDERS'):
-            table_flags |= imgui.TABLE_BORDERS
-        if hasattr(imgui, 'TABLE_ROW_BACKGROUND'):
-            table_flags |= imgui.TABLE_ROW_BACKGROUND
-        if hasattr(imgui, 'TABLE_SIZING_STRETCH_PROP'):
-            table_flags |= imgui.TABLE_SIZING_STRETCH_PROP
+        table_flags = (
+            imgui.TableFlags_.borders
+            | imgui.TableFlags_.row_bg
+            | imgui.TableFlags_.sizing_stretch_prop
+        )
 
         if not imgui.begin_table("seg_table", 5, table_flags):
             return
 
-        imgui.table_setup_column("#",        imgui.TABLE_COLUMN_WIDTH_FIXED, 36)
-        imgui.table_setup_column("x1 (rel)", imgui.TABLE_COLUMN_WIDTH_STRETCH)
-        imgui.table_setup_column("x2 (rel)", imgui.TABLE_COLUMN_WIDTH_STRETCH)
-        imgui.table_setup_column("q1",       imgui.TABLE_COLUMN_WIDTH_STRETCH)
-        imgui.table_setup_column("q2",       imgui.TABLE_COLUMN_WIDTH_STRETCH)
+        imgui.table_setup_column("#",        imgui.TableColumnFlags_.width_fixed, 36)
+        imgui.table_setup_column("x1 (rel)", imgui.TableColumnFlags_.width_stretch)
+        imgui.table_setup_column("x2 (rel)", imgui.TableColumnFlags_.width_stretch)
+        imgui.table_setup_column("q1",       imgui.TableColumnFlags_.width_stretch)
+        imgui.table_setup_column("q2",       imgui.TableColumnFlags_.width_stretch)
 
         imgui.table_headers_row()
 
@@ -558,7 +609,7 @@ class FrameLoadPanel(BasePanel):
             if imgui.selectable(
                 f"{i + 1}",
                 i == self.selected_segment_idx,
-                imgui.SELECTABLE_SPAN_ALL_COLUMNS if False else 0,
+                imgui.SelectableFlags_.span_all_columns if False else 0,
             )[0]:
                 self.selected_segment_idx = i
 
@@ -630,45 +681,47 @@ class FrameLoadPanel(BasePanel):
         can_apply = bool(self.target_frames) and len(self.active_set.segments) > 0
 
         if not can_apply:
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1.0)
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1.0)
+            )
 
-        if imgui.button("  UYGULA  ", 180, 34) and can_apply:
+        if imgui.button(" UYGULA ", imgui.ImVec2(180, 34)) and can_apply:
             self._apply_to_frames()
 
         if not can_apply:
             imgui.pop_style_color(1)
 
         imgui.same_line()
-        if imgui.button("Temizle", 90, 34):
+        if imgui.button("Temizle", imgui.ImVec2(90, 34)):
             self.active_set.clear()
             self.active_set.add_segment(0.0, 1.0, 0.0, 0.0)
             self._update_q_range()
 
         imgui.same_line()
-        if imgui.button("Uniform Yap", 110, 34):
+        if imgui.button("Uniform Yap", imgui.ImVec2(110, 34)):
             if self.active_set.segments:
                 seg = self.active_set.segments[0]
                 self.active_set.segments = [seg]
                 self.selected_segment_idx = 0
 
         imgui.same_line()
-        if imgui.button("Hedefi Yenile", 130, 34):
+        if imgui.button("Hedefi Yenile", imgui.ImVec2(130, 34)):
             self.refresh_targets()
 
         imgui.spacing()
         if not self.target_frames:
-            imgui.text_colored("⚠ Seçili frame yok — sahne üzerinden seçin",
-                               1.0, 0.6, 0.3, 1.0)
+            imgui.text_colored(imgui.ImVec4(1.0, 0.6, 0.3, 1.0), '⚠ Seçili frame yok — sahne üzerinden seçin')
+
         else:
             dir_label = SAP_DIR_LABELS.get(self.load_dir, self.load_dir)
-            imgui.text_colored(
-                f"✓ {len(self.target_frames)} frame | "
-                f"{len(self.active_set.segments)} segment | "
-                f"Pat={self.pattern_name} | "
-                f"{self.coord_sys}/{dir_label.split(' - ')[1]} | "
-                f"{self.mode}",
-                0.6, 0.8, 0.6, 1.0
-            )
+            imgui.text_colored(imgui.ImVec4(0.6, 0.8, 0.6, 1.0), f"✓ {len(self.target_frames)} frame | {len(self.active_set.segments)} segment | Pat={self.pattern_name} | {self.coord_sys}/{dir_label.split(' - ')[1]} | {self.mode}")
+
+
+
+
+
+
+
 
     def _apply_to_frames(self):
         if not self.target_frames:

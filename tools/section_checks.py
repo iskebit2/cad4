@@ -17,11 +17,9 @@ Kullanım:
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, Tuple
 
 from data.enums import SectionType
 from domain.definition import Section
-
 
 # ============================================================================
 # SABİTLER
@@ -40,7 +38,7 @@ R_MIN, R_MAX = 0.5, 500.0
 # ============================================================================
 def analytical_i_section(
     h: float, b: float, tw: float, tf: float,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     I-profile analitik özellikler (mm cinsinden giriş).
 
@@ -68,7 +66,7 @@ def analytical_i_section(
     return {"Area": A, "I33": I33, "I22": I22, "J": J}
 
 
-def analytical_rect_section(h: float, b: float) -> Dict[str, float]:
+def analytical_rect_section(h: float, b: float) -> dict[str, float]:
     """Dolu dikdörtgen. h: yükseklik (I33 ekseni), b: genişlik."""
     if h <= 0 or b <= 0:
         return {}
@@ -83,7 +81,7 @@ def analytical_rect_section(h: float, b: float) -> Dict[str, float]:
 
 def analytical_tube_section(
     h: float, b: float, t: float,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Dikdörtgen kutu (içi boş). t: et kalınlığı (tek)."""
     if h <= 0 or b <= 0 or t <= 0 or 2 * t >= min(h, b):
         return {}
@@ -98,7 +96,7 @@ def analytical_tube_section(
     return {"Area": A, "I33": I33, "I22": I22, "J": J}
 
 
-def analytical_pipe_section(ro: float, ri: float) -> Dict[str, float]:
+def analytical_pipe_section(ro: float, ri: float) -> dict[str, float]:
     """Dairesel boru. ro: dış yarıçap, ri: iç yarıçap."""
     if ro <= 0 or ri < 0 or ri >= ro:
         return {}
@@ -111,7 +109,7 @@ def analytical_pipe_section(ro: float, ri: float) -> Dict[str, float]:
 # ============================================================================
 # ANALİTİK DISPATCH
 # ============================================================================
-def analytical_properties(section) -> Optional[Dict[str, float]]:
+def analytical_properties(section) -> dict[str, float] | None:
     """
     Kesit tipine göre analitik özellikleri döndür.
     Bilinmeyen tip veya eksik parametre → None.
@@ -119,7 +117,7 @@ def analytical_properties(section) -> Optional[Dict[str, float]]:
     p = section.profile_params or {}
     t = section.profile_type
 
-    def g(*keys) -> Optional[Tuple[float, ...]]:
+    def g(*keys) -> tuple[float, ...] | None:
         try:
             vals = tuple(float(p[k]) for k in keys)
         except (KeyError, TypeError, ValueError):
@@ -167,15 +165,15 @@ _TOL_BY_PROP = {
 
 def _compare(
     section,
-    reference: Dict[str, float],
-    tol_by_prop: Dict[str, float],
+    reference: dict[str, float],
+    tol_by_prop: dict[str, float],
     source: str,
-) -> List[str]:
+) -> list[str]:
     """
     section.profile_params ile reference sözlüğünü karşılaştır.
     Sadece reference'ta >0 olan anahtarlar kontrol edilir.
     """
-    msgs: List[str] = []
+    msgs: list[str] = []
     p = section.profile_params or {}
 
     for key, ref_val in reference.items():
@@ -201,7 +199,7 @@ def _compare(
 # ============================================================================
 # KESİT TİPİNE ÖZEL EK KONTROLLER
 # ============================================================================
-def _check_invariants(section) -> List[str]:
+def _check_invariants(section) -> list[str]:
     """
     Genel kesit değişmezleri — analitik olmayan tipler için de geçerli.
 
@@ -209,7 +207,7 @@ def _check_invariants(section) -> List[str]:
     - I33 + I22 >= J (torsiyon genelde ataletlerden küçük)
     - r33/r22 oranı profil tipine göre makul
     """
-    msgs: List[str] = []
+    msgs: list[str] = []
     p = section.profile_params or {}
     A   = float(p.get("Area", 0) or 0)
     I33 = float(p.get("I33", 0) or 0)
@@ -245,7 +243,7 @@ def _check_invariants(section) -> List[str]:
     return msgs
 
 
-def _check_unit_suspicion(section) -> List[str]:
+def _check_unit_suspicion(section) -> list[str]:
     """
     Birim hatası belirtileri — değerler tipik aralığın çok dışındaysa.
 
@@ -254,7 +252,7 @@ def _check_unit_suspicion(section) -> List[str]:
         I33 : 1e4 .. 1e10 mm⁴
         E   : 2.0e5 MPa (çelik), 3.0e4 MPa (beton)
     """
-    msgs: List[str] = []
+    msgs: list[str] = []
     p = section.profile_params or {}
     A   = float(p.get("Area", 0) or 0)
     I33 = float(p.get("I33", 0) or 0)
@@ -286,7 +284,7 @@ def _check_unit_suspicion(section) -> List[str]:
 # ============================================================================
 # ANA GİRİŞ
 # ============================================================================
-def check_section(section, *, strict: bool = False) -> List[str]:
+def check_section(section, *, strict: bool = False) -> list[str]:
     """
     Tek kesit için tam doğrulama.
 
@@ -302,7 +300,7 @@ def check_section(section, *, strict: bool = False) -> List[str]:
     if section is None:
         return ["Section None"]
 
-    msgs: List[str] = []
+    msgs: list[str] = []
 
     # 1. Değişmezler (analitik olmadan da geçerli)
     msgs.extend(_check_invariants(section))
@@ -334,11 +332,11 @@ def check_section(section, *, strict: bool = False) -> List[str]:
 # TOPLU DOĞRULAMA (isteğe bağlı)
 # ============================================================================
 def check_all_sections(
-    sections: Dict[str, "Section"],
+    sections: dict[str, Section],
     *,
     strict: bool = False,
     logger=None,
-) -> Dict[str, List[str]]:
+) -> dict[str, list[str]]:
     """
     Tüm kesitleri doğrula.
 
@@ -346,7 +344,7 @@ def check_all_sections(
     -------
     {section_name: [msgs]} — sadece uyarısı olanlar döner.
     """
-    out: Dict[str, List[str]] = {}
+    out: dict[str, list[str]] = {}
     for name, section in sections.items():
         msgs = check_section(section, strict=strict)
         if msgs:

@@ -1,7 +1,7 @@
-from math import isclose
 import numpy as np
 
 from structload.data.wind_data import TOL, WindRelation
+
 
 def get_neighbors(surf, all_surfaces):
     neighbors = {}

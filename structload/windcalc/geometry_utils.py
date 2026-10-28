@@ -1,9 +1,9 @@
 #windcalc/geometry_utils.py
-from structload.data.wind_data import TOL, EPS
-import math
+
 import numpy as np
-from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional, Union, Any
+
+from structload.data.wind_data import EPS, TOL
+
 
 def close_polygon(polygon: np.ndarray, tol: float = 1e-8) -> np.ndarray:
         """Poligonu kapatır"""
@@ -210,7 +210,7 @@ def _split_by_line_2d(pts_2d, p1, p2, tol: float = EPS):
 
     area2 = _area2(poly)
     if abs(area2) <= tol:
-        pass("Poligon alanı sıfıra çok yakın.")
+        print("Poligon alanı sıfıra çok yakın.")
         return empty, empty
         # raise ValueError("Poligon alanı sıfıra çok yakın.")
     ccw = area2 > 0
@@ -220,7 +220,7 @@ def _split_by_line_2d(pts_2d, p1, p2, tol: float = EPS):
         return line[0] * v[1] - line[1] * v[0]
 
     def clip(keep_left: bool) -> np.ndarray:
-        result: List[np.ndarray] = []
+        result: list[np.ndarray] = []
         s = poly[-1]
         s_s = side(s)
 
@@ -272,7 +272,7 @@ def _clip_line_to_polygon_2d(line_p1, line_p2, polygon):
     if n < 3:
         return None
 
-    intersections: List[np.ndarray] = []
+    intersections: list[np.ndarray] = []
     for i in range(n):
         a = pts[i]
         b = pts[(i + 1) % n]
@@ -337,7 +337,7 @@ def _create_edge_perp_2d(polygon_2d, p1_2d, p2_2d, w_vector_2d, d_L):
         return None
     return result_L, result_R
 
-def _normalize_wind(wind_vector: Optional[np.ndarray]) -> Optional[np.ndarray]:
+def _normalize_wind(wind_vector: np.ndarray | None) -> np.ndarray | None:
     if wind_vector is None:
         return None
     w = np.asarray(wind_vector, dtype=float)

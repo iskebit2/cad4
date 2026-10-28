@@ -8,15 +8,10 @@ Yüksek seviye analiz servisi — UI'nin tek giriş noktası.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
 
-from core.analysis.mass_assembly import build_mass, MassAssembly
-from core.analysis.stiffness_assembly import build_stiffness, StiffnessAssembly
-from core.analysis.solver import StructuralSolver, ModalResult
-from core.analysis.structuralanalysis import run_analysis, StructuralAnalysisResult
-from core.analysis.material_takeoff import compute_takeoff, TakeoffResult
-from core.analysis.spectrum import TBDYSpectrum
+from core.analysis.material_takeoff import TakeoffResult, compute_takeoff
 from core.analysis.modal_analysis import SpectralResult
+from core.analysis.structuralanalysis import StructuralAnalysisResult, run_analysis
 
 
 @dataclass
@@ -26,17 +21,17 @@ class AnalysisOptions:
     run_modal: bool = True
     run_spectral: bool = False
     run_takeoff: bool = True
-    spectrum_name: Optional[str] = None     # project.spectrum_functions'tan
+    spectrum_name: str | None = None     # project.spectrum_functions'tan
     use_shear_deform: bool = True
 
 
 @dataclass
 class AnalysisBundle:
     options: AnalysisOptions
-    result: Optional[StructuralAnalysisResult] = None
-    spectral: Optional[SpectralResult] = None
-    takeoff: Optional[TakeoffResult] = None
-    errors: List[str] = field(default_factory=list)
+    result: StructuralAnalysisResult | None = None
+    spectral: SpectralResult | None = None
+    takeoff: TakeoffResult | None = None
+    errors: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:

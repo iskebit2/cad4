@@ -1,6 +1,5 @@
 #load_manager.py
 
-from typing import Iterable
 
 from structload.loads.load_definition import LoadDefinition
 
@@ -266,13 +265,8 @@ class LoadManager:
         return rows
 
 if __name__ == "__main__":
-    from structload.data.material_data import MATERIAL_WEIGHTS, LIVE_LOADS
-
-    from structload.loads.load_definition import (
-        LoadDefinition,
-        LoadComponent
-    )
-
+    from structload.data.material_data import LIVE_LOADS, MATERIAL_WEIGHTS
+    from structload.loads.load_definition import LoadComponent, LoadDefinition
     from structload.loads.load_manager import LoadManager
 
 
@@ -331,4 +325,4 @@ if __name__ == "__main__":
 
     manager.assign(103, "G02")
     manager.assign(103, "Q01")
-    pass(manager.definition_rows("Q"))
+    print(manager.definition_rows("Q"))

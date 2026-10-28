@@ -5,10 +5,15 @@ Panelin "Katalogdan Yükle" özelliği buradan beslenir.
 """
 from data.enums import MatType
 from structload.data.mechanical import (
-    concrete_data, steel_data, ahsap_data, osb_data,
-    CONCRETEUNITS, STEELUNITS, AHSAPUNITS, OSBUNITS,
+    AHSAPUNITS,
+    CONCRETEUNITS,
+    OSBUNITS,
+    STEELUNITS,
+    ahsap_data,
+    concrete_data,
+    osb_data,
+    steel_data,
 )
-
 
 # Her MatType için hangi katalog(lar) kullanılabilir
 CATALOG_BY_MATTYPE = {

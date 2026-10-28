@@ -1,8 +1,7 @@
-import numpy as np
 
 from core.analysis.mass_assembly import build_mass
-from core.analysis.stiffness_assembly import build_stiffness
 from core.analysis.solver import StructuralSolver
+from core.analysis.stiffness_assembly import build_stiffness
 from core.analysis.structuralanalysis import _collect_fixed_dofs
 from tools.s2k import S2KLoader
 

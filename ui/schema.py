@@ -1,25 +1,25 @@
 # ui/schema.py
 """Şema tanımları — ImGui'den bağımsız, sadece veri."""
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any
 
 
 @dataclass
 class FieldSpec:
     key: str
     kind: str = "str"                     # bool|enum|float|int|color|str|list_object
-    label: Optional[str] = None
-    choices: Optional[List[str]] = None
+    label: str | None = None
+    choices: list[str] | None = None
     editable: bool = True
     step: float = 0.1
     format: str = "%.3f"
-    item_schema: Optional[List[Any]] = None
+    item_schema: list[Any] | None = None
 
 
 @dataclass
 class GroupSpec:
     title: str
-    fields: List[FieldSpec] = field(default_factory=list)
+    fields: list[FieldSpec] = field(default_factory=list)
     default_open: bool = True
 
 

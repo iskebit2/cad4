@@ -1,9 +1,10 @@
 #render/gizmo.py
-import OpenGL.GL as gl
+import ctypes
+
 import glm
 import numpy as np
-import ctypes
-from logging_config import CadLogger
+import OpenGL.GL as gl
+
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -69,7 +70,7 @@ class GizmoAxes:
                 
             # #pass(f"✓ GizmoAxes initialized (OpenGL 3.3), Shader ID: {self.shader}, VAO: {self.VAO}")
             
-        except Exception as e:
+        except Exception:
             # #pass(f"✗ GizmoAxes initialization failed: {e}")
             import traceback
             traceback.pass_exc()
@@ -147,7 +148,7 @@ class GizmoAxes:
             
             return program
             
-        except Exception as e:
+        except Exception:
             # #pass(f"Shader creation error: {e}")
             return None
 

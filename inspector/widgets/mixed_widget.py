@@ -1,6 +1,6 @@
-import imgui
-from inspector.widgets.base import Widget, DrawContext
-from inspector.schema_bridge import MIXED
+from imgui_bundle import imgui
+
+from inspector.widgets.base import DrawContext, Widget
 
 
 class MixedWidget(Widget):
@@ -11,8 +11,12 @@ class MixedWidget(Widget):
         Widget.label_row(field.label or field.key)
         imgui.set_next_item_width(-1)
 
-        imgui.push_style_color(imgui.COLOR_FRAME_BACKGROUND, 0.30, 0.25, 0.10, 1.0)
-        imgui.push_style_color(imgui.COLOR_TEXT, 0.95, 0.85, 0.45, 1.0)
+        imgui.push_style_color(
+            imgui.Col_.frame_bg, imgui.ImVec4(0.30, 0.25, 0.10, 1.0)
+        )
+        imgui.push_style_color(
+            imgui.Col_.text, imgui.ImVec4(0.95, 0.85, 0.45, 1.0)
+        )
 
         changed = False
         try:
@@ -58,17 +62,17 @@ class MixedWidget(Widget):
             return changed
 
         if field.kind == "color":
-            changed, (r, g, b) = imgui.color_edit3(f"##m_{field.key}", 0.5, 0.5, 0.5)
+            changed, color = imgui.color_edit3(f"##m_{field.key}", [0.5, 0.5, 0.5])
             Widget.mixed_marker()
             if changed:
-                ctx.set(field.key, [r, g, b])
+                ctx.set(field.key, color)
             return changed
 
         # str ve diğerleri: mixed buffer kullan
         buf = ctx.mixed_buffer.get(field.key, "")
         changed, new_v = imgui.input_text(
-            f"##m_{field.key}", buf, 512,
-            imgui.INPUT_TEXT_ENTER_RETURNS_TRUE,
+            f"##m_{field.key}", buf,
+            imgui.InputTextFlags_.enter_returns_true,
         )
         Widget.mixed_marker()
         if changed:

@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Optional
 
 import pandas as pd
 
@@ -16,8 +15,12 @@ from logging_config import CadLogger
 from tools.s2k.context import LoadContext
 from tools.s2k.handlers import build_router, build_sorted_router
 from tools.s2k.scene_builder import (
-    assign_joint_loads, assign_loads, create_areas, create_frames,
-    create_links, create_nodes,
+    assign_joint_loads,
+    assign_loads,
+    create_areas,
+    create_frames,
+    create_links,
+    create_nodes,
 )
 
 logger = CadLogger.get(__name__)
@@ -44,10 +47,10 @@ class S2KParser:
     # Tablo başlığı: `TABLE:  "NAME"`
     TABLE_HEADER = re.compile(r'TABLE:\s*"*')
 
-    def __init__(self, file_path: Optional[str] = None):
+    def __init__(self, file_path: str | None = None):
         self.file_path = file_path
-        self.tables: Dict[str, pd.DataFrame] = {}
-        self.curr_units: Optional[str] = None
+        self.tables: dict[str, pd.DataFrame] = {}
+        self.curr_units: str | None = None
         if self.file_path:
             self._parse(self.file_path)
 
@@ -114,7 +117,7 @@ class S2KParser:
     def get_table(self, name: str) -> pd.DataFrame:
         return self.tables.get(name, pd.DataFrame())
 
-    def get_all_tables(self) -> Dict[str, pd.DataFrame]:
+    def get_all_tables(self) -> dict[str, pd.DataFrame]:
         return self.tables
 
 
@@ -129,15 +132,15 @@ class S2KLoader:
         load_from_context(ctx) → hazır ctx'ten project üret (panel kullanır)
     """
 
-    def __init__(self, file_path: Optional[str] = None):
+    def __init__(self, file_path: str | None = None):
         self.file_path = file_path
         self.parser = S2KParser(file_path) if file_path else None
-        self.units: Optional[UnitSystem] = None
+        self.units: UnitSystem | None = None
 
     # ------------------------------------------------------------------
     # PUBLIC
     # ------------------------------------------------------------------
-    def load(self, project: Optional[Project] = None) -> Project:
+    def load(self, project: Project | None = None) -> Project:
         """Dosyayı parse et + handler'ları çalıştır + project üret."""
         if project is None:
             project = Project()
@@ -150,7 +153,7 @@ class S2KLoader:
     def load_from_context(
         self,
         ctx: LoadContext,
-        project: Optional[Project] = None,
+        project: Project | None = None,
     ) -> Project:
         """Hazır bir LoadContext'ten Project üretir."""
         if project is None:

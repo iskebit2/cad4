@@ -2,16 +2,15 @@
 import math
 
 import glm
-import numpy as np
-from typing import List, Optional, Tuple
-from domain.element import Node, Frame, Area
-from domain.definition import Section, Material, SectionType
+
+from domain.definition import Material, Section, SectionType
+from domain.element import Area, Frame, Node
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
 
-def _frame_local_frame(frame: Frame) -> Tuple[glm.vec3, glm.vec3, glm.vec3]:
+def _frame_local_frame(frame: Frame) -> tuple[glm.vec3, glm.vec3, glm.vec3]:
     """Frame'in (e1=axis, e2, e3) ortonormal çerçevesi. glm.mat3 sıralamasına bağımlı değil."""
     dx = frame.node_j.x - frame.node_i.x
     dy = frame.node_j.y - frame.node_i.y
@@ -38,11 +37,11 @@ def _frame_local_frame(frame: Frame) -> Tuple[glm.vec3, glm.vec3, glm.vec3]:
 def sd_frame_to_areas(
     frame: Frame,
     thickness: float,
-    material: Optional[Material] = None,
+    material: Material | None = None,
     section_name: str = "",
     label_prefix: str = "",
-) -> Tuple[List[Area], List[str]]:
-    errors: List[str] = []
+) -> tuple[list[Area], list[str]]:
+    errors: list[str] = []
     section: Section = frame.section
 
     if section is None or section.profile_type != SectionType.CUSTOM:
@@ -89,7 +88,7 @@ def sd_frame_to_areas(
         pts_j.append((pj.x, pj.y, pj.z))
 
     N = len(pts_i)
-    areas: List[Area] = []
+    areas: list[Area] = []
     base_label = label_prefix or frame.label or "A"
 
     for k in range(N):

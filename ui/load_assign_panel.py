@@ -1,9 +1,11 @@
 """
 LoadAssignPanel — Seçili poligona uniform to frame yükü atama paneli.
 """
-import imgui
+from imgui_bundle import imgui
+
+from domain.definition import DistType, LoadDirection
 from ui.base_panel import BasePanel
-from domain.definition import LoadDirection, DistType
+
 
 class LoadAssignPanel(BasePanel):
     def __init__(self, on_apply=None):
@@ -68,18 +70,22 @@ class LoadAssignPanel(BasePanel):
         imgui.spacing()
 
         # Butonlar
-        avail = imgui.get_content_region_available_width()
+        avail = imgui.get_content_region_avail().x
         btn_w = (avail - 8) * 0.5
 
-        if imgui.button("İptal", width=btn_w):
+        if imgui.button("İptal", imgui.ImVec2(btn_w, 0)):
             self.close()
 
         imgui.same_line()
 
-        imgui.push_style_color(imgui.COLOR_BUTTON, 0.20, 0.55, 0.30, 1.0)
-        imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.28, 0.68, 0.40, 1.0)
+        imgui.push_style_color(
+            imgui.Col_.button, imgui.ImVec4(0.20, 0.55, 0.30, 1.0)
+        )
+        imgui.push_style_color(
+            imgui.Col_.button_hovered, imgui.ImVec4(0.28, 0.68, 0.40, 1.0)
+        )
         try:
-            if imgui.button("Uygula (Assign)", width=btn_w):
+            if imgui.button("Uygula (Assign)", imgui.ImVec2(btn_w, 0)):
                 if callable(self.on_apply):
                     pattern = self.load_patterns[self.selected_pattern_idx]
                     direction = self.directions[self.selected_dir_idx]

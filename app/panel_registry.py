@@ -18,31 +18,32 @@ from __future__ import annotations
 
 import base64
 from io import BytesIO
-from typing import Optional, Tuple
 
 import OpenGL.GL as gl
 from PIL import Image
 
 from assets.icons_base64 import ICON_DATA
-
 from inspector import InspectorWindow
-from ui.joint_load_panel import JointLoadPanel
-from ui.sd_convert_panel import SDConvertPanel
-from ui.visibility_panel import VisibilityPanel
-from ui.view_filter_panel import ViewFilterPanel
-from ui.grid_panel import GridPanel
-from ui.zones_panel import ZonesPanel
 from ui.definition_panel import DefinitionPanel
-from ui.project_panels import (
-    ProjectInfoPanel, ProjectConfigPanel, AnalysisManagerPanel, ReportPanel,
-)
-from ui.load_assign_panel import LoadAssignPanel
 from ui.frame_load_panel import FrameLoadPanel
+from ui.grid_panel import GridPanel
+from ui.joint_load_panel import JointLoadPanel
+from ui.load_assign_panel import LoadAssignPanel
 from ui.load_display_panel import LoadDisplayPanel
-from ui.plane_plot_panel import PlanePlotPanel
 from ui.plane_manager_panel import PlaneManagerPanel
-from ui.s2k_panel import S2KPanel
+from ui.plane_plot_panel import PlanePlotPanel
+from ui.project_panels import (
+    AnalysisManagerPanel,
+    ProjectConfigPanel,
+    ProjectInfoPanel,
+    ReportPanel,
+)
 from ui.render_settings_panel import RenderSettingsPanel
+from ui.s2k_panel import S2KPanel
+from ui.sd_convert_panel import SDConvertPanel
+from ui.view_filter_panel import ViewFilterPanel
+from ui.visibility_panel import VisibilityPanel
+from ui.zones_panel import ZonesPanel
 
 # ======================================================================
 # Panel Kayıtları
@@ -78,7 +79,7 @@ PANEL_SPECS = [
         "cls":        S2KPanel,
         "title":      "S2K İçe / Dışa Aktarma",
         "category":   "Dosya",
-        "quick":      False,
+        "quick":      True,
         "shortcut":   "F11",
         "menu_label": "S2K İçe / Dışa Aktar",
         "icon":       "log-in","context": [],
@@ -230,7 +231,7 @@ PANEL_SPECS = [
         "shortcut":   None,
         "menu_label": "Yük Görüntüleme",
         "icon":       "eye",
-        "context": ["scene", "patterns"],
+        "context": ["scene", "renderer", "patterns"],
     },
 
     # --- Yönetim ---
@@ -296,7 +297,7 @@ PANEL_SPECS = [
         "shortcut":   None,
         "menu_label": "Rüzgar Bölgeleri",
         "icon":       "wind",
-        "context": ["on_run_analysis", "on_select_direction", "on_distribute"],
+        "context": ["project", "wind_analysis_ref"],
     },
     {
         "name":       "sd_convert",
@@ -330,9 +331,9 @@ class IconManager:
     """Base64 PNG → OpenGL texture önbelleği. GPU bağlamı hazırken çağır."""
 
     def __init__(self):
-        self._textures: dict[str, Tuple[int, int, int]] = {}
+        self._textures: dict[str, tuple[int, int, int]] = {}
 
-    def get_texture(self, icon_name: Optional[str]):
+    def get_texture(self, icon_name: str | None):
         """'icon_name' doğrudan ICON_DATA anahtarıdır. Yoksa None."""
         if not icon_name:
             return None

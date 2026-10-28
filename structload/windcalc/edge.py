@@ -1,8 +1,10 @@
 #windcalc/edge.py
 
 from dataclasses import dataclass, field
+from typing import Any
+
 import numpy as np
-from typing import List, Dict, Tuple, Optional, Union, Any
+
 
 @dataclass
 class Edge:
@@ -17,27 +19,27 @@ class Edge:
 
     vector: np.ndarray
     length: float
-    direction: Optional[np.ndarray]
+    direction: np.ndarray | None
 
     vector_2d: np.ndarray
     length_2d: float
-    direction_2d: Optional[np.ndarray]
+    direction_2d: np.ndarray | None
 
     # EdgeAnalyzer tarafından doldurulur
-    pos_front: Optional[float] = None
-    pos_back: Optional[float] = None
+    pos_front: float | None = None
+    pos_back: float | None = None
 
-    angle: Optional[float] = None
+    angle: float | None = None
     exposed: bool = False
     leading: bool = False
     vertical: bool = False
     _global: bool = False
 
-    shared: List[Dict[str, Any]] = field(default_factory=list)
-    same_axis: List[Dict[str, Any]] = field(default_factory=list)
+    shared: list[dict[str, Any]] = field(default_factory=list)
+    same_axis: list[dict[str, Any]] = field(default_factory=list)
 
-    wind_to_2d: Optional[np.ndarray] = None
-    pos_front_pt: Optional[np.ndarray] = None
+    wind_to_2d: np.ndarray | None = None
+    pos_front_pt: np.ndarray | None = None
     log: str = ""
     @property
     def is_shared(self) -> bool:

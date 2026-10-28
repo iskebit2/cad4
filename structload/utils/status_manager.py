@@ -4,10 +4,10 @@ Global durum çubuğu ve log yöneticisi.
 Tüm paneller bu singleton üzerinden mesaj gönderebilir.
 """
 
-from kivy.event import EventDispatcher
-from kivy.properties import StringProperty, ListProperty, NumericProperty
 from datetime import datetime
-from typing import Literal
+
+from kivy.event import EventDispatcher
+from kivy.properties import ListProperty, NumericProperty, StringProperty
 
 
 class StatusManager(EventDispatcher):

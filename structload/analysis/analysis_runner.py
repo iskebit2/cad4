@@ -6,10 +6,11 @@ Analiz Modülleri Sarmalayıcı
 
 import traceback
 from typing import Any
-from structload.windcalc.wind_results import WindResults
-from structload.loads.spectrum_kivy import SpectrumPlot
+
 from structload.loads.snow_load import SnowLoad
-from structload.loads.spectrum import EarthquakeLoad
+from structload.loads.spectrum import Spectrum
+from structload.windcalc.wind_results import WindReport
+
 
 class AnalysisResult:
     """Analiz çıktısını GUI'ye taşımak için basit taşıyıcı."""
@@ -44,13 +45,12 @@ class AnalysisResult:
 
 def run_wind(config: dict, data: dict) -> AnalysisResult:
     try:
-        
-
-        result = WindResults(
-            points=config.get("points", []),
-            polygons=config.get("polygons", []),
-            wind_config=data,
-        )
+        result = WindReport({
+            "proje_bilgileri": config.get("proje_bilgileri", {}),
+            "points": config.get("points", []),
+            "polygons": config.get("polygons", []),
+            "wind_config": data,
+        })
         report = result.report()
         return AnalysisResult(
             key="wind",
@@ -73,8 +73,6 @@ def run_wind(config: dict, data: dict) -> AnalysisResult:
 
 def run_snow(config: dict, data: dict) -> AnalysisResult:
     try:
-        
-
         snow = SnowLoad(data)
         report = snow.report()
         return AnalysisResult(
@@ -98,10 +96,12 @@ def run_snow(config: dict, data: dict) -> AnalysisResult:
 
 def run_earthquake(config: dict, data: dict) -> AnalysisResult:
     try:
-        
-
-        eq = EarthquakeLoad(**data)
-        report = eq.report()
+        eq = Spectrum(data)
+        eq.run(T1=config.get("T1", 0))
+        report = {
+            "parameters": eq.table_parameters,
+            "spectrum": eq.table_spectrum,
+        }
         return AnalysisResult(
             key="earthquake",
             title="Deprem",
@@ -130,19 +130,8 @@ def show_spectrum_plot(earthquake_analysis) -> dict:
     dict: {"ok": bool, "save_path": str | None, "error": str | None}
     """
     try:
-        
-
-        plot = SpectrumPlot()
-        plot.set_spectrum(earthquake_analysis)
-        plot.export_to_png("spectrum.png")
-        
-
-        save_path = None
-        if hasattr(plot, "get_default_save_path"):
-            save_path = plot.get_default_save_path()
-        elif hasattr(plot, "_get_default_save_path"):
-            save_path = plot._get_default_save_path()
-
+        save_path = "spectrum.png"
+        earthquake_analysis.spectrum_plot(save=True, filename=save_path)
         return {"ok": True, "save_path": save_path, "error": None}
 
     except Exception as e:

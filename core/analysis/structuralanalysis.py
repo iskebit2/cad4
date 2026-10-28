@@ -5,24 +5,22 @@ Orchestration — mass + stiffness + modal (+ spectrum).
 Birim sözleşmesi: units.py.
 """
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 import numpy as np
 
-from core.units import KG_PER_TON
-from .mass_assembly import build_mass, MassAssembly
-from .stiffness_assembly import build_stiffness, StiffnessAssembly
-from .solver import StructuralSolver, ModalResult
+from .mass_assembly import MassAssembly, build_mass
+from .solver import ModalResult, StructuralSolver
+from .stiffness_assembly import StiffnessAssembly, build_stiffness
 
 
 @dataclass
 class StructuralAnalysisResult:
     mass: MassAssembly
     stiffness: StiffnessAssembly
-    fixed_dofs: List[int]
-    modal: Optional[ModalResult] = None
-    spectral: Optional[object] = None    # sonra doldurulacak
-    warnings: List[str] = field(default_factory=list)
+    fixed_dofs: list[int]
+    modal: ModalResult | None = None
+    spectral: object | None = None    # sonra doldurulacak
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def K(self) -> np.ndarray:
@@ -44,7 +42,7 @@ class StructuralAnalysisResult:
                 "Self": f"{self.mass.total_self_kg:.3f}",
                 "Dead": f"{self.mass.total_dead_kg:.3f}",
                 "Live (ham)": f"{self.mass.total_live_kg:.3f}",
-                "Total (n={n:.2f})".format(n=self.mass.n_live):
+                f"Total (n={self.mass.n_live:.2f})":
                     f"{self.mass.total_kg:.3f}",
                 "Total (ton)": f"{self.mass.total_ton:.4f}",
             },
@@ -63,9 +61,9 @@ class StructuralAnalysisResult:
 # ============================================================================
 # YARDIMCILAR
 # ============================================================================
-def _collect_fixed_dofs(scene) -> List[int]:
+def _collect_fixed_dofs(scene) -> list[int]:
     """Mesnetli node'ların DOF endekslerini topla."""
-    fixed: List[int] = []
+    fixed: list[int] = []
     for node in scene.nodes.values():
         dofs = getattr(node, "dof_indices", None)
         if not dofs:
@@ -81,7 +79,7 @@ def _collect_fixed_dofs(scene) -> List[int]:
     return fixed
 
 
-def _validate_modal(modal: ModalResult, tol: float = 1e-6) -> List[str]:
+def _validate_modal(modal: ModalResult, tol: float = 1e-6) -> list[str]:
     """Modal sonuç doğrulaması."""
     errs = []
 

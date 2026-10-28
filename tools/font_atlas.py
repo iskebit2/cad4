@@ -6,13 +6,15 @@ Basit font atlas — TTF'den bitmap atlas üretir.
 - Binlerce label için tek draw call'lık sistemin temelidir.
 """
 from __future__ import annotations
+
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 @dataclass(frozen=True)
@@ -47,9 +49,9 @@ class FontAtlas:
         " "
     )
 
-    def __init__(self, ttf_path: Optional[str] = None,
+    def __init__(self, ttf_path: str | None = None,
                  size: int = 32,
-                 chars: Optional[str] = None,
+                 chars: str | None = None,
                  padding: int = 2,
                  supersample: int = 1):
         """
@@ -93,11 +95,11 @@ class FontAtlas:
             if not loaded:
                 self.font = ImageFont.load_default()
 
-        self.glyphs: Dict[str, Glyph] = {}
+        self.glyphs: dict[str, Glyph] = {}
         self.texture_id: int = 0
         self.width: int = 0
         self.height: int = 0
-        self.pixels: Optional[np.ndarray] = None
+        self.pixels: np.ndarray | None = None
 
         # Baseline bilgisi (satır yüksekliği)
         try:
@@ -114,7 +116,7 @@ class FontAtlas:
     def _build(self):
         """Atlas image'ını üretir, glyph metriklerini doldurur."""
         # Her glyph için boyut ölç
-        rendered: List[Tuple[str, Image.Image, int, int, float]] = []
+        rendered: list[tuple[str, Image.Image, int, int, float]] = []
         max_w = 0
         max_h = 0
 
@@ -201,12 +203,22 @@ class FontAtlas:
     # ------------------------------------------------------------------
     def upload(self):
         from OpenGL.GL import (
-            glGenTextures, glBindTexture, glTexImage2D, glTexParameteri,
-            glPixelStorei,
-            GL_TEXTURE_2D, GL_R8, GL_RED, GL_UNSIGNED_BYTE,
-            GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER, GL_LINEAR,
-            GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE,
+            GL_CLAMP_TO_EDGE,
+            GL_LINEAR,
+            GL_R8,
+            GL_RED,
+            GL_TEXTURE_2D,
+            GL_TEXTURE_MAG_FILTER,
+            GL_TEXTURE_MIN_FILTER,
+            GL_TEXTURE_WRAP_S,
+            GL_TEXTURE_WRAP_T,
             GL_UNPACK_ALIGNMENT,
+            GL_UNSIGNED_BYTE,
+            glBindTexture,
+            glGenTextures,
+            glPixelStorei,
+            glTexImage2D,
+            glTexParameteri,
         )
 
         if self.texture_id:
@@ -246,7 +258,7 @@ class FontAtlas:
         return tex
 
     # ------------------------------------------------------------------
-    def measure(self, text: str, pixel_size: float) -> Tuple[float, float]:
+    def measure(self, text: str, pixel_size: float) -> tuple[float, float]:
         """
         Verilen metnin `pixel_size` yüksekliğinde piksel cinsinden boyutunu döner.
         (width, height)

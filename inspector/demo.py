@@ -19,7 +19,7 @@ def _make_demo_scene():
         project = Project()
         return project.scene
     except Exception as e:
-        pass(f"[demo] domain yüklenemedi, boş sahne: {e}")
+        print(f"[demo] domain yüklenemedi, boş sahne: {e}")
         return None
 
 
@@ -27,13 +27,13 @@ def main():
     scene = _make_demo_scene()
 
     import glfw
-    import imgui
-    from imgui.integrations.glfw import GlfwRenderer
+    from imgui_bundle import imgui
+    from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 
     from inspector.window import InspectorWindow
 
     if not glfw.init():
-        pass("glfw.init başarısız")
+        print("glfw.init başarısız")
         sys.exit(1)
 
     window = glfw.create_window(1200, 800, "Inspector Demo", None, None)

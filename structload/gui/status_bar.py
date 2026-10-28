@@ -4,15 +4,13 @@ Alt durum çubuğu widget'ı.
 StatusManager'a bağlı olarak renk ve mesaj günceller.
 """
 
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.button import Button
 from kivy.graphics import Color, Rectangle
 from kivy.metrics import dp
-from kivy.properties import ListProperty
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
 
 from structload.utils.status_manager import status
-
 
 LEVEL_COLORS = {
     "info":    (0.20, 0.25, 0.30, 1),

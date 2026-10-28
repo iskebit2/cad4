@@ -6,9 +6,7 @@ Analiz Sekmeleri İçin GUI Panelleri
 - ResultPanel       : Analiz sonuç metni
 """
 
-import ast
 import json
-import traceback
 
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
@@ -18,7 +16,6 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
-
 
 # ======================================================================
 # AnalysisDataPanel

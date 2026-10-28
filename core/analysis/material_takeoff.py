@@ -5,15 +5,14 @@ Malzeme metrajı — ElementWeight ve özet tablolar.
 Birim sözleşmesi: units.py (kg, mm, N, MPa, kg/mm³).
 """
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 import pandas as pd
 
 from core.units import G_M_S2, KG_PER_TON
-from domain.element import Area, Frame, Link
+from domain.element import Area, Frame
 from domain.scene import Scene
-
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 
@@ -38,8 +37,7 @@ class ElementWeight:
         return self.mass_kg / 1000.0
 
     @property
-    def weight_N(self) -> float:
-        """Geriye dönük uyumluluk — N / 1000."""
+    def weight_kN(self) -> float:
         return self.weight_N / 1000.0
 
 
@@ -50,14 +48,14 @@ class MaterialSummary:
     total_weight_kN: float = 0.0
     total_volume: float = 0.0
     element_count: int = 0
-    elements: List[ElementWeight] = field(default_factory=list)
+    elements: list[ElementWeight] = field(default_factory=list)
 
 
 @dataclass
 class TakeoffResult:
-    elements: List[ElementWeight] = field(default_factory=list)
-    by_material: Dict[str, MaterialSummary] = field(default_factory=dict)
-    by_type: Dict[str, Dict] = field(default_factory=dict)
+    elements: list[ElementWeight] = field(default_factory=list)
+    by_material: dict[str, MaterialSummary] = field(default_factory=dict)
+    by_type: dict[str, dict] = field(default_factory=dict)
 
     @property
     def total_mass_kg(self) -> float:
@@ -69,7 +67,7 @@ class TakeoffResult:
 
     @property
     def total_weight_kN(self) -> float:
-        return sum(e.weight_N for e in self.elements)
+        return sum(e.weight_kN for e in self.elements)
 
 
 # ============================================================================
@@ -92,7 +90,7 @@ def _polygon_area_3d(points) -> float:
     return float(np.linalg.norm(normal) / 2.0)
 
 
-def _frame_weight(frame: Frame) -> Optional[ElementWeight]:
+def _frame_weight(frame: Frame) -> ElementWeight | None:
     sec = getattr(frame, "section", None)
     if sec is None:
         return None
@@ -124,7 +122,7 @@ def _frame_weight(frame: Frame) -> Optional[ElementWeight]:
     )
 
 
-def _area_weight(area: Area) -> Optional[ElementWeight]:
+def _area_weight(area: Area) -> ElementWeight | None:
     mat = getattr(area, "material", None)
     if mat is None:
         return None
@@ -173,7 +171,7 @@ def compute_takeoff(scene: Scene) -> TakeoffResult:
             result.by_material[mat] = MaterialSummary(material_name=mat)
         s = result.by_material[mat]
         s.total_mass_kg += e.mass_kg
-        s.total_weight_kN += e.weight_N
+        s.total_weight_kN += e.weight_kN
         s.total_volume += e.volume
         s.element_count += 1
         s.elements.append(e)
@@ -230,7 +228,7 @@ def takeoff_to_dataframes(result: TakeoffResult):
             "A (mm²)": round(e.area, 1),
             "V (mm³)": round(e.volume, 0),
             "Kütle (kg)": round(e.mass_kg, 3),
-            "Ağırlık (kN)": round(e.weight_N, 5),
+            "Ağırlık (kN)": round(e.weight_kN, 5),
         })
     elements_df = pd.DataFrame(elements_data)
 

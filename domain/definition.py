@@ -10,19 +10,24 @@ Birim sözleşmesi (core.units):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import glm
 import numpy as np
 
-from core.units import Dimension, DENSITY_STEEL
+from core.units import DENSITY_STEEL, Dimension
 from data.enums import (
-    DistType, LinkPropType, LoadDirection, MatType,
-    PropAreaType, SectionCutDefinedBy, SectionCutResultType,
-    SectionType, SpectrumSourceType,
+    DistType,
+    LinkPropType,
+    LoadDirection,
+    MatType,
+    PropAreaType,
+    SectionCutDefinedBy,
+    SectionCutResultType,
+    SectionType,
+    SpectrumSourceType,
 )
 from data.seismic import get_tsc2018_site_coefficients
-
 
 __all__ = [
     # enums (re-export)
@@ -47,7 +52,7 @@ __all__ = [
 class Material:
     name: str = "DEFAULT"
     mat_type: MatType = MatType.STEEL
-    color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
+    color: tuple[float, float, float] = (0.8, 0.8, 0.8)
 
     E1: float = 2.1e5
     E2: float = 2.1e5
@@ -97,13 +102,13 @@ DEFAULT_MATERIAL = Material(
 class Section:
     name: str = ""
     profile_type: SectionType = SectionType.RECT
-    profile_params: Dict[str, float] = field(default_factory=dict)
-    material: Optional[Material] = None
-    color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
+    profile_params: dict[str, float] = field(default_factory=dict)
+    material: Material | None = None
+    color: tuple[float, float, float] = (0.8, 0.8, 0.8)
 
-    catalog_props: Dict[str, float] = field(default_factory=dict)
+    catalog_props: dict[str, float] = field(default_factory=dict)
     catalog_source: str = ""
-    sd_section: Optional["SDSection"] = None
+    sd_section: SDSection | None = None
 
     __unit_schema__ = {
         # profile_params
@@ -157,7 +162,7 @@ class Section:
 class AreaSection:
     name: str = ""
     prop_type: PropAreaType = PropAreaType.Shell
-    material: Optional[Material] = None
+    material: Material | None = None
     thickness: float = 0.0
 
     membrane_f11: float = 1.0
@@ -174,7 +179,7 @@ class AreaSection:
     mass: float = 1.0
     weight: float = 1.0
 
-    params: Dict = field(default_factory=dict)
+    params: dict = field(default_factory=dict)
 
     __unit_schema__ = {
         "thickness": Dimension.LENGTH,
@@ -201,16 +206,16 @@ class LinkProp:
 @dataclass
 class LinkPropLinear(LinkProp):
     prop_type: LinkPropType = LinkPropType.LINEAR
-    DOF: Dict[str, bool] = field(default_factory=lambda: {
+    DOF: dict[str, bool] = field(default_factory=lambda: {
         "U1": True, "U2": True, "U3": True,
         "R1": True, "R2": True, "R3": True,
     })
-    Fixed: Dict[str, bool] = field(default_factory=dict)
-    Ke: Dict[str, float] = field(default_factory=lambda: {
+    Fixed: dict[str, bool] = field(default_factory=dict)
+    Ke: dict[str, float] = field(default_factory=lambda: {
         "U1": 0.0, "U2": 0.0, "U3": 0.0,
         "R1": 0.0, "R2": 0.0, "R3": 0.0,
     })
-    Ce: Dict[str, float] = field(default_factory=lambda: {
+    Ce: dict[str, float] = field(default_factory=lambda: {
         "U1": 0.0, "U2": 0.0, "U3": 0.0,
         "R1": 0.0, "R2": 0.0, "R3": 0.0,
     })
@@ -339,7 +344,7 @@ class SiteInformation:
     date: str = ""
     soil_class: str = "ZD"
     subgrade_modulus_kn_m3: float = 15000.0
-    extra_items: Dict[str, Any] = field(default_factory=dict)
+    extra_items: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -350,7 +355,8 @@ class ProjectInfo:
 
 
 @dataclass
-class LoadManager: pass
+class LoadManager:
+    wind_zones: dict[str, list[Any]] = field(default_factory=dict)
 
 @dataclass
 class ReportManager: pass
@@ -366,15 +372,15 @@ class AnalysisManager:
 @dataclass
 class GridPlaneDef:
     name: str = ""
-    origin: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-    normal: Tuple[float, float, float] = (0.0, 0.0, 1.0)
-    u_axis: Tuple[float, float, float] = (1.0, 0.0, 0.0)
+    origin: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    normal: tuple[float, float, float] = (0.0, 0.0, 1.0)
+    u_axis: tuple[float, float, float] = (1.0, 0.0, 0.0)
     spacing_u: float = 1000.0
     spacing_v: float = 1000.0
     count_u: int = 20
     count_v: int = 20
     visible: bool = True
-    color: Tuple[float, float, float] = (0.55, 0.55, 0.60)
+    color: tuple[float, float, float] = (0.55, 0.55, 0.60)
     locked: bool = False
 
     def get_uv_frame(self):
@@ -390,20 +396,20 @@ class GridPlaneDef:
 
 @dataclass
 class GridConfig:
-    x_coords: List[float] = field(default_factory=lambda: [0.0, 1000.0])
-    y_coords: List[float] = field(default_factory=lambda: [0.0, 1000.0])
-    z_coords: List[float] = field(default_factory=lambda: [0.0, 1000.0])
+    x_coords: list[float] = field(default_factory=lambda: [0.0, 1000.0])
+    y_coords: list[float] = field(default_factory=lambda: [0.0, 1000.0])
+    z_coords: list[float] = field(default_factory=lambda: [0.0, 1000.0])
     origin_x: float = 0.0
     origin_y: float = 0.0
     origin_z: float = 0.0
-    planes_visibility: Dict[str, bool] = field(default_factory=lambda: {
+    planes_visibility: dict[str, bool] = field(default_factory=lambda: {
         "XY": True, "XZ": False, "YZ": False,
     })
 
 
 @dataclass
 class QuadDefinition:
-    points: List[Tuple[float, float, float]] = field(default_factory=list)
+    points: list[tuple[float, float, float]] = field(default_factory=list)
 
 
 @dataclass
@@ -420,7 +426,7 @@ class SectionCut:
     angle_b: float = 0.0
     angle_c: float = 0.0
     elem_side: str = "Positive"
-    quad: Optional[QuadDefinition] = None
+    quad: QuadDefinition | None = None
 
     __unit_schema__ = {
         "global_x": Dimension.LENGTH,
@@ -459,7 +465,7 @@ class LoadCase:
     design_act: str = "Non-Composite"
     auto_type: str = "None"
     run_case: bool = True
-    static_assignments: List[StaticLoadAssignment] = field(default_factory=list)
+    static_assignments: list[StaticLoadAssignment] = field(default_factory=list)
 
     __unit_schema__ = {"static_assignments.load_sf": None}
 
@@ -489,7 +495,7 @@ class LoadCombination:
     name: str = ""
     combo_type: str = "Linear Add"
     auto_design: bool = False
-    items: List[ComboItem] = field(default_factory=list)
+    items: list[ComboItem] = field(default_factory=list)
 
 
 # ============================================================================
@@ -555,7 +561,7 @@ class FrameDistributedLoad:
     is_relative: bool = True
     coordinate_system: str = "GLOBAL"
     dist_type: str = "one_way"
-    segments: List[LoadSegment] = field(default_factory=list)
+    segments: list[LoadSegment] = field(default_factory=list)
 
     def add_segment(self, x1: float, x2: float, q1: float, q2: float):
         self.segments.append(LoadSegment(x1, x2, q1, q2))
@@ -694,9 +700,9 @@ class SpectrumFunction:
     d_coeff: float = 1.0
     i_coeff: float = 1.0
     spec_dir: str = "Horizontal"
-    file_path: Optional[str] = None
+    file_path: str | None = None
     data_type: str = "Period vs Accel"
-    points: List[Tuple[float, float]] = field(default_factory=list)
+    points: list[tuple[float, float]] = field(default_factory=list)
 
     __unit_schema__ = {}   # spektrum değerleri boyutsuz (g), periyot s
 
@@ -765,7 +771,7 @@ class ResponseSpectrumCase:
     dir_combo: str = "SRSS"
     damping: float = 0.05
     eccentricity: float = 0.0
-    assignments: List[ResponseSpectrumLoadAssignment] = field(default_factory=list)
+    assignments: list[ResponseSpectrumLoadAssignment] = field(default_factory=list)
 
 
 @dataclass
@@ -804,9 +810,9 @@ class SDShape:
     shape_kind: str = "Polygon"
     material: str = ""
     z_order: int = 1
-    fill_color: Tuple[float, float, float] = (0.8, 0.8, 0.8)
-    points: List[SDPolygonPoint] = field(default_factory=list)
-    params: Dict[str, Any] = field(default_factory=dict)
+    fill_color: tuple[float, float, float] = (0.8, 0.8, 0.8)
+    points: list[SDPolygonPoint] = field(default_factory=list)
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -815,11 +821,11 @@ class SDSection:
     design_type: str = "No Check/Design"
     base_material: str = ""
     axis_angle: float = 90.0
-    shapes: List[SDShape] = field(default_factory=list)
-    edge_rebars: List[dict] = field(default_factory=list)
-    corner_rebars: List[dict] = field(default_factory=list)
-    line_rebars: List[dict] = field(default_factory=list)
-    rect_rebars: List[dict] = field(default_factory=list)
+    shapes: list[SDShape] = field(default_factory=list)
+    edge_rebars: list[dict] = field(default_factory=list)
+    corner_rebars: list[dict] = field(default_factory=list)
+    line_rebars: list[dict] = field(default_factory=list)
+    rect_rebars: list[dict] = field(default_factory=list)
     fiber: dict = field(default_factory=dict)
 
 
@@ -839,8 +845,8 @@ class MassContribution:
 class MassAssembly:
     num_dofs: int
     M_global: np.ndarray
-    node_masses: Dict[str, float]
-    contributions: List[MassContribution]
+    node_masses: dict[str, float]
+    contributions: list[MassContribution]
     total_self_kg: float = 0.0
     total_dead_kg: float = 0.0
     total_live_kg: float = 0.0
@@ -848,10 +854,10 @@ class MassAssembly:
 
 @dataclass
 class WindDirectionResult:
-    w_dir: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    w_dir: tuple[float, float, float] = (0.0, 0.0, 0.0)
     q_p: float = 0.0
     q_b: float = 0.0
     z_ref: float = 0.0
     e: float = 0.0
-    geometry: Dict[str, Any] = field(default_factory=dict)
-    zones_data: List[Dict[str, Any]] = field(default_factory=list)
+    geometry: dict[str, Any] = field(default_factory=dict)
+    zones_data: list[dict[str, Any]] = field(default_factory=list)

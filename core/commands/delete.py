@@ -1,10 +1,5 @@
 # core/commands/delete.py
-from typing import List
-from logging_config import CadLogger
-
 from core.commands.base import Command
-
-
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -16,7 +11,7 @@ class DeleteElementsCommand(Command):
     Undo → silinen elemanları geri koyar.
     """
     
-    def __init__(self, scene, elements: List):
+    def __init__(self, scene, elements: list):
         """
         Parameters
         ----------

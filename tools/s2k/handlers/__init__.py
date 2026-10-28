@@ -5,15 +5,25 @@ Handler router + priority. Her handler (ctx, df) imzasında.
 build_router() → {table_name: handler}
 build_sorted_router() → [(table_name, handler)]  (önceliğe göre sıralı)
 """
-from typing import Callable, Dict, List, Tuple
+from collections.abc import Callable
+from typing import Dict, List, Tuple
 
 from tools.s2k.handlers import (
-    program, materials, sections, links, nodes, frames, areas,
-    loads, patterns, spectra, grids, section_cuts,
+    areas,
+    frames,
+    grids,
+    links,
+    loads,
+    materials,
+    nodes,
+    patterns,
+    program,
+    section_cuts,
+    sections,
+    spectra,
 )
 
-
-PRIORITY: Dict[str, int] = {
+PRIORITY: dict[str, int] = {
     "PROGRAM CONTROL": 10,
     "PROJECT INFORMATION": 11,
     "GRID LINES": 12,
@@ -79,7 +89,7 @@ def get_priority(table_name: str) -> int:
     return PRIORITY.get(table_name, 999)
 
 
-def build_router() -> Dict[str, Callable]:
+def build_router() -> dict[str, Callable]:
     return {
         # Program
         "PROGRAM CONTROL": program.handle_program_control,
@@ -152,7 +162,7 @@ def build_router() -> Dict[str, Callable]:
     }
 
 
-def build_sorted_router() -> List[Tuple[str, Callable]]:
+def build_sorted_router() -> list[tuple[str, Callable]]:
     router = build_router()
     items = [(name, h, get_priority(name)) for name, h in router.items()]
     items.sort(key=lambda x: x[2])

@@ -1,15 +1,15 @@
 # core/edit/edit_controller.py
 from dataclasses import dataclass
-from typing import Any, Dict
-from logging_config import CadLogger
+from typing import Any
 
 from core.commands import (
+    BulkUpdateCommand,
     CommandManager,
     CreateElementCommand,
-    UpdateElementCommand,
     DeleteElementsCommand,
-    BulkUpdateCommand,
+    UpdateElementCommand,
 )
+from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
@@ -43,7 +43,7 @@ class EditController:
     # CREATE
     # ========================================================
 
-    def create(self, element_type: str, values: Dict[str, Any]) -> EditResult:
+    def create(self, element_type: str, values: dict[str, Any]) -> EditResult:
         et = element_type.lower().strip()
         factory = self._factory_for(et)
         if factory is None:
@@ -68,7 +68,7 @@ class EditController:
     # UPDATE
     # ========================================================
 
-    def update(self, element, new_values: Dict[str, Any]) -> EditResult:
+    def update(self, element, new_values: dict[str, Any]) -> EditResult:
         if element is None:
             return EditResult(False, message="Eleman yok")
 
@@ -293,14 +293,14 @@ class EditController:
             from domain.element import PolygonType
             if isinstance(value, str):
                 try:
-                    setattr(element, "poly_type", PolygonType[value.strip().upper()])
+                    element.poly_type = PolygonType[value.strip().upper()]
                 except KeyError:
                     raise ValueError(
                         f"Geçersiz poligon tipi: {value!r}. "
                         f"Geçerli: {[t.name for t in PolygonType]}"
                     )
             elif isinstance(value, PolygonType):
-                setattr(element, "poly_type", value)
+                element.poly_type = value
             return
 
         # --- Genel (nokta yolu: a.b.c) ---

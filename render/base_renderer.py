@@ -1,35 +1,20 @@
 # render/base_renderer.py
 
-from OpenGL.GL import *
-import numpy as np
-import glm
 import ctypes
-
-from typing import (
-    List,
-    Dict,
-    Optional,
-    Tuple,
-    TypeVar,
-    Generic
-)
-
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar
 
-from geometry.frame_builder import FrameBuilder
+import glm
+import numpy as np
+from OpenGL.GL import *
+
+from domain.element import Area, Frame, Link, Polygon
 from geometry.area_builder import AreaBuilder
+from geometry.frame_builder import FrameBuilder
 from geometry.link_builder import LinkBuilder
-from geometry.node_builder import NodeBuilder
 from geometry.polygon_builder import PolygonBuilder
-
-from domain.element import (
-    Frame,
-    Node,
-    Area,
-    Link,
-    Polygon
-)
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 # =================================================================
@@ -117,12 +102,12 @@ class BaseRenderer(ABC, Generic[T]):
         # Elements
         # ---------------------------------------------------------
 
-        self.elements: List[T] = []
+        self.elements: list[T] = []
 
-        self.elem_to_idx: Dict[str, Tuple[int, int]] = {}
-        self.elem_to_vcount: Dict[str, int] = {}
-        self.elem_to_inst: Dict[str, int] = {}
-        self.elem_to_cbo_offset: Dict[str, int] = {}
+        self.elem_to_idx: dict[str, tuple[int, int]] = {}
+        self.elem_to_vcount: dict[str, int] = {}
+        self.elem_to_inst: dict[str, int] = {}
+        self.elem_to_cbo_offset: dict[str, int] = {}
 
         self.vcount = 0
         self.icount = 0
@@ -153,14 +138,14 @@ class BaseRenderer(ABC, Generic[T]):
         self.vertex_stride = 6 * 4
         self.has_center = False
 
-        self.elem_to_simple_vcount: Dict[str, int] = {}
+        self.elem_to_simple_vcount: dict[str, int] = {}
 
     # =============================================================
     # ABSTRACT
     # =============================================================
 
     @abstractmethod
-    def build(self, e: T) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def build(self, e: T) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         pass
 
     @abstractmethod
@@ -285,7 +270,7 @@ class BaseRenderer(ABC, Generic[T]):
     # UPDATE
     # =============================================================
 
-    def update(self, raw: List[T]):
+    def update(self, raw: list[T]):
         """
         Elementleri işle, GPU buffer'larını güncelle.
         Ana geometri + line geometri + simple geometri tek geçişte hazırlanır.
@@ -728,7 +713,7 @@ class BaseRenderer(ABC, Generic[T]):
     # GET
     # =============================================================
 
-    def get(self, eid: str) -> Optional[T]:
+    def get(self, eid: str) -> T | None:
         return next((e for e in self.elements if e.unique_id == eid), None)
 
     # =============================================================

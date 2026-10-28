@@ -1,26 +1,29 @@
 # render/scenerenderer.py
-from OpenGL.GL import *
-
 import math
-import numpy as np
-import glm
-from typing import Optional, Any, List, Dict
 from dataclasses import dataclass
 
-from render.axes_renderer import LocalAxesRenderer
-from render.light_ubo import LightUBO
-from render.lightingsystem import LightingSystem
-from tools.gizmo import GizmoAxes
-from tools.gridsystem import GridSystem
-from domain.scene import Scene
-from render.base_renderer import PolygonRenderer, _final_color_for, BaseRenderer, FrameRenderer, AreaRenderer, LinkRenderer
-from render.node_renderer import NodeRenderer
-from render.pickpass import PickPass
-from render.label_batch import LabelBatch
-from tools.font_atlas import FontAtlas
-from render.load_renderer import LoadRenderer
+import glm
+import numpy as np
+from OpenGL.GL import *
 
 from logging_config import CadLogger
+from render.axes_renderer import LocalAxesRenderer
+from render.base_renderer import (
+    AreaRenderer,
+    FrameRenderer,
+    LinkRenderer,
+    PolygonRenderer,
+    _final_color_for,
+)
+from render.label_batch import LabelBatch
+from render.light_ubo import LightUBO
+from render.lightingsystem import LightingSystem
+from render.load_renderer import LoadRenderer
+from render.node_renderer import NodeRenderer
+from render.pickpass import PickPass
+from tools.font_atlas import FontAtlas
+from tools.gizmo import GizmoAxes
+
 logger = CadLogger.get(__name__)
 
 
@@ -343,27 +346,27 @@ class SceneRenderer:
         _progress(0.02, f"Frames ({len(frames)})...")
         self.frame_r.update(frames)
         done += len(frames) * W_FRAME
-        _progress(done / total, f"Frames ✓")
+        _progress(done / total, "Frames ✓")
 
         _progress(done / total, f"Nodes ({len(nodes)})...")
         self.node_r.update(nodes)
         done += len(nodes) * W_NODE
-        _progress(done / total, f"Nodes ✓")
+        _progress(done / total, "Nodes ✓")
 
         _progress(done / total, f"Areas ({len(areas)})...")
         self.area_r.update(areas)
         done += len(areas) * W_AREA
-        _progress(done / total, f"Areas ✓")
+        _progress(done / total, "Areas ✓")
 
         _progress(done / total, f"Links ({len(links)})...")
         self.link_r.update(links)
         done += len(links) * W_LINK
-        _progress(done / total, f"Links ✓")
+        _progress(done / total, "Links ✓")
 
         _progress(done / total, f"Polygons ({len(polygons)})...")
         self.polygon_r.update(polygons)
         done += len(polygons) * W_POLY
-        _progress(done / total, f"Polygons ✓")
+        _progress(done / total, "Polygons ✓")
 
         
 
@@ -1095,12 +1098,13 @@ class SceneRenderer:
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_DEPTH_TEST)
-        from OpenGL.GL import glDepthMask, GL_FALSE as GLF
+        from OpenGL.GL import GL_FALSE as GLF
+        from OpenGL.GL import glDepthMask
         glDepthMask(GLF)
         try:
             self._render_plane_solid(plane, shader)
         finally:
-            from OpenGL.GL import glDepthMask, GL_TRUE
+            from OpenGL.GL import GL_TRUE, glDepthMask
             glDepthMask(GL_TRUE)
             glDisable(GL_BLEND)
 

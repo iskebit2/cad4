@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -61,10 +61,10 @@ class ReportDataFrame(pd.DataFrame):
         self,
         data: BytesIO | bytes | None = None,
         image: BytesIO | bytes | None = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        width: Optional[float] = None,
-        height: Optional[float] = None,
+        title: str | None = None,
+        description: str | None = None,
+        width: float | None = None,
+        height: float | None = None,
         format: str = "png",
     ) -> ReportDataFrame:
         img_data = data if data is not None else image
@@ -207,8 +207,8 @@ class ReportDataFrame(pd.DataFrame):
     def save_to_docx(
         self,
         document,
-        title: Optional[str] = None,
-        desc: Optional[str] = None,
+        title: str | None = None,
+        desc: str | None = None,
         level: int = 2,
     ) -> None:
         final_title = title if title is not None else getattr(self, "custom_title", None)
@@ -297,33 +297,33 @@ class ReportDataFrame(pd.DataFrame):
 
         raw_doc.add_paragraph()
 
-    def pass(self) -> None:
+    def print(self) -> None:
         if self.custom_title:
-            pass(f"\n{self.custom_title}")
-            pass("-" * len(self.custom_title))
+            print(f"\n{self.custom_title}")
+            print("-" * len(self.custom_title))
 
         if self.custom_desc:
-            pass(f"{self.custom_desc}\n")
+            print(f"{self.custom_desc}\n")
 
         if self.empty:
-            pass("Veri yok")
+            print("Veri yok")
             return
 
-        pass(" | ".join(str(col) for col in self.columns))
+        print(" | ".join(str(col) for col in self.columns))
 
         if self.column_descriptions:
-            pass(
+            print(
                 " | ".join(
                     self.column_descriptions.get(col, "") for col in self.columns
                 )
             )
 
         if self.column_units:
-            pass(
+            print(
                 " | ".join(
                     self.column_units.get(col, "") for col in self.columns
                 )
             )
 
         for _, row in self.iterrows():
-            pass(" | ".join(self._format_row(row)))
+            print(" | ".join(self._format_row(row)))

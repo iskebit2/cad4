@@ -15,12 +15,12 @@ Vertex layout her ikisinde de 9 float:
 from __future__ import annotations
 
 import math
-from typing import Dict, Optional, Tuple
 
 import numpy as np
 
 from domain.element import Node
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 # 9-float vertex: pos3 + normal3 + center3
@@ -34,8 +34,8 @@ class NodeBuilder:
 
     def __init__(self):
         self.size: float = 1.0
-        self.shapes: Dict[str, np.ndarray] = {}
-        self._rot_cache: Dict[Tuple[float, float, float], np.ndarray] = {}
+        self.shapes: dict[str, np.ndarray] = {}
+        self._rot_cache: dict[tuple[float, float, float], np.ndarray] = {}
         self._rebuild_shapes()
 
     # ==================================================================
@@ -50,7 +50,7 @@ class NodeBuilder:
         self._rebuild_shapes()
         return True
 
-    def build(self, node: Node) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def build(self, node: Node) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Shaded mesh. Returns (verts, colors, indices).
 
@@ -143,7 +143,7 @@ class NodeBuilder:
             m = self._rot(0, 0, 0)
             self._add_symbol(symbols["z"], m, [0, 0, -self.size], center, vlist, ilist)
 
-    def determine_support_symbols(self, restraint) -> Dict[str, Optional[str]]:
+    def determine_support_symbols(self, restraint) -> dict[str, str | None]:
         """Restraint → her eksende kullanılacak şekil."""
         if restraint is None:
             return {"x": None, "y": None, "z": None}

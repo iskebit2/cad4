@@ -1,21 +1,35 @@
 # core/draw_manager.py
-import ctypes
+
+import time
 
 import glm
 import numpy as np
-from logging_config import CadLogger
-import time
-
-from domain.element import Polygon
 from OpenGL.GL import (
-    GL_DEPTH_TEST, glDisable, glDisableVertexAttribArray, glEnable, glGenVertexArrays, glGenBuffers, glBindVertexArray, glBindBuffer,
-    glBufferData, glUniform1f, glUniform1i, glUniform4f, glVertexAttrib3f, glVertexAttribPointer, glEnableVertexAttribArray,
-    glDrawArrays, glDeleteVertexArrays, glDeleteBuffers,
-    glGetUniformLocation, glUniformMatrix4fv, glUniform3f,
-    GL_ARRAY_BUFFER, GL_STREAM_DRAW, GL_FLOAT, GL_FALSE,
-    GL_LINE_STRIP, GL_TRIANGLE_FAN, GL_LINES,
+    GL_ARRAY_BUFFER,
+    GL_DEPTH_TEST,
+    GL_FALSE,
+    GL_FLOAT,
+    GL_LINE_STRIP,
+    GL_LINES,
+    GL_STREAM_DRAW,
+    GL_TRIANGLE_FAN,
+    glBindBuffer,
+    glBindVertexArray,
+    glBufferData,
+    glDeleteBuffers,
+    glDeleteVertexArrays,
+    glDisable,
+    glDrawArrays,
+    glEnable,
+    glEnableVertexAttribArray,
+    glGenBuffers,
+    glGenVertexArrays,
+    glUniform4f,
+    glUniformMatrix4fv,
+    glVertexAttribPointer,
 )
 
+from domain.element import Polygon
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)

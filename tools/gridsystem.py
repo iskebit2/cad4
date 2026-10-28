@@ -1,24 +1,37 @@
 # tools/gridsystem.py
 import ctypes
-from typing import List, Optional
+
 import glm
 
 from data.enums import GridPlane
 from domain.definition import GridPlaneDef
+
 glm.silence(2)
 import numpy as np
-
 from OpenGL.GL import (
-    glGenVertexArrays, glGenBuffers, glBindVertexArray, glBindBuffer,
-    glBufferData, glIsBuffer, glIsVertexArray,
-    glVertexAttribPointer, glEnableVertexAttribArray,
-    glDrawArrays, glDeleteVertexArrays, glDeleteBuffers,
-    glUniformMatrix4fv, glUniform1f,
-    GL_ARRAY_BUFFER, GL_STATIC_DRAW, GL_FLOAT, GL_FALSE,
+    GL_ARRAY_BUFFER,
+    GL_FALSE,
+    GL_FLOAT,
     GL_LINES,
+    GL_STATIC_DRAW,
+    glBindBuffer,
+    glBindVertexArray,
+    glBufferData,
+    glDeleteBuffers,
+    glDeleteVertexArrays,
+    glDrawArrays,
+    glEnableVertexAttribArray,
+    glGenBuffers,
+    glGenVertexArrays,
+    glIsBuffer,
+    glIsVertexArray,
+    glUniform1f,
+    glUniformMatrix4fv,
+    glVertexAttribPointer,
 )
 
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 COLOR_MAJOR  = (0.55, 0.55, 0.60)
@@ -43,9 +56,9 @@ class GridSystem:
             GridPlane.YZ: {"visible": False},
         }
         # Kullanıcı tanımlı eğik plane'ler
-        self.user_planes: List[GridPlaneDef] = []
+        self.user_planes: list[GridPlaneDef] = []
         # Hangisi "aktif work plane"?
-        self.active_user_plane: Optional[str] = None
+        self.active_user_plane: str | None = None
 
         # Tekla / ETABS tarzı aks koordinat listeleri (mm veya proje biriminde)
         self.x_coords = [0.0, 4000.0, 8000.0]
@@ -72,13 +85,6 @@ class GridSystem:
         if visible is not None:
             self.planes[plane]["visible"] = bool(visible)
         self._rebuild_plane(plane)
-
-    def rebuild_all(self):
-        for plane in self.planes:
-            if self.planes[plane]["visible"]:
-                self._rebuild_plane(plane)
-            else:
-                self._clear_plane(plane)
 
     def _rebuild_plane(self, plane: GridPlane):
         if plane not in self.planes:
@@ -350,13 +356,13 @@ class GridSystem:
         if self.active_user_plane == name:
             self.active_user_plane = None
 
-    def get_user_plane(self, name: str) -> Optional[GridPlaneDef]:
+    def get_user_plane(self, name: str) -> GridPlaneDef | None:
         for p in self.user_planes:
             if p.name == name:
                 return p
         return None
 
-    def set_active_user_plane(self, name: Optional[str]):
+    def set_active_user_plane(self, name: str | None):
         self.active_user_plane = name
 
     def rebuild_user_plane(self, pdef: GridPlaneDef):

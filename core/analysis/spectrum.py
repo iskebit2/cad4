@@ -1,8 +1,5 @@
 # core/analysis/spectrum.py
 """TBDY 2018 spektrum ve spektral analiz."""
-import numpy as np
-from logging_config import CadLogger
-
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -84,7 +81,7 @@ def read_spectrum_from_parser(parser):
         return defaults
     
     row = df.iloc[0]
-    for key in defaults.keys():
+    for key in defaults:
         if key in row.index:
             try:
                 defaults[key] = float(row[key])

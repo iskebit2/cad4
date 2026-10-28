@@ -1,5 +1,6 @@
-import imgui
-from inspector.widgets.base import Widget, DrawContext
+from imgui_bundle import imgui
+
+from inspector.widgets.base import DrawContext, Widget
 
 
 class ColorWidget(Widget):
@@ -13,7 +14,7 @@ class ColorWidget(Widget):
 
         Widget.label_row(field.label or field.key)
         imgui.set_next_item_width(-1)
-        changed, (nr, ng, nb) = imgui.color_edit3(f"##{field.key}", r, g, b)
+        changed, color = imgui.color_edit3(f"##{field.key}", [r, g, b])
         if changed:
-            ctx.set(field.key, [nr, ng, nb])
+            ctx.set(field.key, color)
         return changed

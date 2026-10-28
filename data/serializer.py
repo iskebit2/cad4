@@ -3,34 +3,71 @@
 Proje geneli serileştirme merkezi.
 Tüm veri dönüşümleri, JSON encode/decode işlemleri burada yapılır.
 """
-import json
 import dataclasses
+import json
 import zipfile
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional, Type
+from typing import Any
+
 import numpy as np
 
-from data.enums import ENUM_REGISTRY, UnitSystem
-from domain.element import Node, Frame, Area, Link, Polygon
+from core.units import UnitSystem
+from data.enums import ENUM_REGISTRY
 from domain.definition import (
-    AnalysisManager, AreaGravityLoad, AreaRefTemperatureLoad, AreaStrainLoad,
-    AreaSurfacePressureLoad, AreaTemperatureLoad, AreaUniformLoad, AreaUniformToFrameLoad,
-    AreaWindPressureLoad, AutoSeismicTSC2018, ComboItem, FrameDistributedLoad,
-    FrameGravityLoad, FramePointLoad, FrameTemperatureLoad, GeneralProjectInfo,
-    GridConfig, LinkProp, LinkPropLinear, LoadCase, LoadCombination, LoadManager,
-    LoadPattern, LoadSegment, Material, ModalCase, PointLoad, ProjectConfig, ProjectInfo,
-    ReportManager, ResponseSpectrumCase, ResponseSpectrumLoadAssignment, Restraint,
-    Section, SeismicConfig, SiteInformation, SnowConfig, SpectrumFunction,
-    StaticLoadAssignment, WindConfig, SectionCut, QuadDefinition
+    AnalysisManager,
+    AreaGravityLoad,
+    AreaRefTemperatureLoad,
+    AreaStrainLoad,
+    AreaSurfacePressureLoad,
+    AreaTemperatureLoad,
+    AreaUniformLoad,
+    AreaUniformToFrameLoad,
+    AreaWindPressureLoad,
+    AutoSeismicTSC2018,
+    ComboItem,
+    FrameDistributedLoad,
+    FrameGravityLoad,
+    FramePointLoad,
+    FrameTemperatureLoad,
+    GeneralProjectInfo,
+    GridConfig,
+    LinkProp,
+    LinkPropLinear,
+    LoadCase,
+    LoadCombination,
+    LoadManager,
+    LoadPattern,
+    LoadSegment,
+    Material,
+    ModalCase,
+    PointLoad,
+    ProjectConfig,
+    ProjectInfo,
+    QuadDefinition,
+    ReportManager,
+    ResponseSpectrumCase,
+    ResponseSpectrumLoadAssignment,
+    Restraint,
+    Section,
+    SectionCut,
+    SeismicConfig,
+    SiteInformation,
+    SnowConfig,
+    SpectrumFunction,
+    StaticLoadAssignment,
+    WindConfig,
+    WindDirectionResult,
 )
+from domain.element import Area, Frame, Link, Node, Polygon
+from domain.plane import ASSOC_KINDS, PendingChange, Plane
 from domain.scene import Scene
-from domain.plane import Plane, PendingChange, ASSOC_KINDS
-
 from logging_config import CadLogger
+from structload.windcalc.zone import Zone
+
 logger = CadLogger.get(__name__)
 
-DATACLASS_REGISTRY: Dict[str, Type] = {
+DATACLASS_REGISTRY: dict[str, type] = {
     "ProjectInfo": ProjectInfo,
     "GeneralProjectInfo": GeneralProjectInfo,
     "SiteInformation": SiteInformation,
@@ -69,12 +106,14 @@ DATACLASS_REGISTRY: Dict[str, Type] = {
     "GridConfig": GridConfig,
     "AnalysisManager": AnalysisManager,
     "LoadManager": LoadManager,
+    "WindDirectionResult": WindDirectionResult,
+    "Zone": Zone,
     "ReportManager": ReportManager,
     "SectionCut": SectionCut,
     "QuadDefinition": QuadDefinition,
 }
 
-CLASS_REGISTRY: Dict[str, Type] = {
+CLASS_REGISTRY: dict[str, type] = {
     "Node": Node,
     "Frame": Frame,
     "Area": Area,
@@ -155,7 +194,7 @@ def _encode(obj: Any) -> Any:
         return obj
     
     if isinstance(obj, np.ndarray):
-        return {"__ndarray__": [float(x) for x in obj.tolist()]}
+        return {"__ndarray__": obj.tolist()}
     if isinstance(obj, (np.integer,)):
         return int(obj)
     if isinstance(obj, (np.floating,)):
@@ -344,10 +383,25 @@ def load_project_file(path: Path) -> Any:
         proj.grid = raw_grid    
     
     raw_unit = payload.get("unit_system", UnitSystem.N_MM)
-    if isinstance(raw_unit, int):
-        proj.unit_system = UnitSystem(raw_unit)
-    else:
+    if isinstance(raw_unit, UnitSystem):
         proj.unit_system = raw_unit
+    elif isinstance(raw_unit, str):
+        proj.unit_system = UnitSystem.from_sap(raw_unit)
+    elif isinstance(raw_unit, int):
+        try:
+            proj.unit_system = UnitSystem(raw_unit)
+        except ValueError:
+            logger.warning(
+                "[Load] Geçersiz unit_system değeri %r; N_MM kullanılıyor.",
+                raw_unit,
+            )
+            proj.unit_system = UnitSystem.N_MM
+    else:
+        logger.warning(
+            "[Load] Beklenmeyen unit_system türü %s; N_MM kullanılıyor.",
+            type(raw_unit).__name__,
+        )
+        proj.unit_system = UnitSystem.N_MM
 
     # Tanımları geri yükle
     proj.materials = {k: _decode(v) for k, v in payload.get("materials", {}).items()}
@@ -398,7 +452,7 @@ def load_project_file(path: Path) -> Any:
                     node_map[str(node.unique_id)] = node
         
 
-        def resolve_node(ref) -> Optional[Node]:
+        def resolve_node(ref) -> Node | None:
             if isinstance(ref, Node):
                 return node_map.get(ref.unique_id) or node_map.get(str(ref.unique_id))
             if isinstance(ref, dict):

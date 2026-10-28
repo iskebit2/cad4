@@ -9,15 +9,18 @@ Doğrulama `tools.section_checks.check_section` ile.
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
-from tools.s2k.context import LoadContext
 from data.enums import MatType, SectionType
 from domain.definition import (
-    Material, Section, SDShape, SDPolygonPoint, SDSection,
+    Material,
+    SDPolygonPoint,
+    SDSection,
+    SDShape,
+    Section,
 )
+from tools.s2k.context import LoadContext
 from tools.section_checks import check_section
 
 logger = logging.getLogger(__name__)
@@ -36,7 +39,7 @@ def _safe_float(row, key, default=0.0) -> float:
         return default
 
 
-def _color_from_string(s: str) -> Tuple[float, float, float]:
+def _color_from_string(s: str) -> tuple[float, float, float]:
     """S2K Color alanı → (R, G, B) 0-1 aralığında.
 
     Desteklenen formatlar:
@@ -105,7 +108,7 @@ def _dim_modifier(row, key: str, default: float = 1.0) -> float:
 # ============================================================================
 # SAP Shape → SectionType + params (S2K birimi — float)
 # ============================================================================
-def _map_sap_to_local(row) -> Tuple[SectionType, Dict[str, float]]:
+def _map_sap_to_local(row) -> tuple[SectionType, dict[str, float]]:
     """SAP satırını SectionType + params'a çevir. Değerler S2K biriminde (float)."""
     shape = str(row.get("Shape", "Rectangle")).strip()
 
@@ -201,7 +204,7 @@ def _map_sap_to_local(row) -> Tuple[SectionType, Dict[str, float]]:
     }
 
 
-def _resolve_material(ctx: LoadContext, mat_name: str) -> Optional[Material]:
+def _resolve_material(ctx: LoadContext, mat_name: str) -> Material | None:
     """S2K biriminde material — handler'lar `float` doldurur."""
     mat_name = str(mat_name or "").strip()
     if not mat_name or mat_name.lower() == "nan":
@@ -316,7 +319,7 @@ def handle_sd_polygon(ctx: LoadContext, df: pd.DataFrame) -> None:
     if df is None or df.empty:
         return
 
-    grouped: Dict[Tuple[str, str], list] = {}
+    grouped: dict[tuple[str, str], list] = {}
     for _, row in df.iterrows():
         sec = str(row.get("SectionName", "")).strip()
         shp = str(row.get("ShapeName", "")).strip()

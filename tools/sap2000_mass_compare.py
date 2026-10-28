@@ -2,9 +2,6 @@
 
 import re
 from pathlib import Path
-from typing import Dict
-
-import numpy as np
 
 
 # ============================================================================
@@ -38,7 +35,7 @@ def _parse_numeric_row(line: str) -> list[float] | None:
     return out if out else None
 
 
-def parse_sap2000_mass_table(path: str) -> Dict[int, dict]:
+def parse_sap2000_mass_table(path: str) -> dict[int, dict]:
     """
     SAP2000 'Assembled Joint Masses' tablosunu parse et.
 
@@ -55,7 +52,7 @@ def parse_sap2000_mass_table(path: str) -> Dict[int, dict]:
     if not block:
         return {}
 
-    out: Dict[int, dict] = {}
+    out: dict[int, dict] = {}
     for line in block.split("\n"):
         stripped = line.strip()
         if not stripped:
@@ -82,7 +79,7 @@ def parse_sap2000_mass_table(path: str) -> Dict[int, dict]:
     return out
 
 
-def parse_sap2000_modal_periods(path: str) -> Dict[int, float]:
+def parse_sap2000_modal_periods(path: str) -> dict[int, float]:
     """
     SAP2000 'Modal Periods And Frequencies' tablosunu parse et.
 
@@ -97,7 +94,7 @@ def parse_sap2000_modal_periods(path: str) -> Dict[int, float]:
     if not block:
         return {}
 
-    out: Dict[int, float] = {}
+    out: dict[int, float] = {}
     for line in block.split("\n"):
         stripped = line.strip()
         if not stripped:

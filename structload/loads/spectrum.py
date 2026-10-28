@@ -4,9 +4,10 @@
 TBDY 2018 Deprem Spektrumu Hesaplamaları
 """
 from io import BytesIO
-import numpy as np
-from structload.utils.report_dataframe import ReportDataFrame
 
+import numpy as np
+
+from structload.utils.report_dataframe import ReportDataFrame
 
 
 class Spectrum:

@@ -3,20 +3,20 @@
 Basit snap göstergesi.
 
 Sadece draw mode aktifken kullanılır.
-Node'a yakınken sarı kare gösterir.
+Normal snap karesi sarıdır; node hover'ında mavi ve daha büyüktür.
 Fare normal ok kalır.
 """
+import numpy as np
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 
-import numpy as np
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
 
 class SnapSquareRenderer:
-    """Draw mode için basit snap göstergesi (sarı kare)."""
+    """Draw mode için snap göstergesi."""
 
     def __init__(self):
         self.shader = None
@@ -31,6 +31,8 @@ class SnapSquareRenderer:
 
         # Renk — sarı
         self.color = (1.0, 0.9, 0.0, 1.0)
+        self.node_hover_size = self.size * 1.25
+        self.node_hover_color = (0.2, 0.55, 1.0, 1.0)
 
     def _init_shader(self):
         vertex_src = """
@@ -56,7 +58,8 @@ class SnapSquareRenderer:
         self.u_color_loc = glGetUniformLocation(self.shader, "uColor")
         glUseProgram(0)
 
-    def draw_snap(self, mouse_x, mouse_y, w, h, active=True):
+    def draw_snap(self, mouse_x, mouse_y, w, h, active=True, hover_node=False):
+        
         """
         Snap göstergesi çiz.
 
@@ -68,6 +71,8 @@ class SnapSquareRenderer:
             Pencere boyutu
         active : bool
             True ise sarı kare çizilir, False ise hiçbir şey çizilmez.
+        hover_node : bool
+            True ise kare node hover'ı için mavi ve daha büyük çizilir.
         """
         if not active:
             return
@@ -88,7 +93,7 @@ class SnapSquareRenderer:
         asp = w / h
 
         # Kare boyutu
-        s = self.size
+        s = self.node_hover_size if hover_node else self.size
 
         vertices = np.array([
             nx - s / asp, ny - s,   # sol-alt
@@ -102,7 +107,8 @@ class SnapSquareRenderer:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         glUseProgram(self.shader)
-        glUniform4f(self.u_color_loc, *self.color)
+        color = self.node_hover_color if hover_node else self.color
+        glUniform4f(self.u_color_loc, *color)
 
         glBindVertexArray(self.vao)
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)

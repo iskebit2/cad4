@@ -21,7 +21,6 @@ import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Dict, Optional
 
 
 # ============================================================================
@@ -32,7 +31,7 @@ class DuplicateMessageFilter(logging.Filter):
 
     def __init__(self, max_tracked: int = 1024):
         super().__init__()
-        self._last: Dict[tuple, str] = {}
+        self._last: dict[tuple, str] = {}
         self._max_tracked = max_tracked
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -84,12 +83,12 @@ class _ColorFormatter(logging.Formatter):
 class CadLogger:
     """Tüm cad.* logger'larının merkezi."""
 
-    _loggers: Dict[str, logging.Logger] = {}
+    _loggers: dict[str, logging.Logger] = {}
     _root_configured: bool = False
 
     # Modül bazlı seviyeler (dosya handler'ı bunları kullanır).
     # Değer yoksa → NOTSET (root'tan miras)
-    MODULE_LEVELS: Dict[str, str] = {
+    MODULE_LEVELS: dict[str, str] = {
         "cad.tools.s2k.loader":       "INFO",
         "cad.tools.s2k_utils":       "INFO",
         "cad.geometry.scenebuilder": "INFO",
@@ -225,7 +224,7 @@ class CadLogger:
         logging.getLogger(cls.ROOT_NAME).setLevel(getattr(logging, level.upper(), logging.INFO))
 
     @classmethod
-    def log_file_path(cls) -> Optional[Path]:
+    def log_file_path(cls) -> Path | None:
         root = logging.getLogger(cls.ROOT_NAME)
         for h in root.handlers:
             if isinstance(h, RotatingFileHandler):

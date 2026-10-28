@@ -1,8 +1,6 @@
 # ui/base_panel.py
 from __future__ import annotations
 
-from typing import Optional, Tuple
-
 
 class BasePanel:
     """
@@ -22,7 +20,7 @@ class BasePanel:
         title: str = "Panel",
         width: float = 420.0,
         height: float = 480.0,
-        pos_first_use: Tuple[float, float] = (100.0, 100.0),
+        pos_first_use: tuple[float, float] = (100.0, 100.0),
         **kwargs,                       # alt sınıf ekstra parametre geçirirse sessizce yut
     ):
         self.title = title
@@ -59,20 +57,23 @@ class BasePanel:
     def draw(self):
         if not self.visible:
             return
-        import imgui
-
-        imgui.set_next_window_size(self.width, self.height, imgui.FIRST_USE_EVER)
-        imgui.set_next_window_position(*self.pos_first_use, imgui.FIRST_USE_EVER)
+        from imgui_bundle import imgui
+        imgui.set_next_window_size(
+            imgui.ImVec2(self.width, self.height), imgui.Cond_.first_use_ever
+        )
+        imgui.set_next_window_pos(
+            imgui.ImVec2(*self.pos_first_use), imgui.Cond_.first_use_ever
+        )
 
         expanded, opened = imgui.begin(self.title, True)
-        if not opened:
-            self.close()
+        try:
+            if not opened:
+                self.close()
+                return
+            if expanded:
+                self.draw_content()
+        finally:
             imgui.end()
-            return
-        if expanded:
-            self.draw_content()
-        imgui.end()
 
     def draw_content(self):
         """Alt sınıf override eder."""
-        pass

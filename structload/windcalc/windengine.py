@@ -1,16 +1,18 @@
 # structload/windcalc/windengine.py
 
-from dataclasses import dataclass, field
 import math
+from dataclasses import dataclass, field
+from typing import Any
+
 import numpy as np
-from typing import List, Dict, Tuple, Optional, Any
 
 from structload.data.wind_data import ARAZI_KATEGORILERI
 
+
 @dataclass
 class WindEngine:
-    points: Dict[str, Tuple[float, float, float]]
-    polygons: Dict[str, List[str]]
+    points: dict[str, tuple[float, float, float]]
+    polygons: dict[str, list[str]]
     v_b0: float = 28.0
     terrain: str = "Kategori III"
     w_dir: Any = field(default_factory=lambda: np.array([1.0, 0.0, 0.0], dtype=float))
@@ -22,9 +24,9 @@ class WindEngine:
     # Calculated fields
     z0: float = field(init=False)
     zmin: float = field(init=False)
-    geometry: Dict[str, Any] = field(init=False, default_factory=dict)
-    surfaces: Dict[str, Dict[str, Any]] = field(init=False, default_factory=dict)
-    e: Optional[float] = field(init=False, default=None)
+    geometry: dict[str, Any] = field(init=False, default_factory=dict)
+    surfaces: dict[str, dict[str, Any]] = field(init=False, default_factory=dict)
+    e: float | None = field(init=False, default=None)
     q_b: float = field(init=False, default=0.0)
     z_ref: float = field(init=False, default=0.0)
     kr: float = field(init=False, default=0.0)
@@ -32,7 +34,7 @@ class WindEngine:
     Iv: float = field(init=False, default=0.0)
     ce: float = field(init=False, default=0.0)
     q_p: float = field(init=False, default=0.0)
-    obb: Dict[str, Any] = field(init=False, default_factory=dict)
+    obb: dict[str, Any] = field(init=False, default_factory=dict)
 
     def __post_init__(self):
         # Ensure numpy array type
@@ -80,7 +82,7 @@ class WindEngine:
         # 4. Yönlendirilmiş sınır kutusu (OBB) köşe koordinatlarının 3D uzayda üretilmesi
         ref_point = np.array([0.0, 0.0, 0.0], dtype=float)
 
-        def get_3d_coord(u: float, v: float) -> List[float]:
+        def get_3d_coord(u: float, v: float) -> list[float]:
             return [
                 ref_point[0] + w_xy[0] * u + v_vec[0] * v,
                 ref_point[1] + w_xy[1] * u + v_vec[1] * v,

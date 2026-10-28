@@ -1,19 +1,13 @@
 # utils/meta_tables.py
 
-from structload.utils.report_dataframe import ReportDataFrame
-from structload.data.mechanical import woodMaterial
-
-
-import pandas as pd
 from structload.data.material_data import (
-MATERIAL_LIBRARY,
-WALL_PRESETS,
-DEAD_LOAD_PRESETS,
-LIVE_LOADS
-
+    DEAD_LOAD_PRESETS,
+    LIVE_LOADS,
+    MATERIAL_LIBRARY,
+    WALL_PRESETS,
 )
-
-
+from structload.data.mechanical import woodMaterial
+from structload.utils.report_dataframe import ReportDataFrame
 
 # ============================================================
 # KATMAN HESABI — TEK KAYNAK
@@ -633,7 +627,7 @@ def create_meta_tables(pdata: dict) -> list:
     try:
         tables.append(tablo_ahsap_mekanik(pdata))
     except Exception as e:
-        pass(f"⚠️  Ahşap mekanik: {e}")
+        print(f"⚠️  Ahşap mekanik: {e}")
 
     # --- 6-8: Yük tabloları (özet + detay) ---
     reports = parse_project_loads(pdata)

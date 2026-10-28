@@ -1,9 +1,10 @@
 import numpy as np
 
 from core.analysis.solver import StructuralSolver
-from domain.definition import Material, Section, Restraint
-from domain.project import Project
+from domain.definition import Material, Restraint, Section
 from domain.element import Frame, Node
+from domain.project import Project
+
 
 def local_collect_fixed_dofs(scene) -> list:
     fixed = []

@@ -1,5 +1,6 @@
-import imgui
-from inspector.widgets.base import Widget, DrawContext
+from imgui_bundle import imgui
+
+from inspector.widgets.base import DrawContext, Widget
 
 
 class LinkPropWidget(Widget):
@@ -9,12 +10,12 @@ class LinkPropWidget(Widget):
     def draw(self, field, ctx: DrawContext) -> bool:
         catalog = getattr(ctx, "catalog", None)
         if catalog is None:
-            imgui.text_colored("(catalog yok)", 0.8, 0.4, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.8, 0.4, 0.4, 1.0), '(catalog yok)')
             return False
 
         names = catalog.list_link_props()
         if not names:
-            imgui.text_colored("(tanımlı link prop yok)", 0.7, 0.7, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.7, 0.5, 1.0), '(tanımlı link prop yok)')
             return False
 
         labels = []

@@ -1,8 +1,9 @@
 # ui/joint_load_panel.py
-import imgui
-from ui.base_panel import BasePanel
+from imgui_bundle import imgui
+
 from domain.definition import PointLoad
 from logging_config import CadLogger
+from ui.base_panel import BasePanel
 
 logger = CadLogger.get(__name__)
 
@@ -27,11 +28,17 @@ class JointLoadPanel(BasePanel):
 
     def draw(self):
         if not self.visible: return
-        imgui.set_next_window_size(360, 340, imgui.ONCE)
+        imgui.set_next_window_size(imgui.ImVec2(360, 340), imgui.Cond_.once)
         _, opened = imgui.begin("Noktasal Yük", True)
-        if not opened:
-            self.close(); imgui.end(); return
+        try:
+            if not opened:
+                self.close()
+                return
+            self._draw_panel_content()
+        finally:
+            imgui.end()
 
+    def _draw_panel_content(self):
         imgui.text(f"Seçili düğüm: {len(self.selected_nodes)}")
 
         if self.patterns:
@@ -50,13 +57,11 @@ class JointLoadPanel(BasePanel):
         _, self.mz = imgui.input_float("Mz (kN·m)", self.mz)
 
         imgui.separator()
-        if imgui.button("Uygula", width=120):
+        if imgui.button("Uygula", imgui.ImVec2(120, 0)):
             self._apply()
         imgui.same_line()
-        if imgui.button("Seçililerden Kaldır", width=160):
+        if imgui.button("Seçililerden Kaldır", imgui.ImVec2(160, 0)):
             self._clear()
-
-        imgui.end()
 
     def _apply(self):
         if not self.pattern or not self.selected_nodes:

@@ -1,8 +1,15 @@
 from enum import Enum, auto
-from typing import List
+
 import numpy as np
 
-from structload.windcalc.geometry_utils import _clip_line_to_polygon_2d, _close_polygon, _create_edge_perp_2d, _split_by_line_2d, _unproject_local_2d_to_3d, _valid_polygon
+from structload.windcalc.geometry_utils import (
+    _clip_line_to_polygon_2d,
+    _close_polygon,
+    _create_edge_perp_2d,
+    _split_by_line_2d,
+    _unproject_local_2d_to_3d,
+    _valid_polygon,
+)
 from structload.windcalc.surface import Surface
 from structload.windcalc.zone import Zone
 
@@ -38,6 +45,7 @@ ZONE_LABELS = {
     ("MONOPITCH", "WINDWARD", ZoneKind.TURBULENCE_CORNER_HIGH): "F",
     ("MONOPITCH", "WINDWARD", ZoneKind.TURBULENCE_CORNER_LOW):  "F",
     ("MONOPITCH", "WINDWARD", ZoneKind.TURBULENCE_REMAIN):       "G",
+    ("MONOPITCH", "WINDWARD", ZoneKind.TURBULENCE_SLOP):        "G",
     ("MONOPITCH", "WINDWARD", ZoneKind.ORDINARY):               "H",
 
     ("MONOPITCH", "LEEWARD", ZoneKind.TURBULENCE_CORNER_HIGH): "F",
@@ -55,6 +63,7 @@ ZONE_LABELS = {
     ("DUOPITCH", "WINDWARD", ZoneKind.TURBULENCE_CORNER_HIGH): "F",
     ("DUOPITCH", "WINDWARD", ZoneKind.TURBULENCE_CORNER_LOW):  "F",
     ("DUOPITCH", "WINDWARD", ZoneKind.TURBULENCE_REMAIN):      "G",
+    ("DUOPITCH", "WINDWARD", ZoneKind.TURBULENCE_SLOP):       "G",
     ("DUOPITCH", "WINDWARD", ZoneKind.ORDINARY):               "H",
 
     ("DUOPITCH", "LEEWARD", ZoneKind.TURBULENCE_STRA): "J",
@@ -71,6 +80,7 @@ ZONE_LABELS = {
     ("HIPPED", "WINDWARD", ZoneKind.TURBULENCE_CORNER_HIGH): "F",
     ("HIPPED", "WINDWARD", ZoneKind.TURBULENCE_CORNER_LOW):  "F",
     ("HIPPED", "WINDWARD", ZoneKind.TURBULENCE_REMAIN):      "G",
+    ("HIPPED", "WINDWARD", ZoneKind.TURBULENCE_SLOP):        "G",
     ("HIPPED", "WINDWARD", ZoneKind.ORDINARY):               "H",
 
     ("HIPPED", "LEEWARD", ZoneKind.TURBULENCE_STRA): "K",
@@ -160,7 +170,7 @@ def _make_zone(
 
     return zone
 
-def _get_wall_zones(plane1: Surface, e: float) -> List[Zone]:
+def _get_wall_zones(plane1: Surface, e: float) -> list[Zone]:
 
     if plane1.surface_type.value != "WALL":
         return []
@@ -395,7 +405,7 @@ def _get_wall_zones(plane1: Surface, e: float) -> List[Zone]:
 
     return plane1.zones
 
-def _get_roof_zones(plane1: Surface, e: float) -> List[Zone]:
+def _get_roof_zones(plane1: Surface, e: float) -> list[Zone]:
 
     table_type = plane1.roof_type
     relation = plane1.wind_relation.value

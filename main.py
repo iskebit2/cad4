@@ -20,7 +20,7 @@ logger = CadLogger.get("cad.main")
 
 def _bootstrap_logging() -> None:
     """Logger'ı başlat ve özet yazdır."""
-    CadLogger._configure_root_once()   # noqa: SLF001
+    CadLogger._configure_root_once()
     CadLogger.print_summary()
 
     logger.info("=" * 64)

@@ -21,8 +21,6 @@ Tüm config tek bir sözlükte toplanır:
 """
 
 import json
-import os
-
 
 # ======================================================================
 # VARSAYILANLAR
@@ -231,7 +229,7 @@ def config_to_load_manager(config: dict, load_manager):
             )
             load_manager.add_definition(definition)
         except Exception as e:
-            pass(f"[config_to_load_manager] '{d.get('id')}' atlandı: {e}")
+            print(f"[config_to_load_manager] '{d.get('id')}' atlandı: {e}")
 
     for elem_id, kinds in config.get("assignments", {}).items():
         for load_id in kinds.get("G", []):

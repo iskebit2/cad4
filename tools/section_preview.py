@@ -1,13 +1,39 @@
-# ui/widgets/section_preview.py
+# tools/section_preview.py
 """
 Kesit 2D önizleme çizici.
 Section.profile_type + profile_params + color'dan otomatik avatar üretir.
 """
-import math
-import imgui
+from imgui_bundle import imgui
 
 from data.enums import SectionType
+from logging_config import CadLogger
 
+logger = CadLogger.get(__name__)
+
+
+class _DrawListAdapter:
+    def __init__(self, draw_list):
+        self._draw_list = draw_list
+
+    def add_rect_filled(self, x1, y1, x2, y2, color):
+        self._draw_list.add_rect_filled(
+            imgui.ImVec2(x1, y1), imgui.ImVec2(x2, y2), color
+        )
+
+    def add_rect(self, x1, y1, x2, y2, color, *, thickness=1.0):
+        self._draw_list.add_rect(
+            imgui.ImVec2(x1, y1), imgui.ImVec2(x2, y2), color,
+            thickness=thickness,
+        )
+
+    def add_circle_filled(self, x, y, radius, color):
+        self._draw_list.add_circle_filled(imgui.ImVec2(x, y), radius, color)
+
+    def add_circle(self, x, y, radius, color, *, num_segments=0, thickness=1.0):
+        self._draw_list.add_circle(
+            imgui.ImVec2(x, y), radius, color,
+            num_segments=num_segments, thickness=thickness,
+        )
 
 
 # ============================================================================
@@ -192,7 +218,7 @@ def _draw_t(dl, x0, y0, aw, ah, color, p):
     dl.add_rect_filled(web_x, y0 + oy + tf * sy, web_x + web_w, y0 + oy + dh, _color_u32(color))
 
 
-def _draw_fallback(dl, x0, y0, aw, ah, color, p):
+def _draw_fallback(dl, x0, y0, aw, ah, _color, _params):
     """Bilinmeyen tip — gri dolu kutu."""
     dl.add_rect_filled(x0 + 4, y0 + 4, x0 + aw - 4, y0 + ah - 4,
                        _color_u32((0.4, 0.4, 0.45)))
@@ -229,7 +255,7 @@ def draw_section_preview(section, avail_w: float = 160.0, avail_h: float = 120.0
         avail_h: Maksimum yükseklik (piksel)
     """
     # Arkaplan kutusu
-    dl = imgui.get_window_draw_list()
+    dl = _DrawListAdapter(imgui.get_window_draw_list())
     cur_x, cur_y = imgui.get_cursor_screen_pos()
 
     # Arkaplan
@@ -239,16 +265,16 @@ def draw_section_preview(section, avail_w: float = 160.0, avail_h: float = 120.0
     dl.add_rect(cur_x, cur_y, cur_x + avail_w, cur_y + avail_h, border_col, thickness=1.0)
 
     # Profil çiz
-    if section is None:
-        return
-    drawer = _PROFILE_DRAWERS.get(section.profile_type, _draw_fallback)
-    color = tuple(section.color) if section.color else (0.7, 0.7, 0.7)
-    try:
-        drawer(dl, cur_x, cur_y, avail_w, avail_h, color, section.profile_params or {})
-    except Exception:
-        # Hata olursa fallback
-        _draw_fallback(dl, cur_x, cur_y, avail_w, avail_h, color, {})
+    if section is not None:
+        drawer = _PROFILE_DRAWERS.get(section.profile_type, _draw_fallback)
+        color = tuple(section.color) if section.color else (0.7, 0.7, 0.7)
+        try:
+            drawer(
+                dl, cur_x, cur_y, avail_w, avail_h,
+                color, section.profile_params or {},
+            )
+        except Exception:
+            logger.exception("Kesit önizleme çizimi başarısız; fallback çiziliyor")
+            _draw_fallback(dl, cur_x, cur_y, avail_w, avail_h, color, {})
 
-    # İmleci widget'ın altına taşı
-    imgui.set_cursor_screen_pos((cur_x, cur_y + avail_h + 4))
-    imgui.dummy(avail_w, avail_h)   # yer ayır
+    imgui.dummy(imgui.ImVec2(avail_w, avail_h + 4))

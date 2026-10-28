@@ -1,11 +1,11 @@
 # geometry/frame_builder.py
 
+
+import mapbox_earcut as earcut
 import numpy as np
-from typing import Tuple
+
 from domain.element import Frame
 from geometry.profile_generator import ProfileGenerator
-import mapbox_earcut as earcut
-from logging_config import CadLogger
 
 # logger = CadLogger.get(__name__)
 
@@ -155,7 +155,7 @@ class FrameBuilder:
     def build(
         self,
         frame: Frame
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
         profile, start_ring, end_ring = self._prepare_geometry(frame)
 

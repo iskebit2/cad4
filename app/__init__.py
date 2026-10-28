@@ -1,5 +1,5 @@
 # app/__init__.py
-from app.cad_window import CadWindow
 from app.cad_app import CadApp
+from app.cad_window import CadWindow
 
-__all__ = ["CadWindow", "CadApp"]
+__all__ = ["CadApp", "CadWindow"]

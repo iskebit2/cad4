@@ -3,7 +3,8 @@
 Rüzgar analizi katmanı — SADECE veri üretir, çizim yapmaz.
 """
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple, Any
+from typing import Any
+
 import numpy as np
 
 from structload.windcalc.surface import Surface
@@ -22,11 +23,11 @@ from structload.windcalc.windengine import WindEngine
 class ZoneResult:
     """Tek bir rüzgar yönü için analiz sonucu."""
     w_key: str
-    w_dir: Tuple[float, float, float]
+    w_dir: tuple[float, float, float]
     engine: WindEngine
-    all_surfaces: Dict[str, Surface]
+    all_surfaces: dict[str, Surface]
     # Çizim için hazır edge bilgileri (opsiyonel, cache)
-    legend_entries: Dict[str, Any] = field(default_factory=dict)
+    legend_entries: dict[str, Any] = field(default_factory=dict)
 
     def iter_zones(self):
         """Tüm yüzeylerdeki Zone nesnelerini tek düz listede döner."""
@@ -43,10 +44,10 @@ class ZoneResult:
 
 @dataclass
 class ZoneBundle:
-    points: Dict[str, Tuple[float, float, float]]
-    polygons: Dict[str, List[str]]
+    points: dict[str, tuple[float, float, float]]
+    polygons: dict[str, list[str]]
     e: float
-    results: List[ZoneResult] = field(default_factory=list)
+    results: list[ZoneResult] = field(default_factory=list)
 
     def __iter__(self):
         return iter(self.results)
@@ -55,20 +56,20 @@ class ZoneBundle:
     # UI UYUMLULUK KATMANI (yukarıdaki property'ler)
     # =========================================================
     @property
-    def wind_planes(self) -> Dict[str, Any]:
+    def wind_planes(self) -> dict[str, Any]:
         if not self.results:
             return {}
         return dict(self.results[0].all_surfaces)
 
     @property
-    def surfaces_items(self) -> Dict[str, Any]:
+    def surfaces_items(self) -> dict[str, Any]:
         return self.wind_planes
 
     @property
     def raw_points(self):
         return self.points
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """BuildingWindEngine.get_summary() benzeri özet."""
         if not self.results:
             return {}
@@ -136,7 +137,7 @@ def analyze(
 
     w_list = W_LIST
 
-    results: List[ZoneResult] = []
+    results: list[ZoneResult] = []
     last_e = 0.0
 
     for w_key, w_dir in w_list.items():
@@ -144,7 +145,7 @@ def analyze(
         w_dir = np.asarray(w_dir, dtype=float)
 
         if verbose:
-            pass(f"\n{'=' * 40}\nWIND: {w_key}\n{'=' * 40}")
+            print(f"\n{'=' * 40}\nWIND: {w_key}\n{'=' * 40}")
 
         engine = WindEngine(
                         points=points,
@@ -155,7 +156,7 @@ def analyze(
 
         last_e = engine.e
 
-        all_surfaces: Dict[str, Surface] = {}
+        all_surfaces: dict[str, Surface] = {}
 
         for poly_name, pt_names in polygons.items():
             pts = np.array([points[pt] for pt in pt_names])
@@ -190,7 +191,7 @@ def analyze(
     )
 
 
-def _generate_zones(all_surfaces: Dict[str, Surface], e: float) -> None:
+def _generate_zones(all_surfaces: dict[str, Surface], e: float) -> None:
     """Zone'ları surface üzerinde üretir (3D coords + label)."""
     from structload.windcalc.zone_generator import _get_roof_zones, _get_wall_zones
 
@@ -202,16 +203,16 @@ def _generate_zones(all_surfaces: Dict[str, Surface], e: float) -> None:
 
 
 def _debug_surface(surf: Surface) -> None:
-    pass(f"\nSurface: {surf.name}")
-    pass(f"  wind_vector: {surf.wind_vector}")
-    pass(f"  type       : {surf.surface_type.value}")
-    pass(f"  relation   : {surf.wind_relation.value}")
-    pass(f"  is_ccw     : {surf.is_ccw}")
-    pass("  Exposed edges:")
+    print(f"\nSurface: {surf.name}")
+    print(f"  wind_vector: {surf.wind_vector}")
+    print(f"  type       : {surf.surface_type.value}")
+    print(f"  relation   : {surf.wind_relation.value}")
+    print(f"  is_ccw     : {surf.is_ccw}")
+    print("  Exposed edges:")
     for edge in surf.edges.values():
         if not edge.exposed:
             continue
-        pass(
+        print(
             f"    Edge {edge.index}: "
             f"p1 {edge.p1}, p2 {edge.p2}, "
             f"wind_to_2d={edge.wind_to_2d}, "
@@ -220,7 +221,7 @@ def _debug_surface(surf: Surface) -> None:
             f"angle={edge.angle:7.3f}, "
             f"leading={edge.leading}"
         )
-    pass(
+    print(
         "  >>> SELECTED LEADING:",
         [e.index for e in surf.edges.values() if e.leading],
     )

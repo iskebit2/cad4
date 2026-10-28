@@ -1,7 +1,6 @@
 # render/lightingsystem.py
 
 from dataclasses import dataclass, field
-from typing import List
 
 
 @dataclass
@@ -12,17 +11,17 @@ class LightingSystem:
     # ---------------------------------------------------------
 
     # Ana ışık: üst-sol-ön
-    pos: List[List[float]] = field(default_factory=lambda: [
+    pos: list[list[float]] = field(default_factory=lambda: [
         [-0.45, -0.60, 1.00],   # Key
         [ 0.65,  0.35, 0.55],   # Fill
     ])
 
-    colors: List[List[float]] = field(default_factory=lambda: [
+    colors: list[list[float]] = field(default_factory=lambda: [
         [1.00, 0.97, 0.92],     # sıcak beyaz
         [0.82, 0.88, 1.00],     # hafif soğuk dolgu
     ])
 
-    intensities: List[float] = field(default_factory=lambda: [
+    intensities: list[float] = field(default_factory=lambda: [
         1.25,
         0.35,
     ])

@@ -7,17 +7,21 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import Dict, Tuple
 
 import pandas as pd
 
+from domain.definition import (
+    AreaUniformLoad,
+    AreaUniformToFrameLoad,
+    DistType,
+    FrameDistributedLoad,
+    FrameGravityLoad,
+    LoadDirection,
+    PointLoad,
+)
+from domain.element import Area, Frame, Node
 from tools.s2k.context import LoadContext
 from tools.s2k.handlers.loads import _sap_frame_dir_code
-from domain.element import Area, Frame, Link, Node
-from domain.definition import (
-    AreaUniformLoad, AreaUniformToFrameLoad, DistType,
-    FrameDistributedLoad, FrameGravityLoad, LoadDirection, PointLoad,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +39,7 @@ def _safe_float(row, key, default=0.0):
 # ============================================================================
 # YARDIMCILAR — parse
 # ============================================================================
-def _parse_restraints(df: pd.DataFrame) -> Dict[str, dict]:
+def _parse_restraints(df: pd.DataFrame) -> dict[str, dict]:
     if df is None or df.empty:
         return {}
     dof_map = {"U1": "ux", "U2": "uy", "U3": "uz", "R1": "rx", "R2": "ry", "R3": "rz"}
@@ -51,7 +55,7 @@ def _parse_restraints(df: pd.DataFrame) -> Dict[str, dict]:
     return out
 
 
-def _parse_frame_assign(df, ctx) -> Dict[str, Tuple[str, float]]:
+def _parse_frame_assign(df, ctx) -> dict[str, tuple[str, float]]:
     if df is None or df.empty or "Frame" not in df.columns:
         return {}
     out = {}
@@ -68,7 +72,7 @@ def _parse_frame_assign(df, ctx) -> Dict[str, Tuple[str, float]]:
     return out
 
 
-def _parse_frame_release(df) -> Dict[str, dict]:
+def _parse_frame_release(df) -> dict[str, dict]:
     if df is None or df.empty or "Frame" not in df.columns:
         return {}
     i_cols = {"R1": "PI", "R2": "V2I", "R3": "V3I", "R4": "TI", "R5": "M2I", "R6": "M3I"}
@@ -85,14 +89,14 @@ def _parse_frame_release(df) -> Dict[str, dict]:
     return out
 
 
-def _parse_area_assign(df) -> Dict[str, str]:
+def _parse_area_assign(df) -> dict[str, str]:
     if df is None or df.empty or "Area" not in df.columns:
         return {}
     return {str(r.get("Area", "")).strip(): str(r.get("Section", "")).strip()
             for _, r in df.iterrows() if str(r.get("Area", "")).strip()}
 
 
-def _parse_link_assign(df) -> Dict[str, str]:
+def _parse_link_assign(df) -> dict[str, str]:
     if df is None or df.empty or "Link" not in df.columns:
         return {}
     out = {}
@@ -132,12 +136,12 @@ def _fallback_section_name(builder, ctx) -> str:
 # ============================================================================
 # NODE / FRAME / AREA / LINK
 # ============================================================================
-def create_nodes(builder, ctx: LoadContext) -> Dict[str, Node]:
+def create_nodes(builder, ctx: LoadContext) -> dict[str, Node]:
     """Node'ları S2K biriminde yarat (float)."""
     if ctx.df_joints is None or ctx.df_joints.empty:
         return {}
     restraints = _parse_restraints(ctx.df_restraints)
-    out: Dict[str, Node] = {}
+    out: dict[str, Node] = {}
     for _, row in ctx.df_joints.iterrows():
         jid = str(row.get("Joint", "")).strip()
         if not jid:
@@ -153,14 +157,14 @@ def create_nodes(builder, ctx: LoadContext) -> Dict[str, Node]:
     return out
 
 
-def create_frames(builder, ctx: LoadContext, node_map: Dict[str, Node]) -> Tuple[Dict[str, Frame], int]:
+def create_frames(builder, ctx: LoadContext, node_map: dict[str, Node]) -> tuple[dict[str, Frame], int]:
     if ctx.df_frame_conn is None or ctx.df_frame_conn.empty:
         return {}, 0
     assign = _parse_frame_assign(ctx.df_frame_assign, ctx)
     releases = _parse_frame_release(ctx.df_frame_release)
     fallback = _fallback_section_name(builder, ctx)
 
-    out: Dict[str, Frame] = {}
+    out: dict[str, Frame] = {}
     count = 0
     for _, row in ctx.df_frame_conn.iterrows():
         fid = str(row.get("Frame", "")).strip()
@@ -186,11 +190,11 @@ def create_frames(builder, ctx: LoadContext, node_map: Dict[str, Node]) -> Tuple
     return out, count
 
 
-def create_areas(builder, ctx: LoadContext, node_map: Dict[str, Node]) -> Tuple[Dict[str, Area], int]:
+def create_areas(builder, ctx: LoadContext, node_map: dict[str, Node]) -> tuple[dict[str, Area], int]:
     if ctx.df_area_conn is None or ctx.df_area_conn.empty:
         return {}, 0
     assign = _parse_area_assign(ctx.df_area_assign)
-    out: Dict[str, Area] = {}
+    out: dict[str, Area] = {}
     for _, row in ctx.df_area_conn.iterrows():
         aid = str(row.get("Area", "")).strip()
         joints = [node_map[j] for i in range(1, 5)
@@ -212,7 +216,7 @@ def create_areas(builder, ctx: LoadContext, node_map: Dict[str, Node]) -> Tuple[
     return out, len(out)
 
 
-def create_links(builder, ctx: LoadContext, node_map: Dict[str, Node]) -> int:
+def create_links(builder, ctx: LoadContext, node_map: dict[str, Node]) -> int:
     if ctx.df_link_conn is None or ctx.df_link_conn.empty:
         return 0
     prop_map = _parse_link_assign(ctx.df_link_assign)

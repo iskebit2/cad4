@@ -1,17 +1,19 @@
 # domain/scene.py
-from typing import Dict, Optional, List, Any
+from typing import Any
+
 import numpy as np
+
 from data.enums import ObjType
-from domain.element import Node, Frame, Area, Link, Element, Polygon
+from domain.element import Area, Element, Frame, Link, Node, Polygon
 
 
 class Scene:
     def __init__(self, project: Any = None):
-        self.nodes: Dict[int, Node] = {}
-        self.frames: Dict[int, Frame] = {}
-        self.areas: Dict[int, Area] = {}
-        self.links: Dict[int, Link] = {}
-        self.polygons: Dict[int, Polygon] = {}
+        self.nodes: dict[int, Node] = {}
+        self.frames: dict[int, Frame] = {}
+        self.areas: dict[int, Area] = {}
+        self.links: dict[int, Link] = {}
+        self.polygons: dict[int, Polygon] = {}
         self.project = project  # Üst proje referansı
         
         self.show_local_axes = False
@@ -19,7 +21,7 @@ class Scene:
         self.show_local_axes_scale = 1.0
         self.units = "N, mm, C"
         self._is_dirty: bool = True
-        self._render_filter: Optional[set] = None
+        self._render_filter: set | None = None
 
     def mark_dirty(self):
         self._is_dirty = True
@@ -111,32 +113,32 @@ class Scene:
         self.mark_dirty()
 
 
-    def _bucket_for_type(self, obj_type) -> Optional[Dict]:
+    def _bucket_for_type(self, obj_type) -> dict | None:
         if obj_type == ObjType.FRAME:    return self.frames
         if obj_type == ObjType.AREA:     return self.areas
         if obj_type == ObjType.LINK:     return self.links
         return None
 
-    def get_element_by_label(self, label: str) -> Optional[Element]:
+    def get_element_by_label(self, label: str) -> Element | None:
         for elem in self.all_elements.values():
             if str(elem.label) == str(label):
                 return elem
         return None
 
-    def get_element_by_id(self, unique_id: str) -> Optional[Element]:
+    def get_element_by_id(self, unique_id: str) -> Element | None:
         for elem in self.all_elements.values():
             if str(elem.unique_id) == str(unique_id):
                 return elem
         return None
 
-    def get_element_by_unique_id(self, unique_id: int) -> Optional[Element]:
+    def get_element_by_unique_id(self, unique_id: int) -> Element | None:
         for bucket in (self.frames, self.nodes, self.areas, self.links, self.polygons):
             if unique_id in bucket:
                 return bucket[unique_id]
         return None
 
     @property
-    def all_elements(self) -> Dict[int, Element]:
+    def all_elements(self) -> dict[int, Element]:
         elements = {}
         elements.update(self.nodes)
         elements.update(self.frames)
@@ -145,7 +147,7 @@ class Scene:
         elements.update(self.polygons)
         return elements
     
-    def get_selected(self) -> List[Element]:
+    def get_selected(self) -> list[Element]:
         return [e for e in self.all_elements.values() if e.is_selected]
     
     def clear_selections(self) -> int:
@@ -171,7 +173,7 @@ class Scene:
         size = float(np.linalg.norm(max_p - min_p))
         return center, size
 
-    def _bucket(self, element: Element) -> Optional[Dict]:
+    def _bucket(self, element: Element) -> dict | None:
         if isinstance(element, Node):     return self.nodes
         if isinstance(element, Frame):    return self.frames
         if isinstance(element, Area):     return self.areas

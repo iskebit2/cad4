@@ -7,12 +7,9 @@ Tüm toleranslar ölçek-bağımsız (göreli) veya mutlak olarak açıkça beli
 """
 from __future__ import annotations
 
-from typing import List
-
 import numpy as np
 
 from core.units import MEGAGRAM
-
 
 # ============================================================================
 # Sabitler — toleranslar
@@ -84,7 +81,7 @@ def _total_mass_consistent(M: np.ndarray) -> float:
 # ============================================================================
 # Kütle doğrulama
 # ============================================================================
-def validate_mass(asm, is_consistent: bool = False) -> List[str]:
+def validate_mass(asm, is_consistent: bool = False) -> list[str]:
     """
     MassAssembly nesnesi üzerinde kütle ve matris doğrulama kontrolleri.
 
@@ -99,7 +96,7 @@ def validate_mass(asm, is_consistent: bool = False) -> List[str]:
     --------
     List[str] : hata mesajları (boşsa sorun yok)
     """
-    errors: List[str] = []
+    errors: list[str] = []
     M = np.asarray(asm.M_global, dtype=float)
 
     if M.size == 0:
@@ -184,9 +181,9 @@ def validate_mass(asm, is_consistent: bool = False) -> List[str]:
 # ============================================================================
 # Rijitlik doğrulama
 # ============================================================================
-def validate_stiffness(asm) -> List[str]:
+def validate_stiffness(asm) -> list[str]:
     """StiffnessAssembly doğrula."""
-    errs: List[str] = []
+    errs: list[str] = []
     K = np.asarray(asm.K_global, dtype=float)
     N = int(asm.num_dofs)
 

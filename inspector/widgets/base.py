@@ -1,9 +1,9 @@
 """Widget sözleşmesi ve ortak yardımcılar."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any
 
-import imgui
+from imgui_bundle import imgui
 
 from inspector.schema_bridge import MIXED
 
@@ -12,8 +12,8 @@ from inspector.schema_bridge import MIXED
 @dataclass
 class DrawContext:
     """Widget'lara geçen edit buffer ve durum."""
-    values: Dict[str, Any]
-    mixed_buffer: Dict[str, str] = field(default_factory=dict)
+    values: dict[str, Any]
+    mixed_buffer: dict[str, str] = field(default_factory=dict)
     changed: bool = False
     catalog: Any = None
 
@@ -47,12 +47,12 @@ class Widget:
     def label_row(label: str, offset: float = 140.0):
         imgui.align_text_to_frame_padding()
         imgui.text(label)
-        imgui.same_line(position=offset)
+        imgui.same_line(offset)
 
     @staticmethod
     def mixed_marker(text: str = "(karışık)"):
         imgui.same_line()
-        imgui.text_colored(text, 0.95, 0.85, 0.45, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.95, 0.85, 0.45, 1.0), text)
 
 
 # ----------------------------------------------------------------------

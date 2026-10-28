@@ -2,8 +2,9 @@
 """
 ViewFilterPanel — Kamera + Görünüm Aralığı (aktif UCS'ye göre).
 """
-from typing import Callable, Optional
-import imgui
+from collections.abc import Callable
+
+from imgui_bundle import imgui
 
 from ui.base_panel import BasePanel
 
@@ -27,7 +28,7 @@ class ViewFilterPanel(BasePanel):
         ("Arkası", "before"),
     ]
 
-    def __init__(self, on_apply: Optional[Callable] = None):
+    def __init__(self, on_apply: Callable | None = None):
         super().__init__(
             title="Kamera ve Görünüm",
             width=420, height=680,
@@ -37,7 +38,7 @@ class ViewFilterPanel(BasePanel):
         self.on_apply = on_apply
 
         # View preset
-        self._sel_preset: Optional[str] = None
+        self._sel_preset: str | None = None
 
         # Section filter state
         self._section_mode = "off"
@@ -61,15 +62,17 @@ class ViewFilterPanel(BasePanel):
     # ------------------------------------------------------------------
     def draw_content(self):
         if self.camera is None:
-            imgui.text_colored("Kamera bağlı değil", 0.9, 0.5, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.9, 0.5, 0.5, 1.0), 'Kamera bağlı değil')
             return
 
-        imgui.begin_child("camera_content", height=0, border=False)
-        self._draw_camera_group()
-        self._draw_projection_group()
-        self._draw_view_presets_group()
-        self._draw_section_group()
-        imgui.end_child()
+        imgui.begin_child("camera_content", imgui.ImVec2(0, 0))
+        try:
+            self._draw_camera_group()
+            self._draw_projection_group()
+            self._draw_view_presets_group()
+            self._draw_section_group()
+        finally:
+            imgui.end_child()
 
     # ------------------------------------------------------------------
     # 1) KAMERA
@@ -79,7 +82,7 @@ class ViewFilterPanel(BasePanel):
         if not imgui.collapsing_header("Kamera", True)[0]:
             return
 
-        imgui.text_colored("Hedef (target)", 0.7, 0.8, 0.9, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.7, 0.8, 0.9, 1.0), 'Hedef (target)')
         imgui.push_item_width(-1)
         tx, ty, tz = float(cam.target.x), float(cam.target.y), float(cam.target.z)
 
@@ -130,12 +133,12 @@ class ViewFilterPanel(BasePanel):
 
         imgui.spacing()
 
-        avail = imgui.get_content_region_available_width()
+        avail = imgui.get_content_region_avail().x
         btn_w = (avail - 8) * 0.5
-        if imgui.button("Model'e Odakla", width=btn_w):
+        if imgui.button("Model'e Odakla", imgui.ImVec2(btn_w, 0)):
             cam.focus_on_model()
         imgui.same_line()
-        if imgui.button("Kamerayı Sıfırla", width=btn_w):
+        if imgui.button("Kamerayı Sıfırla", imgui.ImVec2(btn_w, 0)):
             cam.reset()
 
         imgui.spacing()
@@ -190,10 +193,10 @@ class ViewFilterPanel(BasePanel):
             cam._projection_matrix = None
 
         imgui.spacing()
-        imgui.text_colored(
-            f"near={cam.near:.2f}  far={cam.far:.2f}",
-            0.6, 0.6, 0.6, 1.0,
-        )
+        imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0), f'near={cam.near:.2f}  far={cam.far:.2f}')
+
+
+
         imgui.spacing()
         imgui.separator()
 
@@ -209,10 +212,14 @@ class ViewFilterPanel(BasePanel):
                 imgui.same_line()
             active = (self._sel_preset == key)
             if active:
-                imgui.push_style_color(imgui.COLOR_BUTTON, 0.20, 0.50, 0.75, 1.0)
-                imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.28, 0.62, 0.88, 1.0)
+                imgui.push_style_color(
+                    imgui.Col_.button, imgui.ImVec4(0.20, 0.50, 0.75, 1.0)
+                )
+                imgui.push_style_color(
+                    imgui.Col_.button_hovered, imgui.ImVec4(0.28, 0.62, 0.88, 1.0)
+                )
 
-            if imgui.button(label, width=90):
+            if imgui.button(label, imgui.ImVec2(90, 0)):
                 self._sel_preset = None if self._sel_preset == key else key
                 self._apply_preset()
 
@@ -229,7 +236,7 @@ class ViewFilterPanel(BasePanel):
         if not imgui.collapsing_header("Görünüm Aralığı (Aktif UCS)", True)[0]:
             return
 
-        imgui.text_colored(f"Aktif UCS: {self.ucs_name}", 0.6, 0.9, 0.6, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.6, 0.9, 0.6, 1.0), f'Aktif UCS: {self.ucs_name}')
 
         imgui.text("Mod:")
         for i, (label, key) in enumerate(self.SECTION_MODES):
@@ -237,9 +244,13 @@ class ViewFilterPanel(BasePanel):
                 imgui.same_line()
             active = (self._section_mode == key)
             if active:
-                imgui.push_style_color(imgui.COLOR_BUTTON, 0.20, 0.50, 0.75, 1.0)
-                imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.28, 0.62, 0.88, 1.0)
-            if imgui.button(label, width=90):
+                imgui.push_style_color(
+                    imgui.Col_.button, imgui.ImVec4(0.20, 0.50, 0.75, 1.0)
+                )
+                imgui.push_style_color(
+                    imgui.Col_.button_hovered, imgui.ImVec4(0.28, 0.62, 0.88, 1.0)
+                )
+            if imgui.button(label, imgui.ImVec2(90, 0)):
                 self._section_mode = key
                 self._apply_section()
             if active:
@@ -260,7 +271,7 @@ class ViewFilterPanel(BasePanel):
             self._apply_section()
 
         imgui.spacing()
-        if imgui.button("Sıfırla", width=-1):
+        if imgui.button("Sıfırla", imgui.ImVec2(-1, 0)):
             self._section_min = -1000.0
             self._section_max = 1000.0
             self._apply_section()

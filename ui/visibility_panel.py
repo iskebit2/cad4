@@ -2,8 +2,7 @@
 """
 VisibilityPanel — BasePanel türevi. Sahne elemanlarını tip bazlı gruplarla listeler.
 """
-from typing import Dict, List, Optional
-import imgui
+from imgui_bundle import imgui
 
 from ui.base_panel import BasePanel
 
@@ -23,7 +22,7 @@ class VisibilityPanel(BasePanel):
         self.scene = None
         self.on_apply = on_apply
 
-        self._pending: Dict[int, bool] = {}
+        self._pending: dict[int, bool] = {}
         self._open_groups: set = set()
         self._filter = ""
 
@@ -63,31 +62,31 @@ class VisibilityPanel(BasePanel):
         # --- Filtre ---
         imgui.push_item_width(-1)
         self._filter = imgui.input_text(
-            "##filter", self._filter, 128,
-            imgui.INPUT_TEXT_ENTER_RETURNS_TRUE,
+            "##filter", self._filter,
+            imgui.InputTextFlags_.enter_returns_true,
         )[1]
         imgui.pop_item_width()
 
         imgui.separator()
 
         # --- Global butonlar ---
-        avail = imgui.get_content_region_available_width()
+        avail = imgui.get_content_region_avail().x
         btn_w = (avail - 8) * 0.5
 
-        if imgui.button("Tümünü Aç", width=btn_w):
+        if imgui.button("Tümünü Aç", imgui.ImVec2(btn_w, 0)):
             self._set_all(True)
         imgui.same_line()
-        if imgui.button("Tümünü Kapa", width=btn_w):
+        if imgui.button("Tümünü Kapa", imgui.ImVec2(btn_w, 0)):
             self._set_all(False)
 
         imgui.separator()
 
         # --- Liste ---
         btn_h = imgui.get_frame_height_with_spacing() + 12
-        imgui.begin_child("list", height=-float(btn_h), border=False)
+        imgui.begin_child("list", imgui.ImVec2(0, -float(btn_h)))
 
         if self.scene is None:
-            imgui.text_colored("Sahne yok", 0.7, 0.4, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.4, 0.4, 1.0), 'Sahne yok')
         else:
             self._draw_groups()
 
@@ -95,18 +94,26 @@ class VisibilityPanel(BasePanel):
         imgui.separator()
 
         # --- Alt butonlar ---
-        imgui.push_style_color(imgui.COLOR_BUTTON, 0.45, 0.20, 0.20, 1.0)
-        imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.60, 0.28, 0.28, 1.0)
-        if imgui.button("İptal", width=btn_w):
+        imgui.push_style_color(
+            imgui.Col_.button, imgui.ImVec4(0.45, 0.20, 0.20, 1.0)
+        )
+        imgui.push_style_color(
+            imgui.Col_.button_hovered, imgui.ImVec4(0.60, 0.28, 0.28, 1.0)
+        )
+        if imgui.button("İptal", imgui.ImVec2(btn_w, 0)):
             self._pending.clear()
             self.close()
         imgui.pop_style_color(2)
 
         imgui.same_line()
 
-        imgui.push_style_color(imgui.COLOR_BUTTON, 0.20, 0.55, 0.30, 1.0)
-        imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.28, 0.68, 0.40, 1.0)
-        if imgui.button("Apply", width=btn_w):
+        imgui.push_style_color(
+            imgui.Col_.button, imgui.ImVec4(0.20, 0.55, 0.30, 1.0)
+        )
+        imgui.push_style_color(
+            imgui.Col_.button_hovered, imgui.ImVec4(0.28, 0.68, 0.40, 1.0)
+        )
+        if imgui.button("Apply", imgui.ImVec2(btn_w, 0)):
             self.apply_changes()
             self.close()
         imgui.pop_style_color(2)
@@ -161,9 +168,11 @@ class VisibilityPanel(BasePanel):
 
         imgui.push_id(f"chk_{coll_name}")
         if disabled:
-            imgui.push_style_var(imgui.STYLE_ALPHA, 0.5)
+            imgui.push_style_var(imgui.StyleVar_.alpha, 0.5)
         if mixed:
-            imgui.push_style_color(imgui.COLOR_CHECK_MARK, 0.7, 0.7, 0.4, 1.0)
+            imgui.push_style_color(
+                imgui.Col_.check_mark, imgui.ImVec4(0.7, 0.7, 0.4, 1.0)
+            )
         changed, new_state = imgui.checkbox("##grp_chk", group_state)
         if mixed:
             imgui.pop_style_color(1)
@@ -181,7 +190,7 @@ class VisibilityPanel(BasePanel):
         header_label = f"{arrow}  {display_name} ({len(items)})##hdr_{coll_name}"
 
         if disabled:
-            imgui.push_style_var(imgui.STYLE_ALPHA, 0.5)
+            imgui.push_style_var(imgui.StyleVar_.alpha, 0.5)
         clicked = imgui.selectable(header_label, False)[0]
         if disabled:
             imgui.pop_style_var(1)
@@ -213,7 +222,7 @@ class VisibilityPanel(BasePanel):
         if cur:
             imgui.text(short)
         else:
-            imgui.text_colored(short, 0.5, 0.5, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.5, 0.5, 0.5, 1.0), short)
 
         imgui.pop_id()
 

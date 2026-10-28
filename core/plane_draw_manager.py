@@ -25,29 +25,41 @@ Kontroller:
 
 from __future__ import annotations
 
-import math
-import time
-from typing import Optional, List, Tuple
-
+import glfw
 import glm
 import numpy as np
 from OpenGL.GL import (
-    GL_ARRAY_BUFFER, GL_FLOAT, GL_FALSE, GL_STREAM_DRAW,
-    glBindBuffer, glBindVertexArray, glBufferData,
-    glDeleteBuffers, glDeleteVertexArrays, glDrawArrays,
-    glDisable, glEnable, glUniform4f, glUniformMatrix4fv,
-    glVertexAttribPointer, glEnableVertexAttribArray,
-    glGenBuffers, glGenVertexArrays,
-    GL_DEPTH_TEST, GL_BLEND, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-    GL_TRIANGLES, GL_LINES, GL_LINE_STRIP,
+    GL_ARRAY_BUFFER,
+    GL_BLEND,
+    GL_DEPTH_TEST,
+    GL_FALSE,
+    GL_FLOAT,
+    GL_LINES,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_SRC_ALPHA,
+    GL_STREAM_DRAW,
+    GL_TRIANGLES,
+    glBindBuffer,
+    glBindVertexArray,
     glBlendFunc,
+    glBufferData,
+    glDeleteBuffers,
+    glDeleteVertexArrays,
+    glDisable,
+    glDrawArrays,
+    glEnable,
+    glEnableVertexAttribArray,
+    glGenBuffers,
+    glGenVertexArrays,
+    glUniform4f,
+    glUniformMatrix4fv,
+    glVertexAttribPointer,
 )
-import glfw
 
-from domain.plane import Plane
 from domain.element import Node
-
+from domain.plane import Plane
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 
@@ -76,12 +88,12 @@ class PlaneDrawManager:
         self.stage = self.STAGE_P0
 
         # Seçilen noktalar
-        self.p0: Optional[Node] = None
-        self.p1: Optional[Node] = None
-        self.p2: Optional[Node] = None
+        self.p0: Node | None = None
+        self.p1: Node | None = None
+        self.p2: Node | None = None
 
         # Hover node
-        self.hover_node: Optional[Node] = None
+        self.hover_node: Node | None = None
 
         # Depth
         self.depth_plus = self.DEFAULT_DEPTH
@@ -89,6 +101,7 @@ class PlaneDrawManager:
 
         # Mouse tracking
         self._last_mouse_y = None
+        self._mouse_pos: tuple[float, float] | None = None
 
         # Preview buffers (lazy)
         self._tri_vao = None
@@ -97,7 +110,7 @@ class PlaneDrawManager:
         self._line_vbo = None
 
         # Tamamlanan plane (dışarıdan okunur)
-        self.completed_plane: Optional[Plane] = None
+        self.completed_plane: Plane | None = None
 
     # =========================================================
     # START / CANCEL
@@ -115,6 +128,7 @@ class PlaneDrawManager:
         self.hover_node = None
         self.depth_plus = self.depth_minus = self.DEFAULT_DEPTH
         self._last_mouse_y = None
+        self._mouse_pos = None
         self.completed_plane = None
         logger.info("[PlaneDraw] Mod aktif")
 
@@ -123,6 +137,7 @@ class PlaneDrawManager:
         self.p0 = self.p1 = self.p2 = None
         self.hover_node = None
         self._last_mouse_y = None
+        self._mouse_pos = None
         logger.info("[PlaneDraw] İptal")
 
     def _step_back(self):
@@ -198,6 +213,7 @@ class PlaneDrawManager:
     def on_mouse_move(self, x, y):
         if not self.is_active:
             return
+        self._mouse_pos = (x, y)
 
         # Node snap sadece ilk 3 noktada
         if self.stage in (self.STAGE_P0, self.STAGE_P1, self.STAGE_P2):
@@ -223,6 +239,7 @@ class PlaneDrawManager:
 
         if not self.is_active:
             return False
+        self._mouse_pos = (x, y)
 
         # --- 3 nokta seçimi ---
         if self.stage in (self.STAGE_P0, self.STAGE_P1, self.STAGE_P2):
@@ -451,7 +468,8 @@ class PlaneDrawManager:
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_DEPTH_TEST)
-        from OpenGL.GL import glDepthMask, GL_FALSE as GLF
+        from OpenGL.GL import GL_FALSE as GLF
+        from OpenGL.GL import glDepthMask
         glDepthMask(GLF)
 
         try:
@@ -473,7 +491,16 @@ class PlaneDrawManager:
 
             # --- Çizim ---
             self._draw_lines(shader, loc_color, mvp)
-            if self.p2 is not None:
+            if self.stage == self.STAGE_P2 and self.p2 is None:
+                point = self._preview_point()
+                preview_v = (
+                    self._preview_v_perp(point) if point is not None else None
+                )
+                if preview_v is not None and np.linalg.norm(preview_v) > 1e-9:
+                    self._draw_plane_quad(
+                        shader, loc_color, preview_v=preview_v
+                    )
+            elif self.p2 is not None:
                 self._draw_plane_quad(shader, loc_color)
             if self.stage in (self.STAGE_DEPTH_PLUS, self.STAGE_DEPTH_MINUS):
                 self._draw_solid_box(shader, loc_color)
@@ -481,7 +508,7 @@ class PlaneDrawManager:
                 self._draw_hover_node(shader, loc_color)
 
         finally:
-            from OpenGL.GL import glDepthMask, GL_TRUE
+            from OpenGL.GL import GL_TRUE, glDepthMask
             glDepthMask(GL_TRUE)
             glDisable(GL_BLEND)
             glBindVertexArray(0)
@@ -522,18 +549,34 @@ class PlaneDrawManager:
             p1_xyz = (self.p1.x, self.p1.y, self.p1.z)
 
         # U çizgisi
-        if p0_xyz and p1_xyz:
+        if p0_xyz is not None and p1_xyz is not None:
             lines.extend((*p0_xyz, *p1_xyz))
 
-        # V çizgisi (p0 → p2 veya fare)
-        if self.stage == self.STAGE_P2 and self.hover_node is not None:
-            # Fare node üzerindeyse ona, yoksa "preview v" yok (hover_node yoksa çizme)
-            v_end = (self.hover_node.x, self.hover_node.y, self.hover_node.z)
-            if p0_xyz:
-                lines.extend((*p0_xyz, *v_end))
-        elif self.p2 is not None and p0_xyz:
-            v_end = (self.p2.x, self.p2.y, self.p2.z)
-            lines.extend((*p0_xyz, *v_end))
+        # P0 sonrası U vektörü, fareyi takip eden okla önizlenir.
+        if self.stage == self.STAGE_P1 and self.p0 is not None:
+            preview = self._preview_point()
+            if preview is not None:
+                start = np.asarray(p0_xyz, dtype=float)
+                direction = preview - start
+                length = float(np.linalg.norm(direction))
+                if length > 1e-9:
+                    lines.extend((*start, *preview))
+                    arrow_size = min(length * 0.2, max(length * 0.08, 1.0))
+                    arrow_base = preview - direction / length * arrow_size
+                    camera_forward = np.asarray(
+                        self.engine.cam.target - self.engine.cam.position,
+                        dtype=float,
+                    )
+                    camera_forward /= np.linalg.norm(camera_forward)
+                    side = np.cross(direction / length, camera_forward)
+                    side_length = float(np.linalg.norm(side))
+                    if side_length < 1e-9:
+                        side = np.cross(direction / length, (0.0, 0.0, 1.0))
+                        side_length = float(np.linalg.norm(side))
+                    if side_length > 1e-9:
+                        side = side / side_length * arrow_size * 0.5
+                        lines.extend((*preview, *(arrow_base + side)))
+                        lines.extend((*preview, *(arrow_base - side)))
 
         if lines:
             arr = np.asarray(lines, dtype=np.float32)
@@ -541,10 +584,69 @@ class PlaneDrawManager:
                                   GL_LINES, len(arr) // 3,
                                   (1.0, 0.85, 0.20, 1.0), loc_color, 2.0)
 
-    def _draw_plane_quad(self, shader, loc_color):
+    def _preview_point(self):
+        if self.hover_node is not None:
+            return np.array(
+                [self.hover_node.x, self.hover_node.y, self.hover_node.z],
+                dtype=float,
+            )
+        if self._mouse_pos is None or self.p0 is None:
+            return None
+        cam = self.engine.cam
+        if cam is None or self.engine.w <= 0 or self.engine.h <= 0:
+            return None
+
+        x, y = self._mouse_pos
+        ndc_x = 2.0 * x / self.engine.w - 1.0
+        ndc_y = 1.0 - 2.0 * y / self.engine.h
+        inv_view_projection = glm.inverse(
+            cam.get_projection_matrix() @ cam.get_view_matrix()
+        )
+        near = inv_view_projection * glm.vec4(ndc_x, ndc_y, -1.0, 1.0)
+        far = inv_view_projection * glm.vec4(ndc_x, ndc_y, 1.0, 1.0)
+        if abs(near.w) < 1e-9 or abs(far.w) < 1e-9:
+            return None
+        near = np.asarray(glm.vec3(near) / near.w, dtype=float)
+        far = np.asarray(glm.vec3(far) / far.w, dtype=float)
+        ray = far - near
+        ray_length = float(np.linalg.norm(ray))
+        if ray_length < 1e-9:
+            return None
+        ray /= ray_length
+
+        camera_forward = np.asarray(cam.target - cam.position, dtype=float)
+        forward_length = float(np.linalg.norm(camera_forward))
+        if forward_length < 1e-9:
+            return None
+        camera_forward /= forward_length
+        denominator = float(np.dot(ray, camera_forward))
+        if abs(denominator) < 1e-9:
+            return None
+
+        origin = np.array([self.p0.x, self.p0.y, self.p0.z], dtype=float)
+        distance = float(np.dot(origin - near, camera_forward) / denominator)
+        if distance < 0:
+            return None
+        return near + ray * distance
+
+    def _preview_v_perp(self, point):
+        if self.p0 is None:
+            return None
+        u = self._u_vec()
+        if u is None:
+            return None
+        u_len = float(np.linalg.norm(u))
+        if u_len < 1e-9:
+            return None
+        p0 = np.array([self.p0.x, self.p0.y, self.p0.z], dtype=float)
+        raw_v = point - p0
+        u_hat = u / u_len
+        return raw_v - u_hat * float(np.dot(raw_v, u_hat))
+
+    def _draw_plane_quad(self, shader, loc_color, preview_v=None):
         """U ve V'nin gerdiği paralelkenar — yarı saydam mavi."""
         u = self._u_vec()
-        v = self._v_perp()
+        v = self._v_perp() if preview_v is None else preview_v
         if u is None or v is None:
             return
         p0 = np.array([self.p0.x, self.p0.y, self.p0.z])

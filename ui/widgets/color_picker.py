@@ -5,7 +5,7 @@ Renk editörü widget'ı.
 - Hızlı erişim için 12 renkli palet
 - Tuple[float, float, float] formatında çalışır
 """
-import imgui
+from imgui_bundle import imgui
 
 # 12 renkli standart palet (yapısal CAD uygulamalarında yaygın)
 DEFAULT_PALETTE = [
@@ -46,14 +46,16 @@ def color_edit3(label: str, color, palette=DEFAULT_PALETTE, show_popup: bool = T
 
     # 1) imgui.color_edit3 — popup renk seçici
     if show_popup:
-        c, new_rgb = imgui.color_edit3(f"##{label}_edit", r, g, b)
+        c, new_rgb = imgui.color_edit3(f"##{label}_edit", [r, g, b])
         if c:
             r, g, b = new_rgb
             changed = True
         imgui.same_line()
     else:
         # Popup yoksa sadece küçük renk kutusu
-        imgui.color_button(f"##{label}_swatch", r, g, b)
+        imgui.color_button(
+            f"##{label}_swatch", imgui.ImVec4(r, g, b, 1.0)
+        )
         imgui.same_line()
 
     # 2) Palet açılır panel
@@ -61,26 +63,32 @@ def color_edit3(label: str, color, palette=DEFAULT_PALETTE, show_popup: bool = T
         imgui.open_popup(f"##{label}_palette_popup")
 
     if imgui.begin_popup(f"##{label}_palette_popup"):
-        cols = 4
-        for i, (pr, pg, pb) in enumerate(palette):
-            imgui.push_style_color(imgui.COLOR_BUTTON, pr, pg, pb, 1.0)
-            imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, pr * 1.15, pg * 1.15, pb * 1.15, 1.0)
-            imgui.push_style_color(imgui.COLOR_BUTTON_ACTIVE, pr * 0.85, pg * 0.85, pb * 0.85, 1.0)
-            clicked = imgui.button(f"##pal_{label}_{i}", width=28, height=28)
-            imgui.pop_style_color(3)
-            if clicked:
-                r, g, b = pr, pg, pb
-                changed = True
-                imgui.close_current_popup()
-            # 4'lü grid
-            if (i + 1) % cols != 0 and i != len(palette) - 1:
-                imgui.same_line()
-            # Satır aralığı
-            if (i + 1) % cols == 0:
-                pass
-        imgui.end_popup()
+        try:
+            cols = 4
+            for i, (pr, pg, pb) in enumerate(palette):
+                imgui.push_style_color(
+                    imgui.Col_.button, imgui.ImVec4(pr, pg, pb, 1.0)
+                )
+                imgui.push_style_color(
+                    imgui.Col_.button_hovered,
+                    imgui.ImVec4(pr * 1.15, pg * 1.15, pb * 1.15, 1.0),
+                )
+                imgui.push_style_color(
+                    imgui.Col_.button_active,
+                    imgui.ImVec4(pr * 0.85, pg * 0.85, pb * 0.85, 1.0),
+                )
+                clicked = imgui.button(f"##pal_{label}_{i}", imgui.ImVec2(28, 28))
+                imgui.pop_style_color(3)
+                if clicked:
+                    r, g, b = pr, pg, pb
+                    changed = True
+                    imgui.close_current_popup()
+                if (i + 1) % cols != 0 and i != len(palette) - 1:
+                    imgui.same_line()
+        finally:
+            imgui.end_popup()
 
-    if expanded and imgui.collapsing_header(f"RGB##{label}_rgb")[0]:
+    if expanded and imgui.collapsing_header(f"RGB##{label}_rgb"):
         imgui.push_item_width(120)
         c, r = imgui.slider_float(f"R##{label}", r, 0.0, 1.0)
         changed = changed or c

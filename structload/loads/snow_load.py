@@ -4,10 +4,11 @@
 Kar Yükü Motoru - TS EN 1991-1-3
 """
 
-from typing import Dict, Any
+from typing import Any
+
+from structload.data.snow_data import SNOW_LOAD_TABLE
+from structload.utils.math_utils import calculate_snow_shape_coefficient, interpolate_2d
 from structload.utils.report_dataframe import ReportDataFrame
-from structload.data.snow_data import SNOW_LOAD_TABLE, ALTITUDE_FACTORS, SNOW_REGIONS
-from structload.utils.math_utils import interpolate_2d, calculate_snow_shape_coefficient, round_values
 
 
 class SnowLoad:
@@ -16,7 +17,7 @@ class SnowLoad:
     TS EN 1991-1-3 ve Türkiye Ulusal Eki
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         """
         Args:
             config: {
@@ -96,7 +97,7 @@ class SnowLoad:
             ]
         }
         
-        desc = f"""
+        desc = """
         Standart: TS EN 1991-1-3 ve Türkiye Ulusal Eki
         
         Çatı Şekil Katsayısı (μ):
@@ -113,7 +114,7 @@ class SnowLoad:
             custom_desc=desc
         )
     
-    def get_load_patterns(self) -> Dict[str, float]:
+    def get_load_patterns(self) -> dict[str, float]:
         """SAP2000 yük kalıbı"""
         return {"SNOW": self.s}
 
@@ -127,4 +128,4 @@ if __name__ == "__main__":
         "Ct": 1.0
     }
     snow = SnowLoad(config)
-    pass(snow.report())
+    print(snow.report())

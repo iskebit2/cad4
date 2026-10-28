@@ -1,15 +1,16 @@
 #windcalc/wind_results.py
 from io import BytesIO
+
 import numpy as np
 import pandas as pd
-from PIL import Image as PILImage, ImageDraw, ImageFont
+from PIL import Image as PILImage
+from PIL import ImageDraw, ImageFont
 
 from structload.data.defaults import proje_data
 from structload.data.wind_data import CPI_NEGATIVE, CPI_POSITIVE
 from structload.utils.report_dataframe import ReportDataFrame
 from structload.windcalc.wind_analyzer import WindAnalyzer
 from structload.windcalc.windengine import WindEngine
-
 
 
 def show_zones(zones, building, size=800):
@@ -446,4 +447,4 @@ if __name__ == "__main__":
     wind_report = WindReport(proje_data)
     wind_report.analyze()
     report_=wind_report.report()
-    pass(report_.get("parameters",[]))
+    print(report_.get("parameters",[]))

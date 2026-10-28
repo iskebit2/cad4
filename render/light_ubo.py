@@ -1,7 +1,6 @@
 # render/light_ubo.py
-from OpenGL.GL import *
 import numpy as np
-from logging_config import CadLogger
+from OpenGL.GL import *
 
 from logging_config import CadLogger
 

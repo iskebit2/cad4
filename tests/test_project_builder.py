@@ -1,7 +1,7 @@
-from geometry.project_builder import ProjectBuilder
 from core.units import UnitSystem
+from data.enums import SectionType
 from domain.project import Project
-from data.enums import SectionType, MatType
+from geometry.project_builder import ProjectBuilder
 
 
 def test_basic_project():

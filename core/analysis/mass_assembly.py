@@ -1,15 +1,15 @@
 # core/analysis/mass_assembly.py
 
 from __future__ import annotations
+
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from core.analysis.stiffness_assembly import transformation_matrix
 from core.units import G_M_S2, MEGAGRAM
 from domain.definition import LoadDirection
-from core.analysis.stiffness_assembly import transformation_matrix
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -35,9 +35,9 @@ class MassContribution:
 class MassAssembly:
     num_dofs: int
     M_global: np.ndarray
-    node_masses: Dict[str, float]
-    contributions: List[MassContribution] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+    node_masses: dict[str, float]
+    contributions: list[MassContribution] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     total_self_kg: float = 0.0
     total_dead_kg: float = 0.0
     total_live_kg: float = 0.0
@@ -74,7 +74,7 @@ def _pattern_kind(design_type: str) -> str:
     return "other"
 
 
-def _node_key_map(scene) -> Dict[object, str]:
+def _node_key_map(scene) -> dict[object, str]:
     out = {}
     for key, node in scene.nodes.items():
         out[key] = key
@@ -292,8 +292,8 @@ def build_mass(
 
     # --- Yük pattern'ları ---
     patterns = getattr(project, "load_patterns", {}) or {}
-    pattern_kind: Dict[str, str] = {}
-    pattern_factor: Dict[str, float] = {}
+    pattern_kind: dict[str, str] = {}
+    pattern_factor: dict[str, float] = {}
     for name, lp in patterns.items():
         k = _pattern_kind(getattr(lp, "design_type", "Dead"))
         pattern_kind[name] = k
@@ -302,12 +302,12 @@ def build_mass(
         )
 
     # --- Toplayıcılar ---
-    node_masses: Dict[str, float] = {k: 0.0 for k in scene.nodes.keys()}
-    contributions: List[MassContribution] = []
-    warnings: List[str] = []
+    node_masses: dict[str, float] = {k: 0.0 for k in scene.nodes.keys()}
+    contributions: list[MassContribution] = []
+    warnings: list[str] = []
     M = np.zeros((num_dofs, num_dofs), dtype=float)
 
-    def _add(key: Optional[str], mass_kg: float) -> None:
+    def _add(key: str | None, mass_kg: float) -> None:
         if key is None or mass_kg <= 0 or not math.isfinite(mass_kg):
             return
         node_masses[key] += mass_kg
@@ -439,7 +439,7 @@ def build_mass(
             if m_tri_glob.size == 0:
                 continue
 
-            tri_dofs: List[int] = []
+            tri_dofs: list[int] = []
             ok = True
             for nd in tri_nodes:
                 dofs = getattr(nd, "dof_indices", None)

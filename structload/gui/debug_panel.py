@@ -4,14 +4,13 @@ Debug/Log paneli.
 StatusManager'daki log kayıtlarını renkli olarak gösterir.
 """
 
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
-from kivy.uix.button import Button
 from kivy.metrics import dp
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
 
 from structload.utils.status_manager import status
-
 
 LOG_COLORS = {
     "info":    (0.85, 0.85, 0.85, 1),

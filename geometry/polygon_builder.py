@@ -1,10 +1,9 @@
 # geometry/polygon_builder.py
-import numpy as np
-from typing import Tuple
-from domain.element import Polygon
-import mapbox_earcut as earcut
-from logging_config import CadLogger
 
+import mapbox_earcut as earcut
+import numpy as np
+
+from domain.element import Polygon
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -23,7 +22,7 @@ class PolygonBuilder:
     Kapalı döngü, düzlem normaline göre 2D triangulate edilir.
     """
 
-    def build(self, polygon: Polygon) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def build(self, polygon: Polygon) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         points = np.array([[n.x, n.y, n.z] for n in polygon.nodes], dtype=np.float32)
         if len(points) < 3:
             return np.array([]), np.array([]), np.array([])

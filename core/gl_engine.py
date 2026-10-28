@@ -7,30 +7,30 @@ KivyCADWidget bu sınıfı kullanır ama bu sınıf Kivy'yi bilmez.
 
 import time
 from pathlib import Path
-import glm
-glm.silence(2)
-from OpenGL.GL import glGetString, GL_VERSION
 
-from render.shaderprogram import ShaderProgram
+import glm
+
+glm.silence(2)
+from OpenGL.GL import GL_VERSION, glGetString
+
 from core.camera import Camera
-from domain.scene import Scene
+from core.draw_manager import DrawManager
+from core.edit.edit_controller import EditController
 from core.input_manager import (
     InputManager,
-    MOUSE_BUTTON_LEFT,
-    MOUSE_BUTTON_RIGHT,
-    MOUSE_BUTTON_MIDDLE,
 )
-from core.selection_policy import SelectionPolicy
-from tools.gridsystem import GridSystem
-from render.scenerenderer import SceneRenderer
-from core.selection_manager import SelectionManager
 from core.marquee_selector import MarqueeSelector
-from core.draw_manager import DrawManager
-from render.snapsquare import SnapSquareRenderer
-from core.edit.edit_controller import EditController
-# from tools.smart_plane_analysis import SmartPlaneAnalyzer
+from core.selection_manager import SelectionManager
+from core.selection_policy import SelectionPolicy
+from domain.scene import Scene
 
+# from tools.smart_plane_analysis import SmartPlaneAnalyzer
 from logging_config import CadLogger
+from render.scenerenderer import SceneRenderer
+from render.shaderprogram import ShaderProgram
+from render.snapsquare import SnapSquareRenderer
+from tools.gridsystem import GridSystem
+
 logger = CadLogger.get(__name__)
 
 # Shader klasörü — modül seviyesinde bir kez
@@ -347,8 +347,9 @@ class Engine:
     def _element_type(element):
         if element is None:
             return None
-        if hasattr(element, 'element_type'):
-            return element.element_type
+        element_type = getattr(element, 'element_type', None)
+        if element_type:
+            return str(element_type).lower()
         class_name = element.__class__.__name__.lower()
         for key in ('node', 'frame', 'area', 'link', 'polygon'):
             if key in class_name:

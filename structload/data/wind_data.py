@@ -199,6 +199,7 @@ EPS = 1.0e-9
 
 from enum import Enum
 
+
 class SurfaceType(Enum):
     WALL = "WALL"
     ROOF = "ROOF"

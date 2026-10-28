@@ -1,25 +1,36 @@
 # domain/project.py
 from dataclasses import dataclass, field
-import json
-import zipfile
 from pathlib import Path
-from typing import Dict, Optional, List, Any
+from typing import Any
 
-from data.enums import UnitSystem
-from data.seismic import get_tsc2018_site_coefficients
-from domain.element import Area, Frame, Link, Node, Polygon
-from domain.scene import Scene
+from core.units import UnitSystem
+from data.serializer import load_project_file, save_project_file
 from domain.definition import (
-    AnalysisManager, GeneralProjectInfo, GridConfig, LoadManager, ProjectConfig, ProjectInfo,
-    ReportManager, SiteInformation,
-    Material, Section, LinkProp, LoadPattern, LoadCase, ModalCase,
-    LoadCombination, SpectrumFunction, ResponseSpectrumCase, AutoSeismicTSC2018, SectionCut, QuadDefinition,
-    SpectrumSourceType, get_tsc2018_site_coefficients
+    AnalysisManager,
+    AutoSeismicTSC2018,
+    GeneralProjectInfo,
+    GridConfig,
+    LinkProp,
+    LoadCase,
+    LoadCombination,
+    LoadManager,
+    LoadPattern,
+    Material,
+    ModalCase,
+    ProjectConfig,
+    ProjectInfo,
+    ReportManager,
+    ResponseSpectrumCase,
+    Section,
+    SectionCut,
+    SiteInformation,
+    SpectrumFunction,
+    SpectrumSourceType,
+    get_tsc2018_site_coefficients,
 )
 from domain.plane import Plane
 from domain.plane_manager import PlaneManager
-
-from data.serializer import save_project_file, load_project_file
+from domain.scene import Scene
 
 
 @dataclass
@@ -34,29 +45,29 @@ class Project:
     report: ReportManager = field(default_factory=ReportManager)
     unit_system: UnitSystem = UnitSystem.N_MM
     grid: GridConfig = field(default_factory=GridConfig)
-    planes: Dict[str, Plane] = field(default_factory=dict)
+    planes: dict[str, Plane] = field(default_factory=dict)
 
     # --- ESKİ DEFINITION MANAGER MİRASI (Doğrudan Project'e monte edildi) ---
-    materials: Dict[str, Material] = field(default_factory=dict)
-    sections: Dict[str, Section] = field(default_factory=dict)
-    link_props: Dict[str, LinkProp] = field(default_factory=dict)
-    load_patterns: Dict[str, LoadPattern] = field(default_factory=dict)
-    load_cases: Dict[str, LoadCase] = field(default_factory=dict)
-    modal_cases: Dict[str, ModalCase] = field(default_factory=dict)
-    combinations: Dict[str, LoadCombination] = field(default_factory=dict)
-    spectrum_functions: Dict[str, SpectrumFunction] = field(default_factory=dict)
-    response_spectrum_cases: Dict[str, ResponseSpectrumCase] = field(default_factory=dict)
-    auto_seismics: Dict[str, AutoSeismicTSC2018] = field(default_factory=dict)
-    mass_source_map: Dict[str, float] = field(default_factory=dict)
-    section_cuts: Dict[str, SectionCut] = field(default_factory=dict)
-    diaphragms: Dict[str, dict] = field(default_factory=dict)
-    grid_lines: List[Dict[str, Any]] = field(default_factory=list)
-    joint_constraints: Dict[str, str] = field(default_factory=dict)
-    frame_modifiers: Dict[str, dict] = field(default_factory=dict)
-    frame_design_procs: Dict[str, str] = field(default_factory=dict)
-    frame_auto_mesh: Dict[str, dict] = field(default_factory=dict)
+    materials: dict[str, Material] = field(default_factory=dict)
+    sections: dict[str, Section] = field(default_factory=dict)
+    link_props: dict[str, LinkProp] = field(default_factory=dict)
+    load_patterns: dict[str, LoadPattern] = field(default_factory=dict)
+    load_cases: dict[str, LoadCase] = field(default_factory=dict)
+    modal_cases: dict[str, ModalCase] = field(default_factory=dict)
+    combinations: dict[str, LoadCombination] = field(default_factory=dict)
+    spectrum_functions: dict[str, SpectrumFunction] = field(default_factory=dict)
+    response_spectrum_cases: dict[str, ResponseSpectrumCase] = field(default_factory=dict)
+    auto_seismics: dict[str, AutoSeismicTSC2018] = field(default_factory=dict)
+    mass_source_map: dict[str, float] = field(default_factory=dict)
+    section_cuts: dict[str, SectionCut] = field(default_factory=dict)
+    diaphragms: dict[str, dict] = field(default_factory=dict)
+    grid_lines: list[dict[str, Any]] = field(default_factory=list)
+    joint_constraints: dict[str, str] = field(default_factory=dict)
+    frame_modifiers: dict[str, dict] = field(default_factory=dict)
+    frame_design_procs: dict[str, str] = field(default_factory=dict)
+    frame_auto_mesh: dict[str, dict] = field(default_factory=dict)
 
-    catalog_sections: Dict[str, Section] = field(default_factory=dict)
+    catalog_sections: dict[str, Section] = field(default_factory=dict)
 
     def __post_init__(self):
         # Scene, projeye referans versin ki kendi içinden malzemelere/kesitlere ulaşabilsin
@@ -75,14 +86,11 @@ class Project:
     def add_section_cut(self, sc: SectionCut): 
         self.section_cuts[sc.name] = sc
 
-    def get_section_cut(self, name: str) -> Optional[SectionCut]: 
+    def get_section_cut(self, name: str) -> SectionCut | None:
         return self.section_cuts.get(name)
-    def get_section_by_name(self, name: str) -> Optional[Section]:     return self.sections.get(name)
-    def get_material_by_name(self, name: str) -> Optional[Material]:   return self.materials.get(name)
-    def get_link_prop_by_name(self, name: str) -> Optional[LinkProp]:  return self.link_props.get(name)
-    def add_plane(self, plane: Plane):
-        self.planes[plane.name] = plane
-
+    def get_section_by_name(self, name: str) -> Section | None:     return self.sections.get(name)
+    def get_material_by_name(self, name: str) -> Material | None:   return self.materials.get(name)
+    def get_link_prop_by_name(self, name: str) -> LinkProp | None:  return self.link_props.get(name)
     # ---- Plane CRUD (PlaneManager'a delege) ----
     @property
     def plane_mgr(self) -> PlaneManager:
@@ -92,13 +100,13 @@ class Project:
     def add_plane(self, plane: Plane) -> Plane:
         return self.plane_mgr.add(plane)
 
-    def get_plane(self, name: str) -> Optional[Plane]:
+    def get_plane(self, name: str) -> Plane | None:
         return self.planes.get(name)
 
     def remove_plane(self, name: str) -> bool:
         return self.plane_mgr.remove(name)
 
-    def plane_names(self) -> List[str]:
+    def plane_names(self) -> list[str]:
         return self.plane_mgr.names()
 
 

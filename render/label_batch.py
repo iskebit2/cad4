@@ -13,16 +13,16 @@ Kullanım:
     batch.flush()   # tek draw call
 """
 from __future__ import annotations
+
 import ctypes
 import math
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
 
 import glm
 import numpy as np
 from OpenGL.GL import *
 
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 
@@ -97,7 +97,7 @@ class LabelBatch:
         self.vbo = 0
         self.capacity_quads = 0
         self.vertex_count = 0
-        self.cpu_buffer: Optional[np.ndarray] = None
+        self.cpu_buffer: np.ndarray | None = None
         self.write_offset = 0   # kaç vertex yazıldı
 
         # Uniform location cache
@@ -176,8 +176,7 @@ class LabelBatch:
         self.loc_atlas = glGetUniformLocation(prog, "u_atlas")
 
     def _create_buffers(self, quads: int):
-        if quads < 1:
-            quads = 1
+        quads = max(quads, 1)
         self.capacity_quads = quads
         total_floats = quads * self.FLOATS_PER_QUAD
 

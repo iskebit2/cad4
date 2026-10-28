@@ -1,13 +1,14 @@
 import os
-from typing import Optional, Dict, List, Any
+from typing import Any
+
 from docx import Document as DocxDocument
 from docx.shared import Cm, Pt
 
 
 class MyDocument:
-    def __init__(self, filename: Optional[str] = None):
+    def __init__(self, filename: str | None = None):
         self.doc = DocxDocument(filename) if filename else DocxDocument()
-        self.heading_counters: Dict[int, int] = {}
+        self.heading_counters: dict[int, int] = {}
         self._section = self.doc.sections[0]
 
     def apply_visual_settings(
@@ -46,7 +47,7 @@ class MyDocument:
         full_heading = f'{".".join(numbers)}. {text}'
         return self.doc.add_heading(full_heading, level=level)
 
-    def add_paragraph(self, text: str, style: Optional[str] = None) -> Any:
+    def add_paragraph(self, text: str, style: str | None = None) -> Any:
         return self.doc.add_paragraph(text, style=style) if style else self.doc.add_paragraph(text)
 
     def add_page_break(self) -> None:
@@ -54,9 +55,9 @@ class MyDocument:
 
     def add_table(
         self, 
-        data: List[List[Any]], 
-        headers: List[str], 
-        title: Optional[str] = None
+        data: list[list[Any]], 
+        headers: list[str], 
+        title: str | None = None
     ) -> None:
         if title:
             self.add_paragraph(title)

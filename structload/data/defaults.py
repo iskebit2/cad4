@@ -1,4 +1,3 @@
-from structload.data.material_data import MATERIAL_LIBRARY
 
 proje_data = {
 "proje_bilgileri": {

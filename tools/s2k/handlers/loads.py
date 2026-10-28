@@ -1,13 +1,11 @@
 # tools/s2k/handlers/loads.py
 """JOINT/FRAME/AREA LOADS — tüm birim dönüşümü UnitConverter üzerinden."""
 import logging
-from collections import defaultdict
 
 import pandas as pd
 
-from tools.s2k.context import LoadContext
 from data.enums import LoadDirection
-from domain.definition import PointLoad, FrameGravityLoad, FrameDistributedLoad
+from tools.s2k.context import LoadContext
 
 logger = logging.getLogger(__name__)
 

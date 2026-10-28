@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from imgui_bundle import imgui
 
-import imgui
-
-from domain.plane import Plane, ASSOC_KINDS, ChangeOp
+from domain.plane import ChangeOp, Plane
+from logging_config import CadLogger
 from ui.base_panel import BasePanel
 from ui.widgets.plane_2d_view import Plane2DView
 
-from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
 
@@ -24,7 +22,7 @@ class PlanePlotPanel(BasePanel):
     def __init__(self):
         self.app = None
         self.scene = None
-        self.plane: Optional[Plane] = None
+        self.plane: Plane | None = None
 
         self.view2d = Plane2DView()
         # self.selected = set()       # (kind, id) — view2d ile senkron
@@ -145,28 +143,30 @@ class PlanePlotPanel(BasePanel):
             return
 
         if self.plane is None:
-            imgui.set_next_window_size(400, 120, imgui.FIRST_USE_EVER)
-            imgui.set_next_window_position(200, 200, imgui.FIRST_USE_EVER)
+            imgui.set_next_window_size(imgui.ImVec2(400, 120), imgui.Cond_.first_use_ever)
+            imgui.set_next_window_pos(imgui.ImVec2(200, 200), imgui.Cond_.first_use_ever)
             expanded, opened = imgui.begin("Plane Plot", True)
             try:
                 if not opened:
                     self.visible = False
                     return
-                imgui.text_colored("Plane seçilmedi.", 0.7, 0.7, 0.7, 1.0)
-                imgui.text_colored("Plane Manager'dan bir plane seç.", 0.5, 0.5, 0.5, 1.0)
+                imgui.text_colored(imgui.ImVec4(0.7, 0.7, 0.7, 1.0), 'Plane seçilmedi.')
+                imgui.text_colored(imgui.ImVec4(0.5, 0.5, 0.5, 1.0), "Plane Manager'dan bir plane seç.")
             finally:
                 imgui.end()
             return
 
-        imgui.set_next_window_size(self.PANEL_W, self.PANEL_H, imgui.FIRST_USE_EVER)
-        imgui.set_next_window_position(20, 60, imgui.FIRST_USE_EVER)
+        imgui.set_next_window_size(imgui.ImVec2(self.PANEL_W, self.PANEL_H), imgui.Cond_.first_use_ever)
+        imgui.set_next_window_pos(imgui.ImVec2(20, 60), imgui.Cond_.first_use_ever)
 
         # Window padding = 0 (canvas kenarlara yapışsın)
-        imgui.push_style_var(imgui.STYLE_WINDOW_PADDING, (4.0, 4.0))
-        imgui.push_style_var(imgui.STYLE_WINDOW_BORDERSIZE, 0.0)
+        imgui.push_style_var(
+            imgui.StyleVar_.window_padding, imgui.ImVec2(4.0, 4.0)
+        )
+        imgui.push_style_var(imgui.StyleVar_.window_border_size, 0.0)
 
         expanded, opened = imgui.begin(f"Plane Plot — {self.plane.name}",
-                                        True, imgui.WINDOW_NO_SCROLLBAR)
+                                        True, imgui.WindowFlags_.no_scrollbar)
         try:
             if not opened:
                 self.close()
@@ -175,7 +175,7 @@ class PlanePlotPanel(BasePanel):
                 return
 
             # Layout'u hesapla
-            avail = imgui.get_content_region_available()
+            avail = imgui.get_content_region_avail()
             canvas_w = max(200.0, avail[0])
             total_h = avail[1]
             canvas_h = max(100.0, total_h - self.HEADER_H - 8)
@@ -220,15 +220,23 @@ class PlanePlotPanel(BasePanel):
         dirty = (n_pending > 0)
         if dirty:
             imgui.same_line(0, 8)
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.20, 0.55, 0.30, 1.0)
-            imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.28, 0.68, 0.40, 1.0)
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.20, 0.55, 0.30, 1.0)
+            )
+            imgui.push_style_color(
+                imgui.Col_.button_hovered, imgui.ImVec4(0.28, 0.68, 0.40, 1.0)
+            )
             if imgui.button("Ok") and dirty:
                 self._do_apply_pending()
             imgui.pop_style_color(2)
 
             imgui.same_line(0, 2)
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.45, 0.20, 0.20, 1.0)
-            imgui.push_style_color(imgui.COLOR_BUTTON_HOVERED, 0.60, 0.28, 0.28, 1.0)
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.45, 0.20, 0.20, 1.0)
+            )
+            imgui.push_style_color(
+                imgui.Col_.button_hovered, imgui.ImVec4(0.60, 0.28, 0.28, 1.0)
+            )
             if imgui.button("X") and dirty:
                 self._do_cancel_pending()
             imgui.pop_style_color(2)
@@ -261,11 +269,11 @@ class PlanePlotPanel(BasePanel):
 
         # Sağa yaslama hesaplaması
         text_width = imgui.calc_text_size(stats_text).x
-        available_width = imgui.get_content_region_available_width()
+        available_width = imgui.get_content_region_avail().x
         if available_width > text_width:
             imgui.same_line(available_width - text_width)
 
-        imgui.text_colored(stats_text, 0.7, 0.75, 0.85, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.7, 0.75, 0.85, 1.0), stats_text)
 
     # ------------------------------------------------------------------
     #  Canvas — tam genişlik, kendi başına çizim
@@ -275,7 +283,9 @@ class PlanePlotPanel(BasePanel):
         canvas_pos = (pos.x, pos.y)
 
         # Görünmez buton → tıklamaları yakala (arka plan)
-        imgui.invisible_button("##pp_canvas_area", canvas_w, canvas_h)
+        imgui.invisible_button(
+            "##pp_canvas_area", imgui.ImVec2(canvas_w, canvas_h)
+        )
 
         # 2D view çiz
         dl = imgui.get_window_draw_list()
@@ -311,8 +321,10 @@ class PlanePlotPanel(BasePanel):
         txt = f"{kind} #{eid}  {label}"
 
         # Tooltip gibi sağ alt köşede
-        imgui.set_cursor_screen_pos((cx + cw - 300, cy + ch - 26))
-        imgui.text_colored(txt, 0.7, 0.85, 0.95, 1.0)
+        imgui.set_cursor_screen_pos(
+            imgui.ImVec2(cx + cw - 300, cy + ch - 26)
+        )
+        imgui.text_colored(imgui.ImVec4(0.7, 0.85, 0.95, 1.0), txt)
 
     def _consume_view_clicks(self):
         v = self.view2d

@@ -1,11 +1,11 @@
 # core/marquee_selector.py
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
-import numpy as np
 import glm
 
-from domain.element import Node, Frame, Area, Link
+from domain.element import Area, Frame, Link, Node
 
 
 class MarqueeSelector:
@@ -460,12 +460,10 @@ class MarqueeSelector:
                 if p[i] < 0:
                     if t > u2:
                         return False
-                    if t > u1:
-                        u1 = t
+                    u1 = max(u1, t)
                 else:
                     if t < u1:
                         return False
-                    if t < u2:
-                        u2 = t
+                    u2 = min(u2, t)
         
         return True

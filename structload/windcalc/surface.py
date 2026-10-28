@@ -1,13 +1,21 @@
-import math
+
 import numpy as np
-from typing import List, Dict, Tuple, Optional, Union, Any
-# Geometrik yardımcılar
-from structload.windcalc.geometry_utils import close_polygon, polygon_centroid, _make_local_sys, _project_3d_to_local_2d, _normalize_wind
-from structload.windcalc.edge import Edge
+
 from structload.data.wind_data import EPS, SurfaceType, WindRelation
+from structload.windcalc.edge import Edge
+
+# Geometrik yardımcılar
+from structload.windcalc.geometry_utils import (
+    _make_local_sys,
+    _normalize_wind,
+    _project_3d_to_local_2d,
+    close_polygon,
+    polygon_centroid,
+)
+
 
 class Surface:
-    def __init__(self, polygon: Union[List, np.ndarray], name: str = "Test", tol: float = 1e-6):
+    def __init__(self, polygon: list | np.ndarray, name: str = "Test", tol: float = 1e-6):
         """3B Düzlemsel Poligon Nesnesi"""
         pts = np.asarray(polygon, dtype=float)
 
@@ -49,7 +57,7 @@ class Surface:
         self.any_shared = False
         self.zones = []
 
-    def _compute_normal(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _compute_normal(self) -> tuple[np.ndarray, np.ndarray]:
         normal = np.zeros(3)
         for i in range(self.n_pts):
             p_curr, p_next = self.pts_3d[i], self.pts_3d[(i + 1) % self.n_pts]
@@ -139,7 +147,7 @@ class Surface:
         else:
             return "DEGENERATE"
 
-    def _build_edges(self) -> Dict[int, Edge]:
+    def _build_edges(self) -> dict[int, Edge]:
         edges = {}
         for i in range(self.n_pts):
             try:
@@ -148,7 +156,7 @@ class Surface:
                 continue
         return edges
 
-    def get_upslope_vector_xy(self) -> Optional[np.ndarray]:
+    def get_upslope_vector_xy(self) -> np.ndarray | None:
         """
         Poligonun CCW/CW yapısından bağımsız olarak,
         Z yüksekliğinin arttığı (tırmanma) yönün XY projeksiyonunu döner.
@@ -221,7 +229,7 @@ class Surface:
             np.dot(wind, v_dir)
         ])
     
-    def analyze(self, wind_vector: Optional[np.ndarray]) -> None:
+    def analyze(self, wind_vector: np.ndarray | None) -> None:
         wind_to = _normalize_wind(wind_vector)
         if wind_to is None:
             return

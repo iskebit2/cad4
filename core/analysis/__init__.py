@@ -1,18 +1,27 @@
 
-from .mass_assembly import build_mass, MassAssembly, MassContribution
-from .stiffness_assembly import (
-    build_stiffness, local_stiffness, transformation_matrix,
-    StiffnessAssembly,
-)
-from .solver import StructuralSolver, ModalResult
-from .structuralanalysis import run_analysis, StructuralAnalysisResult
+from .mass_assembly import MassAssembly, MassContribution, build_mass
 from .material_takeoff import compute_takeoff, takeoff_to_dataframes
+from .solver import ModalResult, StructuralSolver
+from .stiffness_assembly import (
+    StiffnessAssembly,
+    build_stiffness,
+    local_stiffness,
+    transformation_matrix,
+)
+from .structuralanalysis import StructuralAnalysisResult, run_analysis
 
 __all__ = [
-    "build_mass", "MassAssembly", "MassContribution",
-    "build_stiffness", "local_stiffness", "transformation_matrix",
+    "MassAssembly",
+    "MassContribution",
+    "ModalResult",
     "StiffnessAssembly",
-    "StructuralSolver", "ModalResult",
-    "run_analysis", "StructuralAnalysisResult",
-    "compute_takeoff", "takeoff_to_dataframes",
+    "StructuralAnalysisResult",
+    "StructuralSolver",
+    "build_mass",
+    "build_stiffness",
+    "compute_takeoff",
+    "local_stiffness",
+    "run_analysis",
+    "takeoff_to_dataframes",
+    "transformation_matrix",
 ]

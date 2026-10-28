@@ -14,12 +14,11 @@ Model verisine YAZMAZ.
 from __future__ import annotations
 
 import math
-from typing import Optional, List, Tuple, Set, Dict
 
-import imgui
 import numpy as np
+from imgui_bundle import imgui
 
-from domain.plane import Plane, ChangeOp
+from domain.plane import ChangeOp, Plane
 
 
 def _rot(v, deg):
@@ -64,7 +63,7 @@ class Plane2DView:
     ZOOM_STEP       = 1.15
 
     def __init__(self):
-        self.plane: Optional[Plane] = None
+        self.plane: Plane | None = None
         self.scene = None
 
         # View
@@ -127,7 +126,7 @@ class Plane2DView:
         """Sahne sel_mgr'sini bağla."""
         self.sel_mgr = sel_mgr
 
-    def _uid_to_kind(self, uid) -> Optional[str]:
+    def _uid_to_kind(self, uid) -> str | None:
         """unique_id → kind. Scene'deki 5 dict'ten türet."""
         if self.scene is None:
             return None
@@ -246,7 +245,7 @@ class Plane2DView:
             if ch.op == ChangeOp.ADD:
                 yield (kind, ch.id, ch.data or {})
 
-    def _element_uvs(self, kind: str, eid) -> List[Tuple[float, float]]:
+    def _element_uvs(self, kind: str, eid) -> list[tuple[float, float]]:
         """Bir elemanın 2D noktaları (assoc veya excluded)."""
         if self.plane is None or self.scene is None:
             return []
@@ -262,7 +261,7 @@ class Plane2DView:
         return [self.plane.to_2d(p) for p in pts]
 
     @staticmethod
-    def _points_3d_of(el, kind: str) -> List[np.ndarray]:
+    def _points_3d_of(el, kind: str) -> list[np.ndarray]:
         if kind == "node":
             return [np.array([el.x, el.y, el.z], dtype=float)]
         if kind in ("frame", "link"):
@@ -312,7 +311,9 @@ class Plane2DView:
             return
 
         dl = draw_list
-        dl.add_rect_filled(cx, cy, cx + cw, cy + ch, self.COL_BG)
+        dl.add_rect_filled(
+            imgui.ImVec2(cx, cy), imgui.ImVec2(cx + cw, cy + ch), self.COL_BG
+        )
 
         to_screen, from_screen = self._factory(cx, cy, cw, ch)
 
@@ -342,8 +343,12 @@ class Plane2DView:
             x1, y1 = self._rubber_end
             rx0, rx1 = min(x0, x1), max(x0, x1)
             ry0, ry1 = min(y0, y1), max(y0, y1)
-            dl.add_rect_filled(rx0, ry0, rx1, ry1, self.COL_RUBBER)
-            dl.add_rect(rx0, ry0, rx1, ry1, 0xFFFFD060)
+            dl.add_rect_filled(
+                imgui.ImVec2(rx0, ry0), imgui.ImVec2(rx1, ry1), self.COL_RUBBER
+            )
+            dl.add_rect(
+                imgui.ImVec2(rx0, ry0), imgui.ImVec2(rx1, ry1), 0xFFFFD060
+            )
 
         # --- Input ---
         self._handle_input(imgui_ctx, cx, cy, cw, ch, to_screen, from_screen)
@@ -378,8 +383,10 @@ class Plane2DView:
             sx0, sy0 = to_screen(u, vmin)
             sx1, sy1 = to_screen(u, vmax)
             major = abs((u / (world_step * 5)) - round(u / (world_step * 5))) < 1e-6
-            dl.add_line(sx0, sy0, sx1, sy1,
-                        self.COL_GRID_MAJOR if major else self.COL_GRID)
+            dl.add_line(
+                imgui.ImVec2(sx0, sy0), imgui.ImVec2(sx1, sy1),
+                self.COL_GRID_MAJOR if major else self.COL_GRID,
+            )
             u += world_step
 
         # Yatay (v sabit)
@@ -388,22 +395,28 @@ class Plane2DView:
             sx0, sy0 = to_screen(umin, v)
             sx1, sy1 = to_screen(umax, v)
             major = abs((v / (world_step * 5)) - round(v / (world_step * 5))) < 1e-6
-            dl.add_line(sx0, sy0, sx1, sy1,
-                        self.COL_GRID_MAJOR if major else self.COL_GRID)
+            dl.add_line(
+                imgui.ImVec2(sx0, sy0), imgui.ImVec2(sx1, sy1),
+                self.COL_GRID_MAJOR if major else self.COL_GRID,
+            )
             v += world_step
 
     def _draw_axes(self, dl, to_screen):
         # U ekseni (v=0)
         x0, y0 = to_screen(-1e7, 0)
         x1, y1 = to_screen(1e7, 0)
-        dl.add_line(x0, y0, x1, y1, self.COL_AXIS_U, 1.2)
+        dl.add_line(
+            imgui.ImVec2(x0, y0), imgui.ImVec2(x1, y1), self.COL_AXIS_U, 1.2
+        )
         # V ekseni (u=0)
         x0, y0 = to_screen(0, -1e7)
         x1, y1 = to_screen(0, 1e7)
-        dl.add_line(x0, y0, x1, y1, self.COL_AXIS_V, 1.2)
+        dl.add_line(
+            imgui.ImVec2(x0, y0), imgui.ImVec2(x1, y1), self.COL_AXIS_V, 1.2
+        )
         # Orijin
         ox, oy = to_screen(0, 0)
-        dl.add_circle_filled(ox, oy, 3.0, 0xFFFFFFFF)
+        dl.add_circle_filled(imgui.ImVec2(ox, oy), 3.0, 0xFFFFFFFF)
 
     # ------------------------------------------------------------------
     def _draw_element(self, dl, kind: str, eid, to_screen, mode="assoc"):
@@ -427,8 +440,10 @@ class Plane2DView:
                 col = self.COL_NODE
             p = to_screen(*uvs[0])
             r = 6.0 if is_sel else (5.0 if is_hov else 4.0)
-            dl.add_circle_filled(p[0], p[1], r, col)
-            dl.add_circle(p[0], p[1], r + 0.8, 0xFF000000, 1.0)
+            dl.add_circle_filled(imgui.ImVec2(*p), r, col)
+            dl.add_circle(
+                imgui.ImVec2(*p), r + 0.8, 0xFF000000, thickness=1.0
+            )
             return
 
         if kind in ("frame", "link"):
@@ -445,12 +460,14 @@ class Plane2DView:
             p0 = to_screen(*uvs[0])
             p1 = to_screen(*uvs[1])
             thickness = 2.5 if is_sel else (2.0 if is_hov else 1.5)
-            dl.add_line(p0[0], p0[1], p1[0], p1[1], col, thickness)
+            dl.add_line(
+                imgui.ImVec2(*p0), imgui.ImVec2(*p1), col, thickness
+            )
             # Uç noktaları (küçük)
             if not is_excluded:
                 r = 2.5
-                dl.add_circle_filled(p0[0], p0[1], r, col)
-                dl.add_circle_filled(p1[0], p1[1], r, col)
+                dl.add_circle_filled(imgui.ImVec2(*p0), r, col)
+                dl.add_circle_filled(imgui.ImVec2(*p1), r, col)
             return
 
         if kind in ("poly", "area"):
@@ -469,14 +486,19 @@ class Plane2DView:
             for i in range(1, len(uvs) - 1):
                 p1 = to_screen(*uvs[i])
                 p2 = to_screen(*uvs[i + 1])
-                dl.add_triangle_filled(p0[0], p0[1], p1[0], p1[1],
-                                        p2[0], p2[1], fill)
+                dl.add_triangle_filled(
+                    imgui.ImVec2(*p0), imgui.ImVec2(*p1),
+                    imgui.ImVec2(*p2), fill,
+                )
             # Kenarlar
             n = len(uvs)
             for i in range(n):
                 a = to_screen(*uvs[i])
                 b = to_screen(*uvs[(i + 1) % n])
-                dl.add_line(a[0], a[1], b[0], b[1], edge, 1.2 if not is_sel else 2.0)
+                dl.add_line(
+                    imgui.ImVec2(*a), imgui.ImVec2(*b), edge,
+                    1.2 if not is_sel else 2.0,
+                )
             return
 
     def _draw_draft(self, dl, kind: str, eid: str, data: dict, to_screen):
@@ -508,13 +530,17 @@ class Plane2DView:
 
         if kind == "node":
             sx, sy = to_screen(*uvs[0])
-            dl.add_circle(sx, sy, 6.0, col, 1.8)
-            dl.add_circle_filled(sx, sy, 2.5, col)
+            dl.add_circle(
+                imgui.ImVec2(sx, sy), 6.0, col, thickness=1.8
+            )
+            dl.add_circle_filled(imgui.ImVec2(sx, sy), 2.5, col)
             return
 
         if kind in ("frame", "link") and len(uvs) >= 2:
             p0 = to_screen(*uvs[0]); p1 = to_screen(*uvs[1])
-            dl.add_line(p0[0], p0[1], p1[0], p1[1], col, 1.8)
+            dl.add_line(
+                imgui.ImVec2(*p0), imgui.ImVec2(*p1), col, 1.8
+            )
             return
 
         if kind in ("poly", "area") and len(uvs) >= 3:
@@ -522,7 +548,9 @@ class Plane2DView:
             for i in range(n):
                 a = to_screen(*uvs[i])
                 b = to_screen(*uvs[(i + 1) % n])
-                dl.add_line(a[0], a[1], b[0], b[1], col, 1.5)
+                dl.add_line(
+                    imgui.ImVec2(*a), imgui.ImVec2(*b), col, 1.5
+                )
 
     # ------------------------------------------------------------------
     #  Input
@@ -702,7 +730,7 @@ class Plane2DView:
         if hasattr(io, "key_space"):
             return bool(io.key_space)
         try:
-            return imgui_ctx.is_key_down(imgui.KEY_SPACE)
+            return imgui_ctx.is_key_down(imgui.Key.space)
         except Exception:
             return False
 

@@ -25,13 +25,25 @@ Kullanım:
 from __future__ import annotations
 
 import ctypes
-import numpy as np
+
 import glm
+import numpy as np
 from OpenGL.GL import (
-    GL_ARRAY_BUFFER, GL_FLOAT, GL_FALSE, GL_LINES, GL_STATIC_DRAW,
-    glBindBuffer, glBindVertexArray, glBufferData, glDeleteBuffers,
-    glDeleteVertexArrays, glDrawArrays, glEnableVertexAttribArray,
-    glGenBuffers, glGenVertexArrays, glVertexAttribPointer,
+    GL_ARRAY_BUFFER,
+    GL_FALSE,
+    GL_FLOAT,
+    GL_LINES,
+    GL_STATIC_DRAW,
+    glBindBuffer,
+    glBindVertexArray,
+    glBufferData,
+    glDeleteBuffers,
+    glDeleteVertexArrays,
+    glDrawArrays,
+    glEnableVertexAttribArray,
+    glGenBuffers,
+    glGenVertexArrays,
+    glVertexAttribPointer,
 )
 
 from logging_config import CadLogger

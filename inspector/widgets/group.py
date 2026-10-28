@@ -1,4 +1,5 @@
-import imgui
+from imgui_bundle import imgui
+
 from inspector.widgets.base import DrawContext
 from inspector.widgets.registry import widget_for_kind
 
@@ -47,10 +48,10 @@ class GroupDrawer:
 
             w = widget_for_kind(field.kind)
             if w is None:
-                imgui.text_colored(
-                    f"{field.label or field.key}: (desteklenmeyen kind={field.kind})",
-                    0.9, 0.5, 0.5, 1.0,
-                )
+                imgui.text_colored(imgui.ImVec4(0.9, 0.5, 0.5, 1.0), f'{field.label or field.key}: (desteklenmeyen kind={field.kind})')
+
+
+
                 return False
             return w.draw(field, ctx)
         finally:

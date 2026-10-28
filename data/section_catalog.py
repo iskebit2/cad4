@@ -8,10 +8,9 @@ data/*.json dosyalarındaki kesit kataloglarını yükler.
 """
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
 
-from domain.definition import Section
 from data.enums import SectionType
+from domain.definition import Section
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -36,14 +35,14 @@ def _f(val, default=0.0) -> float:
         return default
 
 
-def _make_section(entry: dict, section_type: SectionType, family: str) -> Optional[Section]:
+def _make_section(entry: dict, section_type: SectionType, family: str) -> Section | None:
     """JSON entry'sini Section'a çevir."""
     name = entry.get("EDI_STD") or entry.get("DESIGNATION") or ""
     if not name:
         return None
 
-    params: Dict[str, float] = {}
-    catalog: Dict[str, float] = {}
+    params: dict[str, float] = {}
+    catalog: dict[str, float] = {}
 
     if section_type == SectionType.PIPE:
         # Pipe: OD, TDES
@@ -95,12 +94,12 @@ def _make_section(entry: dict, section_type: SectionType, family: str) -> Option
     )
 
 
-def load_catalog_from_dir(data_dir: Path) -> Dict[str, Section]:
+def load_catalog_from_dir(data_dir: Path) -> dict[str, Section]:
     """
     Verilen klasördeki tüm steel_sections_*.json dosyalarını yükler.
     Döndürür: {name: Section} sözlüğü.
     """
-    result: Dict[str, Section] = {}
+    result: dict[str, Section] = {}
     for fname, (stype, family) in CATALOG_FILES.items():
         path = data_dir / fname
         if not path.exists():

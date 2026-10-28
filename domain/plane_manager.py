@@ -11,10 +11,6 @@ Sorumluluk:
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
-import numpy as np
-
 from domain.plane import Plane
 
 
@@ -33,13 +29,13 @@ class PlaneManager:
     def remove(self, name: str) -> bool:
         return self.project.planes.pop(name, None) is not None
 
-    def get(self, name: str) -> Optional[Plane]:
+    def get(self, name: str) -> Plane | None:
         return self.project.planes.get(name)
 
-    def all(self) -> List[Plane]:
+    def all(self) -> list[Plane]:
         return list(self.project.planes.values())
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return sorted(self.project.planes.keys())
 
     def count(self) -> int:
@@ -63,7 +59,7 @@ class PlaneManager:
 
     # ---------------- Pending ----------------
 
-    def apply_pending_all(self, scene=None) -> Dict[str, dict]:
+    def apply_pending_all(self, scene=None) -> dict[str, dict]:
         scene = scene or self.project.scene
         results = {}
         for name, p in self.project.planes.items():
@@ -75,21 +71,21 @@ class PlaneManager:
         for p in self.project.planes.values():
             p.clear_pending()
 
-    def pending_summary(self) -> Dict[str, int]:
+    def pending_summary(self) -> dict[str, int]:
         """Plane ismi → pending sayısı (panel/debug için)."""
         return {name: len(p.pending) for name, p in self.project.planes.items()}
 
     # ---------------- Konum sorguları ----------------
 
-    def planes_containing(self, pt) -> List[Plane]:
+    def planes_containing(self, pt) -> list[Plane]:
         return [p for p in self.project.planes.values() if p.contains_pt(pt)]
 
-    def planes_containing_band_only(self, pt) -> List[Plane]:
+    def planes_containing_band_only(self, pt) -> list[Plane]:
         return [p for p in self.project.planes.values() if p.band_contains_pt(pt)]
 
     # ---------------- Test / debug ----------------
 
-    def summary(self) -> Dict[str, dict]:
+    def summary(self) -> dict[str, dict]:
         """Her plane için kısa özet (log/UI için)."""
         out = {}
         for name, p in self.project.planes.items():

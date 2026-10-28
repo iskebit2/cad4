@@ -2,11 +2,14 @@
 """RESPONSE SPECTRUM FUNCTIONS/CASES, AUTO SEISMIC."""
 import pandas as pd
 
-from tools.s2k.context import LoadContext
 from data.enums import SpectrumSourceType
 from domain.definition import (
-    SpectrumFunction, ResponseSpectrumCase, ResponseSpectrumLoadAssignment, AutoSeismicTSC2018,
+    AutoSeismicTSC2018,
+    ResponseSpectrumCase,
+    ResponseSpectrumLoadAssignment,
+    SpectrumFunction,
 )
+from tools.s2k.context import LoadContext
 
 
 def _safe_float(row, key, default=0.0):

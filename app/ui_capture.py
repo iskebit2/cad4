@@ -5,12 +5,13 @@ ImGui / GLFW bağımlı küçük yardımcılar.
 InputManager buraya bağımlı OLMAMALI; bu modül üst katman
 (cad_app) tarafından import edilir.
 """
+from imgui_bundle import imgui
 
 
 def mouse_over_ui() -> bool:
     """ImGui fareyi yakalıyor mu?"""
     try:
-        import imgui
+        
         return bool(imgui.get_io().want_capture_mouse)
     except Exception:
         return False
@@ -19,7 +20,7 @@ def mouse_over_ui() -> bool:
 def keyboard_captured_by_ui() -> bool:
     """ImGui klavyeyi yakalıyor mu?"""
     try:
-        import imgui
+        
         return bool(imgui.get_io().want_capture_keyboard)
     except Exception:
         return False

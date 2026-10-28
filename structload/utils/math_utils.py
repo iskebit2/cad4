@@ -3,8 +3,9 @@ Ortak Matematik ve Mühendislik Araçları
 """
 
 import math
-from typing import List, Dict, Any, Tuple
 from collections.abc import Mapping
+from typing import Any
+
 
 def interpolate_value(value: float, data: Mapping) -> Any:
     """
@@ -55,7 +56,7 @@ def interpolate_value(value: float, data: Mapping) -> Any:
     return data[keys[-1]]
 
 
-def interpolate_2d(x: float, xp: List[float], yp: List[float]) -> float:
+def interpolate_2d(x: float, xp: list[float], yp: list[float]) -> float:
     """
     2D lineer interpolasyon.
     
@@ -87,7 +88,7 @@ def calculate_wind_velocity_pressure(v_b0: float, rho: float = 1.25) -> float:
     return 0.5 * rho * v_b0**2 / 1000
 
 
-def calculate_roughness_coefficient(z0: float, z: float, zmin: float) -> Tuple[float, float]:
+def calculate_roughness_coefficient(z0: float, z: float, zmin: float) -> tuple[float, float]:
     """
     Pürüzlülük katsayısını hesaplar.
     
@@ -154,7 +155,7 @@ def calculate_snow_shape_coefficient(alpha: float) -> float:
         return 0.0
 
 
-def round_values(data: Dict[str, Any], decimals: int = 3) -> Dict[str, Any]:
+def round_values(data: dict[str, Any], decimals: int = 3) -> dict[str, Any]:
     """
     Dictionary'deki tüm sayısal değerleri yuvarlar.
     

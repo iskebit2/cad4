@@ -1,10 +1,12 @@
 # tests/test_units_schema.py
+from core.units import UnitSystem, convert_project_units
+from data.enums import SectionType
 from domain.definition import (
-    Material, Section, LoadSegment, PointLoad, AreaUniformLoad,
+    LoadSegment,
+    Material,
+    Section,
 )
 from domain.element import Node
-from data.enums import SectionType
-from core.units import convert_project_units, UnitSystem
 
 
 def test_section_roundtrip():

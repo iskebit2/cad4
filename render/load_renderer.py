@@ -6,8 +6,9 @@ Frame yayılı yük görselleştirme.
 - Alpha ile şeffaf dolgu
 """
 import ctypes
-import numpy as np
+
 import glm
+import numpy as np
 from OpenGL.GL import *
 
 from logging_config import CadLogger
@@ -213,8 +214,7 @@ class LoadRenderer:
                     if self.active_pattern and pat != self.active_pattern:
                         continue
                     mag = abs(pl.fx) + abs(pl.fy) + abs(pl.fz)
-                    if mag > point_load_max:
-                        point_load_max = mag
+                    point_load_max = max(point_load_max, mag)
 
             # Ok boyu: sahnenin %5'i (max yük için)
             target_arrow_len = max(scene_size, 1.0) * 0.05

@@ -1,25 +1,16 @@
 # gui/report_panel.py
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.metrics import dp
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.scrollview import ScrollView
 from kivy.graphics import Color, Rectangle
-from structload.data.material_data import MATERIAL_WEIGHTS, LIVE_LOADS
-from structload.data.preset_loader import PresetLibrary
+from kivy.metrics import dp
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
 
-from structload.loads.load_definition import LoadDefinition, LoadComponent
+from structload.data.material_data import MATERIAL_WEIGHTS
 from structload.loads.load_manager import LoadManager
-
-from structload.utils.status_manager import status
 from structload.utils.report_dataframe import ReportDataFrame
-from structload.gui.status_bar import StatusBar
-from structload.gui.debug_panel import DebugPanel
-
-from pathlib import Path
-from structload.utils.my_document import myDocument  # opsiyonel, yoksa try/except
-
+from structload.utils.status_manager import status
 
 load_manager = LoadManager(material_weights=MATERIAL_WEIGHTS)
 
@@ -373,6 +364,6 @@ class RaporPaneli(BoxLayout):
     # ==========================================================
     def _debug_df_yazdir(self, instance):
         for i, df in enumerate(self._tables, 1):
-            pass(f"\n===== Tablo {i}: {df.custom_title} =====")
-            pass(df.to_string())
-            pass(f"Shape: {df.shape}, Columns: {list(df.columns)}")
+            print(f"\n===== Tablo {i}: {df.custom_title} =====")
+            print(df.to_string())
+            print(f"Shape: {df.shape}, Columns: {list(df.columns)}")

@@ -4,9 +4,9 @@ import logging
 
 import pandas as pd
 
-from tools.s2k.context import LoadContext
 from data.enums import LinkPropType
-from domain.definition import LinkProp, LinkPropLinear
+from domain.definition import LinkPropLinear
+from tools.s2k.context import LoadContext
 
 logger = logging.getLogger(__name__)
 

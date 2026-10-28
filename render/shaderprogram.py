@@ -1,9 +1,8 @@
 # render/shaderprogram.py
-from OpenGL.GL import *
+
 import glm
-from typing import Dict, Optional, Any
-from logging_config import CadLogger
 import numpy as np
+from OpenGL.GL import *
 
 from logging_config import CadLogger
 

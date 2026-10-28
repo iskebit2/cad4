@@ -4,8 +4,8 @@ import logging
 
 import pandas as pd
 
-from tools.s2k.context import LoadContext
 from domain.definition import GeneralProjectInfo, SiteInformation
+from tools.s2k.context import LoadContext
 
 logger = logging.getLogger(__name__)
 

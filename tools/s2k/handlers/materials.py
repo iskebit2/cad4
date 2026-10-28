@@ -4,9 +4,9 @@ import logging
 
 import pandas as pd
 
-from tools.s2k.context import LoadContext
 from data.enums import MatType
 from domain.definition import Material
+from tools.s2k.context import LoadContext
 
 logger = logging.getLogger(__name__)
 

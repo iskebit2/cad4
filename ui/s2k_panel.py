@@ -10,24 +10,23 @@ Birleşik S2K İçe/Dışa Aktarma Paneli.
 from __future__ import annotations
 
 import os
-from typing import Callable, Dict, List, Optional, Set
+from collections.abc import Callable
 
-import imgui
 import pandas as pd
+from imgui_bundle import imgui
 
-from ui.base_panel import BasePanel
-from ui.file_dialog import ImGuiFileDialog
 from domain.project import Project
 from logging_config import CadLogger
-
-from tools.s2k import S2KLoader, S2KParser, LoadContext
+from tools.s2k import LoadContext, S2KLoader, S2KParser
 from tools.s2k.handlers import build_router, build_sorted_router
 from tools.s2k_exporter import S2KExporter
+from ui.base_panel import BasePanel
+from ui.file_dialog import ImGuiFileDialog
 
 logger = CadLogger.get(__name__)
 
 
-CORE_DEPENDENCIES: Set[str] = {
+CORE_DEPENDENCIES: set[str] = {
     "MATERIAL PROPERTIES 01 - GENERAL",
     "FRAME SECTION PROPERTIES 01 - GENERAL",
     "JOINT COORDINATES",
@@ -43,9 +42,9 @@ class S2KPanel(BasePanel):
 
     def __init__(
         self,
-        on_import_complete: Optional[Callable[[Project], None]] = None,
-        get_project: Optional[Callable[[], Optional[Project]]] = None,
-        get_selected_elements: Optional[Callable[[], list]] = None,
+        on_import_complete: Callable[[Project], None] | None = None,
+        get_project: Callable[[], Project | None] | None = None,
+        get_selected_elements: Callable[[], list] | None = None,
     ):
         self.visible = False
         self.mode = self.MODE_IMPORT
@@ -57,26 +56,26 @@ class S2KPanel(BasePanel):
         self.get_selected_elements = get_selected_elements
 
         # --- IMPORT ---
-        self.import_path: Optional[str] = None
-        self.parser: Optional[S2KParser] = None
-        self.import_tables: Dict[str, pd.DataFrame] = {}
-        self.selected_tables: Dict[str, bool] = {}
+        self.import_path: str | None = None
+        self.parser: S2KParser | None = None
+        self.import_tables: dict[str, pd.DataFrame] = {}
+        self.selected_tables: dict[str, bool] = {}
         self.is_parsed = False
 
         # --- EXPORT ---
-        self.export_path: Optional[str] = None
+        self.export_path: str | None = None
         self.export_scope = "all"          # "all" | "selected"
-        self.export_text: Optional[str] = None
-        self.export_table_summary: List[tuple] = []   # [(name, row_count)]
-        self.export_table_selected: Dict[str, bool] = {}
+        self.export_text: str | None = None
+        self.export_table_summary: list[tuple] = []   # [(name, row_count)]
+        self.export_table_selected: dict[str, bool] = {}
 
         # --- LOG ---
-        self.log_messages: List[str] = []
+        self.log_messages: list[str] = []
 
     # ==================================================================
     # PUBLIC
     # ==================================================================
-    def open(self, mode: str = MODE_IMPORT, file_path: Optional[str] = None):
+    def open(self, mode: str = MODE_IMPORT, file_path: str | None = None):
         self.visible = True
         self.mode = mode
         if mode == self.MODE_IMPORT and file_path:
@@ -197,7 +196,7 @@ class S2KPanel(BasePanel):
         """Seçili tabloları sıralı + kalan router ile ctx'ye aktar."""
         ctx = LoadContext()
         router = build_router()
-        processed: Set[str] = set()
+        processed: set[str] = set()
 
         # Öncelikli tablolar
         for name, handler in build_sorted_router():
@@ -238,7 +237,7 @@ class S2KPanel(BasePanel):
         self.export_path = file_path
         self._log_info(f"Export yolu: {file_path}")
 
-    def _resolve_project(self) -> Optional[Project]:
+    def _resolve_project(self) -> Project | None:
         if callable(self.get_project):
             return self.get_project()
         return None
@@ -280,9 +279,9 @@ class S2KPanel(BasePanel):
         return True
 
     @staticmethod
-    def _parse_table_summary(text: str) -> List[tuple]:
+    def _parse_table_summary(text: str) -> list[tuple]:
         """TABLO: "NAME" başlıklarını ve satır sayılarını çıkar."""
-        summary: List[tuple] = []
+        summary: list[tuple] = []
         current = None
         count = 0
         for line in text.splitlines():
@@ -326,24 +325,25 @@ class S2KPanel(BasePanel):
 
         self.file_dialog.draw()
 
-        imgui.set_next_window_size(780, 640, imgui.ONCE)
-        expanded, opened = imgui.begin("S2K İçe / Dışa Aktarma", True)
-        if not opened:
-            self.close()
+        imgui.set_next_window_size(imgui.ImVec2(780, 640), imgui.Cond_.once)
+        _, opened = imgui.begin("S2K İçe / Dışa Aktarma", True)
+        try:
+            if not opened:
+                self.close()
+                return
+
+            self._draw_mode_selector()
+            imgui.separator()
+
+            if self.mode == self.MODE_IMPORT:
+                self._draw_import_ui()
+            else:
+                self._draw_export_ui()
+
+            imgui.separator()
+            self._draw_log_area()
+        finally:
             imgui.end()
-            return
-
-        self._draw_mode_selector()
-        imgui.separator()
-
-        if self.mode == self.MODE_IMPORT:
-            self._draw_import_ui()
-        else:
-            self._draw_export_ui()
-
-        imgui.separator()
-        self._draw_log_area()
-        imgui.end()
 
     def _draw_mode_selector(self):
         if imgui.radio_button("İçe Aktar (Import)", self.mode == self.MODE_IMPORT):
@@ -354,13 +354,13 @@ class S2KPanel(BasePanel):
 
     def _draw_import_ui(self):
         name = os.path.basename(self.import_path) if self.import_path else "Henüz dosya seçilmedi"
-        imgui.text_colored(f"Dosya: {name}", 0.4, 0.8, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.4, 0.8, 1.0, 1.0), f'Dosya: {name}')
         imgui.same_line()
         if imgui.button("📂 Dosya Seç"):
             self._open_import_dialog()
 
         if not self.is_parsed:
-            imgui.text_colored("Bir S2K dosyası seçin.", 0.8, 0.8, 0.3)
+            imgui.text_colored(imgui.ImVec4(0.8, 0.8, 0.3, 1.0), 'Bir S2K dosyası seçin.')
             return
 
         if imgui.button("Tümünü Seç"):
@@ -377,23 +377,25 @@ class S2KPanel(BasePanel):
 
         imgui.separator()
         imgui.text("İçe Aktarılacak Tablolar:")
-        imgui.begin_child("##ImportTableList", 0.0, 260.0, border=True)
-        for tbl_name, df in self.import_tables.items():
-            is_core = tbl_name in CORE_DEPENDENCIES
-            label = f"{tbl_name} ({len(df)} satır)"
-            if is_core:
-                imgui.text_colored("[Zorunlu]", 0.9, 0.7, 0.2, 1.0)
-                imgui.same_line()
-            changed, val = imgui.checkbox(label, self.selected_tables.get(tbl_name, False))
-            if changed:
-                self.selected_tables[tbl_name] = val
-        imgui.end_child()
+        imgui.begin_child("##ImportTableList", imgui.ImVec2(0, 130))
+        try:
+            for tbl_name, df in self.import_tables.items():
+                is_core = tbl_name in CORE_DEPENDENCIES
+                label = f"{tbl_name} ({len(df)} satır)"
+                if is_core:
+                    imgui.text_colored(imgui.ImVec4(0.9, 0.7, 0.2, 1.0), '[Zorunlu]')
+                    imgui.same_line()
+                changed, val = imgui.checkbox(label, self.selected_tables.get(tbl_name, False))
+                if changed:
+                    self.selected_tables[tbl_name] = val
+        finally:
+            imgui.end_child()
 
         imgui.separator()
-        if imgui.button("Modeli İnşa Et", width=200, height=30):
+        if imgui.button("Modeli İnşa Et", imgui.ImVec2(200, 30)):
             self._execute_import()
         imgui.same_line()
-        if imgui.button("Kapat", width=80, height=30):
+        if imgui.button("Kapat", imgui.ImVec2(80, 30)):
             self.close()
 
     def _draw_export_ui(self):
@@ -406,46 +408,54 @@ class S2KPanel(BasePanel):
             self.export_scope = "selected"
 
         path = self.export_path or "Henüz dosya seçilmedi"
-        imgui.text_colored(f"Kayıt: {path}", 0.4, 0.8, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.4, 0.8, 1.0, 1.0), f'Kayıt: {path}')
         imgui.same_line()
         if imgui.button("📂 Kayıt Yeri Seç"):
             self._open_export_dialog()
 
         imgui.separator()
-        if imgui.button("Export Üret", width=160, height=28):
+        if imgui.button("Export Üret", imgui.ImVec2(160, 28)):
             self._build_export_text()
 
         if self.export_text and self.export_table_summary:
             imgui.same_line()
-            if imgui.button("Dosyaya Yaz", width=160, height=28):
+            if imgui.button("Dosyaya Yaz", imgui.ImVec2(160, 28)):
                 self._write_export_file()
 
             imgui.separator()
             imgui.text("Oluşan Tablolar (önizleme):")
-            imgui.begin_child("##ExportTableList", 0.0, 240.0, border=True)
-            for tbl_name, count in self.export_table_summary:
-                imgui.text_colored(f"{tbl_name}  [{count} satır]", 0.75, 0.9, 0.75, 1.0)
-            imgui.end_child()
+            imgui.begin_child(
+                "##ExportTableList",
+                imgui.ImVec2(0, 240),
+                imgui.ChildFlags_.borders,
+            )
+            try:
+                for tbl_name, count in self.export_table_summary:
+                    imgui.text_colored(imgui.ImVec4(0.75, 0.9, 0.75, 1.0), f'{tbl_name}  [{count} satır]')
+            finally:
+                imgui.end_child()
 
             imgui.separator()
-            if imgui.button("Metni Panoya Kopyala", width=200, height=26):
+            if imgui.button("Metni Panoya Kopyala", imgui.ImVec2(200, 26)):
                 imgui.set_clipboard_text(self.export_text)
                 self._log_info("Export metni panoya kopyalandı.")
 
         imgui.separator()
-        if imgui.button("Kapat", width=80, height=26):
+        if imgui.button("Kapat", imgui.ImVec2(80, 26)):
             self.close()
 
     def _draw_log_area(self):
         imgui.text("Günlük:")
-        imgui.begin_child("##LogArea", 0.0, 130.0, border=True)
-        for msg in self.log_messages:
-            if "[HATA]" in msg:
-                imgui.text_colored(msg, 1.0, 0.3, 0.3, 1.0)
-            elif "[UYARI]" in msg:
-                imgui.text_colored(msg, 1.0, 0.8, 0.2, 1.0)
-            else:
-                imgui.text_colored(msg, 0.7, 0.9, 0.7, 1.0)
-        if imgui.get_scroll_y() >= imgui.get_scroll_max_y():
-            imgui.set_scroll_here_y(1.0)
-        imgui.end_child()
+        imgui.begin_child("##LogArea", imgui.ImVec2(0, 130))
+        try:
+            for msg in self.log_messages:
+                if "[HATA]" in msg:
+                    imgui.text_colored(imgui.ImVec4(1.0, 0.3, 0.3, 1.0), msg)
+                elif "[UYARI]" in msg:
+                    imgui.text_colored(imgui.ImVec4(1.0, 0.8, 0.2, 1.0), msg)
+                else:
+                    imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), msg)
+            if imgui.get_scroll_y() >= imgui.get_scroll_max_y():
+                imgui.set_scroll_here_y(1.0)
+        finally:
+            imgui.end_child()

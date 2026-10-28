@@ -1,12 +1,11 @@
 # geometry/profile_generator.py
-from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional, Callable, Any, Union
-import numpy as np
 import math
-from enum import Enum
+from typing import Any
+
+import numpy as np
+
 # from domain.element import SectionType
 from domain.definition import SectionType
-from logging_config import CadLogger
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -45,7 +44,7 @@ class ProfileGenerator:
         }
     
     def get_profile(self, 
-                   section_type: Union[SectionType, str], 
+                   section_type: SectionType | str, 
                    params: dict) -> np.ndarray:
         """
         Ana profil üretici fonksiyon - FrameGeometryBuilder bunu çağırır
@@ -148,7 +147,7 @@ class ProfileGenerator:
     
     # ========== PROFİL ÜRETİCİLERİ ==========
     
-    def _rect_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _rect_profile(self, params: dict) -> list[tuple[float, float]]:
         """Dikdörtgen profil"""
         b = params.get('b', 100.0)
         h = params.get('h', 200.0)
@@ -157,7 +156,7 @@ class ProfileGenerator:
             (b/2, h/2), (-b/2, h/2)
         ]
     
-    def _circle_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _circle_profile(self, params: dict) -> list[tuple[float, float]]:
         """Daire profil"""
         r = params.get('r', 50.0)
         n = params.get('n', 16)
@@ -166,7 +165,7 @@ class ProfileGenerator:
             for a in np.linspace(0, 2*math.pi, n, endpoint=False)
         ]
     
-    def _i_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _i_profile(self, params: dict) -> list[tuple[float, float]]:
         """I-profil (IPE, HEA, HEB)"""
         b = params.get('b', 100.0)
         h = params.get('h', 200.0)
@@ -179,7 +178,7 @@ class ProfileGenerator:
             (-tw/2, -h/2 + tf), (-tw/2, h/2 - tf), (-b/2, h/2 - tf),
         ]
     
-    def _l_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _l_profile(self, params: dict) -> list[tuple[float, float]]:
         """L-profil (köşebent)"""
         b = params.get('b', 80.0)
         h = params.get('h', 100.0)
@@ -190,7 +189,7 @@ class ProfileGenerator:
             (b, h - t), (b, h), (0, h)
         ]
     
-    def _t_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _t_profile(self, params: dict) -> list[tuple[float, float]]:
         """T-profil"""
         b = params.get('b', 120.0)
         h = params.get('h', 150.0)
@@ -203,7 +202,7 @@ class ProfileGenerator:
             (-tw/2, h/2 - tf), (-b/2, h/2 - tf),
         ]
     
-    def _pipe_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _pipe_profile(self, params: dict) -> list[tuple[float, float]]:
         """Boru profil"""
         ro = params.get('ro', 60.0)
         ri = params.get('ri', 50.0)
@@ -223,7 +222,7 @@ class ProfileGenerator:
         
         return outer + inner
     
-    def _tube_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _tube_profile(self, params: dict) -> list[tuple[float, float]]:
         """Kutu profil"""
         b = params.get('b', 100.0)
         h = params.get('h', 200.0)
@@ -242,7 +241,7 @@ class ProfileGenerator:
         
         return outer + inner
     
-    def _c_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _c_profile(self, params: dict) -> list[tuple[float, float]]:
         """C-profil (U-profil, kanal)"""
         b = params.get('b', 80.0)
         h = params.get('h', 100.0)
@@ -253,7 +252,7 @@ class ProfileGenerator:
             (2*t, h - t), (2*t, t), (b, t), (b, 0)
         ]
     
-    def _custom_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _custom_profile(self, params: dict) -> list[tuple[float, float]]:
         # 1) SD Section varsa → ilk Polygon shape'ini kullan
         sd = params.get('sd_section') if isinstance(params, dict) else None
         if sd is not None and getattr(sd, 'shapes', None):
@@ -267,13 +266,13 @@ class ProfileGenerator:
                 return pts
 
         # 2) Ham nokta listesi
-        if 'points' in params and params['points']:
+        if params.get('points'):
             return params['points']
 
         # 3) Fallback
         return self._default_profile(params)
     
-    def _default_profile(self, params: dict) -> List[Tuple[float, float]]:
+    def _default_profile(self, params: dict) -> list[tuple[float, float]]:
         """Varsayılan profil (100x100 kare)"""
         return [(-50, -50), (50, -50), (50, 50), (-50, 50)]
     
@@ -321,7 +320,7 @@ def create_mesh_from_outline(outline: np.ndarray,
                             start: np.ndarray, 
                             end: np.ndarray,
                             closed: bool = True,
-                            include_caps: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+                            include_caps: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """
     outline: (N,2) veya (N,3) numpy array, 2D kesit
     start, end: (3,) numpy array, extrusion direction
@@ -386,7 +385,6 @@ def create_mesh_from_outline(outline: np.ndarray,
         
         # TODO: Triangulate caps
         # (karmaşık, ayrı bir fonksiyonda yapılmalı)
-        pass
     
     return np.array(vertex_data, dtype=np.float32), np.array(indices, dtype=np.uint32)
 
@@ -404,7 +402,7 @@ def get_profile_area(profile: np.ndarray) -> float:
     return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
 
 
-def get_profile_centroid(profile: np.ndarray) -> Tuple[float, float]:
+def get_profile_centroid(profile: np.ndarray) -> tuple[float, float]:
     """Profil ağırlık merkezini hesapla"""
     if len(profile) < 3:
         return (0.0, 0.0)
@@ -423,7 +421,7 @@ def get_profile_centroid(profile: np.ndarray) -> Tuple[float, float]:
     return (cx, cy)
 
 
-def get_profile_bounds(profile: np.ndarray) -> Tuple[float, float, float, float]:
+def get_profile_bounds(profile: np.ndarray) -> tuple[float, float, float, float]:
     """Profil sınırlarını hesapla (min_x, max_x, min_y, max_y)"""
     return (np.min(profile[:, 0]), np.max(profile[:, 0]),
             np.min(profile[:, 1]), np.max(profile[:, 1]))

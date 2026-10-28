@@ -1,9 +1,11 @@
 #windcalc/zone.py
 
-from structload.data.wind_data import CPE_DATA, TOL, EPS
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
 import numpy as np
-from typing import List, Dict, Tuple, Optional, Any
+
+from structload.data.wind_data import CPE_DATA
+
 
 @dataclass
 class Zone:

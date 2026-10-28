@@ -1,8 +1,8 @@
 # tools/frame_to_link.py — TAM
 
-from typing import List, Optional, Tuple
-from domain.element import Frame, Link
+
 from domain.definition import LinkPropLinear, LinkPropType
+from domain.element import Frame, Link
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -34,7 +34,7 @@ def ensure_default_link_prop(project) -> LinkPropLinear:
 def frame_to_link(
     frame: Frame,
     link_prop_name: str = DEFAULT_LINK_PROP_NAME,
-) -> Tuple[Optional[Link], Optional[str]]:
+) -> tuple[Link | None, str | None]:
     """Bir Frame'i Link'e çevirir. Hata varsa (None, err) döner."""
     if frame.node_i is None or frame.node_j is None:
         return None, f"Frame '{frame.label}': node_i veya node_j eksik"
@@ -54,7 +54,7 @@ def frame_to_link(
 def convert_frames_to_links(
     scene,
     project,
-    frames: List[Frame],
+    frames: list[Frame],
     link_prop_name: str = DEFAULT_LINK_PROP_NAME,
     delete_original: bool = True,
 ) -> dict:

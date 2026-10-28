@@ -1,5 +1,6 @@
-import imgui
-from inspector.widgets.base import Widget, DrawContext
+from imgui_bundle import imgui
+
+from inspector.widgets.base import DrawContext, Widget
 
 
 class ListObjectWidget(Widget):
@@ -23,7 +24,7 @@ class ListObjectWidget(Widget):
             val = item.get("value")
             header = f"[{idx + 1}] {title}" + (f"  (v={val})" if val is not None else "")
 
-            opened, _ = imgui.collapsing_header(header)
+            opened = imgui.collapsing_header(header)
             if opened and field.item_schema:
                 imgui.indent(12)
                 for sub_f in field.item_schema:

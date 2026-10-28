@@ -11,9 +11,8 @@ Kullanım:
 
 import json
 import os
-from pathlib import Path
-
 import traceback
+from pathlib import Path
 
 from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout

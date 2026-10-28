@@ -9,7 +9,6 @@ Hazır Yük Kütüphanesi Yükleyici
 
 import json
 import os
-from typing import Optional
 
 from structload.loads.load_definition import LoadDefinition
 from structload.loads.wall_load_engine import WallLoadEngine
@@ -18,7 +17,7 @@ KGF_TO_KN = 0.00980665
 
 
 class PresetLibrary:
-    def __init__(self, json_path: Optional[str] = None):
+    def __init__(self, json_path: str | None = None):
         if json_path is None:
             json_path = os.path.join(
                 os.path.dirname(__file__),
@@ -115,7 +114,7 @@ class PresetLibrary:
         kategori_id: str,
         item_index: int,
         load_id: str,
-        load_type: Optional[str] = None,
+        load_type: str | None = None,
         source_ek: str = "Hazır Kütüphane",
     ) -> LoadDefinition:
         cat = self.categories.get(kategori_id)

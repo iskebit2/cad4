@@ -1,12 +1,13 @@
 # core/camera.py
-import numpy as np
 import glm
+import numpy as np
+
 glm.silence(2)
 import math
 from dataclasses import dataclass, field
-from typing import Optional
 
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 
@@ -47,15 +48,15 @@ class Camera:
     max_pitch: float = 89.0
 
     # --- Cache ---
-    _position: Optional[glm.vec3] = None
-    _view_matrix: Optional[glm.mat4] = None
-    _projection_matrix: Optional[glm.mat4] = None
+    _position: glm.vec3 | None = None
+    _view_matrix: glm.mat4 | None = None
+    _projection_matrix: glm.mat4 | None = None
 
     # --- View / Plan filter ---
-    active_plane: Optional[str] = None
+    active_plane: str | None = None
     plane_offset: float = 0.0
     plane_direction: str = "positive"
-    view_preset: Optional[str] = None
+    view_preset: str | None = None
 
     section_active: bool = False
     section_normal: tuple = (0.0, 0.0, 1.0)

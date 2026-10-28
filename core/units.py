@@ -15,11 +15,10 @@ Katmanlar:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
-
 import logging
+from collections.abc import Callable
+from enum import Enum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -42,21 +41,21 @@ DENSITY_TIMBER = 0.60e-6
 # ============================================================================
 # BİRİM TABLOLARI (tek yer)
 # ============================================================================
-FORCE_TO_N: Dict[str, float] = {
+FORCE_TO_N: dict[str, float] = {
     "N": 1.0, "kN": 1e3, "kgf": 9.80665, "tonf": 9806.65,
     "lb": 4.4482216152605, "kip": 4448.2216152605,
 }
 
-LENGTH_TO_MM: Dict[str, float] = {
+LENGTH_TO_MM: dict[str, float] = {
     "mm": 1.0, "cm": 10.0, "m": 1000.0, "in": 25.4, "ft": 304.8,
 }
 
-MASS_TO_KG: Dict[str, float] = {
+MASS_TO_KG: dict[str, float] = {
     "kg": 1.0, "t": 1000.0, "g": 1e-3, "lb": 0.45359237,
 }
 
 # Mutlak sıcaklık: °C = (v - b) * a
-TEMP_FACTOR: Dict[str, tuple[float, float]] = {
+TEMP_FACTOR: dict[str, tuple[float, float]] = {
     "C": (1.0, 0.0),
     "F": (5.0 / 9.0, 32.0),
 }
@@ -97,7 +96,7 @@ class UnitSystem(Enum):
     KIP_FT = "kip, ft, F"
 
     @classmethod
-    def from_sap(cls, s: Optional[str]) -> "UnitSystem":
+    def from_sap(cls, s: str | None) -> UnitSystem:
         s = (s or "N, mm, C").strip()
         for us in cls:
             if us.value.lower() == s.lower():
@@ -179,7 +178,7 @@ def convert_value(
 # ============================================================================
 class UnitChangeEvent:
     def __init__(self):
-        self._listeners: List[Callable] = []
+        self._listeners: list[Callable] = []
 
     def subscribe(self, fn: Callable):
         self._listeners.append(fn)
@@ -294,7 +293,7 @@ def _convert_field(
 # ============================================================================
 # DOĞRULAMA
 # ============================================================================
-def validate_project_units(project, original_system: UnitSystem) -> List[str]:
+def validate_project_units(project, original_system: UnitSystem) -> list[str]:
     """
     Dönüşüm öncesi ve sonrası aynı fiziksel değerleri mi temsil ediyor?
     Roundtrip: original → N_MM → original.

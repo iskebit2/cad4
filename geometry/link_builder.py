@@ -1,8 +1,9 @@
 # geometry/link_builder.py
+
 import numpy as np
-from typing import Tuple
+
 from domain.element import Link
-import math
+
 
 def normalize(v):
     n = np.linalg.norm(v)
@@ -12,7 +13,7 @@ def normalize(v):
 
 class LinkBuilder:
     
-    def build(self, link: Link) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def build(self, link: Link) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Basit link - sadece pos ve norm (6 float)"""
         start = np.array([link.node_i.x, link.node_i.y, link.node_i.z], dtype=np.float32)
         end = np.array([link.node_j.x, link.node_j.y, link.node_j.z], dtype=np.float32)

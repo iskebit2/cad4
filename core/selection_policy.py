@@ -1,6 +1,5 @@
 # core/selection_policy.py
 from enum import Enum
-from logging_config import CadLogger
 
 from logging_config import CadLogger
 

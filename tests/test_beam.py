@@ -1,9 +1,10 @@
 import numpy as np
 
 from core.analysis.solver import StructuralSolver
-from domain.definition import Material, Section, Restraint
-from domain.project import Project
+from domain.definition import Material, Restraint, Section
 from domain.element import Frame, Node
+from domain.project import Project
+
 
 def local_collect_fixed_dofs(scene) -> list:
     fixed = []
@@ -192,10 +193,10 @@ def run_udl_mesh_test(section, L=6000.0, q_N_mm=2.5, num_segments=4, restraint_t
     R = stiff_asm.K_global @ U - F
 
     # 7. Çıktıların Yazdırılması (Output Stations)
-    print(f"\n=======================================================")
+    print("\n=======================================================")
     print(f" MUKAVEMET FİNALİ: {section.name} | Mesnet: {restraint_type.upper()}")
     print(f" Toplam Boy: {L} mm | Yayılı Yük: {q_N_mm} N/mm | Parça Sayısı: {num_segments}")
-    print(f"=======================================================")
+    print("=======================================================")
     print(f"{'Station (mm)':<14}{'Nod':<8}{'Çökme u_z (mm)':<18}{'Reaksiyon R_z (N)':<20}{'Moment M_y (Nmm)':<20}")
     print("-" * 75)
 

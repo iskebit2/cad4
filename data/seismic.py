@@ -2,8 +2,6 @@
 # ============================================================================
 # TBDY 2018 DEPREM TABLOLARI VE KATSAYILARI (LOOKUP TABLES)
 # ============================================================================
-from typing import List, Tuple
-
 
 TSC_2018_FS_TABLE = {
     "ZA": [(0.25, 0.8), (0.50, 0.8), (0.75, 0.8), (1.00, 0.8), (1.25, 0.8), (1.50, 0.8)],
@@ -22,7 +20,7 @@ TSC_2018_F1_TABLE = {
 }
 
 
-def get_tsc2018_site_coefficients(ss: float, s1: float, site_class: str) -> Tuple[float, float]:
+def get_tsc2018_site_coefficients(ss: float, s1: float, site_class: str) -> tuple[float, float]:
     """
     TBDY 2018 Tablo 2.1 ve 2.2'ye göre doğrusal interpolasyon ile Fs ve F1 katsayılarını hesaplar.
     ZF sınıfında sahaya özel zemin davranışı analizi gerektiğinden varsayılan 1.0 döner.
@@ -31,7 +29,7 @@ def get_tsc2018_site_coefficients(ss: float, s1: float, site_class: str) -> Tupl
     if site_class not in TSC_2018_FS_TABLE or site_class == "ZF":
         return 1.0, 1.0
 
-    def interpolate(val: float, points: List[Tuple[float, float]]) -> float:
+    def interpolate(val: float, points: list[tuple[float, float]]) -> float:
         if val <= points[0][0]:
             return points[0][1]
         if val >= points[-1][0]:

@@ -1,8 +1,7 @@
 # domain/enums.py
 
 from enum import Enum, IntEnum, auto
-from typing import Dict, Type
-from core.units import UnitSystem
+
 # ============================================================================
 # ENUMERATION'LAR
 # ============================================================================
@@ -422,7 +421,7 @@ class PolygonType(Enum):
     SECTION_CUT = auto()
     LOAD_AREA = auto()
 
-ENUM_REGISTRY: Dict[str, Type[Enum]] = {
+ENUM_REGISTRY: dict[str, type[Enum]] = {
     "MatType": MatType,
     "SectionType": SectionType,
     "LinkPropType": LinkPropType,

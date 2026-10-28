@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -27,8 +26,8 @@ class StiffnessAssembly:
     K_global: np.ndarray
     frame_count: int = 0
     area_count: int = 0
-    skipped: List[Tuple[str, str]] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+    skipped: list[tuple[str, str]] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 def local_stiffness(
@@ -41,8 +40,8 @@ def local_stiffness(
     AS2: float,
     AS3: float,
     L: float,
-    release_i: Optional[Dict[str, bool]] = None,
-    release_j: Optional[Dict[str, bool]] = None,
+    release_i: dict[str, bool] | None = None,
+    release_j: dict[str, bool] | None = None,
     use_shear_deform: bool = True,
 ) -> np.ndarray:
     """
@@ -55,7 +54,7 @@ def local_stiffness(
     ri = release_i or {}
     rj = release_j or {}
 
-    def rel(d: Dict[str, bool], code: str) -> bool:
+    def rel(d: dict[str, bool], code: str) -> bool:
         return bool(d.get(code, False))
 
     # 1. Eksenel (UX: 0, 6)
@@ -107,7 +106,6 @@ def local_stiffness(
     return 0.5 * (k + k.T)
 
 def transformation_matrix(p1, p2, beta_deg=0.0, up_global=(0.0, 0.0, 1.0)):
-    import math
     p1 = np.asarray(p1, dtype=float)
     p2 = np.asarray(p2, dtype=float)
     v = p2 - p1
@@ -244,8 +242,8 @@ def build_stiffness(
     num_dofs = len(scene.nodes) * 6
 
     K = np.zeros((num_dofs, num_dofs), dtype=float)
-    skipped: List[Tuple[str, str]] = []
-    warnings: List[str] = []
+    skipped: list[tuple[str, str]] = []
+    warnings: list[str] = []
     frame_count = 0
     area_count = 0
 
@@ -286,7 +284,7 @@ def build_stiffness(
 
 def _assemble_frame(
     frame, K: np.ndarray, num_dofs: int, use_shear_deform: bool = True
-) -> Optional[str]:
+) -> str | None:
     sec = getattr(frame, "section", None)
     if not sec:
         return "section yok"
@@ -335,7 +333,7 @@ def _assemble_frame(
     return None
 
 
-def _assemble_area(area, K: np.ndarray, num_dofs: int) -> Optional[str]:
+def _assemble_area(area, K: np.ndarray, num_dofs: int) -> str | None:
     nodes = getattr(area, "nodes", [])
     if len(nodes) < 3:
         return "area düğüm sayısı < 3"

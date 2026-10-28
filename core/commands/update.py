@@ -1,8 +1,9 @@
 # core/commands/update.py
-from typing import Any, Dict, Callable
-from logging_config import CadLogger
+from collections.abc import Callable
+from typing import Any
 
 from core.commands.base import Command
+from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
@@ -14,8 +15,8 @@ class UpdateElementCommand(Command):
     setter: setter(element, field, value)
     """
 
-    def __init__(self, element, before: Dict[str, Any],
-                 after: Dict[str, Any],
+    def __init__(self, element, before: dict[str, Any],
+                 after: dict[str, Any],
                  setter: Callable[[Any, str, Any], None]):
         self.element = element
         self.before = dict(before)

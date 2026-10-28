@@ -4,9 +4,9 @@ import logging
 
 import pandas as pd
 
-from tools.s2k.context import LoadContext
 from data.enums import SectionCutDefinedBy, SectionCutResultType
-from domain.definition import SectionCut, QuadDefinition
+from domain.definition import QuadDefinition, SectionCut
+from tools.s2k.context import LoadContext
 
 logger = logging.getLogger(__name__)
 

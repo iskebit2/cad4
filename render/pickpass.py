@@ -1,10 +1,10 @@
 # render/pickpass.py
-import numpy as np
-import glm
-from OpenGL.GL import *
 import ctypes
-from logging_config import CadLogger
 import time
+
+import numpy as np
+from OpenGL.GL import *
+
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)

@@ -8,19 +8,19 @@ Node _x/_y/_z private — __dict__ doğrudan — mark_dirty yok.
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import glm
 
-from domain import definition as D
-from data import enums as E
 from core.units import Dimension
-
+from data import enums as E
+from domain import definition as D
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 
-def id_to_color(obj_id: int) -> Tuple[float, float, float]:
+def id_to_color(obj_id: int) -> tuple[float, float, float]:
     return (
         ((obj_id >> 0) & 0xFF) / 255.0,
         ((obj_id >> 8) & 0xFF) / 255.0,
@@ -49,7 +49,7 @@ class Element:
         self.pick_id = self.unique_id
         self.element_type = None
         self.color = list(color) if color is not None else None
-        self.show_axes_override: Optional[bool] = None
+        self.show_axes_override: bool | None = None
 
     def toggle_selection(self):
         self.is_selected = not self.is_selected
@@ -57,14 +57,14 @@ class Element:
     def mark_dirty(self):
         self.needs_update = True
 
-    def _apply_base_dict(self, data: Dict[str, Any]):
+    def _apply_base_dict(self, data: dict[str, Any]):
         if "unique_id" in data:
             self.unique_id = int(data["unique_id"])
             Element._id_counter = max(Element._id_counter, self.unique_id + 1)
             self.pick_id = self.unique_id
         self.is_selected = bool(data.get("is_selected", False))
         self.is_visible = bool(data.get("is_visible", True))
-        if "color" in data and data["color"]:
+        if data.get("color"):
             self.color = list(data["color"])
 
 
@@ -81,9 +81,9 @@ class Node(Element):
     }
 
     def __init__(self, x: float, y: float, z: float, label: str = "",
-                 restraint: Optional[D.Restraint] = None,
-                 mass: Tuple[float, ...] = (0.0,) * 6,
-                 spring: Tuple[float, ...] = (), color=None):
+                 restraint: D.Restraint | None = None,
+                 mass: tuple[float, ...] = (0.0,) * 6,
+                 spring: tuple[float, ...] = (), color=None):
         super().__init__(label, color=color)
         self.element_type = "Node"
         self._x = float(x)
@@ -92,9 +92,9 @@ class Node(Element):
         self.restraint = restraint
         self.mass = tuple(mass)
         self.spring = tuple(spring)
-        self.dof_indices: List[Optional[int]] = [None] * 6
-        self.connected: List[Tuple[E.ObjType, str]] = []
-        self.loads: List[D.PointLoad] = []
+        self.dof_indices: list[int | None] = [None] * 6
+        self.connected: list[tuple[E.ObjType, str]] = []
+        self.loads: list[D.PointLoad] = []
 
     # --- x, y, z @property + setter (mark_dirty) ---
     @property
@@ -128,7 +128,7 @@ class Node(Element):
         self._x, self._y, self._z = float(x), float(y), float(z)
         self.mark_dirty()
 
-    def distance_to(self, other: "Node") -> float:
+    def distance_to(self, other: Node) -> float:
         dx, dy, dz = self._x - other._x, self._y - other._y, self._z - other._z
         return math.sqrt(dx * dx + dy * dy + dz * dz)
 
@@ -151,7 +151,7 @@ class Node(Element):
                 current += 1
         return current
 
-    def get_dof_index(self, dof_name: str) -> Optional[int]:
+    def get_dof_index(self, dof_name: str) -> int | None:
         return self.dof_indices[self.DOF_ORDER.index(dof_name)]
 
     def add_connection(self, element):
@@ -182,11 +182,11 @@ class Frame(Element):
         self.release_i = None
         self.release_j = None
 
-        self.point_loads: List[Any] = []
-        self.dist_loads: List[Any] = []
-        self.gravity_loads: List[Any] = []
-        self.temp_loads: List[Any] = []
-        self.dist_load_sets: Dict[str, D.FrameDistributedLoad] = {}
+        self.point_loads: list[Any] = []
+        self.dist_loads: list[Any] = []
+        self.gravity_loads: list[Any] = []
+        self.temp_loads: list[Any] = []
+        self.dist_load_sets: dict[str, D.FrameDistributedLoad] = {}
 
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
@@ -259,7 +259,7 @@ class Area(Element):
         "thickness": Dimension.LENGTH,
     }
 
-    def __init__(self, nodes: List[Node], thickness: float, label: str = "", color=None):
+    def __init__(self, nodes: list[Node], thickness: float, label: str = "", color=None):
         super().__init__(label, color)
         self.element_type = "Area"
         self.nodes = list(nodes)
@@ -267,14 +267,14 @@ class Area(Element):
 
         self.material = None
         self.section_name = ""
-        self.gravity_loads: List[Any] = []
-        self.ref_temp: Optional[float] = None
-        self.strain_loads: List[Any] = []
-        self.surface_pressures: List[Any] = []
-        self.temp_loads: List[Any] = []
-        self.uniform_loads: List[Any] = []
-        self.uniform_to_frame_loads: List[Any] = []
-        self.wind_pressures: List[Any] = []
+        self.gravity_loads: list[Any] = []
+        self.ref_temp: float | None = None
+        self.strain_loads: list[Any] = []
+        self.surface_pressures: list[Any] = []
+        self.temp_loads: list[Any] = []
+        self.uniform_loads: list[Any] = []
+        self.uniform_to_frame_loads: list[Any] = []
+        self.wind_pressures: list[Any] = []
 
     @property
     def section(self):
@@ -301,20 +301,20 @@ class Link(Element):
 # POLYGON
 # ============================================================================
 class Polygon(Element):
-    def __init__(self, nodes: List[Node], label: str = "",
+    def __init__(self, nodes: list[Node], label: str = "",
                  poly_type: E.PolygonType = E.PolygonType.GENERIC, color=None):
         super().__init__(label, color=color or [0.8, 0.3, 0.8, 0.6])
         self.element_type = "Polygon"
         self.poly_type = poly_type
         self.nodes = list(nodes)
-        self.windplane: Dict[str, Any] = {}
+        self.windplane: dict[str, Any] = {}
         self.is_temporary = False
-        self.uniform_to_frame_loads: List[Any] = []
-        self.associated_frame_ids: List[int] = []
+        self.uniform_to_frame_loads: list[Any] = []
+        self.associated_frame_ids: list[int] = []
 
     def is_valid(self) -> bool: return len(self.nodes) >= 3
 
-    def centroid(self) -> Tuple[float, float, float]:
+    def centroid(self) -> tuple[float, float, float]:
         n = len(self.nodes)
         if n == 0:
             return (0.0, 0.0, 0.0)
@@ -325,7 +325,7 @@ class Polygon(Element):
         )
 
     @staticmethod
-    def calculate_normal(nodes: List[Node], use_newell: bool = True) -> glm.vec3:
+    def calculate_normal(nodes: list[Node], use_newell: bool = True) -> glm.vec3:
         n = glm.vec3(0, 0, 0)
         if use_newell:
             N = len(nodes)
@@ -343,7 +343,7 @@ class Polygon(Element):
         return n / L if L > 1e-9 else glm.vec3(0, 0, 1)
 
     @staticmethod
-    def calculate_plane_axes(nodes: List[Node]) -> Tuple[glm.vec3, glm.vec3, glm.vec3]:
+    def calculate_plane_axes(nodes: list[Node]) -> tuple[glm.vec3, glm.vec3, glm.vec3]:
         N = Polygon.calculate_normal(nodes)
         u = glm.vec3(nodes[1]._x - nodes[0]._x, nodes[1]._y - nodes[0]._y, nodes[1]._z - nodes[0]._z)
         u = u - N * glm.dot(u, N)

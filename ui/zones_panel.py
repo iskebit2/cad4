@@ -7,10 +7,12 @@ WindAnalysisResult yapısı:
 WindDirectionResult:
     w_dir: Tuple[float, float, float]
 """
-from logging_config import CadLogger
-import imgui
-from ui.base_panel import BasePanel
+from imgui_bundle import imgui
+import numpy as np
+
 from domain.definition import WindDirectionResult
+from logging_config import CadLogger
+from ui.base_panel import BasePanel
 
 logger = CadLogger.get(__name__)
 
@@ -30,6 +32,7 @@ class ZonesPanel(BasePanel):
             closable=True,
         )
         self.scene = None
+        self.project = None
         self.wind_analysis_ref = None
         self.on_run_analysis = on_run_analysis
         self.on_select_direction = on_select_direction
@@ -41,7 +44,7 @@ class ZonesPanel(BasePanel):
         self._dist_type = "one_way"
 
         self._zones_cache = None
-        self._zones_cache_frame = -1
+        self._zones_cache_key = None
 
     # ------------------------------------------------------------------
     def open(self, scene=None, wind_analysis=None):
@@ -57,7 +60,7 @@ class ZonesPanel(BasePanel):
 
     def _invalidate_zones_cache(self):
         self._zones_cache = None
-        self._zones_cache_frame = -1
+        self._zones_cache_key = None
 
     # ------------------------------------------------------------------
     # WindAnalysisResult erişim yardımcıları
@@ -116,6 +119,8 @@ class ZonesPanel(BasePanel):
         imgui.separator()
         self._draw_analysis_controls()
         imgui.separator()
+        self._draw_zone_preview()
+        imgui.separator()
         self._draw_zone_table()
         imgui.separator()
         self._draw_distribute_controls()
@@ -129,14 +134,14 @@ class ZonesPanel(BasePanel):
             return
 
         if not self.wind_analysis_ref:
-            imgui.text_colored("Rüzgar analiz yöneticisi bağlı değil.",
-                               0.9, 0.5, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.9, 0.5, 0.5, 1.0), 'Rüzgar analiz yöneticisi bağlı değil.')
+
             return
 
         directions_dict = self._get_directions_dict()
         if not directions_dict:
-            imgui.text_colored("Yön bulunamadı. Analizi çalıştırın.",
-                               0.7, 0.7, 0.7, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.7, 0.7, 1.0), 'Yön bulunamadı. Analizi çalıştırın.')
+
             return
 
         active_dir = self._get_active_direction()
@@ -151,7 +156,7 @@ class ZonesPanel(BasePanel):
             imgui.push_id(f"dir_{key}")
 
             # Key etiketi
-            imgui.text_colored(f"{key}", 0.5, 0.7, 0.9, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.5, 0.7, 0.9, 1.0), f'{key}')
             imgui.same_line()
 
             # Vektör input
@@ -159,7 +164,9 @@ class ZonesPanel(BasePanel):
             buf_key = f"dir_buf_{key}"
             if buf_key not in self._dir_buffers:
                 self._dir_buffers[buf_key] = f"{vec[0]}, {vec[1]}, {vec[2]}"
-            changed, new_val = imgui.input_text("##dir", self._dir_buffers[buf_key], 64)
+            changed, new_val = imgui.input_text(
+                "##dir", self._dir_buffers[buf_key]
+            )
             if changed:
                 self._dir_buffers[buf_key] = new_val
                 try:
@@ -176,9 +183,12 @@ class ZonesPanel(BasePanel):
             # Aktif yön butonu
             is_active = (active_dir == vec)
             if is_active:
-                imgui.push_style_color(imgui.COLOR_BUTTON, 0.2, 0.6, 0.3, 1.0)
-            if imgui.button("Gösteriliyor" if is_active else "Sahneye Yansıt"):
+                imgui.push_style_color(
+                    imgui.Col_.button, imgui.ImVec4(0.2, 0.6, 0.3, 1.0)
+                )
+            if imgui.button("Gösteriliyor" if is_active else "Önizle"):
                 self._set_active_direction(vec)
+                self._invalidate_zones_cache()
                 if callable(self.on_select_direction):
                     self.on_select_direction(vec)
             if is_active:
@@ -197,10 +207,10 @@ class ZonesPanel(BasePanel):
             directions_dict.pop(remove_key, None)
             self._dir_buffers.clear()
 
-        if imgui.button("+ Yön Ekle", width=120):
+        if imgui.button("+ Yön Ekle", imgui.ImVec2(120, 0)):
             # Yeni anahtar üret (sayısal key'ler için)
             existing_nums = []
-            for k in directions_dict.keys():
+            for k in directions_dict:
                 try:
                     existing_nums.append(int(k))
                 except (ValueError, TypeError):
@@ -220,7 +230,7 @@ class ZonesPanel(BasePanel):
     # 2. ANALİZ + KIND
     # ------------------------------------------------------------------
     def _draw_analysis_controls(self):
-        if imgui.button("Rüzgar Analizi Çalıştır", width=220, height=32):
+        if imgui.button("Rüzgar Analizi Çalıştır", imgui.ImVec2(220, 32)):
             if callable(self.on_run_analysis):
                 try:
                     self.on_run_analysis()
@@ -245,7 +255,7 @@ class ZonesPanel(BasePanel):
 
         imgui.same_line(560)
         zones = self._collect_zones()
-        imgui.text_colored(f"Zone: {len(zones)}", 0.6, 0.85, 0.6, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.6, 0.85, 0.6, 1.0), f'Zone: {len(zones)}')
 
     # ------------------------------------------------------------------
     # 3. TABLO
@@ -254,26 +264,28 @@ class ZonesPanel(BasePanel):
         zones = self._collect_zones()
         if not zones:
             imgui.spacing()
-            imgui.text_colored("Zone bulunamadı.", 0.5, 0.5, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.5, 0.5, 0.5, 1.0), 'Zone bulunamadı.')
             imgui.spacing()
-            imgui.text_colored("Analizi çalıştırarak zone'ları oluşturun.",
-                               0.7, 0.7, 0.7, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.7, 0.7, 1.0), "Analizi çalıştırarak zone'ları oluşturun.")
+
             return
 
         kind = "CPE1" if self.use_cpe1 else "CPE10"
 
         flags = (
-            imgui.TABLE_BORDERS
-            | imgui.TABLE_ROW_BACKGROUND
-            | imgui.TABLE_RESIZABLE
-            | imgui.TABLE_SIZING_STRETCH_PROP
-            | imgui.TABLE_SCROLL_Y
+            imgui.TableFlags_.borders
+            | imgui.TableFlags_.row_bg
+            | imgui.TableFlags_.resizable
+            | imgui.TableFlags_.sizing_stretch_prop
+            | imgui.TableFlags_.scroll_y
         )
         col_count = 12
         table_height = self.ROW_HEIGHT * self.VISIBLE_ROWS + 30
 
-        if not imgui.begin_table("zone_table", col_count, flags,
-                                 outer_size_height=table_height):
+        if not imgui.begin_table(
+            "zone_table", col_count, flags,
+            outer_size=imgui.ImVec2(0, table_height),
+        ):
             return
 
         headers = [
@@ -284,86 +296,198 @@ class ZonesPanel(BasePanel):
         ]
 
         for idx, (name, w) in enumerate(headers):
-            col_flags = imgui.TABLE_COLUMN_WIDTH_FIXED if idx != 11 else 0
+            col_flags = imgui.TableColumnFlags_.width_fixed if idx != 11 else 0
             imgui.table_setup_column(name, col_flags, w)
         imgui.table_headers_row()
 
         cpi_pos = 0.2
         cpi_neg = -0.3
+        wind_record = self._active_wind_record()
+        q_p = float(self._record_value(wind_record, "q_p", 0.0))
+        direction_key = self._active_direction_key()
 
-        for poly in zones:
-            wp = getattr(poly, "windplane", {}) or {}
-            label = wp.get("label", "") or poly.label
-            surface = wp.get("surface", "-")
-            table_type = wp.get("table_type", "-")
-            pitch = wp.get("pitch", 0.0)
-            q_p = float(wp.get("q_p", 0.0))
+        for zone in zones:
+            label = zone.label
+            surface = zone.surface
+            table_type = zone.table_type
+            pitch = float(zone.pitch)
 
-            if kind == "CPE10":
-                cpe_raw = wp.get("cpe10", [0.0, 0.0])
-            else:
-                cpe_raw = wp.get("cpe1", [0.0, 0.0])
-
-            if isinstance(cpe_raw, (tuple, list)):
-                cpe_min = float(cpe_raw[0]) if len(cpe_raw) > 0 else 0.0
-                cpe_max = float(cpe_raw[1]) if len(cpe_raw) > 1 else cpe_min
-            else:
-                cpe_min = cpe_max = float(cpe_raw)
+            cpe_min, cpe_max = self._zone_coefficients(zone, kind)
 
             f_mn_p = q_p * (cpe_min - cpi_pos)
             f_mn_m = q_p * (cpe_min - cpi_neg)
             f_mx_p = q_p * (cpe_max - cpi_pos)
             f_mx_m = q_p * (cpe_max - cpi_neg)
 
-            dir_idx = int(wp.get("dir_idx", 1))
+            dir_idx = int("".join(c for c in direction_key if c.isdigit()) or "1")
             pattern_mn = f"WIND_{dir_idx:02d}_{kind}_MN_P"
             pattern_mx = f"WIND_{dir_idx:02d}_{kind}_MX_P"
 
             imgui.table_next_row()
 
-            imgui.table_next_column(); imgui.text_colored(label, 0.85, 0.85, 0.5, 1.0)
+            imgui.table_next_column(); imgui.text_colored(imgui.ImVec4(0.85, 0.85, 0.5, 1.0), label)
             imgui.table_next_column(); imgui.text(str(surface))
             imgui.table_next_column(); imgui.text(str(table_type))
             imgui.table_next_column(); imgui.text(f"{pitch:.2f}")
 
             imgui.table_next_column()
             c = (0.9, 0.4, 0.4, 1.0) if cpe_min < 0 else (0.4, 0.9, 0.4, 1.0)
-            imgui.text_colored(f"{cpe_min:.3f}", *c)
+            imgui.text_colored(imgui.ImVec4(*c), f"{cpe_min:.3f}")
 
             imgui.table_next_column()
             if abs(cpe_max) < 1e-9:
-                imgui.text_colored("0.000", 0.5, 0.5, 0.5, 1.0)
+                imgui.text_colored(imgui.ImVec4(0.5, 0.5, 0.5, 1.0), '0.000')
             else:
                 c = (0.9, 0.4, 0.4, 1.0) if cpe_max < 0 else (0.4, 0.9, 0.4, 1.0)
-                imgui.text_colored(f"{cpe_max:.3f}", *c)
+                imgui.text_colored(imgui.ImVec4(*c), f"{cpe_max:.3f}")
 
             imgui.table_next_column(); imgui.text(f"{q_p:.3f}")
 
             imgui.table_next_column()
-            imgui.text_colored(f"{f_mn_p:+.3f}", *self._force_color(f_mn_p))
+            imgui.text_colored(
+                imgui.ImVec4(*self._force_color(f_mn_p)), f"{f_mn_p:+.3f}"
+            )
             imgui.table_next_column()
-            imgui.text_colored(f"{f_mn_m:+.3f}", *self._force_color(f_mn_m))
+            imgui.text_colored(
+                imgui.ImVec4(*self._force_color(f_mn_m)), f"{f_mn_m:+.3f}"
+            )
 
             imgui.table_next_column()
             if abs(cpe_max) < 1e-9:
-                imgui.text_colored("-", 0.4, 0.4, 0.4, 1.0)
+                imgui.text_colored(imgui.ImVec4(0.4, 0.4, 0.4, 1.0), '-')
             else:
-                imgui.text_colored(f"{f_mx_p:+.3f}", *self._force_color(f_mx_p))
+                imgui.text_colored(
+                    imgui.ImVec4(*self._force_color(f_mx_p)), f"{f_mx_p:+.3f}"
+                )
 
             imgui.table_next_column()
             if abs(cpe_max) < 1e-9:
-                imgui.text_colored("-", 0.4, 0.4, 0.4, 1.0)
+                imgui.text_colored(imgui.ImVec4(0.4, 0.4, 0.4, 1.0), '-')
             else:
-                imgui.text_colored(f"{f_mx_m:+.3f}", *self._force_color(f_mx_m))
+                imgui.text_colored(
+                    imgui.ImVec4(*self._force_color(f_mx_m)), f"{f_mx_m:+.3f}"
+                )
 
             imgui.table_next_column()
             if abs(cpe_max) < 1e-9:
-                imgui.text_colored(pattern_mn, 0.6, 0.8, 0.9, 1.0)
+                imgui.text_colored(imgui.ImVec4(0.6, 0.8, 0.9, 1.0), pattern_mn)
             else:
-                imgui.text_colored(f"{pattern_mn} / {pattern_mx}",
-                                   0.6, 0.8, 0.9, 1.0)
+                imgui.text_colored(imgui.ImVec4(0.6, 0.8, 0.9, 1.0), f'{pattern_mn} / {pattern_mx}')
+
 
         imgui.end_table()
+
+    def _active_direction_key(self) -> str:
+        active = self._get_active_direction()
+        if active is None:
+            return ""
+        active = self._wdr_vector({"w_dir": active})
+        for key, record in self._get_directions_dict().items():
+            if np.allclose(self._wdr_vector(record), active, atol=1e-8):
+                return str(key)
+        return ""
+
+    def _active_wind_record(self):
+        return self._get_directions_dict().get(self._active_direction_key())
+
+    @staticmethod
+    def _record_value(record, name, default=None):
+        if isinstance(record, dict):
+            return record.get(name, default)
+        return getattr(record, name, default)
+
+    @staticmethod
+    def _zone_coefficients(zone, kind):
+        raw = zone.cpe1 if kind == "CPE1" else zone.cpe10
+        if np.isscalar(raw):
+            value = float(raw)
+            return value, value
+        values = tuple(float(value) for value in raw)
+        if not values:
+            return 0.0, 0.0
+        return values[0], values[1] if len(values) > 1 else values[0]
+
+    def _draw_zone_preview(self):
+        zones = self._collect_zones()
+        imgui.text("Zone görünümü")
+        imgui.begin_child(
+            "wind_zone_preview",
+            imgui.ImVec2(0, 190),
+            imgui.ChildFlags_.borders,
+        )
+        try:
+            if not zones:
+                imgui.text_disabled("Gösterilecek zone yok.")
+                return
+
+            origin = imgui.get_cursor_screen_pos()
+            size = imgui.get_content_region_avail()
+            canvas_w = max(float(size.x), 1.0)
+            canvas_h = max(float(size.y), 1.0)
+            imgui.invisible_button(
+                "##wind_zone_canvas", imgui.ImVec2(canvas_w, canvas_h)
+            )
+            draw_list = imgui.get_window_draw_list()
+
+            projected_zones = []
+            all_points = []
+            for zone in zones:
+                coords = np.asarray(zone.coords, dtype=float)
+                if coords.ndim != 2 or coords.shape[0] < 3 or coords.shape[1] != 3:
+                    continue
+                projected = np.column_stack(
+                    (coords[:, 0] - coords[:, 1],
+                     coords[:, 2] - (coords[:, 0] + coords[:, 1]) * 0.5)
+                )
+                projected_zones.append((zone, projected))
+                all_points.extend(projected)
+
+            if not projected_zones:
+                imgui.text_disabled("Çizilebilir zone geometrisi yok.")
+                return
+
+            points = np.asarray(all_points, dtype=float)
+            mins = points.min(axis=0)
+            spans = np.maximum(points.max(axis=0) - mins, 1e-9)
+            margin = 14.0
+            scale = min(
+                max(canvas_w - 2 * margin, 1.0) / spans[0],
+                max(canvas_h - 2 * margin, 1.0) / spans[1],
+            )
+            used_w, used_h = spans * scale
+            offset_x = origin.x + (canvas_w - used_w) * 0.5
+            offset_y = origin.y + (canvas_h - used_h) * 0.5
+
+            for zone, polygon in projected_zones:
+                screen_points = [
+                    imgui.ImVec2(
+                        offset_x + (point[0] - mins[0]) * scale,
+                        offset_y + used_h - (point[1] - mins[1]) * scale,
+                    )
+                    for point in polygon
+                ]
+                cpe_min, _ = self._zone_coefficients(zone, "CPE10")
+                fill = (
+                    imgui.get_color_u32(imgui.ImVec4(0.75, 0.35, 0.30, 0.72))
+                    if cpe_min >= 0
+                    else imgui.get_color_u32(imgui.ImVec4(0.30, 0.52, 0.78, 0.72))
+                )
+                outline = imgui.get_color_u32(imgui.ImVec4(0.9, 0.9, 0.9, 1.0))
+                draw_list.add_convex_poly_filled(screen_points, fill)
+                draw_list.add_polyline(
+                    screen_points, outline, imgui.ImDrawFlags_.closed, 1.0
+                )
+                center = np.mean(polygon, axis=0)
+                label_pos = imgui.ImVec2(
+                    offset_x + (center[0] - mins[0]) * scale,
+                    offset_y + used_h - (center[1] - mins[1]) * scale,
+                )
+                draw_list.add_text(
+                    label_pos, imgui.get_color_u32(imgui.ImVec4(1, 1, 1, 1)),
+                    str(zone.label),
+                )
+        finally:
+            imgui.end_child()
 
     def _force_color(self, val):
         if abs(val) < 1e-9:
@@ -380,9 +504,13 @@ class ZonesPanel(BasePanel):
         if not zones:
             return
 
+        if not callable(self.on_distribute):
+            imgui.text("Frame'lere dağıtım henüz etkin değil.")
+            return
+
         kind = "CPE1" if self.use_cpe1 else "CPE10"
 
-        if imgui.button("  Frame'lere Dağıt  ", width=200, height=34):
+        if imgui.button(" Frame'lere Dağıt ", imgui.ImVec2(200, 34)):
             if callable(self.on_distribute):
                 try:
                     n = self.on_distribute(kind, self._dist_type)
@@ -392,47 +520,32 @@ class ZonesPanel(BasePanel):
                     self._last_distributed = -1
 
         imgui.same_line()
-        imgui.text_colored(
-            f"KIND: {kind}   |   Zone: {len(zones)}   |   Tip: {self._dist_type}",
-            0.6, 0.8, 0.9, 1.0,
-        )
+        imgui.text_colored(imgui.ImVec4(0.6, 0.8, 0.9, 1.0), f'KIND: {kind}   |   Zone: {len(zones)}   |   Tip: {self._dist_type}')
+
+
+
 
         if self._last_distributed > 0:
             imgui.same_line(500)
-            imgui.text_colored(
-                f"✓ Son dağıtım: {self._last_distributed} segment",
-                0.4, 0.9, 0.5, 1.0,
-            )
+            imgui.text_colored(imgui.ImVec4(0.4, 0.9, 0.5, 1.0), f'✓ Son dağıtım: {self._last_distributed} segment')
+
+
+
         elif self._last_distributed == -1:
             imgui.same_line(500)
-            imgui.text_colored("✗ Dağıtım hatası (log'a bak)",
-                               0.9, 0.4, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.9, 0.4, 0.4, 1.0), "✗ Dağıtım hatası (log'a bak)")
+
 
     # ------------------------------------------------------------------
     def _collect_zones(self):
-        try:
-            current_frame = imgui.get_frame_count()
-        except Exception:
-            current_frame = -1
-
-        if current_frame != -1 and self._zones_cache_frame == current_frame:
+        direction_key = self._active_direction_key()
+        cache_key = (id(self.project), direction_key)
+        if self._zones_cache_key == cache_key:
             return self._zones_cache
 
-        zones = []
-        if self.scene:
-            for poly in self.scene.polygons.values():
-                wp = getattr(poly, "windplane", None)
-                if not wp or not isinstance(wp, dict) or len(wp) == 0:
-                    continue
-                pt = getattr(poly, "poly_type", None)
-                is_zone = False
-                if pt is not None and hasattr(pt, "name") and pt.name == "ZONE":
-                    is_zone = True
-                elif "ZONE" in (poly.label or "").upper():
-                    is_zone = True
-                if is_zone:
-                    zones.append(poly)
+        wind_zones = getattr(self.project.loads, "wind_zones", {}) if self.project else {}
+        zones = list(wind_zones.get(direction_key, []))
 
         self._zones_cache = zones
-        self._zones_cache_frame = current_frame
+        self._zones_cache_key = cache_key
         return zones

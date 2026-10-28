@@ -4,12 +4,11 @@
 from __future__ import annotations
 
 import threading
-from queue import Queue, Empty
-from typing import Optional
+from queue import Empty, Queue
 
-import imgui
+from imgui_bundle import imgui
 
-from core.analysis.run import AnalysisService, AnalysisOptions, AnalysisBundle
+from core.analysis.run import AnalysisBundle, AnalysisOptions, AnalysisService
 from logging_config import CadLogger
 from ui.base_panel import BasePanel
 
@@ -34,12 +33,12 @@ class AnalysisManagerPanel(BasePanel):
         self._spectrum_names: list[str] = []
 
         # Sonuç / durum
-        self._bundle: Optional[AnalysisBundle] = None
+        self._bundle: AnalysisBundle | None = None
         self._active_tab = 0
         self._status_msg = ""
 
         # Thread state
-        self._worker: Optional[threading.Thread] = None
+        self._worker: threading.Thread | None = None
         self._result_queue: Queue = Queue()
         self._is_running = False
         self._t0 = 0.0
@@ -146,7 +145,7 @@ class AnalysisManagerPanel(BasePanel):
         if not self.visible:
             return
 
-        imgui.set_next_window_size(900, 700, imgui.FIRST_USE_EVER)
+        imgui.set_next_window_size(imgui.ImVec2(900, 700), imgui.Cond_.first_use_ever)
         expanded, opened = imgui.begin(self.title, True)
         if not opened:
             self.close()
@@ -164,10 +163,10 @@ class AnalysisManagerPanel(BasePanel):
             if self._bundle is not None:
                 self._draw_results()
             else:
-                imgui.text_colored(
-                    "Henüz analiz çalıştırılmadı. 'Analizi Çalıştır'a bas.",
-                    0.7, 0.8, 0.6, 1.0,
-                )
+                imgui.text_colored(imgui.ImVec4(0.7, 0.8, 0.6, 1.0), "Henüz analiz çalıştırılmadı. 'Analizi Çalıştır'a bas.")
+
+
+
 
             if self._status_msg:
                 imgui.separator()
@@ -175,7 +174,7 @@ class AnalysisManagerPanel(BasePanel):
                     (0.4, 1.0, 0.4, 1.0) if self._status_msg.startswith("✓")
                     else (0.9, 0.7, 0.4, 1.0)
                 )
-                imgui.text_colored(self._status_msg, *color)
+                imgui.text_colored(imgui.ImVec4(*color), self._status_msg)
 
                 if self._is_running:
                     imgui.same_line()
@@ -184,13 +183,13 @@ class AnalysisManagerPanel(BasePanel):
                     # basit spinner
                     import time
                     dots = "." * (int(time.time() * 2) % 4)
-                    imgui.text_colored(dots, 1.0, 0.9, 0.4, 1.0)
+                    imgui.text_colored(imgui.ImVec4(1.0, 0.9, 0.4, 1.0), dots)
         finally:
             imgui.end()
 
     # ------------------------------------------------------------------
     def _draw_options(self):
-        imgui.text_colored("Analiz Seçenekleri", 0.9, 0.85, 0.5, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.9, 0.85, 0.5, 1.0), 'Analiz Seçenekleri')
         imgui.spacing()
 
         imgui.push_item_width(120)
@@ -214,10 +213,10 @@ class AnalysisManagerPanel(BasePanel):
         if self._run_spectral:
             self._refresh_spectrum_list()
             if not self._spectrum_names:
-                imgui.text_colored(
-                    "  Uyarı: projede spektrum tanımı yok.",
-                    0.9, 0.6, 0.3, 1.0,
-                )
+                imgui.text_colored(imgui.ImVec4(0.9, 0.6, 0.3, 1.0), '  Uyarı: projede spektrum tanımı yok.')
+
+
+
             else:
                 imgui.push_item_width(240)
                 try:
@@ -240,28 +239,36 @@ class AnalysisManagerPanel(BasePanel):
             or self._project() is None
         )
         if disabled:
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1.0)
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1.0)
+            )
 
         label = "⏳ Çalışıyor..." if self._is_running else "▶ Analizi Çalıştır"
-        if imgui.button(label, width=200, height=32) and not disabled:
+        if imgui.button(label, imgui.ImVec2(200, 32)) and not disabled:
             self._run_analysis()
 
         if disabled:
             imgui.pop_style_color(1)
             if not self._is_running:
                 imgui.same_line()
-                imgui.text_colored(
-                    "(sahne veya proje yok)", 0.9, 0.6, 0.3, 1.0,
-                )
+                imgui.text_colored(imgui.ImVec4(0.9, 0.6, 0.3, 1.0), '(sahne veya proje yok)')
+
+
 
     # ------------------------------------------------------------------
     def _draw_error_banner(self):
         if self._bundle is None or not self._bundle.errors:
             return
 
-        imgui.push_style_color(imgui.COLOR_CHILD_BACKGROUND, 0.35, 0.12, 0.12, 1.0)
-        imgui.begin_child("##err_banner", height=min(20 + 18 * len(self._bundle.errors), 120), border=True)
-        imgui.text_colored("⚠ Analiz uyarıları:", 1.0, 0.7, 0.7, 1.0)
+        imgui.push_style_color(
+            imgui.Col_.child_bg, imgui.ImVec4(0.35, 0.12, 0.12, 1.0)
+        )
+        imgui.begin_child(
+            "##err_banner",
+            imgui.ImVec2(0, min(20 + 18 * len(self._bundle.errors), 120)),
+            imgui.ChildFlags_.borders,
+        )
+        imgui.text_colored(imgui.ImVec4(1.0, 0.7, 0.7, 1.0), '⚠ Analiz uyarıları:')
         for e in self._bundle.errors:
             imgui.bullet_text(e)
         imgui.end_child()
@@ -273,40 +280,37 @@ class AnalysisManagerPanel(BasePanel):
     # ------------------------------------------------------------------
     def _draw_results(self):
         if self._bundle is None or self._bundle.result is None:
-            imgui.text_colored("Sonuç yok", 1.0, 0.4, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), 'Sonuç yok')
             return
 
         try:
-            if imgui.collapsing_header("Genel", flags=imgui.TREE_DEFAULT_OPEN)[0]:
+            if imgui.collapsing_header("Genel", flags=imgui.TreeNodeFlags_.default_open):
                 self._draw_tab_genel()
         except Exception:
             logger.exception("Genel hata")
-            imgui.text_colored("⚠ Genel hata", 1.0, 0.4, 0.4, 1.0)
-
+            imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), '⚠ Genel hata')
         try:
-            if imgui.collapsing_header("Kütle")[0]:
+            if imgui.collapsing_header("Kütle"):
                 self._draw_tab_kütle()
         except Exception:
             logger.exception("Kütle hata")
-            imgui.text_colored("⚠ Kütle hata", 1.0, 0.4, 0.4, 1.0)
-
+            imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), '⚠ Kütle hata')
         try:
-            if imgui.collapsing_header("Modal")[0]:
+            if imgui.collapsing_header("Modal"):
                 self._draw_tab_modal()
         except Exception:
             logger.exception("Modal hata")
-            imgui.text_colored("⚠ Modal hata", 1.0, 0.4, 0.4, 1.0)
-
+            imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), '⚠ Modal hata')
         if self._bundle.spectral is not None:
             try:
-                if imgui.collapsing_header("Spectral")[0]:
+                if imgui.collapsing_header("Spectral"):
                     self._draw_tab_spectral()
             except Exception:
                 logger.exception("Spectral hata")
 
         if self._bundle.takeoff is not None:
             try:
-                if imgui.collapsing_header("Metraj")[0]:
+                if imgui.collapsing_header("Metraj"):
                     self._draw_tab_metraj()
             except Exception:
                 logger.exception("Metraj hata")
@@ -317,46 +321,41 @@ class AnalysisManagerPanel(BasePanel):
     # ---------------- Genel ----------------
     def _draw_results(self):
         if self._bundle is None or self._bundle.result is None:
-            imgui.text_colored("Sonuç yok", 1.0, 0.4, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), 'Sonuç yok')
             return
 
-        if imgui.collapsing_header("Genel")[0]:
+        if imgui.collapsing_header("Genel"):
             try:
                 self._draw_tab_genel()
             except Exception:
                 logger.exception("[AnalysisPanel] Genel hata")
-                imgui.text_colored("⚠ Genel sekmesinde hata", 1.0, 0.4, 0.4, 1.0)
-
-        if imgui.collapsing_header("Kütle")[0]:
+                imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), '⚠ Genel sekmesinde hata')
+        if imgui.collapsing_header("Kütle"):
             try:
                 self._draw_tab_kütle()
             except Exception:
                 logger.exception("[AnalysisPanel] Kütle hata")
-                imgui.text_colored("⚠ Kütle sekmesinde hata", 1.0, 0.4, 0.4, 1.0)
-
-        if imgui.collapsing_header("Modal")[0]:
+                imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), '⚠ Kütle sekmesinde hata')
+        if imgui.collapsing_header("Modal"):
             try:
                 self._draw_tab_modal()
             except Exception:
                 logger.exception("[AnalysisPanel] Modal hata")
-                imgui.text_colored("⚠ Modal sekmesinde hata", 1.0, 0.4, 0.4, 1.0)
-
+                imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), '⚠ Modal sekmesinde hata')
         if self._bundle.spectral is not None:
-            if imgui.collapsing_header("Spectral")[0]:
+            if imgui.collapsing_header("Spectral"):
                 try:
                     self._draw_tab_spectral()
                 except Exception:
                     logger.exception("[AnalysisPanel] Spectral hata")
-                    imgui.text_colored("⚠ Spectral sekmesinde hata", 1.0, 0.4, 0.4, 1.0)
-
+                    imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), '⚠ Spectral sekmesinde hata')
         if self._bundle.takeoff is not None:
-            if imgui.collapsing_header("Metraj")[0]:
+            if imgui.collapsing_header("Metraj"):
                 try:
                     self._draw_tab_metraj()
                 except Exception:
                     logger.exception("[AnalysisPanel] Metraj hata")
-                    imgui.text_colored("⚠ Metraj sekmesinde hata", 1.0, 0.4, 0.4, 1.0)
-
+                    imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), '⚠ Metraj sekmesinde hata')
     def _draw_tab_genel(self):
         r = self._bundle.result
         if r is None:
@@ -372,7 +371,7 @@ class AnalysisManagerPanel(BasePanel):
             imgui.separator()
             if imgui.tree_node(f"Atlanan frame'ler ({len(r.stiffness.skipped)})"):
                 for label, reason in r.stiffness.skipped[:50]:
-                    imgui.text_colored(f"  {label}: {reason}", 0.9, 0.7, 0.4, 1.0)
+                    imgui.text_colored(imgui.ImVec4(0.9, 0.7, 0.4, 1.0), f'  {label}: {reason}')
                 if len(r.stiffness.skipped) > 50:
                     imgui.text(f"  ... ve {len(r.stiffness.skipped) - 50} tane daha")
                 imgui.tree_pop()
@@ -380,11 +379,11 @@ class AnalysisManagerPanel(BasePanel):
         warns = list(r.mass.warnings) + list(r.stiffness.warnings)
         if warns:
             imgui.separator()
-            imgui.text_colored("Uyarılar:", 0.9, 0.8, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.9, 0.8, 0.4, 1.0), 'Uyarılar:')
             for w in warns[:20]:
-                imgui.text_colored(f"  • {w}", 0.9, 0.75, 0.5, 1.0)
-            if len(warns) > 20:
-                imgui.text(f"  ... ve {len(warns) - 20} tane daha")
+                imgui.text_colored(imgui.ImVec4(0.9, 0.75, 0.5, 1.0), f'  • {w}')
+                if len(warns) > 20:
+                    imgui.text(f"  ... ve {len(warns) - 20} tane daha")
     # ---------------- Kütle ----------------
     def _draw_tab_kütle(self):
         r = self._bundle.result
@@ -392,13 +391,13 @@ class AnalysisManagerPanel(BasePanel):
             return
         m = r.mass
 
-        imgui.text_colored("Kütle Özeti", 0.9, 0.85, 0.5, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.9, 0.85, 0.5, 1.0), 'Kütle Özeti')
         imgui.spacing()
 
         def _row(label, val, unit):
             imgui.text(label)
             imgui.same_line(240)
-            imgui.text_colored(f"{val:>14.3f} {unit}", 0.7, 0.9, 0.7, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), f'{val:>14.3f} {unit}')
 
         _row("Öz kütle", m.total_self_kg, "kg")
         _row("Dead (ham)", m.total_dead_kg, "kg")
@@ -408,7 +407,7 @@ class AnalysisManagerPanel(BasePanel):
         _row("Toplam", m.total_ton, "ton")
 
         imgui.separator()
-        imgui.text_colored("Kaynak Dökümü", 0.9, 0.85, 0.5, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.9, 0.85, 0.5, 1.0), 'Kaynak Dökümü')
         imgui.spacing()
 
         from collections import defaultdict
@@ -418,7 +417,7 @@ class AnalysisManagerPanel(BasePanel):
         for st, val in sorted(agg.items()):
             imgui.text(f"  {st:20s}")
             imgui.same_line(240)
-            imgui.text_colored(f"{val:>14.3f} kg", 0.7, 0.9, 0.7, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), f'{val:>14.3f} kg')
 
     # ---------------- Modal ----------------
     def _draw_tab_modal(self):
@@ -428,13 +427,13 @@ class AnalysisManagerPanel(BasePanel):
             return
         modal = r.modal
 
-        imgui.text_colored(
-            f"{modal.n_modes} mod | "
-            f"Mx={modal.total_mass_x:.2f}, "
-            f"My={modal.total_mass_y:.2f}, "
-            f"Mz={modal.total_mass_z:.2f} kg",
-            0.85, 0.85, 0.55, 1.0,
-        )
+        imgui.text_colored(imgui.ImVec4(0.85, 0.85, 0.55, 1.0), f'{modal.n_modes} mod | Mx={modal.total_mass_x:.2f}, My={modal.total_mass_y:.2f}, Mz={modal.total_mass_z:.2f} kg')
+
+
+
+
+
+
         imgui.spacing()
 
         cols = ["#", "T (s)", "f (Hz)", "Γx", "Γy", "Γz", "MeffX", "MeffY"]
@@ -470,10 +469,10 @@ class AnalysisManagerPanel(BasePanel):
         if s is None:
             return
         import numpy as np
-        imgui.text_colored(
-            f"{len(s.modes)} mod | SRSS max UX={np.max(np.abs(s.ux_srss)):.4f} mm",
-            0.85, 0.85, 0.55, 1.0,
-        )
+        imgui.text_colored(imgui.ImVec4(0.85, 0.85, 0.55, 1.0), f'{len(s.modes)} mod | SRSS max UX={np.max(np.abs(s.ux_srss)):.4f} mm')
+
+
+
         imgui.text(f"SRSS max UY={np.max(np.abs(s.uy_srss)):.4f} mm, "
                    f"UZ={np.max(np.abs(s.uz_srss)):.4f} mm")
         imgui.separator()
@@ -505,11 +504,11 @@ class AnalysisManagerPanel(BasePanel):
         t = self._bundle.takeoff
         if t is None:
             return
-        imgui.text_colored(
-            f"{len(t.elements)} eleman | toplam {t.total_mass_kg:.2f} kg "
-            f"({t.total_mass_ton:.4f} ton), ağırlık {t.total_weight_kN:.3f} kN",
-            0.85, 0.85, 0.55, 1.0,
-        )
+        imgui.text_colored(imgui.ImVec4(0.85, 0.85, 0.55, 1.0), f'{len(t.elements)} eleman | toplam {t.total_mass_kg:.2f} kg ({t.total_mass_ton:.4f} ton), ağırlık {t.total_weight_kN:.3f} kN')
+
+
+
+
         imgui.separator()
 
         cols = ["Malzeme", "Adet", "Kütle (kg)", "Kütle (ton)", "Ağırlık (kN)"]
@@ -560,7 +559,7 @@ class ProjectInfoPanel(BasePanel):
 
     def draw_content(self):
         # --- Genel Proje Bilgileri ---
-        imgui.text_colored("Genel", 0.5, 0.8, 1.0, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Genel')
         imgui.separator()
         if self.general_info:
             self._field("Firma", "company_name", self.general_info)
@@ -575,7 +574,7 @@ class ProjectInfoPanel(BasePanel):
 
         imgui.spacing()
         # --- Saha Bilgileri ---
-        imgui.text_colored("Saha", 0.5, 0.8, 1.0, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Saha')
         imgui.separator()
         if self.site_info:
             self._field("Zemin Sınıfı", "soil_class", self.site_info)
@@ -586,7 +585,7 @@ class ProjectInfoPanel(BasePanel):
 
         imgui.spacing()
         # --- Metadata ---
-        imgui.text_colored("Metadata", 0.5, 0.8, 1.0, 1.0)
+        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Metadata')
         imgui.separator()
         if self.info:
             self._field("Proje Adı (Kısa)", "name", self.info)
@@ -595,7 +594,7 @@ class ProjectInfoPanel(BasePanel):
 
         # --- Apply butonu ---
         imgui.spacing()
-        if imgui.button("Uygula", width=-1):
+        if imgui.button("Uygula", imgui.ImVec2(-1, 0)):
             if callable(self.on_apply):
                 self.on_apply(self.info, self.general_info, self.site_info)
 
@@ -632,7 +631,7 @@ class ProjectConfigPanel(BasePanel):
 
     def draw_content(self):
         if not self.config:
-            imgui.text_colored("Config yok", 0.5, 0.5, 0.5, 1.0)
+            imgui.text_colored(imgui.ImVec4(0.5, 0.5, 0.5, 1.0), 'Config yok')
             return
 
         # --- Rüzgar ---
@@ -665,7 +664,7 @@ class ProjectConfigPanel(BasePanel):
             self._float("D", e, "overstrength_factor")
 
         imgui.spacing()
-        if imgui.button("Uygula", width=-1):
+        if imgui.button("Uygula", imgui.ImVec2(-1, 0)):
             if callable(self.on_apply):
                 self.on_apply(self.config)
 
@@ -687,4 +686,3 @@ class ProjectConfigPanel(BasePanel):
         imgui.pop_item_width()
         if choices[new_idx] != cur:
             setattr(obj, attr, choices[new_idx])
-

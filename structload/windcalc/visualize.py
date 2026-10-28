@@ -3,12 +3,12 @@
 Sadece görselleştirme. Analiz YAPMAZ, zone ÜRETMEZ.
 Girdi: ZoneBundle / ZoneResult
 """
-from typing import Dict, List, Optional, Any
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib.lines import Line2D
+from typing import Any
 
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.lines import Line2D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 # ---------------------------------------------------------------------------
 # Renk haritası (mevcut kodunuzdan aynen)
@@ -52,12 +52,12 @@ def draw_zone_result(
     title_suffix: str = "",
     show_points: bool = True,
     show_zone_labels: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Tek bir ZoneResult'ı verilen 3D eksene çizer.
     Döner: {legend_label: color} sözlüğü.
     """
-    legend: Dict[str, Any] = {}
+    legend: dict[str, Any] = {}
     engine = result.engine
     all_surfaces = result.all_surfaces
 
@@ -115,7 +115,7 @@ def draw_zone_result(
     return legend
 
 
-def _equalize_axes(ax, points: Dict[str, tuple]) -> None:
+def _equalize_axes(ax, points: dict[str, tuple]) -> None:
     coords = np.array(list(points.values()))
     if len(coords) == 0:
         return
@@ -145,7 +145,7 @@ def draw_bundle_grid(
                              subplot_kw={'projection': '3d'})
     axes_flat = np.atleast_1d(axes).flatten()
 
-    all_legend: Dict[str, Any] = {}
+    all_legend: dict[str, Any] = {}
     for i, result in enumerate(bundle.results):
         ax = axes_flat[i]
         leg = draw_zone_result(ax, result,
@@ -162,7 +162,7 @@ def draw_bundle_grid(
     return fig
 
 
-def _attach_figure_legend(fig, legend_map: Dict[str, Any]) -> None:
+def _attach_figure_legend(fig, legend_map: dict[str, Any]) -> None:
     if not legend_map:
         return
     handles = [

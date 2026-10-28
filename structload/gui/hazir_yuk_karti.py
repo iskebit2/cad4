@@ -5,22 +5,19 @@ Sol taraftaki kütüphaneden seçilen yükü form halinde gösterir,
 düzenlenebilir ve LoadManager'a kaydedilebilir.
 """
 
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
-from kivy.uix.spinner import Spinner
-from kivy.graphics import Color, Rectangle, Line
+from gui import panels
+from kivy.graphics import Color, Line, Rectangle
 from kivy.metrics import dp
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.spinner import Spinner
+from kivy.uix.textinput import TextInput
 
 from structload.data.material_data import MATERIAL_WEIGHTS
+from structload.loads.load_definition import LoadComponent, LoadDefinition
 from structload.utils.status_manager import status
-from structload.utils.report_dataframe import ReportDataFrame
-from structload.loads.load_definition import LoadDefinition, LoadComponent
-
-import gui.panels as panels
 
 
 # ------------------------------------------------------------------

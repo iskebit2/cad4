@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import List, Tuple, Optional, Dict, Set, Any
 from dataclasses import dataclass
 
 import numpy as np
@@ -25,7 +24,7 @@ class PendingChange:
     op: str
     kind: str
     id: str
-    data: Optional[dict] = None
+    data: dict | None = None
 
 
 ASSOC_KINDS = ("frame", "node", "poly", "area", "link")
@@ -70,15 +69,15 @@ class Plane:
     def __init__(self,
                 origin: np.ndarray,
                 normal: np.ndarray,
-                u: Optional[np.ndarray] = None,
-                v: Optional[np.ndarray] = None,          # ← YENİ
+                u: np.ndarray | None = None,
+                v: np.ndarray | None = None,          # ← YENİ
                 *,
-                plane_id: Optional[str] = None,
+                plane_id: str | None = None,
                 name: str = "",
-                u_min: Optional[float] = None,
-                u_max: Optional[float] = None,
-                v_min: Optional[float] = None,
-                v_max: Optional[float] = None,
+                u_min: float | None = None,
+                u_max: float | None = None,
+                v_min: float | None = None,
+                v_max: float | None = None,
                 depth_minus: float = 0.0,
                 depth_plus: float = 0.0):
         origin = np.asarray(origin, dtype=float)
@@ -142,18 +141,18 @@ class Plane:
         self.auto_assoc = True
         self.auto_assoc_ignore_bounds = False
 
-        self.associated: Dict[str, Set[int]] = {k: set() for k in ASSOC_KINDS}
-        self.excluded: Dict[str, Set[int]] = {k: set() for k in ASSOC_KINDS}
-        self.pending: Dict[Tuple[str, str], PendingChange] = {}
+        self.associated: dict[str, set[int]] = {k: set() for k in ASSOC_KINDS}
+        self.excluded: dict[str, set[int]] = {k: set() for k in ASSOC_KINDS}
+        self.pending: dict[tuple[str, str], PendingChange] = {}
 
     # ---------------- CONSTRUCTORS ----------------
 
     @classmethod
-    def from_point_normal(cls, p0, normal, **kw) -> "Plane":
+    def from_point_normal(cls, p0, normal, **kw) -> Plane:
         return cls(np.asarray(p0, dtype=float), np.asarray(normal, dtype=float), **kw)
 
     @classmethod
-    def from_3_points(cls, p0, p1, p2, **kw) -> "Plane":
+    def from_3_points(cls, p0, p1, p2, **kw) -> Plane:
         """
         p0 = origin
         p1 - p0 = u yönü
@@ -178,7 +177,7 @@ class Plane:
         return cls(p0, n, u=u, v=v, **kw)
 
     @classmethod
-    def from_2_points_z_up(cls, p1, p2, up=(0.0, 0.0, 1.0), **kw) -> "Plane":
+    def from_2_points_z_up(cls, p1, p2, up=(0.0, 0.0, 1.0), **kw) -> Plane:
         """
         p1 = origin
         p2 - p1 = u yönü
@@ -201,7 +200,7 @@ class Plane:
         return cls(p1, n, u=u, v=v, **kw)
 
     @classmethod
-    def from_polygon(cls, poly, **kw) -> "Plane":
+    def from_polygon(cls, poly, **kw) -> Plane:
         nodes = poly.nodes
         if len(nodes) < 3:
             raise ValueError("Poly en az 3 node olmalı")
@@ -226,7 +225,7 @@ class Plane:
     @classmethod
     def from_axis_offset(cls, axis: str, offset: float,
                          u_min=None, u_max=None, v_min=None, v_max=None,
-                         depth_minus=0.0, depth_plus=0.0, **kw) -> "Plane":
+                         depth_minus=0.0, depth_plus=0.0, **kw) -> Plane:
         axis = axis.lower()
         if axis not in ("x", "y", "z"):
             raise ValueError("axis x/y/z olmalı")
@@ -256,11 +255,11 @@ class Plane:
         pt = np.asarray(pt, dtype=float)
         return pt - self.normal * self.distance(pt)
 
-    def to_2d(self, pt) -> Tuple[float, float]:
+    def to_2d(self, pt) -> tuple[float, float]:
         rel = np.asarray(pt, dtype=float) - self.origin
         return float(np.dot(rel, self.u)), float(np.dot(rel, self.v))
 
-    def to_3d(self, uv: Tuple[float, float]) -> np.ndarray:
+    def to_3d(self, uv: tuple[float, float]) -> np.ndarray:
         return self.origin + uv[0] * self.u + uv[1] * self.v
 
     # ---------------- SINIR / DERİNLİK ----------------
@@ -282,7 +281,7 @@ class Plane:
         u, v = self.to_2d(pt)
         return self.bounds_contains_uv(u, v)
 
-    def corners_3d(self) -> List[np.ndarray]:
+    def corners_3d(self) -> list[np.ndarray]:
         if None in (self.u_min, self.u_max, self.v_min, self.v_max):
             return []
         return [
@@ -294,7 +293,7 @@ class Plane:
 
     # ---------------- ASSOC ----------------
 
-    def all_assoc_ids(self, kind: str) -> Set[int]:
+    def all_assoc_ids(self, kind: str) -> set[int]:
         return self.associated.get(kind, set())
 
     def add_assoc(self, kind: str, unique_id: int):
@@ -337,7 +336,7 @@ class Plane:
         return all(self.contains_pt(p) for p in pts)
 
     @staticmethod
-    def _element_points(el, kind: str) -> List[np.ndarray]:
+    def _element_points(el, kind: str) -> list[np.ndarray]:
         if kind == "node":
             return [np.array([el.x, el.y, el.z], dtype=float)]
         if kind in ("frame", "link"):
@@ -359,10 +358,10 @@ class Plane:
     def is_pending(self, kind: str, eid) -> bool:
         return (kind, str(eid)) in self.pending
 
-    def pending_of(self, kind: str, eid) -> Optional[PendingChange]:
+    def pending_of(self, kind: str, eid) -> PendingChange | None:
         return self.pending.get((kind, str(eid)))
 
-    def add_pending(self, op: str, kind: str, eid, data: Optional[dict] = None):
+    def add_pending(self, op: str, kind: str, eid, data: dict | None = None):
         if op not in ChangeOp.ALL:
             raise ValueError(f"Geçersiz op: {op}")
         key = (kind, str(eid))
@@ -408,7 +407,7 @@ class Plane:
         report = {"deleted": 0, "modified": 0, "added": 0,
                   "draft_map": {}, "errors": []}
 
-        by_op: Dict[str, list] = {op: [] for op in ChangeOp.APPLY_ORDER}
+        by_op: dict[str, list] = {op: [] for op in ChangeOp.APPLY_ORDER}
         for ch in self.pending.values():
             by_op[ch.op].append(ch)
 
@@ -504,8 +503,8 @@ class Plane:
             return None
 
     def _build_node(self, data: dict):
-        from domain.element import Node
         from domain.definition import Restraint
+        from domain.element import Node
         r = data.get("restraint")
         if isinstance(r, dict):
             r = Restraint(**r)
@@ -534,8 +533,8 @@ class Plane:
                      label=data.get("label", ""))
 
     def _build_poly(self, data, scene, draft_map):
-        from domain.element import Polygon
         from data.enums import PolygonType
+        from domain.element import Polygon
         nodes = [self._resolve_node(r, scene, draft_map)
                  for r in (data.get("node_refs") or [])]
         nodes = [n for n in nodes if n is not None]

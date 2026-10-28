@@ -10,7 +10,6 @@ Kullanım:
 Kısmi export: SAP2000'de "Add to existing model" ile birleştirilebilir.
 Aynı label'lı tanımlar çakışırsa SAP import dialog'unda Replace/Ignore seçilir.
 """
-from typing import Set, Dict, Optional, List
 
 
 class S2KExporter:
@@ -45,7 +44,7 @@ class S2KExporter:
     # PUBLIC API
     # ==================================================================
     @classmethod
-    def export(cls, project, selected_elements: Optional[List] = None) -> str:
+    def export(cls, project, selected_elements: list | None = None) -> str:
         scene = project.scene
         if scene is None:
             return 'TABLE:  "PROGRAM CONTROL"\nEND TABLE DATA\n'
@@ -77,7 +76,7 @@ class S2KExporter:
 
     @classmethod
     def save(cls, project, filepath: str,
-             selected_elements: Optional[List] = None) -> str:
+             selected_elements: list | None = None) -> str:
         text = cls.export(project, selected_elements)
         with open(filepath, "w", encoding="utf-8") as fh:
             fh.write(text)
@@ -87,22 +86,22 @@ class S2KExporter:
     # REFERANS ANALİZİ
     # ==================================================================
     @classmethod
-    def _collect_used(cls, scene, project, selected_elements=None) -> Dict[str, Set]:
+    def _collect_used(cls, scene, project, selected_elements=None) -> dict[str, set]:
         """
         Hangi node / section / material / pattern kullanılıyor?
         selected_elements verilmişse sadece o elemanlar taranır.
         """
-        used_nodes: Set[str] = set()
-        used_sections: Set[str] = set()
-        used_materials: Set[str] = set()
-        used_frames: Set[str] = set()
-        used_areas: Set[str] = set()
-        used_links: Set[str] = set()
-        used_link_props: Set[str] = set()
-        used_patterns: Set[str] = set()
+        used_nodes: set[str] = set()
+        used_sections: set[str] = set()
+        used_materials: set[str] = set()
+        used_frames: set[str] = set()
+        used_areas: set[str] = set()
+        used_links: set[str] = set()
+        used_link_props: set[str] = set()
+        used_patterns: set[str] = set()
 
         # Seçim filtresi
-        sel_ids: Optional[Set[int]] = None
+        sel_ids: set[int] | None = None
         if selected_elements is not None:
             sel_ids = {getattr(e, "unique_id", -1) for e in selected_elements}
 
@@ -247,7 +246,7 @@ class S2KExporter:
                     used_patterns.add(ln)
 
         # --- Combo'ların kullandığı case/pattern'lar ---
-        used_cases: Set[str] = set()
+        used_cases: set[str] = set()
         for cb in getattr(project, "combinations", {}).values():
             for it in getattr(cb, "items", []) or []:
                 n = getattr(it, "case_or_pattern_name", None)
@@ -909,7 +908,7 @@ class S2KExporter:
             return ""
 
         # section_name → (material_name, thickness)
-        sections: Dict[str, dict] = {}
+        sections: dict[str, dict] = {}
         for area in areas.values():
             label = getattr(area, "label", None) or f"A{area.unique_id}"
             if label not in used_areas:

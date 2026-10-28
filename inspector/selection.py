@@ -1,24 +1,24 @@
 """Seçim modeli — Inspector'ın gördüğü element kümesi."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class SelectionModel:
 
     def __init__(self):
-        self.elements: List[Any] = []
-        self.values: Dict[str, Any] = {}     # current edit buffer
-        self.original: Dict[str, Any] = {}   # apply öncesi snapshot
+        self.elements: list[Any] = []
+        self.values: dict[str, Any] = {}     # current edit buffer
+        self.original: dict[str, Any] = {}   # apply öncesi snapshot
 
     # ------------------------------------------------------------------
-    def set_single(self, element, values: Dict[str, Any]):
+    def set_single(self, element, values: dict[str, Any]):
         self._deselect_all()                    # önce eski seçimi temizle
         self.elements = [element]
         element.is_selected = True              # ← YENİ
         self.values = values
         self.original = _deep_copy(values)
 
-    def set_multi(self, elements, common_values: Dict[str, Any]):
+    def set_multi(self, elements, common_values: dict[str, Any]):
         self._deselect_all()
         self.elements = list(elements)
         for e in self.elements:
@@ -52,7 +52,7 @@ class SelectionModel:
         return len(self.elements)
 
     @property
-    def primary(self) -> Optional[Any]:
+    def primary(self) -> Any | None:
         return self.elements[0] if self.elements else None
 
     # ------------------------------------------------------------------

@@ -1,9 +1,10 @@
 # ui/render_settings_panel.py
 from __future__ import annotations
-from typing import Optional
-import imgui
-from ui.base_panel import BasePanel
+
+from imgui_bundle import imgui
+
 from logging_config import CadLogger
+from ui.base_panel import BasePanel
 
 logger = CadLogger.get(__name__)
 
@@ -20,6 +21,8 @@ class RenderSettingsPanel(BasePanel):
         self._axes_scale = 1.0
         self._load_scale = 1.0
         self._anim_dur = 2.0
+        self.get_loads_visible = None
+        self.set_loads_visible = None
 
     def set_context(self, ctx: dict):
         logger.info("[RenderSettings] set_context keys=%s renderer=%r",
@@ -49,14 +52,20 @@ class RenderSettingsPanel(BasePanel):
     def draw(self):
         if not self.visible:
             return
-        imgui.set_next_window_size(420, 640, imgui.ONCE)
-        expanded, opened = imgui.begin("Render Ayarları", True)
-        if not opened:
-            self.close(); imgui.end(); return
+        imgui.set_next_window_size(imgui.ImVec2(420, 640), imgui.Cond_.once)
+        _, opened = imgui.begin("Render Ayarları", True)
+        try:
+            if not opened:
+                self.close()
+                return
+            self._draw_panel_content()
+        finally:
+            imgui.end()
 
+    def _draw_panel_content(self):
         if self.renderer is None:
-            imgui.text_colored("Aktif renderer yok.", 1.0, 0.6, 0.3)
-            imgui.end(); return
+            imgui.text_colored(imgui.ImVec4(1.0, 0.6, 0.3, 1.0), 'Aktif renderer yok.')
+            return
 
         self._draw_render_mode()
         imgui.separator()
@@ -71,8 +80,6 @@ class RenderSettingsPanel(BasePanel):
         self._draw_loads()
         imgui.separator()
         self._draw_animation()
-
-        imgui.end()
 
     # ---------------- bölümler ----------------
     def _draw_render_mode(self):
@@ -97,13 +104,6 @@ class RenderSettingsPanel(BasePanel):
             changed, v = imgui.checkbox(label, r.show.get(k, True))
             if changed:
                 r.set_show(k, v)
-
-        # --- Loads (özel: iki katman senkron) ---
-        changed, v = imgui.checkbox("Loads", r.load_renderer.enabled if r.load_renderer else False)
-        if changed:
-            if hasattr(r, "set_loads_enabled"):
-                r.set_loads_enabled(v)
-            
 
     def _draw_nodes(self):
         r = self.renderer
@@ -137,7 +137,7 @@ class RenderSettingsPanel(BasePanel):
         r, sc = self.renderer, self.scene
         imgui.text("Local Axes")
         if sc is None:
-            imgui.text_colored("Sahne yok.", 0.8, 0.8, 0.3)
+            imgui.text_colored(imgui.ImVec4(0.8, 0.8, 0.3, 1.0), 'Sahne yok.')
             return
         changed, _ = imgui.checkbox("Eksenleri Göster",
                                     bool(getattr(sc, "show_local_axes", False)))
@@ -156,10 +156,16 @@ class RenderSettingsPanel(BasePanel):
     def _draw_loads(self):
         r = self.renderer
         imgui.text("Yükler")
-        enabled = bool(r.show.get("loads", False))
+        if callable(self.get_loads_visible):
+            enabled = bool(self.get_loads_visible())
+        else:
+            enabled = bool(r.load_renderer and r.load_renderer.enabled)
         changed, v = imgui.checkbox("Yükleri Göster", enabled)
         if changed:
-            r.set_loads_enabled(v)
+            if callable(self.set_loads_visible):
+                self.set_loads_visible(v)
+            else:
+                r.set_loads_enabled(v)
         changed, v = imgui.slider_float("Yük Ölçeği", self._load_scale, 0.1, 5.0, "%.2f")
         if changed:
             self._load_scale = v

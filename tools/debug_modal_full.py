@@ -10,16 +10,15 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from core.units import MEGAGRAM
-from domain.project import Project
 from core.analysis.mass_assembly import build_mass
+from core.analysis.solver import StructuralSolver
 from core.analysis.stiffness_assembly import (
     build_stiffness,
     local_stiffness,
     transformation_matrix,
 )
-from core.analysis.solver import StructuralSolver
 from core.analysis.structuralanalysis import _collect_fixed_dofs
+from core.units import MEGAGRAM
 
 
 # ============================================================================
@@ -198,7 +197,6 @@ def report_local_frame(scn) -> None:
         ratio = got / exp if exp else float("nan")
         print(hdr(f"{name}: {got:.3e}  (bekl. {exp:.3e}, oran {ratio:.3f})"))
     print("-"*30)
-    #
 
     evals = np.linalg.eigvalsh(k_loc)
     print(hdr(f"k_loc özdeğer min: {evals.min():.3e}"))

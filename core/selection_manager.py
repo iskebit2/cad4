@@ -1,8 +1,9 @@
 # core/selection_manager.py
-from typing import List, Set
-from core.selection_policy import SelectionMode
+
 from core.commands import CommandManager, DeleteElementsCommand
+from core.selection_policy import SelectionMode
 from logging_config import CadLogger
+
 logger = CadLogger.get(__name__)
 
 class SelectionManager:
@@ -10,7 +11,7 @@ class SelectionManager:
     
     def __init__(self, scene_renderer):
         self.r = scene_renderer
-        self.selected: Set[int] = set()
+        self.selected: set[int] = set()
         self.cmd_mgr = CommandManager(max_history=100)
 
         self.on_selection_changed = None   # callable veya None
@@ -79,25 +80,24 @@ class SelectionManager:
         self._update_partial(changed_elements)
 
         if self.on_selection_changed:
-            self.on_selection_changed(self.get_selected())
+            try:
+                self.on_selection_changed(self.get_selected())
+            except Exception:
+                logger.exception("selection_changed callback hatası")
 
     def _update_partial(self, elements):
         """Tüm sahneyi yenilemek yerine sadece listedeki elemanların renklerini günceller."""
         if not self.r or not hasattr(self.r, 'update_element_color'):
             # Eğer renderer henüz partial update desteklemiyorsa güvenli fallback:
-            self._update()
+            if self.r:
+                self.r.update_sel()
             return
 
         for el in elements:
             self.r.update_element_color(el)
 
-        if self.on_selection_changed:
-            try:
-                self.on_selection_changed(list(self.get_selected()))
-            except Exception as e:
-                logger.error(f"selection_changed callback hatası: {e}")
                 
-    def select_multiple(self, elements: List, mode=SelectionMode.REPLACE):
+    def select_multiple(self, elements: list, mode=SelectionMode.REPLACE):
         """Çoklu eleman seç"""
         if mode == SelectionMode.REPLACE:
             self._clear_all()

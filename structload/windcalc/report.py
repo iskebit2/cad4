@@ -1,10 +1,13 @@
 from io import BytesIO
+
 import numpy as np
 import pandas as pd
-from PIL import Image as PILImage, ImageDraw, ImageFont
+from PIL import Image as PILImage
+from PIL import ImageDraw, ImageFont
 
 from structload.data.wind_data import CPI_NEGATIVE, CPI_POSITIVE
 from structload.utils.report_dataframe import ReportDataFrame
+
 
 def show_zones(zones, building, size=800):
     zone_records = []

@@ -12,13 +12,12 @@ Akış:
 from __future__ import annotations
 
 import math
-from typing import List, Optional, Set, Tuple, Dict
 
 import glm
-import imgui
+from imgui_bundle import imgui
 
-from domain.element import Frame, Node, Area
 from domain.definition import SectionType
+from domain.element import Area, Frame, Node
 from geometry.sd_to_areas import sd_frame_to_areas
 from logging_config import CadLogger
 from ui.base_panel import BasePanel
@@ -39,18 +38,18 @@ def _dist_point_segment(p, a, b):
     t = max(0.0, min(1.0, t))
     return math.hypot(px - (ax+dx*t), py - (ay+dy*t))
 
-def _node_key(nd: Node) -> Tuple[float, float, float]:
+def _node_key(nd: Node) -> tuple[float, float, float]:
     """Aynı 3D konumdaki node'ları birleştirmek için anahtar."""
     return (round(nd.x, 3), round(nd.y, 3), round(nd.z, 3))
 
 
-def _dedupe_area_nodes(areas: List[Area]) -> List[Node]:
+def _dedupe_area_nodes(areas: list[Area]) -> list[Node]:
     """
     Aynı konumdaki node'ları tek Node nesnesine indirger.
     Area.nodes listelerini bu paylaşılan Node'larla günceller.
     Returns: paylaşılan Node listesi (tekilleştirilmiş).
     """
-    shared: Dict[Tuple[float, float, float], Node] = {}
+    shared: dict[tuple[float, float, float], Node] = {}
     for area in areas:
         new_nodes = []
         for nd in area.nodes:
@@ -63,7 +62,7 @@ def _dedupe_area_nodes(areas: List[Area]) -> List[Node]:
 
 
 def _color_u32(r: float, g: float, b: float, a: float = 1.0) -> int:
-    return imgui.get_color_u32_rgba(r, g, b, a)
+    return imgui.get_color_u32(imgui.ImVec4(r, g, b, a))
 
 
 # ============================================================
@@ -80,33 +79,33 @@ class SDConvertPanel(BasePanel):
         self.delete_after_commit: bool = True   # commit sonrası önizlemeyi temizle
 
         # Kaynak
-        self._last_frame_id: Optional[int] = None
+        self._last_frame_id: int | None = None
 
         # Önizleme (sahneye EKLENMEMİŞ)
-        self._preview_frame: Optional[Frame] = None
-        self._preview_areas: List[Area] = []
-        self._preview_nodes: List[Node] = []
-        self._preview_selected: Set[int] = set()   # area.unique_id
+        self._preview_frame: Frame | None = None
+        self._preview_areas: list[Area] = []
+        self._preview_nodes: list[Node] = []
+        self._preview_selected: set[int] = set()   # area.unique_id
 
         # 2D canvas bounds (çizim + hit-test için)
-        self._canvas_bounds: Optional[Tuple[float, float, float, float]] = None  # (umin,umax,vmin,vmax)
+        self._canvas_bounds: tuple[float, float, float, float] | None = None  # (umin,umax,vmin,vmax)
         self._canvas_scale: float = 1.0
-        self._canvas_origin: Tuple[float, float] = (0.0, 0.0)   # screen pos
+        self._canvas_origin: tuple[float, float] = (0.0, 0.0)   # screen pos
 
         # Bilgi
         self._last_error: str = ""
 
         # Kaynak
-        self._preview_frame: Optional[Frame] = None
-        self._polygon_points: List[Tuple[float, float]] = []   # (u, v) SD koordinatları
-        self._edge_selected: Set[int] = set()                   # seçili kenar index'leri (0..N-1)
+        self._preview_frame: Frame | None = None
+        self._polygon_points: list[tuple[float, float]] = []   # (u, v) SD koordinatları
+        self._edge_selected: set[int] = set()                   # seçili kenar index'leri (0..N-1)
 
         # Canvas
-        self._canvas_origin: Tuple[float, float] = (0, 0)
-        self._canvas_size: Tuple[float, float] = (0, 0)
+        self._canvas_origin: tuple[float, float] = (0, 0)
+        self._canvas_size: tuple[float, float] = (0, 0)
         self._canvas_scale: float = 1.0
-        self._canvas_offset: Tuple[float, float] = (0.0, 0.0)   # (cx, cy)
-        self._hover_edge: Optional[int] = None
+        self._canvas_offset: tuple[float, float] = (0.0, 0.0)   # (cx, cy)
+        self._hover_edge: int | None = None
 
     # -----------------------------------------------------------------
     # LIFECYCLE
@@ -129,7 +128,7 @@ class SDConvertPanel(BasePanel):
     # -----------------------------------------------------------------
     # SEÇİLİ FRAME
     # -----------------------------------------------------------------
-    def _get_target_frame(self) -> Optional[Frame]:
+    def _get_target_frame(self) -> Frame | None:
         if not self.app or not self.app.engine or not self.app.engine.scene:
             return None
         scn = self.app.engine.scene
@@ -165,24 +164,27 @@ class SDConvertPanel(BasePanel):
         if not self.visible:
             return
 
-        imgui.set_next_window_size(440, 720, imgui.FIRST_USE_EVER)
+        imgui.set_next_window_size(imgui.ImVec2(440, 720), imgui.Cond_.first_use_ever)
         expanded, opened = imgui.begin("SD → Area", True)
-        if not expanded:
+        try:
+            self._draw_panel_content(expanded, opened)
+        finally:
             imgui.end()
+
+    def _draw_panel_content(self, expanded: bool, opened: bool):
+        if not expanded:
             return
         if not opened:
             self.visible = False
             self._clear_preview()
-            imgui.end()
             return
 
         # Kaynak frame var mı?
         frame = self._get_target_frame()
 
         if frame is None:
-            imgui.text_colored("SD section'lı bir Frame seçin.", 1.0, 0.6, 0.3, 1.0)
+            imgui.text_colored(imgui.ImVec4(1.0, 0.6, 0.3, 1.0), "SD section'lı bir Frame seçin.")
             imgui.text_wrapped("3D viewport'ta SD kesitli bir çubuğa sol tıklayın.")
-            imgui.end()
             return
 
         if frame.unique_id != self._last_frame_id:
@@ -193,8 +195,7 @@ class SDConvertPanel(BasePanel):
 
         poly = self._get_polygon(frame)
         if poly is None:
-            imgui.text_colored("Bu frame'in SD polygon'u yok.", 1.0, 0.4, 0.4, 1.0)
-            imgui.end()
+            imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), "Bu frame'in SD polygon'u yok.")
             return
 
         # --- Bilgi ---
@@ -207,12 +208,11 @@ class SDConvertPanel(BasePanel):
 
         # --- "Kenarları Seç" butonu ---
         if not self._polygon_points:
-            if imgui.button("Kenarları Seç", width=200, height=32):
+            if imgui.button("Kenarları Seç", imgui.ImVec2(200, 32)):
                 self._preview_frame = frame
                 self._polygon_points = [(p.x, p.y) for p in poly.points]
                 self._edge_selected.clear()
                 logger.info(f"[SDPanel] {len(self._polygon_points)} kenar hazır")
-            imgui.end()
             return
 
         # --- Kenar seçim arayüzü ---
@@ -242,21 +242,19 @@ class SDConvertPanel(BasePanel):
             self._polygon_points.clear()
             self._edge_selected.clear()
             self._preview_frame = None
-            imgui.end()
             return
 
         imgui.separator()
 
         can_convert = n_sel > 0
         if not can_convert:
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1.0)
-        if imgui.button(f"Seçili {n_sel} Kenarı Area'ya Çevir",
-                        width=260, height=32) and can_convert:
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1.0)
+            )
+        if imgui.button(f"Seçili {n_sel} Kenarı Area'ya Çevir", imgui.ImVec2(260, 32)) and can_convert:
             self._convert_edges_and_commit()
         if not can_convert:
             imgui.pop_style_color()
-
-        imgui.end()
 
     # -----------------------------------------------------------------
     # KAYNAK (frame + polygon) UI
@@ -264,7 +262,7 @@ class SDConvertPanel(BasePanel):
     def _draw_source_ui(self):
         frame = self._get_target_frame()
         if frame is None:
-            imgui.text_colored("SD section'lı bir Frame seçin.", 1.0, 0.6, 0.3, 1.0)
+            imgui.text_colored(imgui.ImVec4(1.0, 0.6, 0.3, 1.0), "SD section'lı bir Frame seçin.")
             imgui.text_wrapped(
                 "3D viewport'ta SD kesitli bir çubuğa sol tıklayın. "
                 "Seçim yaptıktan sonra bu panel otomatik güncellenir."
@@ -277,7 +275,7 @@ class SDConvertPanel(BasePanel):
 
         poly = self._get_polygon(frame)
         if poly is None:
-            imgui.text_colored("Bu frame'in SD polygon'u yok.", 1.0, 0.4, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), "Bu frame'in SD polygon'u yok.")
             return
 
         # --- Bilgi ---
@@ -300,20 +298,22 @@ class SDConvertPanel(BasePanel):
         _, self.hide_original = imgui.checkbox("Orijinal frame'i gizle", self.hide_original)
 
         # --- Köşe koordinatları ---
-        if imgui.collapsing_header("Köşe koordinatları (mm)")[0]:
-            imgui.begin_child("##coords", height=120, border=True)
+        if imgui.collapsing_header("Köşe koordinatları (mm)"):
+            imgui.begin_child(
+                "##coords", imgui.ImVec2(0, 120), imgui.ChildFlags_.borders
+            )
             for i, p in enumerate(poly.points):
                 imgui.text(f"[{i:02d}]  u={p.x:10.2f}   v={p.y:10.2f}")
             imgui.end_child()
 
         # --- Hata ---
         if self._last_error:
-            imgui.text_colored(self._last_error, 1.0, 0.4, 0.4, 1.0)
+            imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), self._last_error)
 
         imgui.separator()
 
         # --- Buton ---
-        if imgui.button("Area'ya Çevir (Önizleme)", width=220, height=32):
+        if imgui.button("Area'ya Çevir (Önizleme)", imgui.ImVec2(220, 32)):
             self._build_preview(frame)
 
     # -----------------------------------------------------------------
@@ -325,8 +325,7 @@ class SDConvertPanel(BasePanel):
 
         imgui.text(f"Kaynak: {self._preview_frame.label if self._preview_frame else '?'}")
         imgui.text(f"Önizleme: {n_total} area  ({len(self._preview_nodes)} node)")
-        imgui.text_colored(f"Seçili: {n_sel}", 0.9, 0.7, 0.3, 1.0)
-
+        imgui.text_colored(imgui.ImVec4(0.9, 0.7, 0.3, 1.0), f'Seçili: {n_sel}')
         # Kalınlık (önizleme sırasında değiştirilemez — yeniden üretmek gerek)
         imgui.text_disabled(f"Kalınlık: {self.thickness:.1f} mm (değiştirmek için yeniden çevir)")
         _, self.hide_original = imgui.checkbox("Modele aktarınca orijinal frame'i gizle",
@@ -342,8 +341,10 @@ class SDConvertPanel(BasePanel):
         # --- Aksiyonlar ---
         can_delete_sel = n_sel > 0
         if not can_delete_sel:
-            imgui.push_style_color(imgui.COLOR_BUTTON, 0.3, 0.3, 0.3, 1.0)
-        if imgui.button("Seçilileri Sil", width=140) and can_delete_sel:
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1.0)
+            )
+        if imgui.button("Seçilileri Sil", imgui.ImVec2(140, 0)) and can_delete_sel:
             self._preview_areas = [
                 a for a in self._preview_areas
                 if a.unique_id not in self._preview_selected
@@ -354,17 +355,17 @@ class SDConvertPanel(BasePanel):
             imgui.pop_style_color()
 
         imgui.same_line()
-        if imgui.button("Seçimi Temizle", width=140):
+        if imgui.button("Seçimi Temizle", imgui.ImVec2(140, 0)):
             self._preview_selected.clear()
 
         imgui.same_line()
-        if imgui.button("İptal", width=90):
+        if imgui.button("İptal", imgui.ImVec2(90, 0)):
             self._clear_preview()
             return
 
         imgui.separator()
 
-        if imgui.button("Modele Aktar", width=220, height=32):
+        if imgui.button("Modele Aktar", imgui.ImVec2(220, 32)):
             self._commit_to_scene()
 
     # -----------------------------------------------------------------
@@ -395,7 +396,7 @@ class SDConvertPanel(BasePanel):
         du = max(umax - umin, 1e-6)
         dv = max(vmax - vmin, 1e-6)
 
-        avail_w = imgui.get_content_region_available_width()
+        avail_w = imgui.get_content_region_avail().x
         canvas_w = min(avail_w, 400.0)
         canvas_h = 340.0
 
@@ -407,10 +408,14 @@ class SDConvertPanel(BasePanel):
         p0 = imgui.get_cursor_screen_pos()
         draw = imgui.get_window_draw_list()
 
-        draw.add_rect_filled(p0[0], p0[1], p0[0]+canvas_w, p0[1]+canvas_h,
-                            _color_u32(0.10, 0.10, 0.14, 1.0))
-        draw.add_rect(p0[0], p0[1], p0[0]+canvas_w, p0[1]+canvas_h,
-                    _color_u32(0.30, 0.30, 0.35, 1.0))
+        draw.add_rect_filled(
+            p0, imgui.ImVec2(p0.x + canvas_w, p0.y + canvas_h),
+            _color_u32(0.10, 0.10, 0.14, 1.0),
+        )
+        draw.add_rect(
+            p0, imgui.ImVec2(p0.x + canvas_w, p0.y + canvas_h),
+            _color_u32(0.30, 0.30, 0.35, 1.0),
+        )
 
         def to_screen(u, v):
             return (p0[0] + u * scale + cx,
@@ -434,14 +439,20 @@ class SDConvertPanel(BasePanel):
             else:
                 color = _color_u32(0.55, 0.80, 1.0, 1.0)
                 th = 2.0
-            draw.add_line(a[0], a[1], b[0], b[1], color, th)
+            draw.add_line(
+                imgui.ImVec2(*a), imgui.ImVec2(*b), color, th
+            )
 
         for (sx, sy) in screen_pts:
-            draw.add_circle_filled(sx, sy, 3.5, _color_u32(1, 1, 1, 1))
+            draw.add_circle_filled(
+                imgui.ImVec2(sx, sy), 3.5, _color_u32(1, 1, 1, 1)
+            )
 
         # --- 2) Aynı konuma invisible_button koy (tıklama için) ---
         imgui.set_cursor_screen_pos(p0)
-        imgui.invisible_button("##edges_canvas", canvas_w, canvas_h)
+        imgui.invisible_button(
+            "##edges_canvas", imgui.ImVec2(canvas_w, canvas_h)
+        )
 
         # --- 3) Hover + click ---
         io = imgui.get_io()
@@ -618,10 +629,10 @@ class SDConvertPanel(BasePanel):
     def _hit_test_area_screen(
         self,
         mx: float, my: float,
-        p0: Tuple[float, float],
+        p0: tuple[float, float],
         scale: float,
         cx: float, cy: float,
-    ) -> Optional[Area]:
+    ) -> Area | None:
         """
         Ekran noktası → hangi area?
         Nokta-in-polygon (ray casting) kullanır.
@@ -676,7 +687,7 @@ class SDConvertPanel(BasePanel):
         if not self._preview_areas:
             self._preview_nodes = []
             return
-        shared: Dict[Tuple[float, float, float], Node] = {}
+        shared: dict[tuple[float, float, float], Node] = {}
         for a in self._preview_areas:
             for nd in a.nodes:
                 key = _node_key(nd)
@@ -747,7 +758,7 @@ class SDConvertPanel(BasePanel):
         umin, umax = min(us), max(us)
         vmin, vmax = min(vs), max(vs)
 
-        avail_w = imgui.get_content_region_available_width()
+        avail_w = imgui.get_content_region_avail().x
         canvas_h = 300.0
         canvas_w = min(avail_w, 380.0)
         du = max(umax - umin, 1e-6)
@@ -760,11 +771,11 @@ class SDConvertPanel(BasePanel):
         draw = imgui.get_window_draw_list()
 
         draw.add_rect_filled(
-            p0[0], p0[1], p0[0] + canvas_w, p0[1] + canvas_h,
+            p0, imgui.ImVec2(p0.x + canvas_w, p0.y + canvas_h),
             _color_u32(0.10, 0.10, 0.14, 1.0),
         )
         draw.add_rect(
-            p0[0], p0[1], p0[0] + canvas_w, p0[1] + canvas_h,
+            p0, imgui.ImVec2(p0.x + canvas_w, p0.y + canvas_h),
             _color_u32(0.30, 0.30, 0.35, 1.0),
         )
 
@@ -777,17 +788,19 @@ class SDConvertPanel(BasePanel):
         for i in range(len(screen_pts)):
             a = screen_pts[i]
             b = screen_pts[(i + 1) % len(screen_pts)]
-            draw.add_line(a[0], a[1], b[0], b[1], edge, 2.0)
+            draw.add_line(
+                imgui.ImVec2(*a), imgui.ImVec2(*b), edge, 2.0
+            )
         for (sx, sy) in screen_pts:
-            draw.add_circle_filled(sx, sy, 3.0, edge)
+            draw.add_circle_filled(imgui.ImVec2(sx, sy), 3.0, edge)
 
-        imgui.dummy(canvas_w, canvas_h)
+        imgui.dummy(imgui.ImVec2(canvas_w, canvas_h))
 
 
 # ============================================================
 # NOKTА-IN-POLYGON (ray casting)
 # ============================================================
-def _point_in_polygon(p: Tuple[float, float], poly: List[Tuple[float, float]]) -> bool:
+def _point_in_polygon(p: tuple[float, float], poly: list[tuple[float, float]]) -> bool:
     """
     Ray-casting nokta-in-polygon testi.
     p: (x, y), poly: [(x0,y0), (x1,y1), ...] (kapalı, son=ilk değil)

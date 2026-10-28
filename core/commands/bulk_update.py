@@ -7,7 +7,8 @@ BulkUpdateCommand — Birden fazla elemana aynı anda alan uygular.
 - Tek bir Command → CommandManager'da tek undo/redo kaydı
 """
 
-from typing import Any, Callable, Dict, List, Tuple
+from collections.abc import Callable
+from typing import Any
 
 from core.commands.base import Command
 from logging_config import CadLogger
@@ -22,7 +23,7 @@ class BulkUpdateCommand(Command):
     """
 
     def __init__(self,
-                 plan: List[Tuple[Any, Dict[str, Any], Dict[str, Any]]],
+                 plan: list[tuple[Any, dict[str, Any], dict[str, Any]]],
                  setter: Callable[[Any, str, Any], None]):
         self.plan = plan
         self.setter = setter

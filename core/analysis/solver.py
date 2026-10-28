@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 import numpy as np
-from scipy.linalg import eigh, cho_factor, cho_solve
+from scipy.linalg import eigh
 
 logger = logging.getLogger(__name__)
 
 
-import numpy as np
 import logging
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -111,7 +110,7 @@ class StructuralSolver:
         K_red_cond, M_red_cond = perform_guyan_condensation(K_red, M_red, master, slave)
         return K_red_cond, M_red_cond
 
-    def _reduced(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _reduced(self) -> tuple[np.ndarray, np.ndarray]:
         idx = np.ix_(self.free_dofs, self.free_dofs)
         return self.K[idx], self.M[idx]
 
@@ -137,13 +136,13 @@ class StructuralSolver:
         rot_idx = np.where(dof_types >= 3)[0]    # Rotasyon (Slave / b)
 
         if debug:
-            print(f"\n--- Guyan / Kütlesiz DOF Analizi ---")
+            print("\n--- Guyan / Kütlesiz DOF Analizi ---")
             print(f"Toplam serbest DOF: {len(self.free_dofs)}")
             print(f"Öteleme (kütleli) DOF sayısı: {len(trans_idx)}")
             print(f"Rotasyon (kütlesiz) DOF sayısı: {len(rot_idx)}")
             print(f"Kondensasyon: {'AKTİF (Guyan)' if use_condensation else 'KAPALI (Full)'}")
 
-        G: Optional[np.ndarray] = None
+        G: np.ndarray | None = None
 
         # ==============================================================
         # DAL 1: GUYAN STATİK KONDENSASYONU (Optimize Edilmiş Fonksiyon)
@@ -283,9 +282,9 @@ class StructuralSolver:
         M_cond: np.ndarray,
         trans_idx: np.ndarray,
         rot_idx: np.ndarray,
-        G: Optional[np.ndarray],
+        G: np.ndarray | None,
         modal_dofs: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         n_modes = vectors_a.shape[1]
         if n_modes == 0:
             z = np.zeros((0, 3))
@@ -314,9 +313,9 @@ class StructuralSolver:
         M_cond: np.ndarray,
         trans_idx: np.ndarray,
         rot_idx: np.ndarray,
-        G: Optional[np.ndarray],
+        G: np.ndarray | None,
         modal_dofs: np.ndarray,
-    ) -> Tuple[float, float, float]:
+    ) -> tuple[float, float, float]:
         r_full = self._direction_vectors(modal_dofs)
         r_a = r_full[:, trans_idx]
         if G is not None:
@@ -336,7 +335,7 @@ class StructuralSolver:
         mode_shapes: np.ndarray,
         M_red: np.ndarray,
         modal_dofs: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         n_modes = mode_shapes.shape[1]
         if n_modes == 0:
             z = np.zeros((0, 3))
@@ -357,7 +356,7 @@ class StructuralSolver:
     def _total_masses(
         M_red: np.ndarray,
         modal_dofs: np.ndarray,
-    ) -> Tuple[float, float, float]:
+    ) -> tuple[float, float, float]:
         d = np.asarray(modal_dofs) % 6
         rx = (d == 0).astype(float)
         ry = (d == 1).astype(float)

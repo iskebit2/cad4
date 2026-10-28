@@ -11,19 +11,24 @@ ProjectBuilder — tüm proje tanımlarını ve elementlerini
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-
 from core.units import UnitSystem, convert_project_units
-
-from domain.project import Project
-from domain.element import Node, Frame, Area, Link
 from domain.definition import (
-    Material, Section, LinkProp, LinkPropLinear,
-    LoadPattern, LoadCase, ModalCase, LoadCombination,
-    SpectrumFunction, ResponseSpectrumCase, AutoSeismicTSC2018,
-    SectionCut, SDSection,
+    AutoSeismicTSC2018,
+    LinkProp,
+    LinkPropLinear,
+    LoadCase,
+    LoadCombination,
+    LoadPattern,
+    Material,
+    ModalCase,
+    ResponseSpectrumCase,
+    SDSection,
+    Section,
+    SectionCut,
+    SpectrumFunction,
 )
-
+from domain.element import Area, Frame, Link, Node
+from domain.project import Project
 from geometry.scenebuilder import SceneBuilder
 
 
@@ -59,30 +64,29 @@ class ProjectBuilder:
         self._scene_builder = self.scene
 
         # Tanım kütüphaneleri
-        self.materials: Dict[str, Material] = {}
-        self.sections: Dict[str, Section] = {}
-        self.link_props: Dict[str, LinkProp] = {}
-        self.load_patterns: Dict[str, LoadPattern] = {}
-        self.load_cases: Dict[str, LoadCase] = {}
-        self.modal_cases: Dict[str, ModalCase] = {}
-        self.combinations: Dict[str, LoadCombination] = {}
-        self.spectrum_functions: Dict[str, SpectrumFunction] = {}
-        self.response_spectrum_cases: Dict[str, ResponseSpectrumCase] = {}
-        self.auto_seismics: Dict[str, AutoSeismicTSC2018] = {}
-        self.section_cuts: Dict[str, SectionCut] = {}
-        self.sd_sections: Dict[str, SDSection] = {}
+        self.materials: dict[str, Material] = {}
+        self.sections: dict[str, Section] = {}
+        self.link_props: dict[str, LinkProp] = {}
+        self.load_patterns: dict[str, LoadPattern] = {}
+        self.load_cases: dict[str, LoadCase] = {}
+        self.modal_cases: dict[str, ModalCase] = {}
+        self.combinations: dict[str, LoadCombination] = {}
+        self.spectrum_functions: dict[str, SpectrumFunction] = {}
+        self.response_spectrum_cases: dict[str, ResponseSpectrumCase] = {}
+        self.auto_seismics: dict[str, AutoSeismicTSC2018] = {}
+        self.section_cuts: dict[str, SectionCut] = {}
+        self.sd_sections: dict[str, SDSection] = {}
 
-        self.mass_source_map: Dict[str, float] = {}
-        self.grid_lines: List[Dict] = []
-        self.joint_constraints: Dict[str, str] = {}
-        self.diaphragms: Dict[str, dict] = {}
+        self.mass_source_map: dict[str, float] = {}
+        self.grid_lines: list[dict] = []
+        self.joint_constraints: dict[str, str] = {}
+        self.diaphragms: dict[str, dict] = {}
 
     # ==================================================================
     # PROJECT INFO
     # ==================================================================
     def set_project_info(self, **kwargs):
         """ProjectInfo, GeneralProjectInfo, SiteInformation alanları."""
-        from domain.definition import GeneralProjectInfo, SiteInformation, ProjectInfo
         for key, value in kwargs.items():
             if hasattr(self.project.info, key):
                 setattr(self.project.info, key, value)
@@ -120,8 +124,8 @@ class ProjectBuilder:
     # ==================================================================
     def add_section(
         self, name: str, *, profile_type, profile_params: dict,
-        material: Optional[Material] = None, color=None, sd_section=None,
-        catalog_props: Optional[dict] = None, catalog_source: str = "",
+        material: Material | None = None, color=None, sd_section=None,
+        catalog_props: dict | None = None, catalog_source: str = "",
     ) -> Section:
         """Section `project.unit_system`'de."""
         sec = Section(
@@ -232,7 +236,7 @@ class ProjectBuilder:
         return self._scene_builder.create_frame(node_i, node_j, section_name,
                                                  rotation_deg=rotation_deg, label=label)
 
-    def create_area(self, nodes: List[Node], thickness: float, label: str = "") -> Area:
+    def create_area(self, nodes: list[Node], thickness: float, label: str = "") -> Area:
         return self._scene_builder.create_area(nodes, thickness=thickness, label=label)
 
     def create_link(self, node_i: Node, node_j: Node, prop_name: str, label: str = "") -> Link:
@@ -241,12 +245,12 @@ class ProjectBuilder:
     # ==================================================================
     # GRID / CONSTRAINTS
     # ==================================================================
-    def set_grid_lines(self, lines: List[Dict]):
+    def set_grid_lines(self, lines: list[dict]):
         self.grid_lines = list(lines)
         self.project.grid_lines = self.grid_lines
         self.project.sync_grid_from_s2k_lines()
 
-    def set_joint_constraints(self, constraints: Dict[str, str]):
+    def set_joint_constraints(self, constraints: dict[str, str]):
         self.joint_constraints = dict(constraints)
         self.project.joint_constraints = self.joint_constraints
 
@@ -281,7 +285,7 @@ class ProjectBuilder:
         n = convert_project_units(self.project, target, reason="ProjectBuilder")
 
         # Grid lines — list[dict] manuel
-        from core.units import convert_value, Dimension
+        from core.units import Dimension, convert_value
         for gl in self.project.grid_lines:
             if "ordinate" in gl:
                 gl["ordinate"] = convert_value(
@@ -315,4 +319,5 @@ class ProjectBuilder:
 
 
 import logging
+
 logger = logging.getLogger(__name__)

@@ -1,23 +1,21 @@
 # main.py
 import os
-from logging_config import CadLogger
 
 os.environ["KIVY_LOG_LEVEL"] = "warning"
 os.environ["KIVY_NO_ARGS"] = "1"
 
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.scrollview import ScrollView
 from kivy.graphics import Color, Rectangle
 from kivy.metrics import dp
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.scrollview import ScrollView
 
 from structload.data.defaults import proje_data
+from structload.gui.report_view import FONT, THEME, AutoLabel, CardContainer, ReportView
 from structload.loads.snow_load import SnowLoad
 from structload.loads.spectrum import Spectrum
-from structload.windcalc.wind_results import WindReport
 from structload.utils.meta_tables import create_meta_tables
-
-from structload.gui.report_view import ReportView, CardContainer, AutoLabel, FONT, THEME
+from structload.windcalc.wind_results import WindReport
 
 
 class SectionHeader(CardContainer):

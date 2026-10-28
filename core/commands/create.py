@@ -1,8 +1,9 @@
 # core/commands/create.py
-from typing import Any, Dict, Callable
-from logging_config import CadLogger
+from collections.abc import Callable
+from typing import Any
 
 from core.commands.base import Command
+from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
@@ -17,8 +18,8 @@ class CreateElementCommand(Command):
     """
 
     def __init__(self, scene, element_type: str,
-                 factory: Callable[[Dict[str, Any]], Any],
-                 values: Dict[str, Any]):
+                 factory: Callable[[dict[str, Any]], Any],
+                 values: dict[str, Any]):
         self.scene = scene
         self.element_type = element_type
         self.factory = factory

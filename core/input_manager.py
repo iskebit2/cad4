@@ -1,11 +1,9 @@
 # core/input_manager.py
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
 
 import glm
 import numpy as np
-
 
 # ============================================================================
 # SABİTLER
@@ -42,16 +40,16 @@ class InputManager:
 
     # --- Drag (marquee) ---
     is_dragging:    bool = False
-    drag_start:     Optional[Tuple[float, float]] = None
-    drag_current:   Optional[Tuple[float, float]] = None
+    drag_start:     tuple[float, float] | None = None
+    drag_current:   tuple[float, float] | None = None
     drag_threshold: float = 5.0
 
     # --- Buton ve tuş durumları ---
-    buttons: Dict[str, bool]    = field(default_factory=dict)
-    keys:    Dict[object, bool] = field(default_factory=dict)
+    buttons: dict[str, bool]    = field(default_factory=dict)
+    keys:    dict[object, bool] = field(default_factory=dict)
 
     # --- Modifier durumları (sol/sağ birleşik) ---
-    modifiers: Dict[str, bool] = field(default_factory=lambda: {
+    modifiers: dict[str, bool] = field(default_factory=lambda: {
         _SHIFT: False, _CTRL: False, _ALT: False,
     })
 
@@ -71,7 +69,7 @@ class InputManager:
     _last_y: float = field(default=0.0, init=False, repr=False)
 
     _middle_click_time: float = field(default=0.0, init=False, repr=False)
-    _middle_press_pos:  Tuple[float, float] = field(
+    _middle_press_pos:  tuple[float, float] = field(
         default=(0.0, 0.0), init=False, repr=False,
     )
     _middle_dragged:    bool = field(default=False, init=False, repr=False)
@@ -169,7 +167,7 @@ class InputManager:
     # ==================================================================
     # DRAG / MARQUEE
     # ==================================================================
-    def get_drag_rect(self) -> Optional[Tuple[float, float, float, float]]:
+    def get_drag_rect(self) -> tuple[float, float, float, float] | None:
         if (not self.is_dragging
                 or self.drag_start is None
                 or self.drag_current is None):

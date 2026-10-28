@@ -12,11 +12,11 @@ Simple: node.vert, GL_POINTS
 from __future__ import annotations
 
 import ctypes
-from typing import Tuple
 
 import glm
 import numpy as np
 from OpenGL.GL import *
+
 from domain.element import Node
 from geometry.node_builder import NodeBuilder
 from render.base_renderer import BaseRenderer, _final_color_for
