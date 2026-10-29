@@ -8,7 +8,7 @@ KivyCADWidget bu sınıfı kullanır ama bu sınıf Kivy'yi bilmez.
 import time
 from pathlib import Path
 
-import glm
+from pyglm import glm
 
 glm.silence(2)
 from OpenGL.GL import GL_VERSION, glGetString

@@ -12,6 +12,7 @@ from inspector.widgets.list_widget import ListWidget
 from inspector.widgets.material_widget import MaterialWidget
 from inspector.widgets.section_widget import SectionWidget
 from inspector.widgets.string_widget import StringWidget
+from inspector.widgets.tuple3_widget import Tuple3Widget
 
 _WIDGETS = {
     "bool": BoolWidget,
@@ -27,6 +28,7 @@ _WIDGETS = {
     "material_ref": MaterialWidget,
     "link_prop_ref": LinkPropWidget,
     "info":          InfoWidget,
+    "tuple3": Tuple3Widget,
 }
 
 _CACHE = {}

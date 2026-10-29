@@ -13,6 +13,7 @@ DEĞİL: pencere/ImGui kurulumu (CadWindow), render (Engine), panel içeriği.
 """
 from __future__ import annotations
 
+import copy
 import os
 import queue
 import threading
@@ -58,7 +59,7 @@ from core.input_manager import (
     MOUSE_BUTTON_RIGHT,
 )
 from core.plane_draw_manager import PlaneDrawManager
-from core.units import UnitSystem
+from core.units import UnitSystem, convert_project_units
 from data.enums import GridPlane
 from domain.definition import Section, WindDirectionResult
 from domain.element import Area, Frame, Link, Node
@@ -490,7 +491,11 @@ class CadApp:
 
         # 1) Toolbar
         current_unit = self.current_project.unit_system if self.current_project else None
-        self.toolbar.draw(model_text=self._model_text, current_unit=current_unit)
+        self.toolbar.draw(
+            model_text=self._model_text,
+            current_unit=current_unit,
+            project=self.current_project,
+        )
         self.file_dialog.draw()
 
         # 2) Bekleyen event'ler
@@ -724,15 +729,41 @@ class CadApp:
         if self.engine.sel_mgr:
             self.engine.sel_mgr.clear()
 
+
     def _on_update_geo(self) -> None:
         if self.engine and self.engine.renderer and self.engine.scene:
             self.engine.renderer.update_geo(self.engine.scene)
 
     def set_unit_system(self, unit_system: UnitSystem) -> None:
-        self.current_project.unit_system = unit_system
-        if self.engine and self.engine.grid:
-            self.engine.grid.rebuild_all()
-        logger.info("[Units] %s", unit_system.name)
+        old = self.current_project.unit_system
+        if old == unit_system:
+            return
+
+        n = convert_project_units(self.current_project, unit_system, reason="ui")
+        logger.info("[Units] %s → %s (%d alan)", old.value, unit_system.value, n)
+
+        # --- GridSystem'i Project.grid'ten yeniden besle ---
+        g = getattr(self.current_project, "grid", None)
+        if self.engine and self.engine.grid and g:
+            self.engine.grid.set_coords(g.x_coords, g.y_coords, g.z_coords)
+            self.engine.grid.set_origin(g.origin_x, g.origin_y, g.origin_z)
+
+        # --- Renderer yenile ---
+        if self.engine and self.engine.scene and self.engine.renderer:
+            self.engine.renderer.update_geo(self.engine.scene)
+
+        # --- Kamera bounds ---
+        if self.engine and self.engine.cam and self.engine.grid:
+            try:
+                center, size = self.engine.grid.get_bounds()
+                self.engine.cam.update_bounds(center, size)
+            except Exception:
+                pass
+
+        # --- GridPanel text cache ---
+        panel = self.panels.get("grid", {}).get("instance")
+        if panel is not None and hasattr(panel, "on_unit_changed"):
+            panel.on_unit_changed()
 
     def _on_section_changed(self) -> None:
         if self.engine and self.engine.scene:
@@ -816,21 +847,13 @@ class CadApp:
             renderer.set_loads_enabled(enabled)
 
     def _apply_frame_distributed_load(self, frames, load_set) -> None:
-        """Persist a distributed-load set and make the new loads visible."""
-        import copy
-
         if not frames or not load_set.segments:
             return
 
         pattern = load_set.pattern_name
         for frame in frames:
             frame.dist_load_sets[pattern] = copy.deepcopy(load_set)
-            legacy_loads = [
-                load for load in getattr(frame, "dist_loads", [])
-                if getattr(load, "pattern_name", None) != pattern
-            ]
-            legacy_loads.extend(load_set.to_sap_loads())
-            frame.dist_loads = legacy_loads
+            # frame.dist_loads'e YAZMA — property türetir
             frame.mark_dirty()
 
         self._set_loads_visible(True)

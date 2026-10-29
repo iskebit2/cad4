@@ -1,19 +1,1117 @@
-2026-10-28 05:14:05 [INFO    ] cad.main: ================================================================
-2026-10-28 05:14:05 [INFO    ] cad.main: CAD4 başlatılıyor
-2026-10-28 05:14:05 [INFO    ] cad.main: Python   : 3.12.10
-2026-10-28 05:14:05 [INFO    ] cad.main: Dizin    : D:\Program\cad4
-2026-10-28 05:14:05 [INFO    ] cad.main: Log dos. : D:\Program\cad4\logs\cad.log
-2026-10-28 05:14:05 [INFO    ] cad.main: ================================================================
-2026-10-28 05:14:05 [INFO    ] cad.main: [1/3] CadWindow oluşturuluyor...
-2026-10-28 05:14:09 [INFO    ] cad.app.cad_window: [CadWindow] ImGui hazır
-2026-10-28 05:14:09 [INFO    ] cad.app.cad_window: Pencere hazır: 1280x800
-2026-10-28 05:14:09 [INFO    ] cad.main: [2/3] CadApp oluşturuluyor...
-2026-10-28 05:14:09 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
-2026-10-28 05:14:09 [INFO    ] cad.main: [3/3] Ana döngü başlıyor
-2026-10-28 05:14:09 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
-2026-10-28 05:14:09 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
-2026-10-28 05:14:09 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=0
-2026-10-28 05:15:27 [INFO    ] cad.core.draw_manager: [Draw] Polygon modu aktif
-2026-10-28 05:15:35 [INFO    ] cad.core.draw_manager: [Draw] Polygon çizimi iptal edildi
-2026-10-28 05:15:47 [INFO    ] cad.main: [3/3] Ana döngü bitti
-2026-10-28 05:15:48 [INFO    ] cad.main: Çıkış kodu: 0
+2026-10-29 03:14:10 [INFO    ] cad.main: ================================================================
+2026-10-29 03:14:10 [INFO    ] cad.main: CAD4 başlatılıyor
+2026-10-29 03:14:10 [INFO    ] cad.main: Python   : 3.12.10
+2026-10-29 03:14:10 [INFO    ] cad.main: Dizin    : D:\Program\cad4
+2026-10-29 03:14:10 [INFO    ] cad.main: Log dos. : D:\Program\cad4\logs\cad.log
+2026-10-29 03:14:10 [INFO    ] cad.main: ================================================================
+2026-10-29 03:14:10 [INFO    ] cad.main: [1/3] CadWindow oluşturuluyor...
+2026-10-29 03:14:15 [INFO    ] cad.app.cad_window: [CadWindow] ImGui hazır
+2026-10-29 03:14:15 [INFO    ] cad.app.cad_window: Pencere hazır: 1280x800
+2026-10-29 03:14:15 [INFO    ] cad.main: [2/3] CadApp oluşturuluyor...
+2026-10-29 03:14:15 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
+2026-10-29 03:14:15 [INFO    ] cad.main: [3/3] Ana döngü başlıyor
+2026-10-29 03:14:15 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-10-29 03:14:15 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-10-29 03:14:15 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=0
+2026-10-29 03:14:22 [INFO    ] cad.tools.s2k.loader: CurrUnits: Ton. m. C
+2026-10-29 03:14:22 [INFO    ] cad.tools.s2k.loader: [Parser] 34 tablo parse edildi
+2026-10-29 03:14:23 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = tonf, m, C
+2026-10-29 03:14:24 [INFO    ] cad.tools.s2k.loader: [Scene] 365 düğüm, 555 çubuk, 19 alan, 0 bağ
+2026-10-29 03:14:24 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = tonf, m, C
+2026-10-29 03:14:25 [INFO    ] cad.app.cad_app: [S2K] Import tamam
+2026-10-29 03:14:25 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=26280
+2026-10-29 03:16:12 [INFO    ] cad.ui.plane_manager_panel: [PlaneMgr] Yeni plane: Plane_z0 (assoc=939, depth=±500)
+2026-10-29 03:16:18 [INFO    ] cad.ui.plane_manager_panel: [PlaneMgr] Plot: Plane_z0
+2026-10-29 03:17:33 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=24804
+2026-10-29 03:17:49 [INFO    ] cad.core.analysis.material_takeoff: [Takeoff] 159 eleman, toplam 0.181 kg (0.0002 ton)
+2026-10-29 03:18:42 [INFO    ] cad.ui.definition_panel: [DefinitionPanel] Kaydedildi: materials/C30/37
+2026-10-29 03:22:19 [INFO    ] cad.render.scenerenderer: Render modu: normal
+2026-10-29 03:22:19 [INFO    ] cad.render.scenerenderer: mode=normal show_node=True node_r.icount=24804
+2026-10-29 03:22:44 [INFO    ] cad.render.scenerenderer: Render modu: shaded
+2026-10-29 03:22:44 [INFO    ] cad.render.scenerenderer: mode=shaded show_node=True node_r.icount=24804
+2026-10-29 03:23:16 [INFO    ] cad.app.cad_app: [File] Yeni proje
+2026-10-29 03:23:16 [INFO    ] cad.render.scenerenderer: mode=shaded show_node=True node_r.icount=0
+2026-10-29 03:23:29 [INFO    ] cad.tools.s2k.loader: CurrUnits: Tonf, m, C
+2026-10-29 03:23:30 [INFO    ] cad.tools.s2k.loader: [Parser] 71 tablo parse edildi
+2026-10-29 03:23:32 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = tonf, m, C
+2026-10-29 03:23:32 [INFO    ] cad.tools.s2k.loader: [Scene] 381 düğüm, 397 çubuk, 25 alan, 0 bağ
+2026-10-29 03:23:32 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = tonf, m, C
+2026-10-29 03:23:33 [INFO    ] cad.app.cad_app: [S2K] Import tamam
+2026-10-29 03:23:34 [INFO    ] cad.render.scenerenderer: mode=shaded show_node=True node_r.icount=28908
+2026-10-29 03:23:58 [INFO    ] cad.render.scenerenderer: Render modu: line
+2026-10-29 03:23:58 [INFO    ] cad.render.scenerenderer: mode=line show_node=True node_r.icount=28908
+2026-10-29 03:23:58 [INFO    ] cad.render.scenerenderer: Render modu: simple
+2026-10-29 03:23:58 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=28908
+2026-10-29 03:24:23 [INFO    ] cad.core.analysis.material_takeoff: [Takeoff] 422 eleman, toplam 879.827 kg (0.8798 ton)
+2026-10-29 03:25:00 [INFO    ] cad.app.cad_app: [File] Yeni proje
+2026-10-29 03:25:00 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=0
+2026-10-29 03:25:30 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=432
+2026-10-29 03:25:39 [INFO    ] cad.app.cad_app: [Zones] 6 rüzgar bölgesi hesaplandı.
+2026-10-29 03:26:15 [INFO    ] cad.app.cad_app: [File] Yeni proje
+2026-10-29 03:26:15 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=0
+2026-10-29 03:26:38 [INFO    ] cad.tools.s2k.loader: CurrUnits: N, mm, C
+2026-10-29 03:26:38 [INFO    ] cad.tools.s2k.loader: [Parser] 69 tablo parse edildi
+2026-10-29 03:26:39 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = N, mm, C
+2026-10-29 03:26:40 [INFO    ] cad.tools.s2k.loader: [Scene] 447 düğüm, 650 çubuk, 198 alan, 7 bağ
+2026-10-29 03:26:40 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = N, mm, C
+2026-10-29 03:26:41 [INFO    ] cad.app.cad_app: [S2K] Import tamam
+2026-10-29 03:26:42 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=34452
+2026-10-29 03:27:07 [INFO    ] cad.core.analysis.material_takeoff: [Takeoff] 720 eleman, toplam 916.909 kg (0.9169 ton)
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6 L=96.84 profile_h=24.21
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6 L=96.84 profile_h=24.21
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7 L=318.16 profile_h=79.54
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7 L=318.16 profile_h=79.54
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=8 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=8 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=8 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=8 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=9 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=9 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=9 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=9 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=10 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=10 L=51.84 profile_h=12.96
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=10 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=10 L=51.84 profile_h=12.96
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=11 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=11 L=406.84 profile_h=101.71
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=11 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=11 L=406.84 profile_h=101.71
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=12 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=12 L=1905.00 profile_h=476.25
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=12 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=12 L=1905.00 profile_h=476.25
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=13 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=13 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=13 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=13 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=14 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=14 L=2675.00 profile_h=668.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=14 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=14 L=2675.00 profile_h=668.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=15 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=15 L=1550.00 profile_h=387.50
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=15 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=15 L=1550.00 profile_h=387.50
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=66 pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=66 L=933.81 profile_h=233.45
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=66 pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=66 L=933.81 profile_h=233.45
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=67 pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=67 L=3828.73 profile_h=957.18
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=67 pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=67 L=3828.73 profile_h=957.18
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=68 pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=68 L=1961.63 profile_h=490.41
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=68 pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=68 L=1961.63 profile_h=490.41
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=69 pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=69 L=3828.73 profile_h=957.18
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=69 pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=69 L=3828.73 profile_h=957.18
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6A pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6A L=938.62 profile_h=234.65
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6A pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6A L=938.62 profile_h=234.65
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6B pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6B L=1933.13 profile_h=483.28
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6B pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6B L=1933.13 profile_h=483.28
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6C pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6C L=2660.04 profile_h=665.01
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6C pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6C L=2660.04 profile_h=665.01
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6D pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6D L=4432.44 profile_h=1108.11
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6D pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6D L=4432.44 profile_h=1108.11
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6E pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6E L=3172.25 profile_h=793.06
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6E pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6E L=3172.25 profile_h=793.06
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6F pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6F L=1436.30 profile_h=359.08
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6F pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6F L=1436.30 profile_h=359.08
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=70 pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=70 L=1671.92 profile_h=417.98
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=70 pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=70 L=1671.92 profile_h=417.98
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=71 pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=71 L=1572.16 profile_h=393.04
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=71 pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=71 L=1572.16 profile_h=393.04
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=74 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=74 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=74 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=74 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=77 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=77 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=77 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=77 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=79 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=79 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=79 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=79 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7B pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7B L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7B pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7B L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7D pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7D L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7D pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7D L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7F pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7F L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7F pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7F L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=81 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=81 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=81 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=81 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=83 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=83 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=83 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=83 L=2120.00 profile_h=530.00
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=1-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=1-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=1-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=1-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=191 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=191 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=191 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=191 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=192 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=192 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=192 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=192 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=193 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=193 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=193 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=193 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=194 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=194 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=194 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=194 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=195 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=195 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=195 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=195 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=196 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=196 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=196 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=196 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=197 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=197 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=197 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=197 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=198 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=198 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=198 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=198 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=199 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=199 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=199 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=199 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=200 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=200 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=200 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=200 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=201 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=201 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=201 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=201 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=202 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=202 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=202 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=202 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=203 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=203 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=203 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=203 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=204 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=204 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=204 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=204 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=205 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=205 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=205 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=205 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=206 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=206 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=206 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=206 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=207 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=207 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=207 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=207 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=208 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=208 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=208 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=208 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=209 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=209 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=209 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=209 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=2-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=2-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=2-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=2-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=210 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=210 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=210 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=210 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=211 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=211 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=211 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=211 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=212 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=212 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=212 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=212 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=213 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=213 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=213 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=213 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=214 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=214 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=214 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=214 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=215 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=215 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=215 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=215 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=216 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=216 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=216 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=216 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=217 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=217 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=217 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=217 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=218 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=218 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=218 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=218 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=219 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=219 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=219 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=219 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=220 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=220 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=220 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=220 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=221 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=221 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=221 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=221 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=222 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=222 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=222 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=222 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=223 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=223 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=223 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=223 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=224 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=224 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=224 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=224 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=225 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=225 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=225 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=225 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=226 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=226 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=226 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=226 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=227 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=227 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=227 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=227 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=228 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=228 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=228 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=228 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=229 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=229 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=229 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=229 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=230 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=230 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=230 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=230 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=231 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=231 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=231 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=231 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=232 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=232 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=232 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=232 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=233 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=233 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=233 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=233 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=234 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=234 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=234 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=234 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=235 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=235 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=235 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=235 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=236 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=236 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=236 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=236 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=237 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=237 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=237 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=237 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=238 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=238 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=238 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=238 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=239 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=239 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=239 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=239 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=240 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=240 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=240 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=240 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=241 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=241 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=241 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=241 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=242 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=242 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=242 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=242 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=243 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=243 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=243 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=243 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=244 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=244 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=244 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=244 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=245 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=245 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=245 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=245 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=246 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=246 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=246 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=246 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=247 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=247 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=247 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=247 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=248 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=248 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=248 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=248 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=249 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=249 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=249 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=249 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=250 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=250 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=250 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=250 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=251 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=251 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=251 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=251 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=252 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=252 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=252 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=252 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=253 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=253 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=253 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=253 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=254 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=254 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=254 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=254 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=255 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=255 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=255 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=255 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=256 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=256 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=256 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=256 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=257 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=257 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=257 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=257 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=258 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=258 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=258 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=258 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=259 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=259 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=259 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=259 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=260 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=260 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=260 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=260 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=261 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=261 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=261 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=261 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=262 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=262 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=262 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=262 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=263 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=263 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=263 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=263 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=264 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=264 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=264 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=264 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=265 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=265 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=265 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=265 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=266 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=266 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=266 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=266 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=267 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=267 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=267 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=267 L=2262.50 profile_h=565.62
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=268 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=268 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=268 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=268 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=269 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=269 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=269 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=269 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=270 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=270 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=270 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=270 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=271 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=271 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=271 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=271 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=272 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=272 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=272 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=272 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=273 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=273 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=273 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=273 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=274 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=274 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=274 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=274 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=275 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=275 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=275 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=275 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=276 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=276 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=276 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=276 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=277 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=277 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=277 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=277 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=278 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=278 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=278 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=278 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=279 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=279 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=279 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=279 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=280 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=280 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=280 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=280 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=281 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=281 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=281 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=281 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=282 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=282 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=282 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=282 L=2012.50 profile_h=503.12
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=3-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=3-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=3-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=3-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=4-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=4-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=4-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=4-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=5-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=5-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.emit] frame=5-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.profile] frame=5-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:28 [WARNING ] cad.render.load_renderer: [LR.update] show_frame=True show_point=True lines_v=4908 tris_v=13200
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6 L=96.84 profile_h=24.21
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6 L=96.84 profile_h=24.21
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7 L=318.16 profile_h=79.54
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7 L=318.16 profile_h=79.54
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=8 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=8 L=415.00 profile_h=103.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=8 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=8 L=415.00 profile_h=103.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=9 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=9 L=415.00 profile_h=103.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=9 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=9 L=415.00 profile_h=103.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=10 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=10 L=51.84 profile_h=12.96
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=10 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=10 L=51.84 profile_h=12.96
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=11 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=11 L=406.84 profile_h=101.71
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=11 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=11 L=406.84 profile_h=101.71
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=12 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=12 L=1905.00 profile_h=476.25
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=12 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=12 L=1905.00 profile_h=476.25
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=13 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=13 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=13 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=13 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=14 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=14 L=2675.00 profile_h=668.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=14 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=14 L=2675.00 profile_h=668.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=15 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=15 L=1550.00 profile_h=387.50
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=15 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=15 L=1550.00 profile_h=387.50
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=66 pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=66 L=933.81 profile_h=233.45
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=66 pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=66 L=933.81 profile_h=233.45
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=67 pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=67 L=3828.73 profile_h=957.18
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=67 pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=67 L=3828.73 profile_h=957.18
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=68 pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=68 L=1961.63 profile_h=490.41
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=68 pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=68 L=1961.63 profile_h=490.41
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=69 pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=69 L=3828.73 profile_h=957.18
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=69 pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=69 L=3828.73 profile_h=957.18
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6A pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6A L=938.62 profile_h=234.65
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6A pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6A L=938.62 profile_h=234.65
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6B pattern=LIVE segments=1 q1=2.94199505988196
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6B L=1933.13 profile_h=483.28
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6B pattern=DEAD segments=1 q1=0.353039407185835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6B L=1933.13 profile_h=483.28
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6C pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6C L=2660.04 profile_h=665.01
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6C pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6C L=2660.04 profile_h=665.01
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6D pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6D L=4432.44 profile_h=1108.11
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6D pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6D L=4432.44 profile_h=1108.11
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6E pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6E L=3172.25 profile_h=793.06
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6E pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6E L=3172.25 profile_h=793.06
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6F pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6F L=1436.30 profile_h=359.08
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=6F pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=6F L=1436.30 profile_h=359.08
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=70 pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=70 L=1671.92 profile_h=417.98
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=70 pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=70 L=1671.92 profile_h=417.98
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=71 pattern=LIVE segments=1 q1=3.80007695234753
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=71 L=1572.16 profile_h=393.04
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=71 pattern=DEAD segments=1 q1=0.456009234281703
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=71 L=1572.16 profile_h=393.04
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=74 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=74 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=74 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=74 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=77 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=77 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=77 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=77 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=79 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=79 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=79 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=79 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7B pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7B L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7B pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7B L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7D pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7D L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7D pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7D L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7F pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7F L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=7F pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=7F L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=81 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=81 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=81 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=81 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=83 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=83 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=83 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=83 L=2120.00 profile_h=530.00
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=1-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=1-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=1-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=1-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=191 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=191 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=191 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=191 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=192 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=192 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=192 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=192 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=193 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=193 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=193 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=193 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=194 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=194 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=194 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=194 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=195 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=195 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=195 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=195 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=196 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=196 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=196 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=196 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=197 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=197 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=197 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=197 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=198 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=198 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=198 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=198 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=199 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=199 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=199 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=199 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=200 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=200 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=200 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=200 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=201 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=201 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=201 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=201 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=202 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=202 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=202 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=202 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=203 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=203 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=203 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=203 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=204 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=204 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=204 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=204 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=205 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=205 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=205 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=205 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=206 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=206 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=206 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=206 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=207 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=207 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=207 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=207 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=208 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=208 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=208 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=208 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=209 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=209 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=209 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=209 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=2-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=2-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=2-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=2-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=210 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=210 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=210 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=210 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=211 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=211 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=211 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=211 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=212 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=212 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=212 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=212 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=213 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=213 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=213 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=213 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=214 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=214 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=214 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=214 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=215 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=215 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=215 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=215 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=216 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=216 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=216 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=216 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=217 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=217 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=217 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=217 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=218 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=218 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=218 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=218 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=219 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=219 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=219 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=219 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=220 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=220 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=220 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=220 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=221 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=221 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=221 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=221 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=222 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=222 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=222 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=222 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=223 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=223 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=223 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=223 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=224 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=224 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=224 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=224 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=225 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=225 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=225 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=225 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=226 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=226 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=226 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=226 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=227 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=227 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=227 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=227 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=228 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=228 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=228 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=228 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=229 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=229 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=229 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=229 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=230 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=230 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=230 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=230 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=231 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=231 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=231 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=231 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=232 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=232 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=232 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=232 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=233 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=233 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=233 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=233 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=234 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=234 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=234 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=234 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=235 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=235 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=235 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=235 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=236 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=236 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=236 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=236 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=237 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=237 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=237 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=237 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=238 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=238 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=238 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=238 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=239 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=239 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=239 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=239 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=240 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=240 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=240 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=240 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=241 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=241 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=241 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=241 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=242 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=242 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=242 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=242 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=243 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=243 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=243 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=243 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=244 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=244 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=244 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=244 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=245 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=245 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=245 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=245 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=246 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=246 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=246 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=246 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=247 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=247 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=247 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=247 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=248 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=248 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=248 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=248 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=249 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=249 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=249 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=249 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=250 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=250 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=250 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=250 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=251 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=251 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=251 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=251 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=252 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=252 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=252 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=252 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=253 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=253 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=253 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=253 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=254 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=254 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=254 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=254 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=255 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=255 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=255 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=255 L=2262.50 profile_h=565.62
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=256 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=256 L=2012.50 profile_h=503.12
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.emit] frame=256 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:29 [WARNING ] cad.render.load_renderer: [LR.profile] frame=256 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=257 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=257 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=257 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=257 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=258 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=258 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=258 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=258 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=259 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=259 L=2262.50 profile_h=565.62
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=259 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=259 L=2262.50 profile_h=565.62
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=260 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=260 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=260 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=260 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=261 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=261 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=261 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=261 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=262 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=262 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=262 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=262 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=263 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=263 L=2262.50 profile_h=565.62
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=263 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=263 L=2262.50 profile_h=565.62
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=264 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=264 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=264 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=264 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=265 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=265 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=265 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=265 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=266 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=266 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=266 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=266 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=267 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=267 L=2262.50 profile_h=565.62
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=267 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=267 L=2262.50 profile_h=565.62
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=268 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=268 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=268 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=268 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=269 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=269 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=269 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=269 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=270 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=270 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=270 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=270 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=271 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=271 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=271 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=271 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=272 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=272 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=272 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=272 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=273 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=273 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=273 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=273 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=274 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=274 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=274 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=274 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=275 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=275 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=275 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=275 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=276 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=276 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=276 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=276 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=277 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=277 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=277 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=277 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=278 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=278 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=278 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=278 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=279 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=279 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=279 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=279 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=280 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=280 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=280 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=280 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=281 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=281 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=281 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=281 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=282 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=282 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=282 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=282 L=2012.50 profile_h=503.12
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=3-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=3-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=3-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=3-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=4-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=4-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=4-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=4-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=5-1 pattern=DEAD segments=1 q1=0.245166254990163
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=5-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.emit] frame=5-1 pattern=LIVE segments=1 q1=2.03487991641835
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.profile] frame=5-1 L=415.00 profile_h=103.75
+2026-10-29 03:27:30 [WARNING ] cad.render.load_renderer: [LR.update] show_frame=True show_point=True lines_v=4908 tris_v=13200
+2026-10-29 03:28:14 [INFO    ] cad.render.scenerenderer: Render modu: normal
+2026-10-29 03:28:14 [INFO    ] cad.render.scenerenderer: mode=normal show_node=True node_r.icount=34452
+2026-10-29 03:28:18 [INFO    ] cad.render.scenerenderer: Render modu: shaded
+2026-10-29 03:28:18 [INFO    ] cad.render.scenerenderer: mode=shaded show_node=True node_r.icount=34452
+2026-10-29 03:28:24 [INFO    ] cad.ui.render_settings_panel: [RenderSettings] set_context keys=['renderer', 'scene'] renderer=<render.scenerenderer.SceneRenderer object at 0x000001D041CBFBC0>
+2026-10-29 03:28:27 [INFO    ] cad.render.scenerenderer: mode=shaded show_node=False node_r.icount=34452
+2026-10-29 03:31:45 [INFO    ] cad.render.scenerenderer: Render modu: line
+2026-10-29 03:31:45 [INFO    ] cad.render.scenerenderer: mode=line show_node=False node_r.icount=34452
+2026-10-29 03:31:46 [INFO    ] cad.render.scenerenderer: Render modu: simple
+2026-10-29 03:31:46 [INFO    ] cad.render.scenerenderer: mode=simple show_node=False node_r.icount=34452
+2026-10-29 03:32:45 [INFO    ] cad.app.cad_app: [File] Yeni proje
+2026-10-29 03:32:45 [INFO    ] cad.render.scenerenderer: mode=simple show_node=False node_r.icount=0
+2026-10-29 03:33:04 [INFO    ] cad.tools.s2k.loader: CurrUnits: N, mm, C
+2026-10-29 03:33:04 [INFO    ] cad.tools.s2k.loader: [Parser] 78 tablo parse edildi
+2026-10-29 03:33:05 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = N, mm, C
+2026-10-29 03:33:05 [INFO    ] cad.tools.s2k.loader: [Scene] 89 düğüm, 152 çubuk, 0 alan, 0 bağ
+2026-10-29 03:33:05 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = N, mm, C
+2026-10-29 03:33:05 [INFO    ] cad.app.cad_app: [S2K] Import tamam
+2026-10-29 03:33:06 [INFO    ] cad.render.scenerenderer: mode=simple show_node=False node_r.icount=6192
+2026-10-29 03:33:18 [INFO    ] cad.app.cad_app: [File] Yeni proje
+2026-10-29 03:33:18 [INFO    ] cad.render.scenerenderer: mode=simple show_node=False node_r.icount=0
+2026-10-29 03:33:52 [INFO    ] cad.tools.s2k.loader: CurrUnits: N, mm, C
+2026-10-29 03:33:53 [INFO    ] cad.tools.s2k.loader: [Parser] 80 tablo parse edildi
+2026-10-29 03:33:58 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = N, mm, C
+2026-10-29 03:34:04 [INFO    ] cad.tools.s2k.loader: [Scene] 5078 düğüm, 8403 çubuk, 3704 alan, 0 bağ
+2026-10-29 03:34:04 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = N, mm, C
+2026-10-29 03:34:47 [INFO    ] cad.app.cad_app: [S2K] Import tamam
+2026-10-29 03:35:07 [INFO    ] cad.render.scenerenderer: mode=simple show_node=False node_r.icount=371448
+2026-10-29 03:35:17 [INFO    ] cad.render.scenerenderer: Render modu: normal
+2026-10-29 03:35:17 [INFO    ] cad.render.scenerenderer: mode=normal show_node=False node_r.icount=371448
+2026-10-29 03:35:18 [INFO    ] cad.render.scenerenderer: Render modu: shaded
+2026-10-29 03:35:18 [INFO    ] cad.render.scenerenderer: mode=shaded show_node=False node_r.icount=371448
+2026-10-29 03:35:29 [INFO    ] cad.render.scenerenderer: Render modu: line
+2026-10-29 03:35:29 [INFO    ] cad.render.scenerenderer: mode=line show_node=False node_r.icount=371448
+2026-10-29 03:35:30 [INFO    ] cad.render.scenerenderer: Render modu: simple
+2026-10-29 03:35:30 [INFO    ] cad.render.scenerenderer: mode=simple show_node=False node_r.icount=371448
+2026-10-29 03:35:35 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=371448
+2026-10-29 03:38:56 [INFO    ] cad.core.analysis.material_takeoff: [Takeoff] 8507 eleman, toplam 1037.696 kg (1.0377 ton)
+2026-10-29 03:39:29 [INFO    ] cad.main: [3/3] Ana döngü bitti
+2026-10-29 03:39:45 [INFO    ] cad.main: Çıkış kodu: 0

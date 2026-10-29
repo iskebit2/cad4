@@ -7,6 +7,7 @@ from core.units import UnitSystem
 from data.serializer import load_project_file, save_project_file
 from domain.definition import (
     AnalysisManager,
+    AreaSection,
     AutoSeismicTSC2018,
     GeneralProjectInfo,
     GridConfig,
@@ -50,6 +51,7 @@ class Project:
     # --- ESKİ DEFINITION MANAGER MİRASI (Doğrudan Project'e monte edildi) ---
     materials: dict[str, Material] = field(default_factory=dict)
     sections: dict[str, Section] = field(default_factory=dict)
+    area_sections: dict[str, AreaSection] = field(default_factory=dict)
     link_props: dict[str, LinkProp] = field(default_factory=dict)
     load_patterns: dict[str, LoadPattern] = field(default_factory=dict)
     load_cases: dict[str, LoadCase] = field(default_factory=dict)
@@ -75,6 +77,7 @@ class Project:
 
     def add_material(self, m: Material):        self.materials[m.name] = m
     def add_section(self, s: Section):          self.sections[s.name] = s
+    def add_area_section(self, s: AreaSection): self.area_sections[s.name] = s
     def add_link_prop(self, p: LinkProp):       self.link_props[p.name] = p
     def add_load_pattern(self, p: LoadPattern): self.load_patterns[p.name] = p
     def add_load_case(self, c: LoadCase):       self.load_cases[c.name] = c
@@ -283,3 +286,23 @@ class Project:
 
         if _seen:
             log.info("[Migrate] %d Material nesnesi işlendi", len(_seen))
+
+    def __repr__(self) -> str:
+        return (
+            f"<Project unit={self.unit_system.value} "
+            f"materials={len(self.materials)} sections={len(self.sections)} "
+            f"patterns={len(self.load_patterns)} cases={len(self.load_cases)}>"
+        )
+
+    def summary(self) -> str:
+        return (
+            f"Project [{self.unit_system.value}]\n"
+            f"  Materials: {len(self.materials)}\n"
+            f"  Sections: {len(self.sections)}\n"
+            f"  AreaSections: {len(self.area_sections)}\n"
+            f"  LinkProps: {len(self.link_props)}\n"
+            f"  LoadPatterns: {len(self.load_patterns)}\n"
+            f"  LoadCases: {len(self.load_cases)}\n"
+            f"  Combinations: {len(self.combinations)}\n"
+            f"{self.scene.summary()}"
+        )

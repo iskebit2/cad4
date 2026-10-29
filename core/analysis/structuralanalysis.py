@@ -11,6 +11,7 @@ import numpy as np
 from .mass_assembly import MassAssembly, build_mass
 from .solver import ModalResult, StructuralSolver
 from .stiffness_assembly import StiffnessAssembly, build_stiffness
+from core.analysis.unit_guard import ensure_nmm
 
 
 @dataclass
@@ -119,6 +120,9 @@ def run_analysis(
     n_modes  : kaç mod isteniyor
     spectrum : opsiyonel spektrum (get_sa(T) → Sa[g])
     """
+    # --- 0. Birim guard: solver N_MM varsayar ---
+    ensure_nmm(project)
+    
     # --- 1. Mass ---
     mass_asm = build_mass(scene, project, n_live=n_live, validate=validate)
 

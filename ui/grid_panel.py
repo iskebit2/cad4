@@ -1,6 +1,12 @@
 # ui/grid_panel.py
-"""GridPanel — Aks koordinatları tabanlı grid ayarları."""
-import glm
+"""GridPanel — aks koordinatları + work plane yönetimi.
+
+Tek doğruluk kaynağı: Project.grid (GridConfig).
+GridSystem (engine.grid) türetilmiş — Project.grid'ten beslenir.
+"""
+from __future__ import annotations
+
+from pyglm import glm
 from imgui_bundle import imgui
 
 from data.enums import GridPlane
@@ -10,9 +16,9 @@ from ui.base_panel import BasePanel
 
 logger = CadLogger.get(__name__)
 
+
 class GridPanel(BasePanel):
     PLANES = [GridPlane.XY, GridPlane.XZ, GridPlane.YZ]
-        
 
     def __init__(self):
         super().__init__(
@@ -22,18 +28,12 @@ class GridPanel(BasePanel):
         )
         self.app = None
         self.visible = False
-        
-        self.project = None
-        self.camera = None
 
-        
-        # Input buffer cache (metin kutularının anlık durumu için)
         self._x_text = ""
         self._y_text = ""
         self._z_text = ""
         self._initialized_texts = False
 
-        # Yeni work plane form buffer
         self._new_name = "PLANE-1"
         self._new_origin = [0.0, 0.0, 3000.0]
         self._new_normal = [0.0, 0.0, 1.0]
@@ -44,66 +44,69 @@ class GridPanel(BasePanel):
         self._new_count_v = 10
         self._name_seq = 1
 
-        self._active_tab = 0  # 0 = Global Grid, 1 = Work Planes
-
-    def _project(self):
+    # ----------------------------------------------------------------
+    # CONTEXT
+    # ----------------------------------------------------------------
+    @property
+    def project(self):
         return getattr(self.app, "current_project", None) if self.app else None
 
-    def _camera(self):
-        return getattr(getattr(self.app, "engine", None), "cam", None) if self.app else None
-    
-    def open(self):
-        self.project = self._project()
-        self.camera = self._camera()
-        super().open()
-        g = self.grid
-        if g is not None:
-            # Mevcut koordinatları string'e çevir[cite: 11]
-            self._x_text = ", ".join(map(str, [int(v) if v.is_integer() else v for v in g.x_coords]))
-            self._y_text = ", ".join(map(str, [int(v) if v.is_integer() else v for v in g.y_coords]))
-            self._z_text = ", ".join(map(str, [int(v) if v.is_integer() else v for v in g.z_coords]))
-            self._initialized_texts = True
-            
+    @property
+    def engine(self):
+        return getattr(self.app, "engine", None) if self.app else None
+
+    @property
+    def grid_system(self):
+        eng = self.engine
+        return getattr(eng, "grid", None) if eng else None
+
+    @property
+    def camera(self):
+        eng = self.engine
+        return getattr(eng, "cam", None) if eng else None
+
     @property
     def grid(self):
-        """Doğrudan ana motorun GridSystem (OpenGL renderer) nesnesini döndürür."""
-        if self.app:
-            engine = getattr(self.app, "engine", None)
-            if engine and hasattr(engine, "grid"):
-                return engine.grid
-        return None
+        """Project.grid (GridConfig) — tek doğruluk kaynağı."""
+        proj = self.project
+        return getattr(proj, "grid", None) if proj else None
 
-    def get_label_anchors(self):
-        """
-        Her plane için label anchor noktaları döner.
-        """
-        g = self.grid
-        if not g:
-            return []
+    # ----------------------------------------------------------------
+    # OPEN / TEXT CACHE
+    # ----------------------------------------------------------------
+    def open(self):
+        super().open()
+        self._sync_texts_from_project()
 
-        ox, oy, oz = g.origin_x, g.origin_y, g.origin_z
-        xs = [ox + x for x in g.x_coords]
-        ys = [oy + y for y in g.y_coords]
-        zs = [oz + z for z in g.z_coords]
-        
-        if not xs or not ys or not zs:
-            return []
-        
-        labels = []
-        for plane, p in g.planes_visibility.items():
-            # Not: Plane görünürlük sözlüğü yapısına göre uyarlanmıştır.
-            pass
-            
-        return labels
-
-    # ------------------------------------------------------------------
-    def draw_content(self):
+    def _sync_texts_from_project(self):
         g = self.grid
         if g is None:
-            imgui.text_colored(imgui.ImVec4(0.9, 0.5, 0.5, 1.0), 'Grid bağlı değil (Project bulunamadı)')
+            return
+        fmt = lambda v: int(v) if float(v).is_integer() else float(v)
+        self._x_text = ", ".join(str(fmt(v)) for v in g.x_coords)
+        self._y_text = ", ".join(str(fmt(v)) for v in g.y_coords)
+        self._z_text = ", ".join(str(fmt(v)) for v in g.z_coords)
+        self._initialized_texts = True
+
+    def on_unit_changed(self):
+        """Birim değişince text cache'i yenile."""
+        self._sync_texts_from_project()
+
+    # ----------------------------------------------------------------
+    # DRAW
+    # ----------------------------------------------------------------
+    def draw_content(self):
+        gs = self.grid_system
+        if gs is None or self.grid is None:
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.5, 0.5, 1.0),
+                "Grid bağlı değil (Project veya Engine yok)",
+            )
             return
 
-        # Sekmeler
+        if not self._initialized_texts:
+            self._sync_texts_from_project()
+
         if imgui.begin_tab_bar("grid_tabs"):
             if imgui.begin_tab_item("Global Grid")[0]:
                 self._draw_global_grid()
@@ -113,33 +116,35 @@ class GridPanel(BasePanel):
                 imgui.end_tab_item()
             imgui.end_tab_bar()
 
-    # ------------------------------------------------------------------
+    # ----------------------------------------------------------------
     # GLOBAL GRID
-    # ------------------------------------------------------------------
+    # ----------------------------------------------------------------
     def _draw_global_grid(self):
-        g = self.grid
+        gs = self.grid_system
+        gp = self.grid
 
-        if not self._initialized_texts:
-            self._x_text = ", ".join(map(str, [int(v) if v.is_integer() else v for v in g.x_coords]))
-            self._y_text = ", ".join(map(str, [int(v) if v.is_integer() else v for v in g.y_coords]))
-            self._z_text = ", ".join(map(str, [int(v) if v.is_integer() else v for v in g.z_coords]))
-            self._initialized_texts = True
-
-        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Düzlemler')
+        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Düzlemler")
         imgui.separator()
-        
-        # GridSystem.planes yapısı: {GridPlane.XY: {"visible": True}, ...}
+
         for plane in self.PLANES:
-            if plane in g.planes:
-                is_vis = g.planes[plane].get("visible", False)
-                changed, val = imgui.checkbox(f"  {plane.name} Düzlemi##vis", is_vis)
-                if changed:
-                    g.set_plane(plane, visible=val)
+            if plane not in gs.planes:
+                continue
+            is_vis = gs.planes[plane].get("visible", False)
+            changed, val = imgui.checkbox(
+                f"  {plane.name} Düzlemi##vis", is_vis,
+            )
+            if changed:
+                gs.set_plane(plane, visible=val)
+                key = plane.name
+                if key in gp.planes_visibility:
+                    gp.planes_visibility[key] = bool(val)
 
         imgui.spacing()
         imgui.separator()
-
-        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Aks Koordinatları (Virgülle ayırın)')
+        imgui.text_colored(
+            imgui.ImVec4(0.5, 0.8, 1.0, 1.0),
+            "Aks Koordinatları (virgülle ayırın)",
+        )
         imgui.separator()
 
         _, self._x_text = imgui.input_text("X Aksları", self._x_text, 256)
@@ -148,38 +153,15 @@ class GridPanel(BasePanel):
 
         imgui.spacing()
         if imgui.button("Uygula", imgui.ImVec2(-1, 0)):
-            try:
-                # String'i virgüllere göre bölüp float'a çevir
-                x_list = [float(v.strip()) for v in self._x_text.split(",") if v.strip()]
-                y_list = [float(v.strip()) for v in self._y_text.split(",") if v.strip()]
-                z_list = [float(v.strip()) for v in self._z_text.split(",") if v.strip()]
-                
-                
-                
-                # 1. Görsel Engine Grid'i güncelle
-                if g and hasattr(g, "set_coords"):
-                    g.set_coords(x_list, y_list, z_list)
-
-                # 2. Proje modelini (Single Source of Truth) güncelle ki save() sırasında diske yazılsın!
-                proj = self._project()
-                if proj and hasattr(proj, "grid") and proj.grid:
-                    proj.grid.x_coords = list(x_list)
-                    proj.grid.y_coords = list(y_list)
-                    proj.grid.z_coords = list(z_list)
-
-                engine = getattr(self.app, "engine", None) if self.app else None
-                camera = getattr(engine, "cam", None) if engine else None
-                if camera and hasattr(g, "get_bounds"):
-                    center, size = g.get_bounds()
-                    camera.update_bounds(center, size)
-            except Exception as e:
-                logger.error(f"[Panel Hata] Uygula sırasında hata: {e}")
+            self._apply_axis_coords()
 
         imgui.spacing()
         imgui.separator()
 
-        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Origin (Kaydırma Merkezi)')
-        ox, oy, oz = g.origin.x, g.origin.y, g.origin.z
+        imgui.text_colored(
+            imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Origin (Kaydırma Merkezi)",
+        )
+        ox, oy, oz = gp.origin_x, gp.origin_y, gp.origin_z
         imgui.text("X"); imgui.same_line(30)
         cx, ox = imgui.input_float("##ox", ox, step=100.0)
         imgui.same_line(); imgui.text("Y"); imgui.same_line(30)
@@ -187,70 +169,119 @@ class GridPanel(BasePanel):
         imgui.same_line(); imgui.text("Z"); imgui.same_line(30)
         cz, oz = imgui.input_float("##oz", oz, step=100.0)
         if cx or cy or cz:
-            g.set_origin(ox, oy, oz)  # GridSystem.set_origin otomatik rebuild_all çağırır
+            self._apply_origin(ox, oy, oz)
 
-        engine = getattr(self.app, "engine", None) if self.app else None
-        camera = getattr(engine, "cam", None) if engine else None
-
-        if camera is not None and hasattr(g, "get_bounds"):
+        cam = self.camera
+        if cam is not None:
             if imgui.button("Origin → Model Merkezi", imgui.ImVec2(-1, 0)):
-                center, size = g.get_bounds()
-                g.set_origin(float(center.x), float(center.y), float(center.z))
-                camera.update_bounds(center, size)
+                try:
+                    center, size = gs.get_bounds()
+                    self._apply_origin(
+                        float(center.x), float(center.y), float(center.z),
+                    )
+                    cam.update_bounds(center, size)
+                except Exception:
+                    logger.exception("[GridPanel] Origin → model merkezi hatası")
 
         imgui.spacing()
         imgui.separator()
-
-        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Kamera Hizalama')
-        if camera is not None:
-            if imgui.button(
-                "Kamerayı Üst Görünüşe (TOP) Al", imgui.ImVec2(-1, 0)
-            ):
-                camera.set_view_preset("top")
+        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Kamera Hizalama")
+        if cam is not None:
+            if imgui.button("Kamerayı Üst Görünüşe (TOP) Al", imgui.ImVec2(-1, 0)):
+                cam.set_view_preset("top")
         else:
-            imgui.text_colored(imgui.ImVec4(0.7, 0.5, 0.5, 1.0), 'Kamera bağlı değil')
-    # ------------------------------------------------------------------
+            imgui.text_colored(
+                imgui.ImVec4(0.7, 0.5, 0.5, 1.0), "Kamera bağlı değil",
+            )
+
+    def _apply_axis_coords(self):
+        try:
+            x_list = [float(v.strip()) for v in self._x_text.split(",") if v.strip()]
+            y_list = [float(v.strip()) for v in self._y_text.split(",") if v.strip()]
+            z_list = [float(v.strip()) for v in self._z_text.split(",") if v.strip()]
+        except ValueError:
+            logger.error("[GridPanel] Geçersiz aks koordinatı")
+            return
+
+        gp = self.grid
+        gs = self.grid_system
+        if gp is None or gs is None:
+            return
+
+        gp.x_coords = list(x_list)
+        gp.y_coords = list(y_list)
+        gp.z_coords = list(z_list)
+
+        gs.set_coords(x_list, y_list, z_list)
+
+        cam = self.camera
+        if cam is not None:
+            try:
+                center, size = gs.get_bounds()
+                cam.update_bounds(center, size)
+            except Exception:
+                pass
+
+    def _apply_origin(self, x: float, y: float, z: float):
+        gp = self.grid
+        gs = self.grid_system
+        if gp is None or gs is None:
+            return
+        gp.origin_x = float(x)
+        gp.origin_y = float(y)
+        gp.origin_z = float(z)
+        gs.set_origin(x, y, z)
+
+    # ----------------------------------------------------------------
     # WORK PLANES
-    # ------------------------------------------------------------------
+    # ----------------------------------------------------------------
     def _draw_work_planes(self):
-        g = self.grid
+        gs = self.grid_system
 
-        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Aktif Work Plane')
+        imgui.text_colored(
+            imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Aktif Work Plane",
+        )
         imgui.separator()
 
-        active_name = getattr(g, "active_user_plane", None)
+        active_name = getattr(gs, "active_user_plane", None)
         if active_name is None:
-            imgui.text_colored(imgui.ImVec4(0.7, 0.7, 0.7, 1.0), '(yok — global grid)')
+            imgui.text_colored(
+                imgui.ImVec4(0.7, 0.7, 0.7, 1.0), "(yok — global grid)",
+            )
         else:
-            imgui.text_colored(imgui.ImVec4(0.4, 0.9, 0.5, 1.0), f'Aktif: {active_name}')
+            imgui.text_colored(
+                imgui.ImVec4(0.4, 0.9, 0.5, 1.0), f"Aktif: {active_name}",
+            )
             if imgui.button("Aktifliği Kaldır", imgui.ImVec2(-1, 0)):
-                if hasattr(g, "set_active_user_plane"):
-                    g.set_active_user_plane(None)
+                gs.set_active_user_plane(None)
 
         imgui.spacing()
         imgui.separator()
-
-        # ---- Mevcut plane listesi ----
-        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Tanımlı Work Plane'ler")
+        imgui.text_colored(
+            imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Tanımlı Work Plane'ler",
+        )
         imgui.separator()
 
-        user_planes = getattr(g, "user_planes", [])
+        user_planes = getattr(gs, "user_planes", [])
         if not user_planes:
-            imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0), '  Henüz yok')
+            imgui.text_colored(
+                imgui.ImVec4(0.6, 0.6, 0.6, 1.0), "  Henüz yok",
+            )
         else:
             to_delete = None
             for pdef in user_planes:
                 is_active = (pdef.name == active_name)
-                ch_vis, val = imgui.checkbox(f"##vis_{pdef.name}", pdef.visible)
+                ch_vis, val = imgui.checkbox(
+                    f"##vis_{pdef.name}", pdef.visible,
+                )
                 if ch_vis:
                     pdef.visible = val
-                    if hasattr(g, "rebuild_user_plane"):
-                        g.rebuild_user_plane(pdef)
+                    gs.rebuild_user_plane(pdef)
 
                 imgui.same_line()
                 if is_active:
                     imgui.push_style_color(
-                        imgui.Col_.text, imgui.ImVec4(0.4, 1.0, 0.5, 1.0)
+                        imgui.Col_.text, imgui.ImVec4(0.4, 1.0, 0.5, 1.0),
                     )
                 imgui.text(pdef.name)
                 if is_active:
@@ -258,20 +289,20 @@ class GridPanel(BasePanel):
 
                 imgui.same_line()
                 if imgui.small_button(f"Aktifleştir##{pdef.name}"):
-                    self._activate_work_plane(pdef)
+                    gs.set_active_user_plane(pdef.name)
 
                 imgui.same_line()
                 if imgui.small_button(f"X##del_{pdef.name}"):
                     to_delete = pdef
 
-            if to_delete is not None and hasattr(g, "remove_user_plane"):
-                g.remove_user_plane(to_delete.name)
+            if to_delete is not None:
+                gs.remove_user_plane(to_delete.name)
 
         imgui.spacing()
         imgui.separator()
-
-        # ---- Yeni plane formu ----
-        imgui.text_colored(imgui.ImVec4(0.5, 0.8, 1.0, 1.0), 'Yeni Work Plane')
+        imgui.text_colored(
+            imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Yeni Work Plane",
+        )
         imgui.separator()
 
         imgui.push_item_width(120)
@@ -328,12 +359,12 @@ class GridPanel(BasePanel):
             self._create_and_add_plane(activate=True)
 
     def _create_and_add_plane(self, activate: bool = False):
-        g = self.grid
-        if not g:
+        gs = self.grid_system
+        if not gs:
             return
 
         name = (self._new_name or f"PLANE-{self._name_seq}").strip()
-        existing = {p.name for p in getattr(g, "user_planes", [])}
+        existing = {p.name for p in getattr(gs, "user_planes", [])}
         base = name
         i = 1
         while name in existing:
@@ -352,14 +383,10 @@ class GridPanel(BasePanel):
             count_v=self._new_count_v,
             visible=True,
         )
-        
-        if hasattr(g, "add_user_plane"):
-            g.add_user_plane(pdef)
-            
+        gs.add_user_plane(pdef)
         if activate:
-            self._activate_work_plane(pdef)
+            gs.set_active_user_plane(pdef.name)
 
-    # ------------------------------------------------------------------
     def _draw_vec3_inputs(self, tag: str, vec: list):
         imgui.push_item_width(90)
         imgui.text("X"); imgui.same_line(20)
@@ -369,9 +396,3 @@ class GridPanel(BasePanel):
         imgui.same_line(); imgui.text("Z"); imgui.same_line(20)
         _, vec[2] = imgui.input_float(f"##{tag}z", float(vec[2]), step=100.0, format="%.3f")
         imgui.pop_item_width()
-
-    # ------------------------------------------------------------------
-    def _activate_work_plane(self, pdef: GridPlaneDef):
-        g = self.grid
-        if g and hasattr(g, "set_active_user_plane"):
-            g.set_active_user_plane(pdef.name)

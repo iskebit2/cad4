@@ -10,6 +10,8 @@ Alt:        [ Cancel ]  [ Apply ]
 CadApp sadece `draw()` ve `set_selection(...)` çağırır.
 """
 
+from collections.abc import Mapping
+from enum import Enum
 from typing import Any
 
 from imgui_bundle import imgui
@@ -141,6 +143,14 @@ def _copy_to_clipboard(text: str):
 # ----------------------------------------------------------------------
 def _col(r, g, b, a=1.0) -> imgui.ImVec4:
     return imgui.ImVec4(float(r), float(g), float(b), float(a))
+
+
+def _domain_field_items(element) -> list[tuple[str, Any]]:
+    """Return all stored domain fields, including fields added by future models."""
+    try:
+        return list(vars(element).items())
+    except TypeError:
+        return []
 
 
 class InspectorWindow:
@@ -555,6 +565,88 @@ class InspectorWindow:
         self._group_drawer.open_groups = self._form_open_groups
         for gi, group in enumerate(c.schema):
             self._group_drawer.draw(gi, group, self._draw_ctx)
+
+        # elements = c.selection.elements
+        # if elements:
+        #     imgui.separator()
+        #     imgui.set_next_item_open(True, imgui.Cond_.once)
+        #     if imgui.tree_node(f"Domain alanları##domain_fields_{id(elements[0])}"):
+        #         for index, element in enumerate(elements):
+        #             if len(elements) > 1:
+        #                 title = f"{_element_label(element)} ({type(element).__name__})##domain_element_{index}"
+        #                 if not imgui.tree_node(title):
+        #                     continue
+        #                 self._draw_domain_fields(element)
+        #                 imgui.tree_pop()
+        #             else:
+        #                 self._draw_domain_fields(element)
+        #         imgui.tree_pop()
+
+    # def _draw_domain_fields(self, element) -> None:
+    #     for name, value in _domain_field_items(element):
+    #         self._draw_domain_value(name, value, set())
+
+    # def _draw_domain_value(self, label: str, value: Any, ancestors: set[int]) -> None:
+    #     if isinstance(value, Enum):
+    #         imgui.text(f"{label}: {value.name} ({value.value})")
+    #         return
+    #     if value is None or isinstance(value, (str, int, float, bool)):
+    #         imgui.text_wrapped(f"{label}: {value!r}")
+    #         return
+
+    #     if isinstance(value, Mapping):
+    #         entries = list(value.items())
+    #         object_id = id(value)
+    #         if object_id in ancestors:
+    #             imgui.text(f"{label}: <circular reference>")
+    #             return
+    #         if not imgui.tree_node(f"{label} ({len(entries)})"):
+    #             return
+    #         ancestors.add(object_id)
+    #         for key, child in entries:
+    #             self._draw_domain_value(str(key), child, ancestors)
+    #         ancestors.remove(object_id)
+    #         imgui.tree_pop()
+    #         return
+
+    #     if isinstance(value, (list, tuple, set)):
+    #         items = list(value)
+    #         object_id = id(value)
+    #         if object_id in ancestors:
+    #             imgui.text(f"{label}: <circular reference>")
+    #             return
+    #         if not imgui.tree_node(f"{label} ({len(items)})"):
+    #             return
+    #         ancestors.add(object_id)
+    #         for index, child in enumerate(items):
+    #             self._draw_domain_value(f"[{index}]", child, ancestors)
+    #         ancestors.remove(object_id)
+    #         imgui.tree_pop()
+    #         return
+
+    #     unique_id = _unique_id(value)
+    #     if unique_id is not None:
+    #         ref_type = getattr(value, "element_type", type(value).__name__)
+    #         ref_label = _element_label(value)
+    #         imgui.text_wrapped(f"{label}: {ref_type} #{unique_id} ({ref_label})")
+    #         return
+
+    #     fields = _domain_field_items(value)
+    #     if fields:
+    #         object_id = id(value)
+    #         if object_id in ancestors:
+    #             imgui.text(f"{label}: <circular reference>")
+    #             return
+    #         if not imgui.tree_node(f"{label} ({type(value).__name__})"):
+    #             return
+    #         ancestors.add(object_id)
+    #         for name, child in fields:
+    #             self._draw_domain_value(name, child, ancestors)
+    #         ancestors.remove(object_id)
+    #         imgui.tree_pop()
+    #         return
+
+    #     imgui.text_wrapped(f"{label}: {value!r}")
 
     def _is_dirty(self) -> bool:
         return self.controller.selection.values != self.controller.selection.original

@@ -54,6 +54,7 @@ PRIORITY: dict[str, int] = {
     "CONNECTIVITY - AREA": 53,
     "CONNECTIVITY - LINK": 54,
     "JOINT CONSTRAINT ASSIGNMENTS": 55,
+    "JOINT ADDED MASS ASSIGNMENTS": 56,
 
     "FRAME SECTION ASSIGNMENTS": 60,
     "AREA SECTION ASSIGNMENTS": 61,
@@ -123,6 +124,7 @@ def build_router() -> dict[str, Callable]:
         "JOINT COORDINATES": nodes.handle_joints,
         "JOINT RESTRAINT ASSIGNMENTS": nodes.handle_joint_restraints,
         "JOINT CONSTRAINT ASSIGNMENTS": nodes.handle_joint_constraints,
+        "JOINT ADDED MASS ASSIGNMENTS": nodes.handle_joint_added_mass,
         "CONNECTIVITY - FRAME": frames.handle_frame_conn,
         "CONNECTIVITY - AREA": areas.handle_area_conn,
         "CONNECTIVITY - LINK": links.handle_link_conn,

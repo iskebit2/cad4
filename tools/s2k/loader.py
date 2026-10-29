@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from pathlib import Path
+from dataclasses import dataclass, field
 
 import pandas as pd
 
@@ -25,6 +26,15 @@ from tools.s2k.scene_builder import (
 
 logger = CadLogger.get(__name__)
 
+@dataclass
+class S2KMetadata:
+    program_name: str = ""
+    version: str = ""
+    curr_units_raw: str = ""
+    curr_units_normalized: str = ""
+    unit_system: UnitSystem = UnitSystem.N_MM
+    num_tables: int = 0
+    warnings: list[str] = field(default_factory=list)
 
 # ============================================================================
 # PARSER
@@ -142,37 +152,56 @@ class S2KLoader:
     # ------------------------------------------------------------------
     def load(self, project: Project | None = None) -> Project:
         """Dosyayı parse et + handler'ları çalıştır + project üret."""
+        project, _ = self.load_with_metadata(project)
+        return project
+
+    def load_with_metadata(self, project=None, *, ctx=None) -> tuple[Project, S2KMetadata]:
         if project is None:
             project = Project()
-        if self.parser is None:
-            return project
-
-        ctx = self._run_handlers()
-        return self.load_from_context(ctx, project)
+        if ctx is None:
+            if self.parser is None:
+                return project, S2KMetadata()
+            ctx = self._run_handlers()
+        meta = self._build_metadata(ctx)
+        project = self.load_from_context(ctx, project)
+        return project, meta
 
     def load_from_context(
-        self,
-        ctx: LoadContext,
-        project: Project | None = None,
+        self, ctx: LoadContext, project: Project | None = None,
     ) -> Project:
-        """Hazır bir LoadContext'ten Project üretir."""
+        """Hazır LoadContext → Project. Değerler S2K biriminde KALIR."""
         if project is None:
             project = Project()
-
-        logger.info("[Loader] Model inşa başlıyor")
 
         s2k_sys = UnitSystem.from_sap(ctx.units_source_string)
         self.units = s2k_sys
         logger.info("[Loader] S2K CurrUnits = %s", s2k_sys.value)
 
+        # Project birimini S2K'nın birimine ayarla — DEĞER DEĞİŞMEZ
+        project.unit_system = s2k_sys
+
         builder = ProjectBuilder(project, s2k_sys)
         self._apply_ctx_to_builder(ctx, builder)
         self._build_scene_into_builder(ctx, builder)
-        builder.finalize_and_convert(UnitSystem.N_MM)
 
-        project._migrate_materials()
-        logger.info("[Loader] Bitti")
+        # finalize_and_convert / _migrate_materials ÇAĞRILMAZ
+
+        logger.info("[Loader] Bitti — unit_system = %s", project.unit_system.value)
         return project
+
+    def _build_metadata(self, ctx: LoadContext) -> S2KMetadata:
+        meta = S2KMetadata()
+        pc = self.parser.get_table("PROGRAM CONTROL") if self.parser else None
+        if pc is not None and not pc.empty:
+            r = pc.iloc[0]
+            meta.program_name = str(r.get("ProgramName", "")).strip()
+            meta.version = str(r.get("Version", "")).strip()
+            meta.curr_units_raw = str(r.get("CurrUnits", "")).strip()
+        meta.curr_units_normalized = ctx.units_source_string
+        meta.unit_system = UnitSystem.from_sap(ctx.units_source_string)
+        meta.num_tables = len(self.parser.get_all_tables()) if self.parser else 0
+        meta.warnings = list(ctx.warnings)
+        return meta
 
     # ------------------------------------------------------------------
     # HANDLERS
@@ -245,6 +274,12 @@ class S2KLoader:
                 catalog_props=getattr(sec, "catalog_props", {}),
                 catalog_source=getattr(sec, "catalog_source", ""),
             )
+            # yeni alanları doğrudan project.sections'a yansıt
+            builder.project.sections[sec.name] = sec
+
+        # AreaSections
+        for name, sec in ctx.area_section_objects.items():
+            builder.project.add_area_section(sec)
 
         # Load patterns
         for lp in ctx.load_patterns.values():

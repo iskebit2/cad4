@@ -17,7 +17,7 @@ from __future__ import annotations
 import ctypes
 import math
 
-import glm
+from pyglm import glm
 import numpy as np
 from OpenGL.GL import *
 

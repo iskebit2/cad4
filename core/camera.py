@@ -1,5 +1,5 @@
 # core/camera.py
-import glm
+from pyglm import glm
 import numpy as np
 
 glm.silence(2)

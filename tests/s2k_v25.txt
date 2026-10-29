@@ -1,0 +1,451 @@
+ACTIVE DEGREES OF FREEDOM
+ UX  UY  UZ  RX  RY  RZ
+Yes Yes Yes Yes Yes Yes
+
+ANALYSIS OPTIONS
+  Solver SolverProc Force32Bit StiffCase GeomMod    HingeOpt NumAThreads MaxFileSize NumDThreads NumRThreads         UseMMFiles AllowDiff
+Advanced       Auto         No      None    None In Elements           0           0           0           0 Program Determined        No
+
+AREA SECTION ASSIGNMENTS
+  Area Section MatProp
+P139_1  PANEL1 Default
+P140_2  PANEL1 Default
+P141_3  PANEL1 Default
+P142_4  PANEL1 Default
+P143_5  PANEL1 Default
+
+AREA SECTION PROPERTIES
+Section Material MatAngle AreaType       Type DrillDOF Thickness BendThick Color F11Mod F22Mod F12Mod M11Mod M22Mod M12Mod V13Mod V23Mod MMod WMod                                 GUID
+ PANEL1   C30/37        0    Shell Shell-Thin      Yes      0.25      0.25  Blue      1      1      1      1      1      1      1      1    1    1 116ad0ec-2ccc-44d5-bdbc-49a42a24c4f9
+
+AREA SECTION PROPERTY DESIGN PARAMETERS
+Section RebarMat RebarOpt
+ PANEL1     None  Default
+
+AREA SECTION PROPERTY - TIME DEPENDENT
+Section TypeSize AutoSFSize
+ PANEL1     Auto          1
+
+AUTO WAVE 3 - WAVE CHARACTERISTICS - GENERAL
+WaveChar    WaveType KinFactor SWaterDepth WaveHeight WavePeriod WaveTheory
+ Default From Theory         1          45         18         12     Linear
+
+CASE - MODAL 1 - GENERAL
+ Case ModeType MaxNumModes MinNumModes EigenShift EigenCutoff EigenTol AutoShift
+MODAL    Eigen          12           1          0           0    1E-09        No
+
+CASE - RESPONSE SPECTRUM 1 - GENERAL
+ Case ModalCombo GMCf1 GMCf2 PerRigid DirCombo ConstDamp EccenRatio
+RespX        CQC     1     0     SRSS     SRSS      0.05       0.05
+RespY        CQC     1     0     SRSS     SRSS      0.05       0.05
+
+CASE - RESPONSE SPECTRUM 2 - LOAD ASSIGNMENTS
+ Case LoadName CoordSys Function Angle        TransAccSF
+RespX       U1   GLOBAL  SpecSta     0 0.700478571428571
+RespY       U2   GLOBAL  SpecSta     0 0.700478571428571
+
+CASE - STATIC 1 - LOAD ASSIGNMENTS
+     Case     LoadType  LoadName LoadSF
+     DEAD Load pattern      DEAD      1
+   G-Dead Load pattern    G-Dead      1
+   Q-Live Load pattern    Q-Live      1
+QxA-Quake Load pattern QxA-Quake      1
+QxB-Quake Load pattern QxB-Quake      1
+
+COMBINATION DEFINITIONS
+ComboName  ComboType AutoDesign  CaseName ScaleFactor SteelDesign ConcDesign AlumDesign ColdDesign                                 GUID
+    DEAD1 Linear Add         No    G-Dead         1.4        None       None       None       None 9ef707d1-b8cb-4911-b935-3e08b3190615
+    DEAD1        NaN        NaN    Q-Live         1.6         NaN        NaN        NaN        NaN                                  NaN
+    QUAX2 Linear Add         No    G-Dead           1        None       None       None       None b5b3f378-0b3e-4e5f-b31c-56a160ec3fca
+    QUAX2        NaN        NaN    Q-Live           1         NaN        NaN        NaN        NaN                                  NaN
+    QUAX2        NaN        NaN QxA-Quake           1         NaN        NaN        NaN        NaN                                  NaN
+
+CONNECTIVITY - AREA
+  Area Joint1 Joint2 Joint3 Joint4
+P139_1    224      4      3    225
+P140_2      4    226    227      3
+P141_3    227    229    228    226
+P142_4    229    231    230    228
+P143_5    231     11     12    230
+
+CONNECTIVITY - FRAME
+ Frame JointI JointJ IsCurved                                 GUID
+C101_2      1      2       No 23566142-e787-4b2a-a41f-9fb2c6f4eb0f
+C102_3      3      4       No 0994d6da-247f-468f-8b52-fcd885a126ae
+C103_4      5      6       No f06ff050-af10-4db4-b810-1d9c3e245fe2
+C104_5      7      8       No 2c8eb13a-37e9-4cb4-82c9-9c8c7200ce97
+C105_6      9     10       No 2ac84ac0-5664-4be5-ab0a-bad4970d587d
+
+CONSTRAINT DEFINITIONS - DIAPHRAGM
+Name CoordSys Axis MultiLevel
+   1   GLOBAL    Z        Yes
+   2   GLOBAL    Z        Yes
+   3   GLOBAL    Z        Yes
+   4   GLOBAL    Z        Yes
+   5   GLOBAL    Z        Yes
+
+COORDINATE SYSTEMS
+  Name      Type X Y Z AboutZ AboutY AboutX
+GLOBAL Cartesian 0 0 0      0      0      0
+
+DATABASE FORMAT TYPES
+UnitsCurr OverrideE
+      Yes        No
+
+FRAME AUTO MESH ASSIGNMENTS
+ Frame AutoMesh AtJoints AtFrames NumSegments MaxLength MaxDegrees
+C101_2      Yes      Yes       No           0         0          0
+C102_3      Yes      Yes       No           0         0          0
+C103_4      Yes      Yes       No           0         0          0
+C104_5      Yes      Yes       No           0         0          0
+C105_6      Yes      Yes       No           0         0          0
+
+FRAME DESIGN PROCEDURES
+ Frame    DesignProc
+C101_2 From Material
+C102_3 From Material
+C103_4 From Material
+C104_5 From Material
+C105_6 From Material
+
+FRAME INSERTION POINT ASSIGNMENTS
+ Frame    CardinalPt Mirror2 Mirror3 Transform CoordSys JtOffsetXI         JtOffsetYI           JtOffsetZI JtOffsetXJ         JtOffsetYJ           JtOffsetZJ
+C101_2 10 (centroid)      No      No       Yes      NaN        NaN                NaN                  NaN        NaN                NaN                  NaN
+C102_3 10 (centroid)      No      No       Yes    Local          0  0.300563007593155    0.148868560791016          0  0.300563007593155    0.148868560791016
+C103_4 10 (centroid)      No      No       Yes    Local          0  -0.74999475479126  0.00281047821044922          0  -0.74999475479126  0.00281047821044922
+C104_5 10 (centroid)      No      No       Yes    Local          0  0.300036430358887  0.00883173942565918          0  0.300036430358887  0.00883173942565918
+C105_6 10 (centroid)      No      No       Yes    Local          0 -0.300028800964355 -0.00682878494262695          0 -0.300028800964355 -0.00682878494262695
+
+FRAME LOADS - DISTRIBUTED
+   Frame LoadPat CoordSys  Type     Dir DistType RelDistA RelDistB   AbsDistA   AbsDistB FOverLA FOverLB                                 GUID
+K101_165  G-Dead   GLOBAL Force Gravity  RelDist   0.0502   0.9498   0.248992   4.711008  0.5931  0.5931 b896ed3a-73e1-4295-8eed-51a9e224821c
+K101_165  G-Dead   GLOBAL Force Gravity  RelDist   0.7036   0.9498   3.489856   4.711008  0.7626  0.0703 4b1c39fb-0430-4307-8e4a-1b66c1b58837
+K101_165  Q-Live   GLOBAL Force Gravity  RelDist   0.7036   0.9498   3.489856   4.711008  0.4707  0.0434 fe484e67-af76-4435-bac8-55515e65ff0b
+K102_166  G-Dead   GLOBAL Force Gravity  RelDist   0.0834   0.9997 0.24510426 2.93801833  0.1915  0.1915 abc3513a-d4a5-4a53-9c4a-c9c588ca92a1
+K102_166  G-Dead   GLOBAL Force Gravity  RelDist   0.0834   0.5245 0.24510426 1.54145305  0.1236  1.7848 330d30cc-f020-4559-a0c3-4df1c84bd4df
+
+FRAME LOAD TRANSFER OPTIONS
+ Frame Transfer
+C101_2      Yes
+C102_3      Yes
+C103_4      Yes
+C104_5      Yes
+C105_6      Yes
+
+FRAME LOCAL AXES ASSIGNMENTS 1 - TYPICAL
+ Frame              Angle
+C101_2                  1
+C102_3 -0.215862303972244
+C103_4 -0.214697301387787
+C104_5 -0.223112195730209
+C105_6 -0.223685294389725
+
+FRAME OFFSET ALONG LENGTH ASSIGNMENTS
+ Frame Type LengthI LengthJ RigidFactor
+C101_2 User       0       0         0.5
+C102_3 User       0       0         0.5
+C103_4 User       0       0         0.5
+C104_5 User       0       0         0.5
+C105_6 User       0       0         0.5
+
+FRAME OUTPUT STATION ASSIGNMENTS
+ Frame StationType MinNumSta AddAtElmInt AddAtPtLoad MaxStaSpcg
+C101_2   MinNumSta         3         Yes         Yes        NaN
+C102_3   MinNumSta         3         Yes         Yes        NaN
+C103_4   MinNumSta         3         Yes         Yes        NaN
+C104_5   MinNumSta         3         Yes         Yes        NaN
+C105_6   MinNumSta         3         Yes         Yes        NaN
+
+FRAME SECTION ASSIGNMENTS
+ Frame AutoSelect AnalSect MatProp
+C101_2       N.A.   R60x30 Default
+C102_3       N.A.   R30x60 Default
+C103_4       N.A.  R25x150 Default
+C104_5       N.A.   R30x60 Default
+C105_6       N.A.   R30x60 Default
+
+FRAME SECTION PROPERTIES 01 - GENERAL
+SectionName Material      Shape              Area          TorsConst                I33               I22                I23               AS2               AS3            S33Top             S33Bot           S22Left         S22Right               Z33               Z22               R33               R22          CGOffset3           CGOffset2 EccV2 EccV3 Cw     Color FromFile AMod A2Mod A3Mod JMod I2Mod I3Mod MMod WMod                                 GUID                     Notes  t3  t2 IncludeSCAn  tf  tw FilletRadius
+    115_147   C30/37 SD Section  1.95872567751631 0.0410831338143116   1.95183803230915  1.40584636220065 -0.168855295113006 0.805797044962937  1.13450661351825  1.42237959717041   1.58330396543307  1.03279166919869  1.3533590315929  1.78712125791813   1.4924877116647 0.998240256185756 0.847192538985516 -0.161213504168756 -0.0697357987776528     0     0  0   Magenta       No    1     1     1    1     1     1    1    1 eb5fdb5a-9fdd-405a-b380-3e4e31c56b31 Added 22.10.2026 02:07:20 NaN NaN         NaN NaN NaN          NaN
+    119_148   C30/37 SD Section 0.832492367560689 0.0168647226811461 0.0782109811625698 0.482849805876293 -0.106277531274188 0.295813353898677 0.531463606053767 0.269905344909216 0.0878551020588345 0.536633079442731 0.32185337651178 0.169040642262936 0.555875504454027 0.306509356861561 0.761580648625107   0.30022011918987   0.300227540584806     0     0  0 Gray8Dark       No    1     1     1    1     1     1    1    1 32ba6e73-85e4-43a5-abae-72bfdbc0ee9c Added 22.10.2026 02:07:20 NaN NaN         NaN NaN NaN          NaN
+    215_149   C30/37 SD Section  1.95872567751631 0.0410831338143117   1.95183803230915  1.40584636220065 -0.168855295113006 0.805797044962937  1.13450661351825  1.42237959717041   1.58330396543307  1.03279166919869  1.3533590315929  1.78712125791813   1.4924877116647 0.998240256185756 0.847192538985516 -0.161213504168756 -0.0697357987776528     0     0  0     Green       No    1     1     1    1     1     1    1    1 6b3b5a6c-c11d-4597-8295-5a1fd43656a1 Added 22.10.2026 02:07:20 NaN NaN         NaN NaN NaN          NaN
+    219_150   C30/37 SD Section 0.832492367560689 0.0168647226811461 0.0782109811625698 0.482849805876293 -0.106277531274188 0.295813353898677 0.531463606053767 0.269905344909216 0.0878551020588345 0.536633079442731 0.32185337651178 0.169040642262936 0.555875504454027 0.306509356861561 0.761580648625107   0.30022011918987   0.300227540584806     0     0  0       Red       No    1     1     1    1     1     1    1    1 244cd4c4-7f43-40c7-9591-330536d14482 Added 22.10.2026 02:07:20 NaN NaN         NaN NaN NaN          NaN
+    315_151   C30/37 SD Section  1.95872567751631 0.0410831338143118   1.95183803230915  1.40584636220065 -0.168855295113006 0.805797044962937  1.13450661351825  1.42237959717041   1.58330396543307  1.03279166919869  1.3533590315929  1.78712125791813   1.4924877116647 0.998240256185756 0.847192538985516 -0.161213504168756 -0.0697357987776528     0     0  0    Yellow       No    1     1     1    1     1     1    1    1 1e528ac9-4dbc-4ee4-855f-e08142745c6e Added 22.10.2026 02:07:20 NaN NaN         NaN NaN NaN          NaN
+
+FRAME SECTION PROPERTIES 02 - CONCRETE COLUMN
+SectionName RebarMatL RebarMatC ReinfConfig LatReinf Cover NumBars3Dir NumBars2Dir BarSizeL BarSizeC SpacingC NumCBars2 NumCBars3 ReinfType
+    R150x25     Rebar     Rebar Rectangular     Ties  0.04           3           3       #9       #4     0.15         3         3    Design
+    R25x150     Rebar     Rebar Rectangular     Ties  0.04           3           3       #9       #4     0.15         3         3    Design
+     R30x50     Rebar     Rebar Rectangular     Ties  0.04           3           3       #9       #4     0.15         3         3    Design
+     R30x60     Rebar     Rebar Rectangular     Ties  0.04           3           3       #9       #4     0.15         3         3    Design
+     R40x60     Rebar     Rebar Rectangular     Ties  0.04           3           3       #9       #4     0.15         3         3    Design
+
+FRAME SECTION PROPERTIES 03 - CONCRETE BEAM
+       SectionName RebarMatL RebarMatC TopCover BotCover TopLeftArea TopRghtArea BotLeftArea BotRghtArea
+T101x60x9.29577x30     Rebar     Rebar     0.06     0.06           0           0           0           0
+T102x60x9.33333x30     Rebar     Rebar     0.06     0.06           0           0           0           0
+      T146x30x8x50     Rebar     Rebar     0.06     0.06           0           0           0           0
+      T156x30x8x60     Rebar     Rebar     0.06     0.06           0           0           0           0
+      T32x50x15x25     Rebar     Rebar     0.06     0.06           0           0           0           0
+
+FRAME SECTION PROPERTIES 13 - TIME DEPENDENT
+SectionName TypeSize AutoSFSize
+    115_147     Auto          1
+    119_148     Auto          1
+    215_149     Auto          1
+    219_150     Auto          1
+    315_151     Auto          1
+
+FUNCTION - PLOT FUNCTIONS
+    PlotFunc   Type Component Mode
+Input Energy Energy     Input  All
+
+FUNCTION - POWER SPECTRAL DENSITY - USER
+   Name Frequency Value
+UNIFPSD         0     1
+UNIFPSD         1     1
+
+FUNCTION - RESPONSE SPECTRUM - USER
+   Name Period Accel FuncDamp
+ UNIFRS      0     1     0.05
+ UNIFRS      1     1      NaN
+SpecSta      0   2.5     0.05
+SpecSta   0.01   2.5      NaN
+SpecSta   0.02   2.5      NaN
+
+FUNCTION - STEADY STATE - USER
+  Name Frequency Value
+UNIFSS         0     1
+UNIFSS         1     1
+
+FUNCTION - TIME HISTORY - USER
+  Name Time Value
+RAMPTH    0     0
+RAMPTH    1     1
+RAMPTH    4     1
+UNIFTH    0     1
+UNIFTH    1     1
+
+GRID LINES
+CoordSys AxisDir GridID XRYZCoord LineType LineColor Visible BubbleLoc AllVisible BubbleSize
+  GLOBAL       X    x10   -3.0961  Primary Gray8Dark     Yes       End        Yes     2.4384
+  GLOBAL       X     x9   -2.9978  Primary Gray8Dark     Yes       End        NaN        NaN
+  GLOBAL       X     x8   -2.9389  Primary Gray8Dark     Yes       End        NaN        NaN
+  GLOBAL       X     x1   -2.7477  Primary Gray8Dark     Yes       End        NaN        NaN
+  GLOBAL       X     x2         0  Primary Gray8Dark     Yes       End        NaN        NaN
+
+GROUPS 1 - DEFINITIONS
+GroupName Selection SectionCut Steel Concrete Aluminum ColdFormed Stage Bridge AutoSeismic AutoWind SelDesSteel SelDesAlum SelDesCold MassWeight Color
+      ALL       Yes        Yes   Yes      Yes      Yes        Yes   Yes    Yes          No       No          No         No         No        Yes   Red
+
+JOINT ADDED MASS ASSIGNMENTS
+Joint    CoordSys            Mass1            Mass2 Mass3 MMI1 MMI2             MMI3
+  348 Joint Local  50.900015753957  50.900015753957     0    0    0 3551.41642608942
+  350 Joint Local 23.6539677996173 23.6539677996173     0    0    0 1141.99180919796
+  352 Joint Local 24.4275071618231 24.4275071618231     0    0    0 1179.76219348021
+  354 Joint Local 24.4628273904435 24.4628273904435     0    0    0 1181.46803559153
+  356 Joint Local 24.4707811358778 24.4707811358778     0    0    0 1181.85217336285
+
+JOINT CONSTRAINT ASSIGNMENTS
+Joint Constraint
+    2          1
+    4          1
+    6          1
+    8          1
+   10          1
+
+JOINT COORDINATES
+Joint CoordSys CoordType    XorR       Y    Z SpecialJt
+    1   GLOBAL Cartesian -2.7477 -2.3566    0       Yes
+    2   GLOBAL Cartesian -2.7477 -2.3566 2.75       Yes
+    3   GLOBAL Cartesian       0 -2.6668    0       Yes
+    4   GLOBAL Cartesian       0 -2.6668 2.75       Yes
+    5   GLOBAL Cartesian  4.6503 -2.5594    0       Yes
+
+JOINT LOADS - FORCE
+Joint LoadPat CoordSys F1 F2                  F3 M1 M2 M3                                 GUID
+    2  G-Dead   GLOBAL  0  0             -1.2375  0  0  0 4a427237-a954-4afd-9cd5-42df1f6b2856
+    2  G-Dead   GLOBAL  0  0                   0  0  0  0 f9c7b8c7-44cf-418d-805a-f32a870d6d51
+    2  G-Dead   GLOBAL  0  0                   0  0  0  0 fe9f04c8-b419-43d4-898a-20707fc7502e
+    2  G-Dead   GLOBAL  0  0 -0.0247204005718231  0  0  0 f7f35213-fe26-421a-8e27-9137039dee8d
+    2  G-Dead   GLOBAL  0  0                   0  0  0  0 3aed6935-3553-49a4-b8c9-6b163702fcce
+
+JOINT PATTERN DEFINITIONS
+Pattern
+Default
+
+JOINT RESTRAINT ASSIGNMENTS
+Joint  U1  U2  U3 R1 R2 R3
+    1 Yes Yes Yes No No No
+    3 Yes Yes Yes No No No
+    5 Yes Yes Yes No No No
+    7 Yes Yes Yes No No No
+    9 Yes Yes Yes No No No
+
+LOAD CASE DEFINITIONS
+     Case      Type InitialCond DesTypeOpt DesignType DesActOpt            DesignAct AutoType RunCase                                 GUID ModalCase
+     DEAD LinStatic        Zero   Prog Det       Dead  Prog Det        Non-Composite     None     Yes 73c51527-43a6-4cf7-ae96-ea9ae0b3885f       NaN
+    MODAL  LinModal        Zero   Prog Det      Other  Prog Det                Other     None     Yes f91372f3-d2e5-4871-a3f3-5b946771579d       NaN
+   G-Dead LinStatic        Zero   Prog Det       Dead  Prog Det        Non-Composite     None     Yes 4092ceb7-9e86-4f16-90b2-a68ecb422c0e       NaN
+   Q-Live LinStatic        Zero   Prog Det       Live  Prog Det Short-Term Composite     None     Yes 567685ff-b932-40f6-99b3-9a3c4ce436e3       NaN
+QxA-Quake LinStatic        Zero   Prog Det      Quake  Prog Det Short-Term Composite     None     Yes c895d99c-3d22-48c8-9957-72a835353761       NaN
+
+LOAD PATTERN DEFINITIONS
+  LoadPat DesignType SelfWtMult                                 GUID AutoLoad
+     DEAD       Dead          1 6b849493-8c90-4810-8e2f-69bdc6d97b1d      NaN
+   G-Dead       Dead          0 35672ad5-5ada-4ce9-91f1-020f1a62a7d7      NaN
+   Q-Live       Live          0 a2ec64a7-fec7-4e02-ac09-00142f45ba24      NaN
+QxA-Quake      Quake          0 948344a8-3033-4f04-b568-bc8ece9b39ed     None
+QxB-Quake      Quake          0 e29292ca-320c-4572-be66-f7c980cae0f8     None
+
+MASS SOURCE
+MassSource Elements Masses Loads IsDefault
+   MSSSRC1      Yes    Yes    No       Yes
+
+MATERIAL PROPERTIES 01 - GENERAL
+Material     Type  Grade   SymType TempDepend     Color                                 GUID                              Notes
+  C30/37 Concrete C30/37 Isotropic         No    Yellow f09578ea-e5cd-4bb8-834a-062a6e4ef068                                 EN
+    link Concrete    NaN Isotropic         No       Red bd5549d3-511a-4ab1-8959-d4fc94a66baa Concrete added 22.10.2026 01:49:38
+   Rebar    Rebar    NaN  Uniaxial         No Gray8Dark 01af442c-aeb7-447c-b0b7-d417185faa7e                              Rebar
+    S355    Steel   S355 Isotropic         No   Magenta 00a4c55e-300e-43e1-9056-629b4fd800d0                                 EN
+  Tendon   Tendon    NaN  Uniaxial         No      Cyan 3d3f632a-7438-4237-9275-8fc75f05c578                             Tendon
+
+MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES
+Material       UnitWeight          UnitMass               E1              G12 U12                   A1
+  C30/37  2.5485376913926 0.259878515917928 3365063.43433399 1402109.76430583 0.2                1E-05
+    link                0                 0        300000000        150000000   0                    0
+   Rebar 7.84904757236607 0.800380070686609 20389019.1580383              NaN NaN 1.16999994421006E-05
+    S355 7.84904757236607 0.800380070686609 21414040.0366708 8236169.24487338 0.3             1.17E-05
+  Tendon 7.84904757236607 0.800380070686609 20037484.3449687              NaN NaN 1.16999994421006E-05
+
+MATERIAL PROPERTIES 03A - STEEL DATA
+Material               Fy               Fu            EffFy            EffFu SSCurveOpt SSHysType SHard SMax SRup FinalSlope CoupModType
+    S355 36199.9248238959 52005.5258033435 39819.9173062855 57206.0783836778     Simple Kinematic 0.015 0.11 0.17       -0.1   Von Mises
+
+MATERIAL PROPERTIES 03B - CONCRETE DATA
+Material               Fc              eFc LtWtConc SSCurveOpt SSHysType        SFc  SCap FinalSlope FAngle DAngle              CoupModType
+  C30/37 3059.14857666726 3059.14857666726       No     Mander    Takeda 0.00181818 0.005       -0.1      0      0 Modified Darwin-Pecknold
+    link               10               10       No     Mander    Takeda      0.002 0.005       -0.1      0      0 Modified Darwin-Pecknold
+
+MATERIAL PROPERTIES 03E - REBAR DATA
+Material               Fy               Fu            EffFy           EffFu SSCurveOpt SSHysType SHard SCap FinalSlope UseCTDef CoupModType
+   Rebar 42184.1775683551 63276.2663525327 46402.5953251907 69603.892987786     Simple Kinematic  0.01 0.09       -0.1       No   Von Mises
+
+MATERIAL PROPERTIES 03F - TENDON DATA
+Material               Fy               Fu SSCurveOpt SSHysType FinalSlope CoupModType
+  Tendon 172322.365366731 189828.799057598    270 ksi Kinematic       -0.1   Von Mises
+
+MATERIAL PROPERTIES 03J - COUPLED NONLINEAR VON MISES DATA
+Material      YieldStress LinIsoHard LinKinHard NLIsoSaHard
+   Rebar 46402.5953251907         No         No          No
+    S355 39819.9173062855         No         No          No
+  Tendon 172322.365366731         No         No          No
+
+MATERIAL PROPERTIES 06 - DAMPING PARAMETERS
+Material ModalRatio VisMass VisStiff HysMass HysStiff
+  C30/37          0       0        0       0        0
+    link          0       0        0       0        0
+   Rebar          0       0        0       0        0
+    S355          0       0        0       0        0
+  Tendon          0       0        0       0        0
+
+MATERIAL PROPERTIES 09 - ACCEPTANCE CRITERIA
+Material IOTens LSTens CPTens IOComp LSComp CPComp IgnoreTens
+  C30/37   0.01   0.02   0.05 -0.003 -0.006 -0.015        Yes
+    link   0.01   0.02   0.05 -0.003 -0.006 -0.015        Yes
+   Rebar   0.01   0.02   0.05 -0.005  -0.01  -0.02        NaN
+    S355   0.01   0.02   0.05 -0.005  -0.01  -0.02        NaN
+  Tendon  0.015  0.023   0.03 -0.015 -0.023  -0.03        NaN
+
+OPTIONS - COLORS - DISPLAY
+   DeviceType    Points LinesFrame LinesFrmDL LinesCable LinesTendon SpringLinks Restraints Releases  Axes  Text ShadowLines GuideLines Highlight Selection AreaFillBot AreaFillTop AreaFillSd AreaEdge    SolidF1 SolidF2 SolidF3 SolidF4 SolidF5 SolidF6 SolidEdge Floor Background BGLowLeft BGLowRight BGUpRight Darkness
+       Screen      Blue       Blue       Blue      Green       Green       Green      Green    Green  Cyan Black   Gray8Dark  Gray8Dark       Red  10504778         Red    16744703        Red  DarkRed        Red    Blue   Green  Yellow   White    Cyan   DarkRed Gray4      White     White      White     White        0
+      Printer Gray8Dark      Black      Gray4      Black       Black   Gray8Dark  Gray8Dark    Gray4 Black Black       Gray4      Gray4     Black     Black       Gray4   Gray8Dark      Gray4    Black Gray1Light   Gray2   Gray3   Gray4   Gray5   Gray6     Black Gray4      White     White      White     White      0.5
+Color Printer      Blue       Blue       Blue      Green       Green       Green      Green    Green  Cyan Black   Gray8Dark  Gray8Dark       Red  10504778         Red    16744703        Red  DarkRed        Red    Blue   Green  Yellow   White    Cyan   DarkRed Gray4      White     White      White     White      0.5
+
+OPTIONS - COLORS - OUTPUT
+   DeviceType Contour1 Contour2 Contour3 Contour4 Contour5 Contour6  Contour7 Contour8 Contour9 Contour10 Contour11 Contour12 Contour13  Contour14 Contour15 Transpare Ratio1 Ratio2    Ratio3  Ratio4 Ratio5 RatioNotD RatioNotC RatioVal1 RatioVal2 RatioVal3 RatioVal4  DFillPos  DFillNeg DFillRPos DFillRNeg
+       Screen 13107400  6553828      Red    16639   Orange    43775     54527   Yellow    65408     Green   8453888      Cyan  16755200   16733440      Blue         0   Cyan  Green    Yellow  Orange    Red     Gray4       Red       0.5       0.7       0.9         1      Blue       Red   9498256   9498256
+      Printer    Black  3158064  4210752  5263440  6316128  7368816 Gray8Dark    Gray7    Gray6     Gray5     Gray4     Gray3     Gray2 Gray1Light     White         0  Gray2  Gray4 Gray8Dark 4210752  Black     Gray4     Black       0.5       0.7       0.9         1 Gray8Dark Gray8Dark   4210752   4210752
+Color Printer 13107400  6553828      Red    16639   Orange    43775     54527   Yellow    65408     Green   8453888      Cyan  16755200   16733440      Blue         0   Cyan  Green    Yellow  Orange    Red     Gray4       Red       0.5       0.7       0.9         1      Blue       Red   9498256   9498256
+
+OVERWRITES - CONCRETE DESIGN - ACI 318-19
+ Frame         DesignSect          FrameType RLLF XLMajor XLMinor XKMajor XKMinor CmMajor CmMinor DnsMajor DnsMinor DsMajor DsMinor CTorsion TanTheta TorsCover
+C101_2 Program Determined Program Determined    0       0       0       0       0       0       0        0        0       0       0      NaN      NaN       NaN
+C102_3 Program Determined Program Determined    0       0       0       0       0       0       0        0        0       0       0      NaN      NaN       NaN
+C103_4 Program Determined Program Determined    0       0       0       0       0       0       0        0        0       0       0      NaN      NaN       NaN
+C104_5 Program Determined Program Determined    0       0       0       0       0       0       0        0        0       0       0      NaN      NaN       NaN
+C105_6 Program Determined Program Determined    0       0       0       0       0       0       0        0        0       0       0      NaN      NaN       NaN
+
+PREFERENCES - ALUMINUM DESIGN - AA 2015
+ THDesign SRatioLimit Provision          LatFact UseLatFact Bridge PhiTy PhiTr PhiC PhiBo PhiBr PhiVo PhiVr
+Envelopes           1      LRFD 1.33333333333333         No     No   0.9  0.75  0.9   0.9  0.75   0.9  0.75
+
+PREFERENCES - COLD FORMED DESIGN - AISI-16
+ THDesign    FrameType SRatioLimit          SOMethod Provision          LatFact UseLatFact PhiTy PhiTr PhiC PhiB PhiBPipe PhiV
+Envelopes Braced Frame           1 General 2nd Order      LRFD 1.33333333333333         No   0.9  0.75 0.85  0.9     0.95 0.95
+
+PREFERENCES - CONCRETE DESIGN - ACI 318-19
+ THDesign NumCurves NumPoints MinEccen BCCDesign IgnoreBPu CTorsion PatLLF UFLimit SeisCat Rho Sds PhiT PhiCTied PhiCSpiral PhiV PhiVSeismic PhiVJoint TanTheta
+Envelopes        24        11      Yes       Yes       Yes      Yes   0.75    0.95       D   1 0.5  0.9     0.65       0.75 0.75         0.6      0.85        1
+
+PREFERENCES - CONCRETE SHELL DESIGN - EUROCODE 2-2004
+    Country GammaS GammaC AlphaCC AlphaCT          CrackCond ShrDesMet CotTheta AddTenForce
+CEN Default   1.15    1.5       1       1 Program Determined  Method 1        1         Yes
+
+PREFERENCES - DIMENSIONAL
+MergeTol FineGrid Nudge SelectTol SnapTol SLineThick PLineThick MaxFont MinFont AutoZoom ShrinkFact TextFileLen
+   0.001     0.25  0.25         3      12          1          4      12       6       10         70         240
+
+PREFERENCES - STEEL DESIGN - AISC 360-16
+ THDesign FrameType PatLLF SRatioLimit MaxIter SDC SeisCode SeisLoad ImpFactor SystemRho SystemSds SystemR SystemCd Omega0 Provision         AMethod          SOMethod    SRMethod NLCoeff PhiB PhiC PhiTY PhiTF PhiV PhiVRolledI PhiVT PlugWeld HSSWelding HSSReduceT CheckDefl DLRat SDLAndLLRat LLRat TotalRat NetRat
+Envelopes       SMF   0.75        0.95       1   D       No       No         1         1       0.5       8      5.5      3      LRFD Direct Analysis General 2nd Order Tau-b Fixed   0.002  0.9  0.9   0.9  0.75  0.9           1   0.9      Yes        ERW         No        No   120         120   360      240    240
+
+PROGRAM CONTROL
+ProgramName Version  CurrUnits   SteelCode   ConcCode AlumCode ColdCode RegenHinge
+    SAP2000  25.3.1 Tonf, m, C AISC 360-16 ACI 318-19  AA 2015  AISI-16        Yes
+
+PROJECT INFORMATION
+          Item Data
+  Company Name   ab
+   Client Name  NaN
+  Project Name  NaN
+Project Number  NaN
+    Model Name  NaN
+
+REBAR SIZES
+RebarID                 Area Diameter
+     #2           3.2258E-05  0.00635
+     #3 7.09675996154547E-05 0.009525
+     #4 0.000129032001922727   0.0127
+     #5 0.000199999601538181 0.015875
+     #6 0.000283870398461819  0.01905
+
+SECTION DESIGNER PROPERTIES 01 - GENERAL
+SectionName      DesignType DsgnOrChck IncludeVStr AxisAngle MeshSzAbs MeshSzRel
+    115_147 No Check/Design      Check          No        90         0      0.05
+    119_148 No Check/Design      Check          No        90         0      0.05
+    215_149 No Check/Design      Check          No        90         0      0.05
+    219_150 No Check/Design      Check          No        90         0      0.05
+    315_151 No Check/Design      Check          No        90         0      0.05
+
+SECTION DESIGNER PROPERTIES 16 - SHAPE POLYGON
+SectionName ShapeName                  X                  Y Radius ShapeMat ZOrder FillColor            CoreDim BCoreMajor BCoreMinor DCoreMajorPositive DCoreMajorNegative DCoreMinorPositive DCoreMinorNegative Reinforcing
+    115_147       SH1  -2.39999298095703  0.150001201629643      0   C30/37      1    Yellow Program Determined          0          0                  0                  0                  0                  0          No
+    115_147       SH1  -2.14999893188477  0.150001201629642      0      NaN    NaN       NaN                NaN        NaN        NaN                NaN                NaN                NaN                NaN         NaN
+    115_147       SH1  -2.14999893188477 -0.779997634887685      0      NaN    NaN       NaN                NaN        NaN        NaN                NaN                NaN                NaN                NaN         NaN
+    115_147       SH1 -0.249993896484379 -0.779997634887694      0      NaN    NaN       NaN                NaN        NaN        NaN                NaN                NaN                NaN                NaN         NaN
+    115_147       SH1 -0.249993896484373              1.325      0      NaN    NaN       NaN                NaN        NaN        NaN                NaN                NaN                NaN                NaN         NaN
+
+SECTION DESIGNER PROPERTIES 30 - FIBER GENERAL
+SectionName NumFibersD2 NumFibersD3  CoordSys GridAngle LumpRebar FiberPMM FiberMC
+    115_147           3           3 Cartesian         0        No       No      No
+    119_148           3           3 Cartesian         0        No       No      No
+    215_149           3           3 Cartesian         0        No       No      No
+    219_150           3           3 Cartesian         0        No       No      No
+    315_151           3           3 Cartesian         0        No       No      No
+
+SOLID PROPERTY DEFINITIONS
+SolidProp Material MatAngleA MatAngleB MatAngleC InComp   Color                                 GUID
+   Solid1   C30/37         0         0         0    Yes Magenta 19d4566a-0c4c-48f0-94bc-354760244239
+

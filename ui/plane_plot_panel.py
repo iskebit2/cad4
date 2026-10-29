@@ -199,9 +199,9 @@ class PlanePlotPanel(BasePanel):
         p = self.plane
 
         # --- 1. Butonlar (Sol taraf, küçük/ikonumsu ASCII alternatifleri) ---
-        if imgui.button("<"):  self.view2d.rotate_view(-90)
+        if imgui.button("◀"):  self.view2d.rotate_view(-90)
         imgui.same_line(0, 2)
-        if imgui.button(">"):  self.view2d.rotate_view(90)
+        if imgui.button("▶"):  self.view2d.rotate_view(90)
         imgui.same_line(0, 2)
         if imgui.button("+"):  self.view2d.zoom_at_center(1.15)
         imgui.same_line(0, 2)

@@ -2,7 +2,7 @@
 import math
 from dataclasses import dataclass
 
-import glm
+from pyglm import glm
 import numpy as np
 from OpenGL.GL import *
 

@@ -97,7 +97,7 @@ class ViewFilterPanel(BasePanel):
         imgui.pop_item_width()
 
         if cx or cy or cz:
-            import glm
+            from pyglm import glm
             cam.target = glm.vec3(tx, ty, tz)
             cam._invalidate()
 

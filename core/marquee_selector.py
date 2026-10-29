@@ -3,7 +3,7 @@ from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
-import glm
+from pyglm import glm
 
 from domain.element import Area, Frame, Link, Node
 

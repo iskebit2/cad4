@@ -69,3 +69,32 @@ def handle_joint_loads(ctx: LoadContext, df: pd.DataFrame):
             mz=_f(row.get("M3")),
         )
         ctx.joint_loads.setdefault(joint, []).append(pl)
+
+def handle_joint_added_mass(ctx: LoadContext, df: pd.DataFrame) -> None:
+    """JOINT ADDED MASS ASSIGNMENTS.
+
+    v25/v10: Joint, CoordSys, Mass1, Mass2, Mass3, MMI1, MMI2, MMI3
+    Birim: S2K CurrUnits — finalize_and_convert N_MM'ye çevirir.
+    """
+    if df is None or df.empty:
+        return
+
+    def _f(v, default=0.0):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return default
+
+    for _, row in df.iterrows():
+        jid = str(row.get("Joint", "")).strip()
+        if not jid:
+            continue
+        ctx.joint_added_mass[jid] = {
+            "coord_sys": str(row.get("CoordSys", "Joint Local")).strip(),
+            "mass1": _f(row.get("Mass1")),
+            "mass2": _f(row.get("Mass2")),
+            "mass3": _f(row.get("Mass3")),
+            "mmi1":  _f(row.get("MMI1")),
+            "mmi2":  _f(row.get("MMI2")),
+            "mmi3":  _f(row.get("MMI3")),
+        }

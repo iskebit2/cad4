@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-import glm
+from pyglm import glm
 
 from core.units import Dimension
 from data import enums as E
@@ -78,11 +78,23 @@ class Node(Element):
         "_x": Dimension.LENGTH,
         "_y": Dimension.LENGTH,
         "_z": Dimension.LENGTH,
+        # JOINT ADDED MASS — ilk 3 MASS, son 3 MASS_INERTIA
+        "mass_1": Dimension.MASS,
+        "mass_2": Dimension.MASS,
+        "mass_3": Dimension.MASS,
+        "mmi_1": Dimension.MASS_INERTIA,
+        "mmi_2": Dimension.MASS_INERTIA,
+        "mmi_3": Dimension.MASS_INERTIA,
+        "added_mass_1": Dimension.MASS,
+        "added_mass_2": Dimension.MASS,
+        "added_mass_3": Dimension.MASS,
+        "added_mmi_1": Dimension.MASS_INERTIA,
+        "added_mmi_2": Dimension.MASS_INERTIA,
+        "added_mmi_3": Dimension.MASS_INERTIA,
     }
 
     def __init__(self, x: float, y: float, z: float, label: str = "",
                  restraint: D.Restraint | None = None,
-                 mass: tuple[float, ...] = (0.0,) * 6,
                  spring: tuple[float, ...] = (), color=None):
         super().__init__(label, color=color)
         self.element_type = "Node"
@@ -90,13 +102,39 @@ class Node(Element):
         self._y = float(y)
         self._z = float(z)
         self.restraint = restraint
-        self.mass = tuple(mass)
         self.spring = tuple(spring)
         self.dof_indices: list[int | None] = [None] * 6
         self.connected: list[tuple[E.ObjType, str]] = []
         self.loads: list[D.PointLoad] = []
 
-    # --- x, y, z @property + setter (mark_dirty) ---
+        # --- JOINT COORDINATES ---
+        self.coord_sys: str = "GLOBAL"
+        self.coord_type: str = "Cartesian"
+        self.special_jt: bool = False
+
+        # --- JOINT CONSTRAINT ASSIGNMENTS ---
+        self.constraint_name: str | None = None
+
+        # --- JOINT ADDED MASS ASSIGNMENTS ---
+        self.mass_coord_sys: str = "Joint Local"
+        self.mass_1: float = 0.0
+        self.mass_2: float = 0.0
+        self.mass_3: float = 0.0
+        self.mmi_1: float = 0.0
+        self.mmi_2: float = 0.0
+        self.mmi_3: float = 0.0
+
+        self.added_mass_1: float = 0.0
+        self.added_mass_2: float = 0.0
+        self.added_mass_3: float = 0.0
+        self.added_mmi_1: float = 0.0
+        self.added_mmi_2: float = 0.0
+        self.added_mmi_3: float = 0.0
+
+        # --- JOINT PATTERN (v10) ---
+        self.load_pattern: str = ""
+
+    # ---- x/y/z property (değişmedi) ----
     @property
     def x(self) -> float: return self._x
 
@@ -162,32 +200,162 @@ class Node(Element):
         elif isinstance(element, Link):
             self.connected.append((E.ObjType.LINK, element.unique_id))
 
+    # ---- kütle yardımcıları ----
+    @property
+    def total_mass(self) -> tuple[float, float, float, float, float, float]:
+        """(Mass1, Mass2, Mass3, MMI1, MMI2, MMI3) = mass + added_mass."""
+        return (
+            self.mass_1 + self.added_mass_1,
+            self.mass_2 + self.added_mass_2,
+            self.mass_3 + self.added_mass_3,
+            self.mmi_1 + self.added_mmi_1,
+            self.mmi_2 + self.added_mmi_2,
+            self.mmi_3 + self.added_mmi_3,
+        )
+
+    def has_mass(self) -> bool:
+        return any(
+            abs(v) > 1e-12
+            for v in (
+                self.mass_1, self.mass_2, self.mass_3,
+                self.mmi_1, self.mmi_2, self.mmi_3,
+                self.added_mass_1, self.added_mass_2, self.added_mass_3,
+                self.added_mmi_1, self.added_mmi_2, self.added_mmi_3,
+            )
+        )
+
 
 # ============================================================================
 # FRAME
 # ============================================================================
+# domain/element.py  — Frame bölümünü bununla değiştir
+
 class Frame(Element):
+    """S2K frame — geometri + section + tüm atama tabloları.
+
+    Birim sözleşmesi: model her zaman project.unit_system'de.
+    __unit_schema__ convert_project_units tarafından kullanılır.
+    """
+
     __unit_schema__ = {
-        "rotation_deg": None,   # açı — boyutsuz
+        # --- geometri ---
+        "rotation_deg": None,          # açı — boyutsuz
+        # --- insertion point offsets (FRAME INSERTION POINT ASSIGNMENTS) ---
+        "jt_offset_i": Dimension.LENGTH,   # tuple → her bileşen LENGTH
+        "jt_offset_j": Dimension.LENGTH,
+        # --- end offsets (FRAME OFFSET ALONG LENGTH ASSIGNMENTS) ---
+        "offset_length_i": Dimension.LENGTH,
+        "offset_length_j": Dimension.LENGTH,
+        "rigid_factor": None,              # boyutsuz
+        # --- auto mesh (FRAME AUTO MESH / AUTO SUBDIVISION) ---
+        "mesh_max_length": Dimension.LENGTH,
+        "mesh_max_degrees": None,          # açı — boyutsuz
+        # --- output stations ---
+        "max_sta_spcg": Dimension.LENGTH,
+        # --- modifiers (boyutsuz) ---
+        # modifiers dict içindeki değerler boyutsuz — schema gerekmez
+        # --- rebar / cover (FRAME SECTION PROPERTIES 02/03) ---
+        # section_rebar dict — LENGTH alanları var ama dict; manuel işlenir
     }
 
     def __init__(self, node_i, node_j, section, rotation_deg=0.0, label="", color=None):
-        
         super().__init__(label, color=color)
         self.element_type = "Frame"
         self.node_i = node_i
         self.node_j = node_j
         self.section = section
         self.rotation_deg = float(rotation_deg)
-        self.release_i = None
-        self.release_j = None
 
+        # --- end releases (FRAME END RELEASE ASSIGNMENTS) ---
+        # {"i": {"PI":bool,"V2I":bool,...}, "j": {...}} veya None
+        self.release_i: dict | None = None
+        self.release_j: dict | None = None
+
+        # --- yükler ---
         self.point_loads: list[Any] = []
-        self.dist_loads: list[Any] = []
+        
         self.gravity_loads: list[Any] = []
         self.temp_loads: list[Any] = []
         self.dist_load_sets: dict[str, D.FrameDistributedLoad] = {}
 
+        # ============================================================
+        # FRAME INSERTION POINT ASSIGNMENTS
+        # ============================================================
+        self.cardinal_pt: str = "10 (centroid)"
+        self.mirror2: bool = False
+        self.mirror3: bool = False
+        self.transform: bool = True
+        self.insertion_coord_sys: str = "Local"
+        self.jt_offset_i: tuple[float, float, float] = (0.0, 0.0, 0.0)
+        self.jt_offset_j: tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+        # ============================================================
+        # FRAME OFFSET ALONG LENGTH ASSIGNMENTS
+        # ============================================================
+        self.offset_type: str = "User"       # User / Auto
+        self.offset_length_i: float = 0.0
+        self.offset_length_j: float = 0.0
+        self.rigid_factor: float = 0.0
+
+        # ============================================================
+        # FRAME OUTPUT STATION ASSIGNMENTS
+        # ============================================================
+        self.station_type: str = "MinNumSta"
+        self.min_num_sta: int = 3
+        self.add_at_elm_int: bool = True
+        self.add_at_pt_load: bool = True
+        self.max_sta_spcg: float | None = None
+
+        # ============================================================
+        # FRAME AUTO MESH / AUTO SUBDIVISION ASSIGNMENTS
+        # ============================================================
+        self.auto_mesh: bool = False
+        self.mesh_at_joints: bool = False
+        self.mesh_at_frames: bool = False
+        self.mesh_num_segments: int = 0
+        self.mesh_max_length: float = 0.0
+        self.mesh_max_degrees: float = 0.0
+
+        # ============================================================
+        # FRAME LOCAL AXES ASSIGNMENTS (v10 ek: mirror abt 2/3)
+        # ============================================================
+        self.mirror_abt2: bool = False
+        self.mirror_abt3: bool = False
+
+        # ============================================================
+        # FRAME MODIFIERS  (amod, as2mod, as3mod, jmod, i22mod, i33mod, massmod, weightmod)
+        # ============================================================
+        self.modifiers: dict[str, float] = {}
+
+        # ============================================================
+        # FRAME DESIGN PROCEDURES / LOAD TRANSFER
+        # ============================================================
+        self.design_proc: str = "From Material"
+        self.load_transfer: bool = True
+
+        # ============================================================
+        # FRAME SECTION PROPERTIES 02/03/13  (betonarme)
+        # ============================================================
+        # column: rebar_mat_l, rebar_mat_c, reinf_config, lat_reinf, cover,
+        #         num_bars3_dir, num_bars2_dir, bar_size_l, bar_size_c,
+        #         spacing_c, num_cbars2, num_cbars3, reinf_type
+        # beam:   top_cover, bot_cover, top_left_area, top_rght_area,
+        #         bot_left_area, bot_rght_area
+        self.section_rebar: dict[str, Any] = {}
+        # FRAME SECTION PROPERTIES 13 - TIME DEPENDENT
+        self.time_dependent: dict[str, Any] = {}   # {"type_size": "Auto", "auto_sf_size": 1.0}
+
+    @property
+    def dist_loads(self) -> list[D.FrameDistributedLoad]:
+        """Türetilmiş görünüm — dist_load_sets'ten her erişimde."""
+        out: list[D.FrameDistributedLoad] = []
+        for load_set in self.dist_load_sets.values():
+            out.extend(load_set.to_sap_loads())
+        return out
+    
+    # ----------------------------------------------------------------
+    # mevcut yardımcılar (değişmedi)
+    # ----------------------------------------------------------------
     def get_length(self) -> float:
         return self.node_i.distance_to(self.node_j)
 
@@ -256,17 +424,34 @@ class Frame(Element):
 # ============================================================================
 class Area(Element):
     __unit_schema__ = {
-        "thickness": Dimension.LENGTH,
+        "thick_over": Dimension.LENGTH,
+        "offset_over": Dimension.LENGTH,
     }
 
     def __init__(self, nodes: list[Node], thickness: float, label: str = "", color=None):
         super().__init__(label, color)
         self.element_type = "Area"
         self.nodes = list(nodes)
-        self.thickness = float(thickness)
+        self.__dict__["thickness"] = float(thickness)
 
         self.material = None
         self.section_name = ""
+
+        # ============================================================
+        # AREA SECTION ASSIGNMENTS — referans (AreaSection nesnesi)
+        # ============================================================
+        self.area_section: D.AreaSection | None = None
+
+        # ============================================================
+        # AREA SECTION ASSIGNMENTS — override'lar
+        # ============================================================
+        self.mat_prop: str = ""           # MatProp (Default / material adı)
+        self.thick_over: float | None = None     # ThickOver
+        self.offset_over: float | None = None    # OffsetOver
+
+        # ============================================================
+        # yükler (mevcut)
+        # ============================================================
         self.gravity_loads: list[Any] = []
         self.ref_temp: float | None = None
         self.strain_loads: list[Any] = []
@@ -277,11 +462,45 @@ class Area(Element):
         self.wind_pressures: list[Any] = []
 
     @property
+    def thickness(self) -> float:
+        if self.thick_over is not None:
+            return self.thick_over
+        if self.area_section is not None:
+            return self.area_section.thickness
+        return float(self.__dict__.get("thickness", 0.0))
+
+    @thickness.setter
+    def thickness(self, value: float) -> None:
+        if getattr(self, "area_section", None) is not None:
+            self.thick_over = float(value)
+        else:
+            self.__dict__["thickness"] = float(value)
+
+    @property
     def section(self):
+        """Geriye dönük uyum — AreaSection döndürür."""
+        if self.area_section is not None:
+            return self.area_section
         proj = getattr(getattr(self, "_scene", None), "project", None)
         if proj and self.section_name:
             return proj.sections.get(self.section_name)
         return None
+
+    # --- yeni yardımcılar ---
+    @property
+    def effective_thickness(self) -> float:
+        """ThickOver varsa onu, yoksa AreaSection.thickness, yoksa kendi thickness."""
+        if self.thick_over is not None:
+            return self.thick_over
+        if self.area_section is not None:
+            return self.area_section.thickness
+        return self.thickness
+
+    @property
+    def effective_bend_thick(self) -> float:
+        if self.area_section is not None:
+            return self.area_section.effective_bend_thick
+        return self.thickness
 
 
 # ============================================================================

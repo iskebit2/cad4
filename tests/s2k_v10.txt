@@ -1,0 +1,236 @@
+ACTIVE DEGREES OF FREEDOM
+ UX  UY  UZ  RX  RY  RZ
+Yes Yes Yes Yes Yes Yes
+
+COORDINATE SYSTEMS
+  Name      Type X Y Z AboutZ AboutY AboutX
+GLOBAL Cartesian 0 0 0      0      0      0
+
+GRID LINES
+CoordSys AxisDir GridID XRYZCoord LineType LineColor Visible BubbleLoc AllVisible BubbleSize
+  GLOBAL       X     x1   -2.7477  Primary Gray8Dark     Yes       End        Yes       1.25
+  GLOBAL       X     x2         0  Primary Gray8Dark     Yes       End        Yes       1.25
+  GLOBAL       X     x3    4.6503  Primary Gray8Dark     Yes       End        Yes       1.25
+  GLOBAL       X     x4    8.5703  Primary Gray8Dark     Yes       End        Yes       1.25
+  GLOBAL       X     x5   13.5303  Primary Gray8Dark     Yes       End        Yes       1.25
+
+CONSTRAINT DEFINITIONS - DIAPHRAGM
+Name CoordSys Axis MultiLevel
+   1   GLOBAL    Z        Yes
+   2   GLOBAL    Z        Yes
+   3   GLOBAL    Z        Yes
+   4   GLOBAL    Z        Yes
+   5   GLOBAL    Z        Yes
+
+JOINT COORDINATES
+Joint CoordSys CoordType    XorR       Y    Z SpecialJt
+    1   GLOBAL Cartesian -2.7477 -2.3566    0       Yes
+    2   GLOBAL Cartesian -2.7477 -2.3566 2.75       Yes
+    3   GLOBAL Cartesian       0 -2.6668    0       Yes
+    4   GLOBAL Cartesian       0 -2.6668 2.75       Yes
+    5   GLOBAL Cartesian  4.6503 -2.5594    0       Yes
+
+CONNECTIVITY - FRAME
+ Frame JointI JointJ IsCurved
+C101_2      1      2       No
+C102_3      3      4       No
+C103_4      5      6       No
+C104_5      7      8       No
+C105_6      9     10       No
+
+FRAME INSERTION POINT ASSIGNMENTS
+ Frame    CardinalPt CoordSys JtOffsetXI         JtOffsetYI            JtOffsetZI JtOffsetXJ         JtOffsetYJ            JtOffsetZJ Mirror2 Transform
+C102_3 10 (centroid)    Local          0  0.300563007593155     0.148868560791016          0  0.300563007593155     0.148868560791016      No       Yes
+C103_4 10 (centroid)    Local          0  -0.74999475479126  2.81047821044922E-03          0  -0.74999475479126  2.81047821044922E-03      No       Yes
+C104_5 10 (centroid)    Local          0  0.300036430358887  8.83173942565918E-03          0  0.300036430358887  8.83173942565918E-03      No       Yes
+C105_6 10 (centroid)    Local          0 -0.300028800964355 -6.82878494262695E-03          0 -0.300028800964355 -6.82878494262695E-03      No       Yes
+C106_7 10 (centroid)    Local          0  0.300548553466797     0.144868612289429          0  0.300548553466797     0.144868612289429      No       Yes
+
+FRAME LOCAL AXES ASSIGNMENTS 1 - TYPICAL
+ Frame              Angle MirrorAbt2 MirrorAbt3
+C101_2                  1         No         No
+C102_3 -0.215862303972244         No         No
+C103_4 -0.214697301387787         No         No
+C104_5 -0.223112195730209         No         No
+C105_6 -0.223685294389725         No         No
+
+FRAME OFFSET ALONG LENGTH ASSIGNMENTS
+ Frame Type LengthI LengthJ RigidFactor
+C101_2 User       0       0         0.5
+C102_3 User       0       0         0.5
+C103_4 User       0       0         0.5
+C104_5 User       0       0         0.5
+C105_6 User       0       0         0.5
+
+CONNECTIVITY - AREA
+  Area Joint1 Joint2 Joint3 Joint4
+P139_1    224      4    225      3
+P140_2      4    226      3    227
+P141_3    226    228    227    229
+P142_4    228    230    229    231
+P143_5    230     12    231     11
+
+MATERIAL PROPERTIES 01 - GENERAL
+Material      Type DesignType UnitMass UnitWeight         E    U
+    link Isotropic   Concrete        0          0 300000000    0
+       0 Isotropic   Concrete        0          0   3320000 0.25
+
+MATERIAL PROPERTIES 04 - DESIGN CONCRETE
+Material   Fc RebarFy RebarFys LtWtConc LtWtFact
+    link   10      10       10       No        1
+       0 3500   42000    42000       No        1
+
+FRAME SECTION ASSIGNMENTS
+ Frame AutoSelect AnalSect MatProp
+C101_2       N.A.   C101_2 Default
+C102_3       N.A.   C102_3 Default
+C103_4       N.A.   C103_4 Default
+C104_5       N.A.   C104_5 Default
+C105_6       N.A.   C105_6 Default
+
+FRAME SECTION PROPERTIES 01 - GENERAL
+SectionName Material       Shape   t3   t2 Area TorsConst I33 I22 AS2 AS3  tf  tw
+       link     link     General 0.01 0.01   10         1  10  10  10  10 NaN NaN
+     C101_2        0 Rectangular  0.3  0.6  NaN       NaN NaN NaN NaN NaN NaN NaN
+     C102_3        0 Rectangular  0.6  0.3  NaN       NaN NaN NaN NaN NaN NaN NaN
+     C103_4        0 Rectangular  1.5 0.25  NaN       NaN NaN NaN NaN NaN NaN NaN
+     C104_5        0 Rectangular  0.6  0.3  NaN       NaN NaN NaN NaN NaN NaN NaN
+
+SECTION DESIGNER PROPERTIES 01 - GENERAL
+SectionName BaseMat nPolygon
+    115_147       0        1
+    119_148       0        1
+    215_149       0        1
+    219_150       0        1
+    315_151       0        1
+
+SECTION DESIGNER PROPERTIES 16 - SHAPE POLYGON
+SectionName ShapeNum                  X                  Y Radius ShapeMat FillColor Reinforcing
+    115_147        1  -2.39999298095703  0.150001201629643      0        0     Gray4          No
+    115_147        1  -2.14999893188477  0.150001201629642      0      NaN       NaN         NaN
+    115_147        1  -2.14999893188477 -0.779997634887685      0      NaN       NaN         NaN
+    115_147        1 -0.249993896484379 -0.779997634887694      0      NaN       NaN         NaN
+    115_147        1 -0.249993896484373              1.325      0      NaN       NaN         NaN
+
+AREA SECTION PROPERTIES
+Section Material AreaType       Type Thickness BendThick Color F11Mod F22Mod F12Mod M11Mod M22Mod M12Mod V13Mod V23Mod MMod WMod
+      1        0    Shell Shell-Thin      0.25      0.25  Blue      1      1      1      1      1      1      1      1    1    1
+
+LOAD CASE DEFINITIONS
+ LoadCase DesignType SelfWtMult
+   G-Dead       DEAD          0
+   Q-Live       LIVE          0
+QxA-Quake      QUAKE          0
+QxB-Quake      QUAKE          0
+QyA-Quake      QUAKE          0
+
+ANALYSIS CASE DEFINITIONS
+     Case      Type InitialCond RunCase ModalCase
+    MODAL  LinModal        Zero     Yes       NaN
+   G-Dead LinStatic        Zero     Yes       NaN
+   Q-Live LinStatic        Zero     Yes       NaN
+QxA-Quake LinStatic        Zero     Yes       NaN
+QxB-Quake LinStatic        Zero     Yes       NaN
+
+CASE - STATIC 1 - LOAD ASSIGNMENTS
+     Case  LoadType  LoadName LoadSF
+   G-Dead Load case    G-Dead      1
+   Q-Live Load case    Q-Live      1
+QxA-Quake Load case QxA-Quake      1
+QxB-Quake Load case QxB-Quake      1
+QyA-Quake Load case QyA-Quake      1
+
+COMBINATION DEFINITIONS
+ComboName  ComboType SteelDesign ConcDesign AlumDesign ColdDesign      CaseType CaseName ScaleFactor
+    DEAD1 Linear Add          No        Yes         No         No           NaN      NaN         NaN
+    DEAD1        NaN         NaN        NaN        NaN        NaN Linear Static   G-Dead         1.4
+    DEAD1        NaN         NaN        NaN        NaN        NaN Linear Static   Q-Live         1.6
+    QUAX2 Linear Add          No        Yes         No         No           NaN      NaN         NaN
+    QUAX2        NaN         NaN        NaN        NaN        NaN Linear Static   G-Dead           1
+
+CASE - MODAL 1 - GENERAL
+ Case ModeType MaxNumModes MinNumModes EigenShift EigenCutoff    EigenTol AutoShift
+MODAL    Eigen          12           1          0           0 0.000000001        No
+
+CASE - RESPONSE SPECTRUM 1 - GENERAL
+ Case ModalCombo DirCombo ConstDamp EccenRatio
+RespX        CQC     SRSS      0.05       0.05
+RespY        CQC     SRSS      0.05       0.05
+
+CASE - RESPONSE SPECTRUM 2 - LOAD ASSIGNMENTS
+ Case LoadName CoordSys Function Angle        TransAccSF
+RespX       U1   GLOBAL  SpecSta     0 0.700478571428571
+RespY       U2   GLOBAL  SpecSta     0 0.700478571428571
+
+JOINT CONSTRAINT ASSIGNMENTS
+Joint Constraint
+    2          1
+    4          1
+    6          1
+    8          1
+   10          1
+
+JOINT ADDED MASS ASSIGNMENTS
+Joint    CoordSys            Mass1            Mass2 Mass3 MMI1 MMI2             MMI3
+  348 Joint Local  50.900015753957  50.900015753957     0    0    0 3551.41642608942
+  350 Joint Local 23.6539677996173 23.6539677996173     0    0    0 1141.99180919796
+  352 Joint Local 24.4275071618231 24.4275071618231     0    0    0 1179.76219348021
+  354 Joint Local 24.4628273904435 24.4628273904435     0    0    0 1181.46803559153
+  356 Joint Local 24.4707811358778 24.4707811358778     0    0    0 1181.85217336285
+
+JOINT LOADS - FORCE
+Joint  LoadCase CoordSys               F1                M3               F2  F3  M2  M1
+  348 QxA-Quake   GLOBAL 140.539468675194               NaN              NaN NaN NaN NaN
+  348 QxB-Quake   GLOBAL 140.539468675194               NaN              NaN NaN NaN NaN
+  348 QxA-Quake   GLOBAL              NaN  104.493203052037              NaN NaN NaN NaN
+  348 QxB-Quake   GLOBAL              NaN -104.493203052037              NaN NaN NaN NaN
+  348 QyA-Quake   GLOBAL              NaN               NaN 155.974209788746 NaN NaN NaN
+
+FRAME AUTO SUBDIVISION ASSIGNMENTS
+ Frame AutoDivide AtJoints AtFrames NumSegments MaxLength MaxDegrees
+C101_2         No       No       No           0         0          0
+C102_3         No       No       No           0         0          0
+C103_4         No       No       No           0         0          0
+C104_5         No       No       No           0         0          0
+C105_6         No       No       No           0         0          0
+
+FRAME OUTPUT STATION ASSIGNMENTS
+ Frame StationType MinNumSta AddAtElmInt AddAtPtLoad
+C101_2   MinNumSta         5         Yes         Yes
+C102_3   MinNumSta         5         Yes         Yes
+C103_4   MinNumSta         5         Yes         Yes
+C104_5   MinNumSta         5         Yes         Yes
+C105_6   MinNumSta         5         Yes         Yes
+
+FRAME LOADS - DISTRIBUTED
+   Frame LoadCase CoordSys  Type     Dir DistType RelDistA RelDistB FOverLA FOverLB
+K101_165   G-Dead   GLOBAL Force Gravity  RelDist   0.0502   0.9498  0.5931  0.5931
+K102_166   G-Dead   GLOBAL Force Gravity  RelDist   0.0834   0.9997  0.1915  0.1915
+K103_167   G-Dead   GLOBAL Force Gravity  RelDist   0.0643   0.8712  0.7085  0.7085
+K104_168   G-Dead   GLOBAL Force Gravity  RelDist   0.0003   0.9997  0.7085  0.7085
+K105_169   G-Dead   GLOBAL Force Gravity  RelDist   0.0003   0.9997  0.7085  0.7085
+
+AREA SECTION ASSIGNMENTS
+  Area Section MatProp ThickOver OffsetOver
+P139_1       1 Default      None       None
+P140_2       1 Default      None       None
+P141_3       1 Default      None       None
+P142_4       1 Default      None       None
+P143_5       1 Default      None       None
+
+FUNCTION - RESPONSE SPECTRUM - USER
+   Name Period Accel FuncDamp
+SpecSta      0   2.5     0.05
+SpecSta   0.01   2.5      NaN
+SpecSta   0.02   2.5      NaN
+SpecSta   0.03   2.5      NaN
+SpecSta   0.04   2.5      NaN
+
+PROGRAM CONTROL
+ProgramName Version CurrUnits
+    SAP2000  10.0.1 Ton. m. C
+
+PREFERENCES - DIMENSIONAL
+MergeTol
+   0.001
+

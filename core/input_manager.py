@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-import glm
+from pyglm import glm
 import numpy as np
 
 # ============================================================================

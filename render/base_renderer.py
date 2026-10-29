@@ -4,7 +4,7 @@ import ctypes
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
-import glm
+from pyglm import glm
 import numpy as np
 from OpenGL.GL import *
 

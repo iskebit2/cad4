@@ -7,12 +7,13 @@ from typing import Any
 @dataclass
 class FieldSpec:
     key: str
-    kind: str = "str"                     # bool|enum|float|int|color|str|list_object
+    kind: str = "str"
     label: str | None = None
     choices: list[str] | None = None
     editable: bool = True
     step: float = 0.1
     format: str = "%.3f"
+    unit: str | None = None
     item_schema: list[Any] | None = None
 
 

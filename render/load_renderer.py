@@ -7,7 +7,7 @@ Frame yayılı yük görselleştirme.
 """
 import ctypes
 
-import glm
+from pyglm import glm
 import numpy as np
 from OpenGL.GL import *
 
@@ -192,15 +192,12 @@ class LoadRenderer:
                 n_frames_with_sets += 1
                 for pat, ls in load_sets.items():
                     if self.active_pattern and pat != self.active_pattern:
-                        logger.warning("[LR.skip] pattern filter: pat=%s active=%s",
-                                    pat, self.active_pattern)
+                        
                         continue
                     n_sets_total += 1
-                    logger.warning("[LR.emit] frame=%s pat=%s segments=%d",
-                                frame.label, pat, len(getattr(ls, "segments", [])))
+                    
                     self._emit_load_set(frame, ls, lines, tris, camera_scale)
-            logger.warning("[LR] frames_with_sets=%d, sets_emitted=%d, active_pattern=%s",
-                        n_frames_with_sets, n_sets_total, self.active_pattern)
+            
 
         # --- Point loads: ÖLÇEĞİ ÖNCE HESAPLA ---
         if self.show_point_loads:

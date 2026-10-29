@@ -196,3 +196,23 @@ class Scene:
         elif isinstance(element, Polygon):self.add_polygon(element)
         else: return False
         return True
+
+    def __repr__(self) -> str:
+        return (
+            f"<Scene nodes={len(self.nodes)} frames={len(self.frames)} "
+            f"areas={len(self.areas)} links={len(self.links)} "
+            f"polygons={len(self.polygons)}>"
+        )
+
+    def summary(self) -> str:
+        """Detaylı özet — kütle/constraint sayıları."""
+        n_mass = sum(1 for n in self.nodes.values() if n.has_mass())
+        n_con = sum(1 for n in self.nodes.values() if n.constraint_name)
+        return (
+            f"Scene:\n"
+            f"  Nodes: {len(self.nodes)}  (mass: {n_mass}, constraint: {n_con})\n"
+            f"  Frames: {len(self.frames)}\n"
+            f"  Areas: {len(self.areas)}\n"
+            f"  Links: {len(self.links)}\n"
+            f"  Polygons: {len(self.polygons)}"
+        )

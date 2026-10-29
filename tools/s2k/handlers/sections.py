@@ -22,6 +22,7 @@ from domain.definition import (
 )
 from tools.s2k.context import LoadContext
 from tools.section_checks import check_section
+from tools.s2k.handlers._colors import color_from_string, DEFAULT_COLOR
 
 logger = logging.getLogger(__name__)
 
@@ -39,64 +40,7 @@ def _safe_float(row, key, default=0.0) -> float:
         return default
 
 
-def _color_from_string(s: str) -> tuple[float, float, float]:
-    """S2K Color alanı → (R, G, B) 0-1 aralığında.
 
-    Desteklenen formatlar:
-        - İsimli: "Red", "Cyan", "Gray8Dark", ...
-        - Windows BGR sayısal: 16711808, 4227200, ...
-        - Hex: "#FF0080"
-    """
-    if not s:
-        return (0.8, 0.8, 0.8)
-
-    s_clean = str(s).strip()
-
-    # 1. Sayısal (Windows BGR)
-    try:
-        value = int(s_clean)
-        r = (value & 0xFF) / 255.0
-        g = ((value >> 8) & 0xFF) / 255.0
-        b = ((value >> 16) & 0xFF) / 255.0
-        return (r, g, b)
-    except (ValueError, TypeError):
-        pass
-
-    # 2. Hex "#FF0080"
-    if s_clean.startswith("#") and len(s_clean) == 7:
-        try:
-            r = int(s_clean[1:3], 16) / 255.0
-            g = int(s_clean[3:5], 16) / 255.0
-            b = int(s_clean[5:7], 16) / 255.0
-            return (r, g, b)
-        except ValueError:
-            pass
-
-    # 3. İsimli renkler (case-insensitive)
-    color_map = {
-        "red": (1.0, 0.0, 0.0),
-        "green": (0.0, 1.0, 0.0),
-        "blue": (0.0, 0.0, 1.0),
-        "yellow": (1.0, 1.0, 0.0),
-        "cyan": (0.0, 1.0, 1.0),
-        "magenta": (1.0, 0.0, 1.0),
-        "white": (1.0, 1.0, 1.0),
-        "black": (0.0, 0.0, 0.0),
-        "orange": (1.0, 0.5, 0.0),
-        "pink": (1.0, 0.75, 0.8),
-        "purple": (0.5, 0.0, 0.5),
-        "brown": (0.6, 0.4, 0.2),
-        "gray": (0.5, 0.5, 0.5),
-        "grey": (0.5, 0.5, 0.5),
-        "gray8dark": (0.3, 0.3, 0.3),
-        "gray8light": (0.7, 0.7, 0.7),
-    }
-    c = color_map.get(s_clean.lower())
-    if c is not None:
-        return c
-
-    logger.warning("[Color] Bilinmeyen format: %r → default", s_clean)
-    return (0.8, 0.8, 0.8)
 
 
 def _dim_modifier(row, key: str, default: float = 1.0) -> float:
@@ -220,16 +164,12 @@ def _resolve_material(ctx: LoadContext, mat_name: str) -> Material | None:
 # FRAME SECTION
 # ============================================================================
 def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
-        
     name_col = next((c for c in ("SectionName", "Section", "Name") if c in df.columns), None)
     if name_col is None:
         logger.error("[FrameProps] İsim kolonu yok: %s", list(df.columns))
         return
 
     for _, row in df.iterrows():
-
-
-
         sect_name = str(row.get(name_col, "")).strip()
         if not sect_name:
             continue
@@ -245,7 +185,7 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
 
         mat = _resolve_material(ctx, row.get("Material", ""))
         raw_color = str(row.get("Color", ""))
-        parsed = _color_from_string(raw_color)
+        parsed = color_from_string(raw_color)
         logger.info("[ColorImport] sec=%s raw=%r parsed=%s", sect_name, raw_color, parsed)
 
         section = Section(
@@ -253,11 +193,16 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
             profile_type=s_type,
             profile_params=s_params,
             material=mat,
-            color=_color_from_string(str(row.get("Color", "Gray8Dark"))),
+            color=parsed,
+            cg_offset3=_safe_float(row, "CGOffset3", 0.0),
+            cg_offset2=_safe_float(row, "CGOffset2", 0.0),
+            ecc_v2=_safe_float(row, "EccV2", 0.0),
+            ecc_v3=_safe_float(row, "EccV3", 0.0),
+            from_file=str(row.get("FromFile", "No")).strip().upper() == "YES",
+            notes=str(row.get("Notes", "")).strip(),
         )
         ctx.sections[sect_name] = section
 
-        # Doğrulama — analitik + katalog + değişmezler
         try:
             for msg in check_section(section, strict=False):
                 logger.info("[SectionCheck] %s", msg)
@@ -281,24 +226,69 @@ def handle_auto_select_lists(ctx: LoadContext, df: pd.DataFrame) -> None:
 # AREA SECTION
 # ============================================================================
 def handle_area_props(ctx: LoadContext, df: pd.DataFrame) -> None:
+    """AREA SECTION PROPERTIES — AreaSection nesnesi üret."""
+    from data.enums import PropAreaType
+    from domain.definition import AreaSection
+
     for _, row in df.iterrows():
         name = str(row.get("Section", "")).strip()
         if not name:
             continue
-        thickness = _safe_float(row, "Thickness", 0.1)   # S2K birimi
+
+        # material
         mat_name = str(row.get("Material", "")).strip()
         mat = ctx.materials.get(mat_name) if mat_name else None
         if mat is None and mat_name:
             mat = Material(name=mat_name)
             ctx.materials[mat_name] = mat
 
+        # area_type / type
+        area_type_raw = str(row.get("AreaType", "Shell")).strip()
+        try:
+            prop_type = PropAreaType(area_type_raw)
+        except ValueError:
+            prop_type = PropAreaType.Shell
+
+        thickness = _safe_float(row, "Thickness", 0.1)   # S2K birimi
+        bend_thick_raw = row.get("BendThick")
+        bend_thick = None
+        if bend_thick_raw not in (None, "", "nan", "NaN"):
+            try:
+                bend_thick = float(bend_thick_raw)
+            except (TypeError, ValueError):
+                bend_thick = None
+
+        sec = AreaSection(
+            name=name,
+            prop_type=prop_type,
+            area_type=str(row.get("Type", "Shell-Thin")).strip(),
+            material=mat,
+            mat_angle=_safe_float(row, "MatAngle", 0.0),
+            thickness=thickness,
+            bend_thick=bend_thick,
+            drill_dof=str(row.get("DrillDOF", "No")).strip().upper() == "YES",
+            color= color_from_string(str(row.get("Color", "Gray8Dark"))),
+            membrane_f11=_safe_float(row, "F11Mod", 1.0),
+            membrane_f22=_safe_float(row, "F22Mod", 1.0),
+            membrane_f12=_safe_float(row, "F12Mod", 1.0),
+            bending_m11=_safe_float(row, "M11Mod", 1.0),
+            bending_m22=_safe_float(row, "M22Mod", 1.0),
+            bending_m12=_safe_float(row, "M12Mod", 1.0),
+            shear_v13=_safe_float(row, "V13Mod", 1.0),
+            shear_v23=_safe_float(row, "V23Mod", 1.0),
+            mass=_safe_float(row, "MMod", 1.0),
+            weight=_safe_float(row, "WMod", 1.0),
+        )
+
+        # geri uyum için ham dict de doldur
         ctx.area_sections[name] = {
             "material": mat,
             "thickness": thickness,
-            "area_type": str(row.get("AreaType", "Shell")).strip(),
-            "type": str(row.get("Type", "Shell-Thin")).strip(),
-            "color": _color_from_string(str(row.get("Color", "Gray8Dark"))),
+            "area_type": area_type_raw,
+            "type": sec.area_type,
+            "color": sec.color,
         }
+        ctx.area_section_objects[name] = sec
         ctx.area_thicknesses[name] = thickness
 
 
@@ -306,6 +296,7 @@ def handle_area_props(ctx: LoadContext, df: pd.DataFrame) -> None:
 # SD SECTION
 # ============================================================================
 def handle_sd_general(ctx: LoadContext, df: pd.DataFrame) -> None:
+    """SECTION DESIGNER PROPERTIES 01 - GENERAL."""
     for _, r in df.iterrows():
         name = str(r.get("SectionName", "")).strip()
         if not name:
@@ -313,6 +304,13 @@ def handle_sd_general(ctx: LoadContext, df: pd.DataFrame) -> None:
         sd = ctx.sd_sections.setdefault(name, SDSection(name=name))
         sd.design_type = str(r.get("DesignType", "No Check/Design")).strip()
         sd.axis_angle = _safe_float(r, "AxisAngle", 90.0)
+        sd.mesh_sz_abs = _safe_float(r, "MeshSzAbs", 0.0)
+        sd.mesh_sz_rel = _safe_float(r, "MeshSzRel", 0.05)
+        sd.dsgn_or_chck = str(r.get("DsgnOrChck", "Check")).strip()
+        sd.include_v_str = str(r.get("IncludeVStr", "No")).strip().upper() == "YES"
+        sd.n_polygon = int(_safe_float(r, "nPolygon", 0))
+        # base material — v10'da "BaseMat" kolonu
+        sd.base_material = str(r.get("BaseMat", sd.base_material)).strip()
 
 
 def handle_sd_polygon(ctx: LoadContext, df: pd.DataFrame) -> None:
@@ -322,7 +320,7 @@ def handle_sd_polygon(ctx: LoadContext, df: pd.DataFrame) -> None:
     grouped: dict[tuple[str, str], list] = {}
     for _, row in df.iterrows():
         sec = str(row.get("SectionName", "")).strip()
-        shp = str(row.get("ShapeName", "")).strip()
+        shp = str(row.get("ShapeName", row.get("ShapeNum", ""))).strip()
         if sec and shp:
             grouped.setdefault((sec, shp), []).append(row)
 
@@ -330,7 +328,7 @@ def handle_sd_polygon(ctx: LoadContext, df: pd.DataFrame) -> None:
         first = rows[0]
         mat = str(first.get("ShapeMat", "")).strip()
         z_order = int(_safe_float(first, "ZOrder", 1))
-        color = _color_from_string(str(first.get("FillColor", "Gray8Dark")))
+        color = color_from_string(str(first.get("FillColor", "Gray8Dark")))
 
         pts = [
             SDPolygonPoint(
@@ -363,3 +361,91 @@ def handle_sd_rebar_rect(ctx: LoadContext, df: pd.DataFrame) -> None:
             "width": _safe_float(r, "Width"),
             "rotation": _safe_float(r, "Rotation"),
         })
+
+def handle_frame_section_rebar_col(ctx: LoadContext, df: pd.DataFrame) -> None:
+    """FRAME SECTION PROPERTIES 02 - CONCRETE COLUMN."""
+    if df is None or df.empty:
+        return
+    for _, r in df.iterrows():
+        sec = str(r.get("SectionName", "")).strip()
+        if not sec:
+            continue
+        section = ctx.sections.get(sec)
+        if section is None:
+            section = Section(name=sec)
+            ctx.sections[sec] = section
+        section.rebar_column.update({
+            "rebar_mat_l": str(r.get("RebarMatL", "")).strip(),
+            "rebar_mat_c": str(r.get("RebarMatC", "")).strip(),
+            "reinf_config": str(r.get("ReinfConfig", "")).strip(),
+            "lat_reinf": str(r.get("LatReinf", "")).strip(),
+            "cover": _safe_float(r, "Cover"),
+            "num_bars3_dir": int(_safe_float(r, "NumBars3Dir", 0)),
+            "num_bars2_dir": int(_safe_float(r, "NumBars2Dir", 0)),
+            "bar_size_l": str(r.get("BarSizeL", "")).strip(),
+            "bar_size_c": str(r.get("BarSizeC", "")).strip(),
+            "spacing_c": _safe_float(r, "SpacingC"),
+            "num_cbars2": int(_safe_float(r, "NumCBars2", 0)),
+            "num_cbars3": int(_safe_float(r, "NumCBars3", 0)),
+            "reinf_type": str(r.get("ReinfType", "")).strip(),
+        })
+
+def handle_frame_section_rebar_beam(ctx: LoadContext, df: pd.DataFrame) -> None:
+    """FRAME SECTION PROPERTIES 03 - CONCRETE BEAM."""
+    if df is None or df.empty:
+        return
+    for _, r in df.iterrows():
+        sec = str(r.get("SectionName", "")).strip()
+        if not sec:
+            continue
+        section = ctx.sections.get(sec)
+        if section is None:
+            section = Section(name=sec)
+            ctx.sections[sec] = section
+        section.rebar_beam.update({
+            "rebar_mat_l": str(r.get("RebarMatL", "")).strip(),
+            "rebar_mat_c": str(r.get("RebarMatC", "")).strip(),
+            "top_cover": _safe_float(r, "TopCover"),
+            "bot_cover": _safe_float(r, "BotCover"),
+            "top_left_area": _safe_float(r, "TopLeftArea"),
+            "top_rght_area": _safe_float(r, "TopRghtArea"),
+            "bot_left_area": _safe_float(r, "BotLeftArea"),
+            "bot_rght_area": _safe_float(r, "BotRghtArea"),
+        })
+
+
+def handle_frame_section_time_dependent(ctx: LoadContext, df: pd.DataFrame) -> None:
+    """FRAME SECTION PROPERTIES 13 - TIME DEPENDENT."""
+    if df is None or df.empty:
+        return
+    for _, r in df.iterrows():
+        sec = str(r.get("SectionName", "")).strip()
+        if not sec:
+            continue
+        section = ctx.sections.get(sec)
+        if section is None:
+            section = Section(name=sec)
+            ctx.sections[sec] = section
+        section.time_dependent = {
+            "type_size": str(r.get("TypeSize", "Auto")).strip(),
+            "auto_sf_size": _safe_float(r, "AutoSFSize", 1.0),
+        }
+
+def handle_sd_fiber_general(ctx: LoadContext, df: pd.DataFrame) -> None:
+    """SECTION DESIGNER PROPERTIES 30 - FIBER GENERAL."""
+    if df is None or df.empty:
+        return
+    for _, r in df.iterrows():
+        name = str(r.get("SectionName", "")).strip()
+        if not name:
+            continue
+        sd = ctx.sd_sections.setdefault(name, SDSection(name=name))
+        sd.fiber = {
+            "num_fibers_d2": int(_safe_float(r, "NumFibersD2", 3)),
+            "num_fibers_d3": int(_safe_float(r, "NumFibersD3", 3)),
+            "coord_sys": str(r.get("CoordSys", "Cartesian")).strip(),
+            "grid_angle": _safe_float(r, "GridAngle", 0.0),
+            "lump_rebar": str(r.get("LumpRebar", "No")).strip().upper() == "YES",
+            "fiber_pmm": str(r.get("FiberPMM", "No")).strip().upper() == "YES",
+            "fiber_mc": str(r.get("FiberMC", "No")).strip().upper() == "YES",
+        }

@@ -26,7 +26,7 @@ Kontroller:
 from __future__ import annotations
 
 import glfw
-import glm
+from pyglm import glm
 import numpy as np
 from OpenGL.GL import (
     GL_ARRAY_BUFFER,

@@ -1,7 +1,7 @@
 # tools/gridsystem.py
 import ctypes
 
-import glm
+from pyglm import glm
 
 from data.enums import GridPlane
 from domain.definition import GridPlaneDef
@@ -68,15 +68,30 @@ class GridSystem:
         self.origin = glm.vec3(0.0, 0.0, 0.0)
         self._gpu = {name: {"vao": None, "vbo": None, "count": 0} for name in self.planes}
 
+    @property
+    def origin_x(self) -> float:
+        return float(self.origin.x)
+
+    @property
+    def origin_y(self) -> float:
+        return float(self.origin.y)
+
+    @property
+    def origin_z(self) -> float:
+        return float(self.origin.z)
+
+    @property
+    def planes_visibility(self) -> dict[str, bool]:
+        return {p.name: bool(d.get("visible", False)) for p, d in self.planes.items()}
+    
     def set_origin(self, x, y, z):
         self.origin = glm.vec3(float(x), float(y), float(z))
         self.rebuild_all()
 
     def set_coords(self, x_list, y_list, z_list):
-
-        if x_list: self.x_coords = sorted(list(set(x_list)))
-        if y_list: self.y_coords = sorted(list(set(y_list)))
-        if z_list: self.z_coords = sorted(list(set(z_list)))
+        self.x_coords = sorted(set(float(v) for v in x_list)) if x_list else []
+        self.y_coords = sorted(set(float(v) for v in y_list)) if y_list else []
+        self.z_coords = sorted(set(float(v) for v in z_list)) if z_list else []
         self.rebuild_all()
 
     def set_plane(self, plane: GridPlane, visible=None):

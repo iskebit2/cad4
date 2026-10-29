@@ -1,7 +1,7 @@
 # geometry/sd_to_areas.py
 import math
 
-import glm
+from pyglm import glm
 
 from domain.definition import Material, Section, SectionType
 from domain.element import Area, Frame, Node

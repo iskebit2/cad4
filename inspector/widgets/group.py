@@ -14,7 +14,7 @@ class GroupDrawer:
         key = f"grp_{gi}"
         is_open = key in self.open_groups
 
-        arrow = "▼" if is_open else ">"
+        arrow = "▼" if is_open else "▶"
         header = f"{arrow}  {group.title}##hdr_{gi}"
 
         if imgui.selectable(header, False)[0]:

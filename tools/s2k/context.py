@@ -39,7 +39,11 @@ class LoadContext:
     sections: dict[str, Section] = field(default_factory=dict)
     auto_select_lists: dict[str, list[str]] = field(default_factory=dict)
     area_sections: dict[str, dict] = field(default_factory=dict)
+    area_section_objects: dict[str, Any] = field(default_factory=dict)  
     area_thicknesses: dict[str, float] = field(default_factory=dict)
+    area_section_design_params: dict[str, dict] = field(default_factory=dict)
+    area_section_time_dependent: dict[str, dict] = field(default_factory=dict)
+
     link_props: dict[str, LinkProp] = field(default_factory=dict)
 
     # --- Yük tanımları ---
@@ -65,7 +69,10 @@ class LoadContext:
     joint_added_mass: dict[str, dict] = field(default_factory=dict)
     frame_insertion_points: dict[str, dict] = field(default_factory=dict)
     frame_end_offsets: dict[str, dict] = field(default_factory=dict)
+    frame_local_axes: dict[str, dict] = field(default_factory=dict)
     frame_section_rebar: dict[str, dict] = field(default_factory=dict)
+    frame_load_transfer: dict[str, bool] = field(default_factory=dict)
+    frame_time_dependent: dict[str, dict] = field(default_factory=dict)
     rebar_sizes: dict[str, dict] = field(default_factory=dict)
     sd_sections: dict[str, SDSection] = field(default_factory=dict)
     joint_loads: dict[str, list[PointLoad]] = field(default_factory=dict)
@@ -82,6 +89,15 @@ class LoadContext:
     df_area_assign: pd.DataFrame | None = None
     df_link_assign: pd.DataFrame | None = None
     df_frame_release: pd.DataFrame | None = None
+    df_area_section_design: pd.DataFrame | None = None
+    df_area_section_time_dep: pd.DataFrame | None = None
+
+    df_frame_output_stations: pd.DataFrame | None = None
+    df_frame_load_transfer: pd.DataFrame | None = None
+    df_frame_time_dependent: pd.DataFrame | None = None
+    df_frame_insertion: pd.DataFrame | None = None
+    df_frame_end_offsets: pd.DataFrame | None = None
+    df_frame_local_axes: pd.DataFrame | None = None
 
     df_joint_loads: pd.DataFrame | None = None
     df_frame_gravity: pd.DataFrame | None = None
@@ -103,6 +119,7 @@ class LoadContext:
     df_grid_lines: pd.DataFrame | None = None
     df_joint_constraints: pd.DataFrame | None = None
     df_link_props_linear: pd.DataFrame | None = None
+    df_joint_added_mass: pd.DataFrame | None = None
 
     # --- Uyarılar ---
     warnings: list[str] = field(default_factory=list)

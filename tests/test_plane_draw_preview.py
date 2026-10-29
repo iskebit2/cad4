@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-import glm
+from pyglm import glm
 import numpy as np
 
 from core.plane_draw_manager import PlaneDrawManager

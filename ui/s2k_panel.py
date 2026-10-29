@@ -157,36 +157,33 @@ class S2KPanel(BasePanel):
             self._log_error(f"S2K okuma hatası: {e}")
 
     def _execute_import(self):
-        """Seçili tabloları ctx'ye aktar, scene'i inşa et, callback'i tetikle."""
         if not self.parser:
             self._log_error("Aktarılacak dosya seçilmedi.")
             return
 
         ctx = self._run_handlers()
 
-        # Scene inşası — loader'ın public API'si üzerinden (birim dönüşümü dahil)
-        loader = S2KLoader()          # parser'a gerek yok, ctx hazır
+        loader = S2KLoader()
+        loader.parser = self.parser
         try:
-            new_project = loader.load_from_context(ctx)
+            new_project, meta = loader.load_with_metadata(ctx=ctx)
         except Exception:
             logger.exception("[Import] Scene inşası başarısız")
             self._log_error("Model oluşturulurken hata oluştu.")
             return
 
-        scn = new_project.scene
         self._log_info(
-            f"✓ Model inşa edildi: {len(scn.frames)} çubuk, {len(scn.nodes)} düğüm"
+            f"{meta.program_name} {meta.version} | "
+            f"CurrUnits: {meta.curr_units_raw} → {meta.unit_system.value}"
         )
+        scn = new_project.scene
+        self._log_info(f"✓ {len(scn.frames)} çubuk, {len(scn.nodes)} düğüm")
 
         if not callable(self.on_import_complete):
-            logger.error("[Import] on_import_complete bağlı değil")
-            self._log_error("Callback bağlı değil — panel CadApp üzerinden açılmalı.")
+            self._log_error("Callback bağlı değil.")
             return
-
         try:
-            logger.info("[Import] callback tetikleniyor...")
             self.on_import_complete(new_project)
-            logger.info("[Import] callback tamamlandı")
             self._log_info("İçe aktarma tamamlandı.")
         except Exception:
             logger.exception("[Import] callback hatası")

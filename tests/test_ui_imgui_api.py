@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 from imgui_bundle import imgui
 
+from core.units import UnitSystem
 from ui.joint_load_panel import JointLoadPanel
 from ui.plane_plot_panel import PlanePlotPanel
 from ui.render_settings_panel import RenderSettingsPanel
@@ -140,6 +141,29 @@ def test_toolbar_styled_button_uses_imgui_bundle_style_var(monkeypatch):
 
     assert style_vars == [(imgui.StyleVar_.frame_rounding, 4.0)]
     assert len(style_colors) == 3
+
+
+def test_toolbar_unit_selector_accepts_serialized_unit_system(monkeypatch):
+    toolbar = Toolbar(commands={}, panel_states={})
+    toolbar._ctx["current_unit"] = "kN, m, C"
+    menu_labels = []
+    selected_items = []
+
+    monkeypatch.setattr(imgui, "begin_menu", lambda label: menu_labels.append(label) or True)
+    monkeypatch.setattr(
+        imgui,
+        "menu_item",
+        lambda label, shortcut, selected: (
+            selected_items.append((label, selected)) or False,
+            None,
+        ),
+    )
+    monkeypatch.setattr(imgui, "end_menu", lambda: None)
+
+    toolbar._render_unit_selector()
+
+    assert menu_labels == ["Birim: KN_M"]
+    assert (f"{UnitSystem.KN_M.name} (kN, m)", True) in selected_items
 
 
 def test_zones_panel_uses_input_text_flags_position_and_table_outer_size(monkeypatch):

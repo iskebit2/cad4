@@ -44,8 +44,12 @@ class Toolbar:
         self._pending_fires: list[tuple[str, tuple]] = []
 
     # ==================================================================
-    def draw(self, model_text: str = "", current_unit=None) -> None:
-        self._ctx = {"model_text": model_text, "current_unit": current_unit}
+    def draw(self, model_text: str = "", current_unit=None, project=None) -> None:
+        self._ctx = {
+            "model_text": model_text,
+            "current_unit": current_unit,
+            "project": project,
+        }
 
         if imgui.begin_main_menu_bar():
             try:
@@ -212,6 +216,8 @@ class Toolbar:
     def _render_unit_selector(self) -> None:
         from core.units import UnitSystem
         cu = self._ctx.get("current_unit")
+        if isinstance(cu, str):
+            cu = UnitSystem.from_sap(cu)
         label = f"Birim: {cu.name}" if cu else "Birim: N-mm"
 
         opened = imgui.begin_menu(label)
@@ -230,5 +236,25 @@ class Toolbar:
 
     def _render_model_label(self) -> None:
         text = self._ctx.get("model_text") or ""
-        if text:
-            imgui.text_colored(_v4(0.60, 0.65, 0.72), text)
+        if not text:
+            return
+
+        imgui.text_colored(_v4(0.60, 0.65, 0.72), text)
+        if imgui.is_item_hovered() and imgui.is_mouse_clicked(0):
+            self._print_project_summary()
+
+    def _print_project_summary(self) -> None:
+        """Projenin özetini terminale bas. `_ctx` içinden project al."""
+        project = self._ctx.get("project")
+        if project is None:
+            print("[summary] project yok")
+            return
+        try:
+            if hasattr(project, "summary"):
+                print(project.summary())
+            else:
+                print(project)
+                if hasattr(project, "scene"):
+                    print(project.scene)
+        except Exception as e:
+            print(f"[summary] hata: {e}")

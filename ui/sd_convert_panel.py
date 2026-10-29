@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 
-import glm
+from pyglm import glm
 from imgui_bundle import imgui
 
 from domain.definition import SectionType
