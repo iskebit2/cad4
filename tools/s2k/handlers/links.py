@@ -126,7 +126,7 @@ def handle_link_props_linear(ctx: LoadContext, df: pd.DataFrame) -> None:
 
         prop = ctx.link_props.setdefault(name, LinkPropLinear(name=name))
         if not isinstance(prop, LinkPropLinear):
-            logger.warning(
+            logger.debug(
                 "[LinkProp] '%s' LinkPropLinear değil, atlanıyor", name,
             )
             continue

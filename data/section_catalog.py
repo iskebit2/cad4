@@ -103,7 +103,7 @@ def load_catalog_from_dir(data_dir: Path) -> dict[str, Section]:
     for fname, (stype, family) in CATALOG_FILES.items():
         path = data_dir / fname
         if not path.exists():
-            logger.warning(f"[Catalog] Dosya yok: {path}")
+            logger.debug(f"[Catalog] Dosya yok: {path}")
             continue
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))

@@ -73,10 +73,19 @@ class LoadContext:
     frame_section_rebar: dict[str, dict] = field(default_factory=dict)
     frame_load_transfer: dict[str, bool] = field(default_factory=dict)
     frame_time_dependent: dict[str, dict] = field(default_factory=dict)
+    frame_insertion_points: dict[str, dict] = field(default_factory=dict)
+    frame_end_offsets: dict[str, dict] = field(default_factory=dict)
+    frame_output_stations: dict[str, dict] = field(default_factory=dict)
+    frame_load_transfer: dict[str, bool] = field(default_factory=dict)
+    frame_time_dependent: dict[str, dict] = field(default_factory=dict)
+    frame_local_axes: dict[str, dict] = field(default_factory=dict)
+
     rebar_sizes: dict[str, dict] = field(default_factory=dict)
     sd_sections: dict[str, SDSection] = field(default_factory=dict)
     joint_loads: dict[str, list[PointLoad]] = field(default_factory=dict)
     joint_constraints: dict[str, str] = field(default_factory=dict)
+    constraint_definitions: dict[str, Any] = field(default_factory=dict)
+    joint_springs: dict[str, dict] = field(default_factory=dict)
     grid_lines: list[dict] = field(default_factory=list)
 
     # --- Ham DataFrame'ler (handler'lar doldurur, scene_builder okur) ---

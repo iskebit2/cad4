@@ -82,11 +82,12 @@ class ProfileGenerator:
         return points
     
     def _validate_params(self, section_type: SectionType, params: Any) -> dict:
-        """Parametreleri doğrula ve varsayılan değerleri ekle (Güvenli Sübap)"""
+        """Parametreleri doğrula ve varsayılan değerleri ekle."""
         if isinstance(params, list):
             p_list = params
             params = {}
-            if section_type in [SectionType.RECT, SectionType.BOX, SectionType.TUBE, SectionType.I, SectionType.T, SectionType.CHANNEL]:
+            if section_type in [SectionType.RECT, SectionType.BOX, SectionType.TUBE,
+                                SectionType.I, SectionType.T, SectionType.CHANNEL]:
                 if len(p_list) >= 2:
                     params['b'], params['h'] = p_list[0], p_list[1]
                 if len(p_list) >= 3:
@@ -108,41 +109,46 @@ class ProfileGenerator:
                 params['points'] = p_list
 
         validated = dict(params) if isinstance(params, dict) else {}
-        
-        # Ortak validasyonlar
+
+        # ★ CUSTOM için min eşik 1e-6 — link section 10 mm = 0.01 m için
+        if section_type == SectionType.CUSTOM:
+            for key in ['b', 'h', 't', 'tw', 'tf', 'r', 'ro', 'ri']:
+                if key in validated:
+                    try:
+                        validated[key] = max(1e-6, float(validated[key]))
+                    except (TypeError, ValueError):
+                        pass
+            return validated
+
+        # Diğer tipler: min 0.1 m
         for key in ['b', 'h', 't', 'tw', 'tf', 'r', 'ro', 'ri']:
             if key in validated:
                 validated[key] = max(0.1, float(validated[key]))
-        
-        # Tip-specific validasyonlar
+
         if section_type == SectionType.CIRCLE:
             validated.setdefault('r', 50.0)
             validated.setdefault('n', 16)
             validated['n'] = max(3, int(validated.get('n', 16)))
-        
         elif section_type == SectionType.PIPE:
             validated.setdefault('ro', 60.0)
             validated.setdefault('ri', 50.0)
             validated.setdefault('n', 24)
             validated['ri'] = min(validated['ro'] - 0.1, validated['ri'])
             validated['n'] = max(3, int(validated['n']))
-        
         elif section_type in [SectionType.I, SectionType.T, SectionType.CHANNEL]:
             validated.setdefault('b', 100.0)
             validated.setdefault('h', 200.0)
             validated.setdefault('tw', 10.0)
             validated.setdefault('tf', 14.0)
-        
         elif section_type in [SectionType.L, SectionType.C]:
             validated.setdefault('b', 80.0)
             validated.setdefault('h', 100.0)
             validated.setdefault('t', 8.0)
-        
         elif section_type in [SectionType.TUBE, SectionType.BOX]:
             validated.setdefault('b', 100.0)
             validated.setdefault('h', 200.0)
             validated.setdefault('t', 10.0)
-        
+
         return validated
     
     # ========== PROFİL ÜRETİCİLERİ ==========
@@ -253,7 +259,7 @@ class ProfileGenerator:
         ]
     
     def _custom_profile(self, params: dict) -> list[tuple[float, float]]:
-        # 1) SD Section varsa → ilk Polygon shape'ini kullan
+        # 1) SD Section varsa → polygon
         sd = params.get('sd_section') if isinstance(params, dict) else None
         if sd is not None and getattr(sd, 'shapes', None):
             poly = next(
@@ -262,14 +268,24 @@ class ProfileGenerator:
                 None,
             )
             if poly is not None:
-                pts = [(float(p.x), float(p.y)) for p in poly.points]
-                return pts
+                return [(float(p.x), float(p.y)) for p in poly.points]
 
-        # 2) Ham nokta listesi
+        # 2) h/b varsa → dikdörtgen (link, CUSTOM vb.)
+        h = params.get('h') if isinstance(params, dict) else None
+        b = params.get('b') if isinstance(params, dict) else None
+        if h and b:
+            h, b = float(h), float(b)
+            if h > 0 and b > 0:
+                return [
+                    (-b/2, -h/2), (b/2, -h/2),
+                    (b/2, h/2), (-b/2, h/2),
+                ]
+
+        # 3) Ham nokta listesi
         if params.get('points'):
             return params['points']
 
-        # 3) Fallback
+        # 4) Fallback
         return self._default_profile(params)
     
     def _default_profile(self, params: dict) -> list[tuple[float, float]]:

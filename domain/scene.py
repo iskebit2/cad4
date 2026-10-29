@@ -208,9 +208,14 @@ class Scene:
         """Detaylı özet — kütle/constraint sayıları."""
         n_mass = sum(1 for n in self.nodes.values() if n.has_mass())
         n_con = sum(1 for n in self.nodes.values() if n.constraint_name)
+        n_spring = sum(
+                        1 for n in self.nodes.values()
+                        if any(abs(getattr(n, f"spring_{d}", 0.0)) > 1e-12
+                            for d in ("u1", "u2", "u3", "r1", "r2", "r3"))
+                    )
         return (
             f"Scene:\n"
-            f"  Nodes: {len(self.nodes)}  (mass: {n_mass}, constraint: {n_con})\n"
+            f"  Nodes: {len(self.nodes)}  (mass: {n_mass}, constraint: {n_con}, spring: {n_spring})\n"
             f"  Frames: {len(self.frames)}\n"
             f"  Areas: {len(self.areas)}\n"
             f"  Links: {len(self.links)}\n"

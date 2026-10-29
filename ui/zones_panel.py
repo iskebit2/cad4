@@ -222,7 +222,7 @@ class ZonesPanel(BasePanel):
                 
                 directions_dict[new_key] = WindDirectionResult(w_dir=(0.0, 1.0, 0.0))
             except ImportError:
-                logger.warning("[ZonesPanel] WindDirectionResult import edilemedi, dict fallback")
+                logger.debug("[ZonesPanel] WindDirectionResult import edilemedi, dict fallback")
                 directions_dict[new_key] = {"w_dir": (0.0, 1.0, 0.0)}
             self._dir_buffers.clear()
 

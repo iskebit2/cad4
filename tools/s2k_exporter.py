@@ -51,26 +51,38 @@ class S2KExporter:
         used = cls._collect_used(scene, project, selected_elements)
 
         sections = [
-            cls._program_control(project),
-            cls._active_dof(),
-            cls._materials(project, used),
-            cls._sections(project, used),
-            cls._link_props(project, used),
-            cls._load_patterns(project, used, scene),
-            cls._load_cases(project, used, scene),
-            cls._combinations(project, used),
-            cls._joint_coordinates(scene, used),
-            cls._joint_restraints(scene, used),
-            cls._frame_connectivity(scene, used),
-            cls._frame_section_assignments(scene, used),
-            cls._frame_local_axes(scene, used),
-            cls._frame_loads_distributed(scene, used),
-            cls._area_section_properties(scene, used),
-            cls._area_connectivity(scene, used),
-            cls._area_section_assignments(scene, used),
-            cls._link_connectivity(scene, used),
-            cls._link_assignments(scene, used),
-        ]
+                    cls._program_control(project),
+                    cls._active_dof(),
+                    cls._materials(project, used),
+                    cls._constraint_definitions(project),                  # ← YENİ
+                    cls._sections(project, used),
+                    cls._sd_section_tables(project, used),                 # ← YENİ
+                    cls._link_props(project, used),
+                    cls._load_patterns(project, used, scene),
+                    cls._load_cases(project, used, scene),
+                    cls._combinations(project, used),
+                    cls._joint_coordinates(scene, used),
+                    cls._joint_restraints(scene, used),
+                    cls._joint_constraint_assignments(scene, used),        # ← YENİ
+                    cls._joint_added_mass(scene, used),                    # ← YENİ
+                    cls._joint_springs(scene, used),                       # ← YENİ
+                    cls._frame_connectivity(scene, used),
+                    cls._frame_section_assignments(scene, used),
+                    cls._frame_local_axes(scene, used),
+                    cls._frame_insertion_points(scene, used),              # ← YENİ
+                    cls._frame_end_offsets(scene, used),                   # ← YENİ
+                    cls._frame_output_stations(scene, used),               # ← YENİ
+                    cls._frame_auto_mesh(scene, used),                     # ← YENİ
+                    cls._frame_modifiers(scene, used),                     # ← YENİ
+                    cls._frame_design_procs(scene, used),                  # ← YENİ
+                    cls._frame_load_transfer(scene, used),                 # ← YENİ
+                    cls._frame_loads_distributed(scene, used),
+                    cls._area_section_properties(scene, used),
+                    cls._area_connectivity(scene, used),
+                    cls._area_section_assignments(scene, used),
+                    cls._link_connectivity(scene, used),
+                    cls._link_assignments(scene, used),
+                ]
         sections = [s for s in sections if s]
         return "\n\n".join(sections) + "\n\nEND TABLE DATA\n"
 
@@ -258,7 +270,10 @@ class S2KExporter:
         for pat in list(used_patterns):
             if pat in getattr(project, "load_cases", {}):
                 used_cases.add(pat)
-
+        # SD-only section'lar (frame'lerde referans varsa)
+        for sd_name in getattr(project, "sd_sections", {}).keys() if hasattr(project, "sd_sections") else []:
+            used_sections.add(sd_name)
+            
         return {
             "nodes": used_nodes,
             "sections": used_sections,
@@ -337,9 +352,10 @@ class S2KExporter:
             nu = getattr(mat, "nu12", 0.3)
             density = getattr(mat, "density", 7850.0)
 
-            # density: kg/m³ varsayımıyla N/mm³ ve kg/mm³
-            unit_weight = float(density) * 9.81e-9
-            unit_mass = float(density) * 1e-12
+            # density kg/mm³ → UnitMass kg/mm³
+            unit_mass = float(density)
+            # UnitWeight N/mm³ = density * g (mm/s²) = density * 9806.65
+            unit_weight = float(density) * 9806.65
 
             mech.append(
                 f'   Material={name}   '
@@ -669,9 +685,10 @@ class S2KExporter:
             x = getattr(node, "x", 0.0)
             y = getattr(node, "y", 0.0)
             z = getattr(node, "z", 0.0)
+            sj = "Yes" if getattr(node, "special_jt", False) else "No"
             lines.append(
                 f'   Joint={label}   CoordSys=GLOBAL   CoordType=Cartesian   '
-                f'XorR={cls._g(x)}   Y={cls._g(y)}   Z={cls._g(z)}   SpecialJt=No'
+                f'XorR={cls._g(x)}   Y={cls._g(y)}   Z={cls._g(z)}   SpecialJt={sj}'
             )
 
         return "\n".join(lines) if len(lines) > 1 else ""
@@ -914,9 +931,13 @@ class S2KExporter:
             if label not in used_areas:
                 continue
 
-            sec_name = getattr(area, "section_name", "") or "PANEL1"
-            if sec_name in sections:
-                continue
+            sec_name = getattr(area, "section_name", "")
+            if not sec_name:
+                sec = getattr(area, "area_section", None)
+                if sec:
+                    sec_name = getattr(sec, "name", "")
+            if not sec_name:
+                sec_name = "PANEL1"
 
             mat = getattr(area, "material", None)
             mat_name = getattr(mat, "name", "") if mat else ""
@@ -1037,3 +1058,371 @@ class S2KExporter:
         if s in ("global", "g"):
             return "GLOBAL"
         return "Local"
+
+    @classmethod
+    def _joint_springs(cls, scene, used) -> str:
+        nodes = getattr(scene, "nodes", {}) or {}
+        used_nodes = used.get("nodes", set())
+        lines = ['TABLE:  "JOINT SPRING ASSIGNMENTS 1 - UNCOUPLED"']
+        has_any = False
+
+        for node in nodes.values():
+            label = getattr(node, "label", None) or f"J{node.unique_id}"
+            if label not in used_nodes:
+                continue
+            vals = (node.spring_u1, node.spring_u2, node.spring_u3,
+                    node.spring_r1, node.spring_r2, node.spring_r3)
+            if all(abs(v) < 1e-15 for v in vals):
+                continue
+            has_any = True
+            lines.append(
+                f'   Joint={label}   CoordSys=Local   '
+                f'U1={cls._g(node.spring_u1)}   '
+                f'U2={cls._g(node.spring_u2)}   '
+                f'U3={cls._g(node.spring_u3)}   '
+                f'R1={cls._g(node.spring_r1)}   '
+                f'R2={cls._g(node.spring_r2)}   '
+                f'R3={cls._g(node.spring_r3)}'
+            )
+
+        return "\n".join(lines) if has_any else ""
+
+    @classmethod
+    def _joint_added_mass(cls, scene, used) -> str:
+        nodes = getattr(scene, "nodes", {}) or {}
+        used_nodes = used.get("nodes", set())
+        lines = ['TABLE:  "JOINT ADDED MASS ASSIGNMENTS"']
+        has_any = False
+
+        for node in nodes.values():
+            label = getattr(node, "label", None) or f"J{node.unique_id}"
+            if label not in used_nodes:
+                continue
+            if not node.has_mass():
+                continue
+            has_any = True
+            lines.append(
+                f'   Joint={label}   '
+                f'CoordSys={node.mass_coord_sys}   '
+                f'Mass1={cls._g(node.added_mass_1)}   '
+                f'Mass2={cls._g(node.added_mass_2)}   '
+                f'Mass3={cls._g(node.added_mass_3)}   '
+                f'MMI1={cls._g(node.added_mmi_1)}   '
+                f'MMI2={cls._g(node.added_mmi_2)}   '
+                f'MMI3={cls._g(node.added_mmi_3)}'
+            )
+
+        return "\n".join(lines) if has_any else ""
+
+    @classmethod
+    def _joint_constraint_assignments(cls, scene, used) -> str:
+        nodes = getattr(scene, "nodes", {}) or {}
+        used_nodes = used.get("nodes", set())
+        lines = ['TABLE:  "JOINT CONSTRAINT ASSIGNMENTS"']
+        has_any = False
+
+        for node in nodes.values():
+            label = getattr(node, "label", None) or f"J{node.unique_id}"
+            if label not in used_nodes:
+                continue
+            cname = getattr(node, "constraint_name", None)
+            if not cname:
+                continue
+            has_any = True
+            lines.append(f'   Joint={label}   Constraint={cname}')
+
+        return "\n".join(lines) if has_any else ""
+
+    @classmethod
+    def _sd_section_tables(cls, project, used) -> str:
+        """SECTION DESIGNER PROPERTIES 01 + 16 + (opsiyonel 30)."""
+        secs = getattr(project, "sections", {}) or {}
+        used_secs = used.get("sections", set())
+
+        sd_sections = {
+            n: s for n, s in secs.items()
+            if n in used_secs and getattr(s, "sd_section", None) is not None
+        }
+        if not sd_sections:
+            return ""
+
+        general = ['TABLE:  "SECTION DESIGNER PROPERTIES 01 - GENERAL"']
+        polygon = ['TABLE:  "SECTION DESIGNER PROPERTIES 16 - SHAPE POLYGON"']
+
+        for name, sec in sd_sections.items():
+            sd = sec.sd_section
+            general.append(
+                f'   SectionName={name}   '
+                f'DesignType="{sd.design_type}"   '
+                f'DsgnOrChck={sd.dsgn_or_chck}'
+            )
+
+            for shape in sd.shapes:
+                for i, pt in enumerate(shape.points):
+                    line = (
+                        f'   SectionName={name}   '
+                        f'ShapeName={shape.name}   '
+                        f'X={cls._g(pt.x)}   Y={cls._g(pt.y)}   '
+                        f'Radius={cls._g(pt.radius)}'
+                    )
+                    if i == 0:
+                        line += (
+                            f'   ShapeMat={shape.material or "0"}   '
+                            f'ZOrder={shape.z_order}   '
+                            f'FillColor={cls._color_to_sap(shape.fill_color)}   '
+                            f'Reinforcing={"Yes" if shape.reinforcing else "No"}'
+                        )
+                    polygon.append(line)
+
+        parts = ["\n".join(general), "\n".join(polygon)]
+        return "\n\n".join(parts)
+
+
+    @staticmethod
+    def _color_to_sap(rgb) -> str:
+        """(r,g,b) 0-1 → SAP renk ismi veya BGR."""
+        if not rgb or len(rgb) < 3:
+            return "Gray8Dark"
+        r, g, b = int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255)
+        return str(r + (g << 8) + (b << 16))
+
+    @classmethod
+    def _constraint_definitions(cls, project) -> str:
+        defs = getattr(project, "constraint_definitions", {}) or {}
+        if not defs:
+            return ""
+
+        from collections import defaultdict
+        by_type = defaultdict(list)
+
+        for name, cd in defs.items():
+            ct = getattr(cd, "constraint_type", None)
+            ct_name = getattr(ct, "name", "") if ct else ""
+            if not ct_name:
+                continue
+            by_type[ct_name].append((name, cd))
+
+        parts = []
+        for ct_name, items in by_type.items():
+            header = f'TABLE:  "CONSTRAINT DEFINITIONS - {ct_name}"'
+            lines = [header]
+            for name, cd in items:
+                base = f'   Name={name}   CoordSys={cd.coord_sys}'
+
+                if ct_name == "DIAPHRAGM":
+                    lines.append(
+                        f'{base}   Axis={cd.axis}   '
+                        f'MultiLevel={"Yes" if cd.multi_level else "No"}'
+                    )
+                elif ct_name in ("BODY", "EQUAL", "LINE", "WELD"):
+                    dofs = "   ".join(
+                        f'{k.upper() if len(k)==2 else k}='
+                        f'{"Yes" if getattr(cd, f"u{k[-1]}" if k.startswith("u") else f"r{k[-1]}", False) else "No"}'
+                        for k in ("ux", "uy", "uz", "rx", "ry", "rz")
+                    )
+                    # daha temiz:
+                    flags = []
+                    for attr, sap in (("ux","UX"),("uy","UY"),("uz","UZ"),
+                                    ("rx","RX"),("ry","RY"),("rz","RZ")):
+                        flags.append(f'{sap}={"Yes" if getattr(cd, attr, False) else "No"}')
+                    dofs = "   ".join(flags)
+                    tol = f'   Tolerance={cls._g(cd.tolerance)}' if ct_name == "WELD" and cd.tolerance else ""
+                    lines.append(f'{base}   {dofs}{tol}')
+                elif ct_name == "LOCAL":
+                    flags = []
+                    for attr, sap in (("u1","U1"),("u2","U2"),("u3","U3"),
+                                    ("r1","R1"),("r2","R2"),("r3","R3")):
+                        flags.append(f'{sap}={"Yes" if getattr(cd, attr, False) else "No"}')
+                    lines.append(f'   Name={name}   {"   ".join(flags)}')
+                elif ct_name in ("BEAM", "PLATE", "ROD"):
+                    lines.append(f'{base}   Axis={cd.axis}')
+
+            parts.append("\n".join(lines))
+
+        return "\n\n".join(parts)
+
+    # ==================================================================
+    # FRAME INSERTION POINTS
+    # ==================================================================
+    @classmethod
+    def _frame_insertion_points(cls, scene, used) -> str:
+        frames = getattr(scene, "frames", {}) or {}
+        used_frames = used.get("frames", set())
+        lines = ['TABLE:  "FRAME INSERTION POINT ASSIGNMENTS"']
+        has_any = False
+
+        for frame in frames.values():
+            label = getattr(frame, "label", None) or f"F{frame.unique_id}"
+            if label not in used_frames:
+                continue
+            has_any = True
+            ji = frame.jt_offset_i or (0.0, 0.0, 0.0)
+            jj = frame.jt_offset_j or (0.0, 0.0, 0.0)
+            lines.append(
+                f'   Frame={label}   CardinalPt="{frame.cardinal_pt}"   '
+                f'Mirror2={"Yes" if frame.mirror2 else "No"}   '
+                f'Mirror3={"Yes" if frame.mirror3 else "No"}   '
+                f'Transform={"Yes" if frame.transform else "No"}   '
+                f'CoordSys={frame.insertion_coord_sys}   '
+                f'JtOffsetXI={cls._g(ji[0])}   JtOffsetYI={cls._g(ji[1])}   JtOffsetZI={cls._g(ji[2])}   '
+                f'JtOffsetXJ={cls._g(jj[0])}   JtOffsetYJ={cls._g(jj[1])}   JtOffsetZJ={cls._g(jj[2])}'
+            )
+
+        return "\n".join(lines) if has_any else ""
+
+    # ==================================================================
+    # FRAME END OFFSETS
+    # ==================================================================
+    @classmethod
+    def _frame_end_offsets(cls, scene, used) -> str:
+        frames = getattr(scene, "frames", {}) or {}
+        used_frames = used.get("frames", set())
+        lines = ['TABLE:  "FRAME OFFSET ALONG LENGTH ASSIGNMENTS"']
+        has_any = False
+
+        for frame in frames.values():
+            label = getattr(frame, "label", None) or f"F{frame.unique_id}"
+            if label not in used_frames:
+                continue
+            if (abs(frame.offset_length_i) < 1e-15 and
+                abs(frame.offset_length_j) < 1e-15 and
+                abs(frame.rigid_factor) < 1e-15):
+                continue
+            has_any = True
+            lines.append(
+                f'   Frame={label}   Type={frame.offset_type}   '
+                f'LengthI={cls._g(frame.offset_length_i)}   '
+                f'LengthJ={cls._g(frame.offset_length_j)}   '
+                f'RigidFactor={cls._g(frame.rigid_factor)}'
+            )
+
+        return "\n".join(lines) if has_any else ""
+
+    # ==================================================================
+    # FRAME OUTPUT STATIONS
+    # ==================================================================
+    @classmethod
+    def _frame_output_stations(cls, scene, used) -> str:
+        frames = getattr(scene, "frames", {}) or {}
+        used_frames = used.get("frames", set())
+        lines = ['TABLE:  "FRAME OUTPUT STATION ASSIGNMENTS"']
+        has_any = False
+
+        for frame in frames.values():
+            label = getattr(frame, "label", None) or f"F{frame.unique_id}"
+            if label not in used_frames:
+                continue
+            has_any = True
+            max_spcg = getattr(frame, "max_sta_spcg", None)
+            max_str = f'   MaxStaSpcg={cls._g(max_spcg)}' if max_spcg else ""
+            lines.append(
+                f'   Frame={label}   '
+                f'StationType={frame.station_type}   '
+                f'MinNumSta={int(getattr(frame, "min_num_sta", 3))}   '
+                f'AddAtElmInt={"Yes" if getattr(frame, "add_at_elm_int", True) else "No"}   '
+                f'AddAtPtLoad={"Yes" if getattr(frame, "add_at_pt_load", True) else "No"}'
+                f'{max_str}'
+            )
+
+        return "\n".join(lines) if has_any else ""
+
+    # ==================================================================
+    # FRAME AUTO MESH
+    # ==================================================================
+    @classmethod
+    def _frame_auto_mesh(cls, scene, used) -> str:
+        frames = getattr(scene, "frames", {}) or {}
+        used_frames = used.get("frames", set())
+        lines = ['TABLE:  "FRAME AUTO MESH ASSIGNMENTS"']
+        has_any = False
+
+        for frame in frames.values():
+            label = getattr(frame, "label", None) or f"F{frame.unique_id}"
+            if label not in used_frames:
+                continue
+            if not getattr(frame, "auto_mesh", False):
+                continue
+            has_any = True
+            lines.append(
+                f'   Frame={label}   AutoMesh=Yes   '
+                f'AtJoints={"Yes" if getattr(frame, "mesh_at_joints", False) else "No"}   '
+                f'AtFrames={"Yes" if getattr(frame, "mesh_at_frames", False) else "No"}   '
+                f'NumSegments={int(getattr(frame, "mesh_num_segments", 0))}   '
+                f'MaxLength={cls._g(getattr(frame, "mesh_max_length", 0.0))}   '
+                f'MaxDegrees={cls._g(getattr(frame, "mesh_max_degrees", 0.0))}'
+            )
+
+        return "\n".join(lines) if has_any else ""
+
+    # ==================================================================
+    # FRAME PROPERTY MODIFIERS
+    # ==================================================================
+    @classmethod
+    def _frame_modifiers(cls, scene, used) -> str:
+        frames = getattr(scene, "frames", {}) or {}
+        used_frames = used.get("frames", set())
+        lines = ['TABLE:  "FRAME PROPERTY MODIFIERS"']
+        has_any = False
+
+        for frame in frames.values():
+            label = getattr(frame, "label", None) or f"F{frame.unique_id}"
+            if label not in used_frames:
+                continue
+            mods = getattr(frame, "modifiers", {}) or {}
+            if not mods:
+                continue
+            has_any = True
+            lines.append(
+                f'   Frame={label}   '
+                f'AMod={cls._g(mods.get("amod", 1.0))}   '
+                f'AS2Mod={cls._g(mods.get("as2mod", 1.0))}   '
+                f'AS3Mod={cls._g(mods.get("as3mod", 1.0))}   '
+                f'JMod={cls._g(mods.get("jmod", 1.0))}   '
+                f'I22Mod={cls._g(mods.get("i22mod", 1.0))}   '
+                f'I33Mod={cls._g(mods.get("i33mod", 1.0))}   '
+                f'MassMod={cls._g(mods.get("massmod", 1.0))}   '
+                f'WeightMod={cls._g(mods.get("weightmod", 1.0))}'
+            )
+
+        return "\n".join(lines) if has_any else ""
+
+    # ==================================================================
+    # FRAME DESIGN PROCEDURES
+    # ==================================================================
+    @classmethod
+    def _frame_design_procs(cls, scene, used) -> str:
+        frames = getattr(scene, "frames", {}) or {}
+        used_frames = used.get("frames", set())
+        lines = ['TABLE:  "FRAME DESIGN PROCEDURES"']
+        has_any = False
+
+        for frame in frames.values():
+            label = getattr(frame, "label", None) or f"F{frame.unique_id}"
+            if label not in used_frames:
+                continue
+            proc = getattr(frame, "design_proc", "From Material") or "From Material"
+            has_any = True
+            lines.append(f'   Frame={label}   DesignProc="{proc}"')
+
+        return "\n".join(lines) if has_any else ""
+
+    # ==================================================================
+    # FRAME LOAD TRANSFER
+    # ==================================================================
+    @classmethod
+    def _frame_load_transfer(cls, scene, used) -> str:
+        frames = getattr(scene, "frames", {}) or {}
+        used_frames = used.get("frames", set())
+        lines = ['TABLE:  "FRAME LOAD TRANSFER OPTIONS"']
+        has_any = False
+
+        for frame in frames.values():
+            label = getattr(frame, "label", None) or f"F{frame.unique_id}"
+            if label not in used_frames:
+                continue
+            if not getattr(frame, "load_transfer", True):
+                continue
+            has_any = True
+            lines.append(f'   Frame={label}   Transfer=Yes')
+
+        return "\n".join(lines) if has_any else ""

@@ -358,7 +358,7 @@ class BaseRenderer(ABC, Generic[T]):
                         np.full(simple_vc, e.unique_id, dtype=np.uint32)
                     )
                 else:
-                    logger.warning(...)
+                    logger.debug("...build_simple")
             else:
                 self.elem_to_simple_vcount[e.unique_id] = 0   # ← boş element
 
@@ -769,7 +769,15 @@ class FrameRenderer(BaseRenderer[Frame]):
         self.simple_draw_mode = GL_LINES
 
     def build(self, f):
-        return self.builder.build(f)
+        v, c, i = self.builder.build(f)
+        logger.debug(
+            "[FrameRenderer.build] frame=%s sd=%s verts=%d idx=%d",
+            getattr(f, "label", "?"),
+            "VAR" if getattr(getattr(f, "section", None), "sd_section", None) else "YOK",
+            len(v) // 6 if len(v) > 0 else 0,
+            len(i) if len(i) > 0 else 0,
+        )
+        return v, c, i
 
     def build_lines(self, f):
         return self.builder.build_lines(f)

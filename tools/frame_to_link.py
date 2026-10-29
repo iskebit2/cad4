@@ -65,7 +65,7 @@ def convert_frames_to_links(
 
     # LinkProp kontrolü
     if link_prop_name not in project.link_props:
-        logger.warning(
+        logger.debug(
             f"[Frame→Link] '{link_prop_name}' projede yok, DefaultLink oluşturuluyor"
         )
         ensure_default_link_prop(project)
@@ -87,7 +87,7 @@ def convert_frames_to_links(
         if delete_original:
             ok = scene.remove_element(frame)
             if not ok:
-                logger.warning(f"[Frame→Link] Frame '{frame.label}' silinemedi")
+                logger.debug(f"[Frame→Link] Frame '{frame.label}' silinemedi")
         else:
             frame.is_visible = False
             frame.mark_dirty()

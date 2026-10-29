@@ -91,6 +91,12 @@ class Node(Element):
         "added_mmi_1": Dimension.MASS_INERTIA,
         "added_mmi_2": Dimension.MASS_INERTIA,
         "added_mmi_3": Dimension.MASS_INERTIA,
+        "spring.0": Dimension.FORCE,
+        "spring.1": Dimension.FORCE,
+        "spring.2": Dimension.FORCE,
+        "spring.3": Dimension.MOMENT,
+        "spring.4": Dimension.MOMENT,
+        "spring.5": Dimension.MOMENT,
     }
 
     def __init__(self, x: float, y: float, z: float, label: str = "",
@@ -102,7 +108,7 @@ class Node(Element):
         self._y = float(y)
         self._z = float(z)
         self.restraint = restraint
-        self.spring = tuple(spring)
+        # self.spring = tuple(spring)
         self.dof_indices: list[int | None] = [None] * 6
         self.connected: list[tuple[E.ObjType, str]] = []
         self.loads: list[D.PointLoad] = []
@@ -130,6 +136,13 @@ class Node(Element):
         self.added_mmi_1: float = 0.0
         self.added_mmi_2: float = 0.0
         self.added_mmi_3: float = 0.0
+
+        self.spring_u1: float = 0.0
+        self.spring_u2: float = 0.0
+        self.spring_u3: float = 0.0
+        self.spring_r1: float = 0.0
+        self.spring_r2: float = 0.0
+        self.spring_r3: float = 0.0
 
         # --- JOINT PATTERN (v10) ---
         self.load_pattern: str = ""

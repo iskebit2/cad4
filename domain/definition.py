@@ -26,6 +26,7 @@ from data.enums import (
     SectionCutResultType,
     SectionType,
     SpectrumSourceType,
+    ConstraintType
 )
 from data.seismic import get_tsc2018_site_coefficients
 
@@ -992,7 +993,7 @@ class SDShape:
     fill_color: tuple[float, float, float] = (0.8, 0.8, 0.8)
     points: list[SDPolygonPoint] = field(default_factory=list)
     params: dict[str, Any] = field(default_factory=dict)
-
+    reinforcing: bool = False
 
 @dataclass
 class SDSection:
@@ -1051,3 +1052,30 @@ class WindDirectionResult:
     e: float = 0.0
     geometry: dict[str, Any] = field(default_factory=dict)
     zones_data: list[dict[str, Any]] = field(default_factory=list)
+
+@dataclass
+class ConstraintDefinition:
+    name: str = ""
+    constraint_type: ConstraintType | None = None
+    coord_sys: str = "GLOBAL"
+
+    axis: str = "Z"
+
+    ux: bool = False
+    uy: bool = False
+    uz: bool = False
+    rx: bool = False
+    ry: bool = False
+    rz: bool = False
+
+    u1: bool = False
+    u2: bool = False
+    u3: bool = False
+    r1: bool = False
+    r2: bool = False
+    r3: bool = False
+
+    multi_level: bool = False
+    tolerance: float = 0.0
+
+    __unit_schema__ = {"tolerance": Dimension.LENGTH}

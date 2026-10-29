@@ -99,8 +99,41 @@ class S2KParser:
                 continue
 
             rows = self._parse_rows(lines[1:])
-            if rows:
-                self.tables[name] = pd.DataFrame(rows)
+            if not rows:
+                continue
+
+            new_df = pd.DataFrame(rows)
+
+            if name in self.tables:
+                # Aynı isimli tablo → SectionName/Name bazlı birleştir
+                old_df = self.tables[name]
+                key = next(
+                    (c for c in ("SectionName", "Name", "Joint", "Frame", "Area", "Link")
+                     if c in old_df.columns and c in new_df.columns),
+                    None,
+                )
+                if key is None:
+                    # Anahtar yok → concat
+                    self.tables[name] = pd.concat(
+                        [old_df, new_df], ignore_index=True,
+                    )
+                else:
+                    # Satır bazlı merge: aynı key → sütunları birleştir
+                    merged = old_df.copy()
+                    for _, new_row in new_df.iterrows():
+                        k_val = new_row.get(key)
+                        match = merged[merged[key] == k_val]
+                        if match.empty:
+                            merged = pd.concat([merged, new_row.to_frame().T],
+                                               ignore_index=True)
+                        else:
+                            idx = match.index[0]
+                            for col, val in new_row.items():
+                                if pd.notna(val):
+                                    merged.at[idx, col] = val
+                    self.tables[name] = merged
+            else:
+                self.tables[name] = new_df
 
         logger.info("[Parser] %d tablo parse edildi", len(self.tables))
 
@@ -212,7 +245,7 @@ class S2KLoader:
         tables = self.parser.get_all_tables()
 
         if not tables:
-            logger.warning("[Loader] Tablo yok")
+            logger.debug("[Loader] Tablo yok")
             return ctx
 
         sorted_router = self._sorted_router()
@@ -248,7 +281,24 @@ class S2KLoader:
     # BUILDER
     # ------------------------------------------------------------------
     def _apply_ctx_to_builder(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
-        # Materials
+        """ctx'teki tüm tanımları builder'a aktar.
+
+        Sıra önemli: material → section → area_section → SD → patterns/cases/combos.
+        """
+        self._apply_materials(ctx, builder)
+        self._apply_sections(ctx, builder)
+        self._apply_area_sections(ctx, builder)
+        self._apply_load_patterns(ctx, builder)
+        self._apply_load_cases(ctx, builder)
+        self._apply_combinations(ctx, builder)
+        self._apply_constraint_definitions(ctx, builder)
+        self._apply_grid(ctx, builder)
+
+
+    # ------------------------------------------------------------------
+    # MATERIALS
+    # ------------------------------------------------------------------
+    def _apply_materials(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
         for mat in ctx.materials.values():
             builder.add_material(
                 mat.name,
@@ -259,11 +309,44 @@ class S2KLoader:
                 nu12=mat.nu12,
             )
 
-        # Sections
+
+    # ------------------------------------------------------------------
+    # SECTIONS
+    # ------------------------------------------------------------------
+    def _apply_sections(self, ctx, builder):
+        from data.enums import SectionType
+        from domain.definition import Section as DomSection
+
+        # 1) SD-only section'lar
+        for name, sd in ctx.sd_sections.items():
+            if name not in ctx.sections:
+                ctx.sections[name] = DomSection(
+                    name=name,
+                    profile_type=SectionType.CUSTOM,
+                    sd_section=sd,
+                )
+
+        # 2) Tüm section'ları işle
         for sec in ctx.sections.values():
+            sd = ctx.sd_sections.get(sec.name)
+            if sd is not None:
+                sec.sd_section = sd
+
+                # SD varsa profile_params'ı türet/zenginleştir (h/b/I33/I22 vs.)
+                derived = _derive_params_from_sd(sd)
+                if derived:
+                    merged = dict(sec.profile_params or {})
+                    for k, v in derived.items():
+                        # 0 veya None değerleri ezme
+                        if merged.get(k) in (None, 0.0):
+                            merged[k] = v
+                    sec.profile_params = merged
+
+            # material
             mat = None
             if sec.material is not None:
                 mat = builder.materials.get(sec.material.name)
+
             builder.add_section(
                 sec.name,
                 profile_type=sec.profile_type,
@@ -274,14 +357,21 @@ class S2KLoader:
                 catalog_props=getattr(sec, "catalog_props", {}),
                 catalog_source=getattr(sec, "catalog_source", ""),
             )
-            # yeni alanları doğrudan project.sections'a yansıt
             builder.project.sections[sec.name] = sec
 
-        # AreaSections
-        for name, sec in ctx.area_section_objects.items():
+
+    # ------------------------------------------------------------------
+    # AREA SECTIONS
+    # ------------------------------------------------------------------
+    def _apply_area_sections(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+        for sec in ctx.area_section_objects.values():
             builder.project.add_area_section(sec)
 
-        # Load patterns
+
+    # ------------------------------------------------------------------
+    # LOAD PATTERNS
+    # ------------------------------------------------------------------
+    def _apply_load_patterns(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
         for lp in ctx.load_patterns.values():
             builder.add_load_pattern(
                 lp.name,
@@ -289,7 +379,11 @@ class S2KLoader:
                 self_wt_mult=lp.self_wt_mult,
             )
 
-        # Load cases
+
+    # ------------------------------------------------------------------
+    # LOAD CASES
+    # ------------------------------------------------------------------
+    def _apply_load_cases(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
         for lc in ctx.load_cases.values():
             builder.add_load_case(
                 lc.name,
@@ -300,7 +394,11 @@ class S2KLoader:
                 run_case=lc.run_case,
             )
 
-        # Combinations
+
+    # ------------------------------------------------------------------
+    # COMBINATIONS
+    # ------------------------------------------------------------------
+    def _apply_combinations(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
         for combo in ctx.load_combos.values():
             builder.add_combination(
                 combo.name,
@@ -308,7 +406,19 @@ class S2KLoader:
                 auto_design=combo.auto_design,
             )
 
-        # Grid / constraints
+
+    # ------------------------------------------------------------------
+    # CONSTRAINT DEFINITIONS
+    # ------------------------------------------------------------------
+    def _apply_constraint_definitions(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+        for cd in ctx.constraint_definitions.values():
+            builder.project.add_constraint_definition(cd)
+
+
+    # ------------------------------------------------------------------
+    # GRID / CONSTRAINTS
+    # ------------------------------------------------------------------
+    def _apply_grid(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
         if ctx.grid_lines:
             builder.set_grid_lines(ctx.grid_lines)
         if ctx.joint_constraints:
@@ -342,3 +452,45 @@ class S2KLoader:
     def _fallback_router():
         """build_router() sonucu — modül yüklenirken bir kez."""
         return build_router()
+
+def _derive_params_from_sd(sd) -> dict:
+    """SD polygon(lar)dan bbox + analitik özellik türet."""
+    from math import isfinite
+
+    all_pts = []
+    for shape in sd.shapes:
+        for pt in shape.points:
+            all_pts.append((pt.x, pt.y))
+
+    if not all_pts:
+        return {}
+
+    xs = [p[0] for p in all_pts]
+    ys = [p[1] for p in all_pts]
+    h = max(ys) - min(ys)
+    b = max(xs) - min(xs)
+
+    total_area = 0.0
+    for shape in sd.shapes:
+        pts = [(p.x, p.y) for p in shape.points]
+        if len(pts) < 3:
+            continue
+        a = 0.0
+        n = len(pts)
+        for i in range(n):
+            x0, y0 = pts[i]
+            x1, y1 = pts[(i + 1) % n]
+            a += x0 * y1 - x1 * y0
+        a *= 0.5
+        if isfinite(a):
+            total_area += abs(a)
+
+    I33 = b * h**3 / 12.0 if h > 0 and b > 0 else 0.0
+    I22 = h * b**3 / 12.0 if h > 0 and b > 0 else 0.0
+
+    return {
+        "h": h, "b": b,
+        "Area": total_area,
+        "I33": I33, "I22": I22, "J": I33 + I22,
+        "AS2": total_area / 2.0, "AS3": total_area / 2.0,
+    }

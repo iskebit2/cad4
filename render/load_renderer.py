@@ -247,7 +247,7 @@ class LoadRenderer:
             self.tri_count = 0
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
-        logger.warning("[LR.update] show_frame=%s show_point=%s lines_v=%d tris_v=%d",
+        logger.debug("[LR.update] show_frame=%s show_point=%s lines_v=%d tris_v=%d",
                self.show_frame_loads, self.show_point_loads,
                len(lines) // 6 if lines else 0,
                len(tris) // 3 if tris else 0)
@@ -276,7 +276,7 @@ class LoadRenderer:
     # ==================================================================
     def _emit_load_set(self, frame, ls, lines, tris, cam_scale):
         segments = getattr(ls, "segments", None) or []
-        logger.warning("[LR.emit] frame=%s pattern=%s segments=%d q1=%s",
+        logger.debug("[LR.emit] frame=%s pattern=%s segments=%d q1=%s",
                    getattr(frame, "label", "?"),
                    getattr(ls, "pattern_name", "?"),
                    len(segments),
@@ -430,7 +430,7 @@ class LoadRenderer:
                 right = hb - side * head_w
 
                 self._push_tri(tris, tip, left, right, color)
-                logger.warning("[LR.profile] frame=%s L=%.2f profile_h=%.2f",
+                logger.debug("[LR.profile] frame=%s L=%.2f profile_h=%.2f",
                frame.label, L, profile_h)
 
     @staticmethod

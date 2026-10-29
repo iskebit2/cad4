@@ -227,7 +227,7 @@ def create_nodes(builder, ctx: LoadContext) -> dict[str, Node]:
             y = float(row.get("Y", 0))
             z = float(row.get("Z", 0))
         except (ValueError, TypeError):
-            logger.warning("[Node] %s: geçersiz koordinat", jid)
+            logger.debug("[Node] %s: geçersiz koordinat", jid)
             continue
 
         node = builder.create_node(x, y, z, label=jid, restraint=restraints.get(jid))
@@ -238,6 +238,7 @@ def create_nodes(builder, ctx: LoadContext) -> dict[str, Node]:
 
     _apply_joint_constraints(ctx, out)
     _apply_joint_added_mass(ctx, out)
+    _apply_joint_springs(ctx, out)
     return out
 
 
@@ -247,6 +248,17 @@ def _apply_joint_constraints(ctx: LoadContext, node_map: dict[str, Node]) -> Non
         if node is not None:
             node.constraint_name = cname
 
+def _apply_joint_springs(ctx, node_map: dict[str, Node]) -> None:
+    for jid, data in ctx.joint_springs.items():
+        node = node_map.get(jid)
+        if node is None:
+            continue
+        node.spring_u1 = float(data.get("u1", 0.0))
+        node.spring_u2 = float(data.get("u2", 0.0))
+        node.spring_u3 = float(data.get("u3", 0.0))
+        node.spring_r1 = float(data.get("r1", 0.0))
+        node.spring_r2 = float(data.get("r2", 0.0))
+        node.spring_r3 = float(data.get("r3", 0.0))
 
 def _apply_joint_added_mass(ctx: LoadContext, node_map: dict[str, Node]) -> None:
     if not ctx.joint_added_mass:
@@ -310,6 +322,8 @@ def create_frames(
     _apply_frame_modifiers(ctx, out)
     _apply_frame_design_procs(ctx, out)
     _apply_frame_time_dependent(ctx, out)
+    _apply_frame_load_transfer(ctx, out)
+    _apply_frame_local_axes(ctx, out)
 
     return out, count
 
@@ -320,19 +334,19 @@ def _apply_frame_insertion_points(ctx, frame_map):
         if frame is None:
             continue
         frame.cardinal_pt = str(data.get("cardinal_pt", "10 (centroid)"))
-        frame.mirror2 = _to_bool(data.get("mirror2"))
-        frame.mirror3 = _to_bool(data.get("mirror3"))
-        frame.transform = _to_bool(data.get("transform"), True)
+        frame.mirror2 = bool(data.get("mirror2"))
+        frame.mirror3 = bool(data.get("mirror3"))
+        frame.transform = bool(data.get("transform", True))
         frame.insertion_coord_sys = str(data.get("coord_sys", "Local"))
         frame.jt_offset_i = (
-            float(data.get("jt_offset_xi", 0.0) or 0.0),
-            float(data.get("jt_offset_yi", 0.0) or 0.0),
-            float(data.get("jt_offset_zi", 0.0) or 0.0),
+            float(data.get("jt_offset_xi", 0.0)),
+            float(data.get("jt_offset_yi", 0.0)),
+            float(data.get("jt_offset_zi", 0.0)),
         )
         frame.jt_offset_j = (
-            float(data.get("jt_offset_xj", 0.0) or 0.0),
-            float(data.get("jt_offset_yj", 0.0) or 0.0),
-            float(data.get("jt_offset_zj", 0.0) or 0.0),
+            float(data.get("jt_offset_xj", 0.0)),
+            float(data.get("jt_offset_yj", 0.0)),
+            float(data.get("jt_offset_zj", 0.0)),
         )
 
 
@@ -364,6 +378,20 @@ def _apply_frame_output_stations(ctx, frame_map):
         frame.add_at_pt_load = _to_bool(r.get("AddAtPtLoad"), True)
         frame.max_sta_spcg = _opt_float(r.get("MaxStaSpcg"))
 
+def _apply_frame_load_transfer(ctx, frame_map):
+    for fid, transfer in ctx.frame_load_transfer.items():
+        frame = frame_map.get(fid)
+        if frame is not None:
+            frame.load_transfer = bool(transfer)
+
+def _apply_frame_local_axes(ctx, frame_map):
+    for fid, data in ctx.frame_local_axes.items():
+        frame = frame_map.get(fid)
+        if frame is None:
+            continue
+        frame.rotation_deg = float(data.get("angle", 0.0))
+        frame.mirror_abt2 = bool(data.get("mirror_abt2", False))
+        frame.mirror_abt3 = bool(data.get("mirror_abt3", False))
 
 def _apply_frame_auto_mesh(ctx, frame_map):
     for fid, data in ctx.frame_auto_mesh.items():
@@ -496,7 +524,7 @@ def create_links(builder, ctx: LoadContext, node_map: dict[str, Node]) -> int:
             )
             count += 1
         except Exception as e:
-            logger.warning("[Link] %s: %s", lid, e)
+            logger.debug("[Link] %s: %s", lid, e)
     return count
 
 

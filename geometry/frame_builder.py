@@ -7,7 +7,9 @@ import numpy as np
 from domain.element import Frame
 from geometry.profile_generator import ProfileGenerator
 
-# logger = CadLogger.get(__name__)
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 def normalize(v):
@@ -42,16 +44,9 @@ class FrameBuilder:
     def _prepare_geometry(self, frame):
         section = frame.section
         params = dict(section.profile_params or {})
-        if getattr(section, 'sd_section', None) is not None:
-            params["sd_section"] = section.sd_section
-
-        # pass(
-        #                 f"[FrameBuilder-DIAG] section='{section.name}' "
-        #                 f"type={section.profile_type} "
-        #                 f"sd={'VAR' if getattr(section, 'sd_section', None) else 'YOK'} "
-        #                 f"params_keys={list(params.keys())} "
-        #                 f"has_sd_in_params={'sd_section' in params}"
-        #             )
+        sd = getattr(section, "sd_section", None)
+        if sd is not None:
+            params["sd_section"] = sd
                             
         profile = self.profile_gen.get_profile(section.profile_type, params)
 
@@ -151,7 +146,7 @@ class FrameBuilder:
         end_ring = end + (R @ local.T).T
 
         return profile, start_ring, end_ring
-
+    
     def build(
         self,
         frame: Frame

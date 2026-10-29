@@ -47,6 +47,12 @@ def node_to_values(node) -> dict[str, Any]:
         "added_mmi_2": float(getattr(node, "added_mmi_2", 0.0)),
         "added_mmi_3": float(getattr(node, "added_mmi_3", 0.0)),
         "mass_coord_sys": getattr(node, "mass_coord_sys", "Joint Local"),
+        "spring_u1": float(getattr(node, "spring_u1", 0.0)),
+        "spring_u2": float(getattr(node, "spring_u2", 0.0)),
+        "spring_u3": float(getattr(node, "spring_u3", 0.0)),
+        "spring_r1": float(getattr(node, "spring_r1", 0.0)),
+        "spring_r2": float(getattr(node, "spring_r2", 0.0)),
+        "spring_r3": float(getattr(node, "spring_r3", 0.0)),
     }
 
 
@@ -76,6 +82,11 @@ def values_to_node(node, v: dict[str, Any]) -> None:
         for k in ("ux", "uy", "uz", "rx", "ry", "rz"):
             if k in r:
                 setattr(node.restraint, k, bool(r[k]))
+
+    for key in ("spring_u1", "spring_u2", "spring_u3",
+            "spring_r1", "spring_r2", "spring_r3"):
+        if key in v:
+            setattr(node, key, float(v[key]))
 
     for key in (
         "mass_1", "mass_2", "mass_3",
@@ -156,6 +167,46 @@ def frame_to_values(frame) -> dict[str, Any]:
         "color": list(frame.color[:3]) if frame.color else None,
         "rotation_deg": float(getattr(frame, "rotation_deg", 0.0)),
         "section": sec,
+
+        # --- Insertion Point ---
+        "cardinal_pt": getattr(frame, "cardinal_pt", "10 (centroid)"),
+        "mirror2": bool(getattr(frame, "mirror2", False)),
+        "mirror3": bool(getattr(frame, "mirror3", False)),
+        "transform": bool(getattr(frame, "transform", True)),
+        "insertion_coord_sys": getattr(frame, "insertion_coord_sys", "Local"),
+        "jt_offset_i": tuple(getattr(frame, "jt_offset_i", (0.0, 0.0, 0.0))),
+        "jt_offset_j": tuple(getattr(frame, "jt_offset_j", (0.0, 0.0, 0.0))),
+
+        # --- End Offset ---
+        "offset_type": getattr(frame, "offset_type", "User"),
+        "offset_length_i": float(getattr(frame, "offset_length_i", 0.0)),
+        "offset_length_j": float(getattr(frame, "offset_length_j", 0.0)),
+        "rigid_factor": float(getattr(frame, "rigid_factor", 0.0)),
+
+        # --- Output Stations ---
+        "station_type": getattr(frame, "station_type", "MinNumSta"),
+        "min_num_sta": int(getattr(frame, "min_num_sta", 3)),
+        "add_at_elm_int": bool(getattr(frame, "add_at_elm_int", True)),
+        "add_at_pt_load": bool(getattr(frame, "add_at_pt_load", True)),
+        "max_sta_spcg": getattr(frame, "max_sta_spcg", None),
+
+        # --- Auto Mesh ---
+        "auto_mesh": bool(getattr(frame, "auto_mesh", False)),
+        "mesh_at_joints": bool(getattr(frame, "mesh_at_joints", False)),
+        "mesh_at_frames": bool(getattr(frame, "mesh_at_frames", False)),
+        "mesh_num_segments": int(getattr(frame, "mesh_num_segments", 0)),
+        "mesh_max_length": float(getattr(frame, "mesh_max_length", 0.0)),
+        "mesh_max_degrees": float(getattr(frame, "mesh_max_degrees", 0.0)),
+
+        # --- Local Axes ---
+        "mirror_abt2": bool(getattr(frame, "mirror_abt2", False)),
+        "mirror_abt3": bool(getattr(frame, "mirror_abt3", False)),
+
+        # --- Design ---
+        "design_proc": getattr(frame, "design_proc", "From Material"),
+        "load_transfer": bool(getattr(frame, "load_transfer", True)),
+
+        # --- Yük setleri ---
         "dist_load_sets_list": sets_list,
     }
 
@@ -169,8 +220,52 @@ def values_to_frame(frame, v: dict[str, Any]) -> None:
     sec = v.get("section")
     if sec is not None and hasattr(sec, "name") and hasattr(sec, "profile_type"):
         frame.section = sec
-        frame.mark_dirty()
 
+    # Insertion
+    frame.cardinal_pt = str(v.get("cardinal_pt", frame.cardinal_pt))
+    frame.mirror2 = bool(v.get("mirror2", frame.mirror2))
+    frame.mirror3 = bool(v.get("mirror3", frame.mirror3))
+    frame.transform = bool(v.get("transform", frame.transform))
+    frame.insertion_coord_sys = str(v.get("insertion_coord_sys", frame.insertion_coord_sys))
+    ji = v.get("jt_offset_i")
+    if isinstance(ji, (tuple, list)) and len(ji) == 3:
+        frame.jt_offset_i = tuple(float(x) for x in ji)
+    jj = v.get("jt_offset_j")
+    if isinstance(jj, (tuple, list)) and len(jj) == 3:
+        frame.jt_offset_j = tuple(float(x) for x in jj)
+
+    # End Offset
+    frame.offset_type = str(v.get("offset_type", frame.offset_type))
+    frame.offset_length_i = float(v.get("offset_length_i", frame.offset_length_i))
+    frame.offset_length_j = float(v.get("offset_length_j", frame.offset_length_j))
+    frame.rigid_factor = float(v.get("rigid_factor", frame.rigid_factor))
+
+    # Output Stations
+    frame.station_type = str(v.get("station_type", frame.station_type))
+    frame.min_num_sta = int(v.get("min_num_sta", frame.min_num_sta))
+    frame.add_at_elm_int = bool(v.get("add_at_elm_int", frame.add_at_elm_int))
+    frame.add_at_pt_load = bool(v.get("add_at_pt_load", frame.add_at_pt_load))
+    if "max_sta_spcg" in v:
+        val = v["max_sta_spcg"]
+        frame.max_sta_spcg = float(val) if val is not None else None
+
+    # Auto Mesh
+    frame.auto_mesh = bool(v.get("auto_mesh", frame.auto_mesh))
+    frame.mesh_at_joints = bool(v.get("mesh_at_joints", frame.mesh_at_joints))
+    frame.mesh_at_frames = bool(v.get("mesh_at_frames", frame.mesh_at_frames))
+    frame.mesh_num_segments = int(v.get("mesh_num_segments", frame.mesh_num_segments))
+    frame.mesh_max_length = float(v.get("mesh_max_length", frame.mesh_max_length))
+    frame.mesh_max_degrees = float(v.get("mesh_max_degrees", frame.mesh_max_degrees))
+
+    # Local Axes
+    frame.mirror_abt2 = bool(v.get("mirror_abt2", frame.mirror_abt2))
+    frame.mirror_abt3 = bool(v.get("mirror_abt3", frame.mirror_abt3))
+
+    # Design
+    frame.design_proc = str(v.get("design_proc", frame.design_proc))
+    frame.load_transfer = bool(v.get("load_transfer", frame.load_transfer))
+
+    # Yük setleri
     sets_v = v.get("dist_load_sets_list")
     if isinstance(sets_v, list):
         new_sets: dict[str, FrameDistributedLoad] = {}
@@ -190,7 +285,6 @@ def values_to_frame(frame, v: dict[str, Any]) -> None:
                 segments=segs,
             )
         frame.dist_load_sets = new_sets
-        # dist_loads artık property — doğrudan yazılmaz
 
     frame.mark_dirty()
 

@@ -5,7 +5,26 @@ from enum import Enum, IntEnum, auto
 # ============================================================================
 # ENUMERATION'LAR
 # ============================================================================
+class ConstraintType(Enum):
+    BODY = 1
+    DIAPHRAGM = 2
+    PLATE = 3
+    ROD = 4
+    BEAM = 5
+    EQUAL = 6
+    LOCAL = 7
+    WELD = 8
+    LINE = 13
 
+    @classmethod
+    def from_sap(cls, name: str) -> "ConstraintType | None":
+        """S2K tablo adından tip çıkar: 'CONSTRAINT DEFINITIONS - DIAPHRAGM' → DIAPHRAGM."""
+        key = str(name or "").upper().strip()
+        for member in cls:
+            if member.name in key:
+                return member
+        return None
+    
 class MatType(IntEnum):
     STEEL     = 1
     CONCRETE  = 2

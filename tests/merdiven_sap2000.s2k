@@ -3221,258 +3221,258 @@ TABLE:  "FRAME SECTION PROPERTIES 01 - GENERAL"
    SectionName=819_162   Material=0  Shape="SD Section"
    SectionName=915_163   Material=0  Shape="SD Section"
    SectionName=919_164   Material=0  Shape="SD Section"
-   SectionName=K101_165   Material=0  SHAPE "Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
-   SectionName=K102_166   Material=0  SHAPE "Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
-   SectionName=K103_167   Material=0  SHAPE "Tee"  t3=0.6  t2=1.01  tf=9.29577464788732E-02  tw=0.3
-   SectionName=K104_168   Material=0  SHAPE "Tee"  t3=0.6  t2=1.02  tf=9.33333333333333E-02  tw=0.3
-   SectionName=K105_169   Material=0  SHAPE "Tee"  t3=0.6  t2=1.02  tf=9.33333333333333E-02  tw=0.3
-   SectionName=K106_170   Material=0  SHAPE "Tee"  t3=0.6  t2=1.01  tf=9.29577464788732E-02  tw=0.3
-   SectionName=K107_171   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
-   SectionName=K108_172   Material=0  SHAPE "Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
-   SectionName=K109_173   Material=0  SHAPE "Tee"  t3=0.6  t2=0.72  tf=0.12  tw=0.3
-   SectionName=K110_174   Material=0  SHAPE "Tee"  t3=0.6  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K111_175   Material=0  SHAPE "Tee"  t3=0.6  t2=0.32  tf=0.15  tw=0.25
-   SectionName=K112_176   Material=0  SHAPE "Tee"  t3=0.6  t2=0.39  tf=0.135  tw=0.25
-   SectionName=K113_177   Material=0  SHAPE "Tee"  t3=0.6  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K114_178   Material=0  SHAPE "Tee"  t3=0.6  t2=0.76  tf=0.12  tw=0.3
-   SectionName=K115_179   Material=0  SHAPE "Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
-   SectionName=K116_180   Material=0  SHAPE "Tee"  t3=0.6  t2=1.01  tf=9.29577464788732E-02  tw=0.3
-   SectionName=K117_181   Material=0  SHAPE "Tee"  t3=0.3  t2=0.98  tf=0.08  tw=0.5
-   SectionName=K121_182   Material=0  SHAPE "Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
-   SectionName=K122_183   Material=0  SHAPE "Tee"  t3=0.4  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K123_184   Material=0  SHAPE "Tee"  t3=0.4  t2=0.48  tf=0.12  tw=0.3
-   SectionName=K124_185   Material=0  SHAPE "Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
-   SectionName=K125_186   Material=0  SHAPE "Tee"  t3=0.6  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K126_187   Material=0  SHAPE "Tee"  t3=0.6  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K127_188   Material=0  SHAPE "Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
-   SectionName=K128_189   Material=0  SHAPE "Tee"  t3=0.6  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K129_190   Material=0  SHAPE "Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
-   SectionName=K130_191   Material=0  SHAPE "Tee"  t3=0.6  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K131_192   Material=0  SHAPE "Tee"  t3=0.6  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K132_193   Material=0  SHAPE "Tee"  t3=0.6  t2=0.41  tf=0.135  tw=0.25
-   SectionName=K133_194   Material=0  SHAPE "Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
-   SectionName=K134_195   Material=0  SHAPE "Tee"  t3=0.6  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K135_196   Material=0  SHAPE "Tee"  t3=0.6  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K136_197   Material=0  SHAPE "Tee"  t3=0.3  t2=1.56  tf=0.08  tw=0.6
-   SectionName=K201_198   Material=0  SHAPE "Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
-   SectionName=K202_199   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K203_200   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K204_201   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K205_202   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K206_203   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
-   SectionName=K207_204   Material=0  SHAPE "Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
-   SectionName=K208_205   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K209_206   Material=0  SHAPE "Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
-   SectionName=K210_207   Material=0  SHAPE "Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
-   SectionName=K211_208   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K212_209   Material=0  SHAPE "Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
-   SectionName=K213_210   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K214_211   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K215_212   Material=0   Shape=Rectangular   t3=0.5   t2=0.3
-   SectionName=K216_213   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K217_214   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K218_215   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K219_216   Material=0  SHAPE "Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
-   SectionName=K220_217   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K221_218   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K222_219   Material=0  SHAPE "Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K223_220   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K224_221   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K225_222   Material=0  SHAPE "Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
-   SectionName=K226_223   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K227_224   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K228_225   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K229_226   Material=0  SHAPE "Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
-   SectionName=K230_227   Material=0  SHAPE "Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
-   SectionName=K301_228   Material=0  SHAPE "Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
-   SectionName=K302_229   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K303_230   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K304_231   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K305_232   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K306_233   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
-   SectionName=K307_234   Material=0  SHAPE "Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
-   SectionName=K308_235   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K309_236   Material=0  SHAPE "Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
-   SectionName=K310_237   Material=0  SHAPE "Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
-   SectionName=K311_238   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K312_239   Material=0  SHAPE "Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
-   SectionName=K313_240   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K314_241   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K315_242   Material=0   Shape=Rectangular   t3=0.5   t2=0.3
-   SectionName=K316_243   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K317_244   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K318_245   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K319_246   Material=0  SHAPE "Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
-   SectionName=K320_247   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K321_248   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K322_249   Material=0  SHAPE "Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K323_250   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K324_251   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K325_252   Material=0  SHAPE "Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
-   SectionName=K326_253   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K327_254   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K328_255   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K329_256   Material=0  SHAPE "Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
-   SectionName=K330_257   Material=0  SHAPE "Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
-   SectionName=K401_258   Material=0  SHAPE "Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
-   SectionName=K402_259   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K403_260   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K404_261   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K405_262   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K406_263   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
-   SectionName=K407_264   Material=0  SHAPE "Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
-   SectionName=K408_265   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K409_266   Material=0  SHAPE "Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
-   SectionName=K410_267   Material=0  SHAPE "Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
-   SectionName=K411_268   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K412_269   Material=0  SHAPE "Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
-   SectionName=K413_270   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K414_271   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K101_165   Material=0  Shape="Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
+   SectionName=K102_166   Material=0  Shape="Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
+   SectionName=K103_167   Material=0  Shape="Tee"  t3=0.6  t2=1.01  tf=9.29577464788732E-02  tw=0.3
+   SectionName=K104_168   Material=0  Shape="Tee"  t3=0.6  t2=1.02  tf=9.33333333333333E-02  tw=0.3
+   SectionName=K105_169   Material=0  Shape="Tee"  t3=0.6  t2=1.02  tf=9.33333333333333E-02  tw=0.3
+   SectionName=K106_170   Material=0  Shape="Tee"  t3=0.6  t2=1.01  tf=9.29577464788732E-02  tw=0.3
+   SectionName=K107_171   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
+   SectionName=K108_172   Material=0  Shape="Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
+   SectionName=K109_173   Material=0  Shape="Tee"  t3=0.6  t2=0.72  tf=0.12  tw=0.3
+   SectionName=K110_174   Material=0  Shape="Tee"  t3=0.6  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K111_175   Material=0  Shape="Tee"  t3=0.6  t2=0.32  tf=0.15  tw=0.25
+   SectionName=K112_176   Material=0  Shape="Tee"  t3=0.6  t2=0.39  tf=0.135  tw=0.25
+   SectionName=K113_177   Material=0  Shape="Tee"  t3=0.6  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K114_178   Material=0  Shape="Tee"  t3=0.6  t2=0.76  tf=0.12  tw=0.3
+   SectionName=K115_179   Material=0  Shape="Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
+   SectionName=K116_180   Material=0  Shape="Tee"  t3=0.6  t2=1.01  tf=9.29577464788732E-02  tw=0.3
+   SectionName=K117_181   Material=0  Shape="Tee"  t3=0.3  t2=0.98  tf=0.08  tw=0.5
+   SectionName=K121_182   Material=0  Shape="Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
+   SectionName=K122_183   Material=0  Shape="Tee"  t3=0.4  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K123_184   Material=0  Shape="Tee"  t3=0.4  t2=0.48  tf=0.12  tw=0.3
+   SectionName=K124_185   Material=0  Shape="Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
+   SectionName=K125_186   Material=0  Shape="Tee"  t3=0.6  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K126_187   Material=0  Shape="Tee"  t3=0.6  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K127_188   Material=0  Shape="Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
+   SectionName=K128_189   Material=0  Shape="Tee"  t3=0.6  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K129_190   Material=0  Shape="Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
+   SectionName=K130_191   Material=0  Shape="Tee"  t3=0.6  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K131_192   Material=0  Shape="Tee"  t3=0.6  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K132_193   Material=0  Shape="Tee"  t3=0.6  t2=0.41  tf=0.135  tw=0.25
+   SectionName=K133_194   Material=0  Shape="Tee"  t3=0.3  t2=1.46  tf=0.08  tw=0.5
+   SectionName=K134_195   Material=0  Shape="Tee"  t3=0.6  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K135_196   Material=0  Shape="Tee"  t3=0.6  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K136_197   Material=0  Shape="Tee"  t3=0.3  t2=1.56  tf=0.08  tw=0.6
+   SectionName=K201_198   Material=0  Shape="Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
+   SectionName=K202_199   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K203_200   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K204_201   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K205_202   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K206_203   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
+   SectionName=K207_204   Material=0  Shape="Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
+   SectionName=K208_205   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K209_206   Material=0  Shape="Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
+   SectionName=K210_207   Material=0  Shape="Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
+   SectionName=K211_208   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K212_209   Material=0  Shape="Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
+   SectionName=K213_210   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K214_211   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K215_212   Material=0  Shape=Rectangular   t3=0.5   t2=0.3
+   SectionName=K216_213   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K217_214   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K218_215   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K219_216   Material=0  Shape="Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
+   SectionName=K220_217   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K221_218   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K222_219   Material=0  Shape="Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K223_220   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K224_221   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K225_222   Material=0  Shape="Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
+   SectionName=K226_223   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K227_224   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K228_225   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K229_226   Material=0  Shape="Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
+   SectionName=K230_227   Material=0  Shape="Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
+   SectionName=K301_228   Material=0  Shape="Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
+   SectionName=K302_229   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K303_230   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K304_231   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K305_232   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K306_233   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
+   SectionName=K307_234   Material=0  Shape="Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
+   SectionName=K308_235   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K309_236   Material=0  Shape="Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
+   SectionName=K310_237   Material=0  Shape="Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
+   SectionName=K311_238   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K312_239   Material=0  Shape="Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
+   SectionName=K313_240   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K314_241   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K315_242   Material=0  Shape=Rectangular   t3=0.5   t2=0.3
+   SectionName=K316_243   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K317_244   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K318_245   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K319_246   Material=0  Shape="Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
+   SectionName=K320_247   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K321_248   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K322_249   Material=0  Shape="Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K323_250   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K324_251   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K325_252   Material=0  Shape="Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
+   SectionName=K326_253   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K327_254   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K328_255   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K329_256   Material=0  Shape="Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
+   SectionName=K330_257   Material=0  Shape="Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
+   SectionName=K401_258   Material=0  Shape="Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
+   SectionName=K402_259   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K403_260   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K404_261   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K405_262   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K406_263   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
+   SectionName=K407_264   Material=0  Shape="Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
+   SectionName=K408_265   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K409_266   Material=0  Shape="Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
+   SectionName=K410_267   Material=0  Shape="Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
+   SectionName=K411_268   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K412_269   Material=0  Shape="Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
+   SectionName=K413_270   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K414_271   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
    SectionName=K415_272   Material=0   Shape=Rectangular   t3=0.5   t2=0.3
-   SectionName=K416_273   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K417_274   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K418_275   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K419_276   Material=0  SHAPE "Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
-   SectionName=K420_277   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K421_278   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K422_279   Material=0  SHAPE "Tee"  t3=0.4  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K423_280   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K424_281   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K425_282   Material=0  SHAPE "Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
-   SectionName=K426_283   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K427_284   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K428_285   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K429_286   Material=0  SHAPE "Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
-   SectionName=K430_287   Material=0  SHAPE "Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
-   SectionName=K501_288   Material=0  SHAPE "Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
-   SectionName=K502_289   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K503_290   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K504_291   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K505_292   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K506_293   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
-   SectionName=K507_294   Material=0  SHAPE "Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
-   SectionName=K508_295   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K509_296   Material=0  SHAPE "Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
-   SectionName=K510_297   Material=0  SHAPE "Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
-   SectionName=K511_298   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K512_299   Material=0  SHAPE "Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
-   SectionName=K513_300   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K514_301   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K416_273   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K417_274   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K418_275   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K419_276   Material=0  Shape="Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
+   SectionName=K420_277   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K421_278   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K422_279   Material=0  Shape="Tee"  t3=0.4  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K423_280   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K424_281   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K425_282   Material=0  Shape="Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
+   SectionName=K426_283   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K427_284   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K428_285   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K429_286   Material=0  Shape="Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
+   SectionName=K430_287   Material=0  Shape="Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
+   SectionName=K501_288   Material=0  Shape="Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
+   SectionName=K502_289   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K503_290   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K504_291   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K505_292   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K506_293   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
+   SectionName=K507_294   Material=0  Shape="Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
+   SectionName=K508_295   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K509_296   Material=0  Shape="Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
+   SectionName=K510_297   Material=0  Shape="Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
+   SectionName=K511_298   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K512_299   Material=0  Shape="Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
+   SectionName=K513_300   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K514_301   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
    SectionName=K515_302   Material=0   Shape=Rectangular   t3=0.5   t2=0.3
-   SectionName=K516_303   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K517_304   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K518_305   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K519_306   Material=0  SHAPE "Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
-   SectionName=K520_307   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K521_308   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K522_309   Material=0  SHAPE "Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K523_310   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K524_311   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K525_312   Material=0  SHAPE "Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
-   SectionName=K526_313   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K527_314   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K528_315   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K529_316   Material=0  SHAPE "Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
-   SectionName=K530_317   Material=0  SHAPE "Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
-   SectionName=K601_318   Material=0  SHAPE "Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
-   SectionName=K602_319   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K603_320   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K604_321   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K605_322   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K606_323   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
-   SectionName=K607_324   Material=0  SHAPE "Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
-   SectionName=K608_325   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K609_326   Material=0  SHAPE "Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
-   SectionName=K610_327   Material=0  SHAPE "Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
-   SectionName=K611_328   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K612_329   Material=0  SHAPE "Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
-   SectionName=K613_330   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K614_331   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K516_303   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K517_304   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K518_305   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K519_306   Material=0  Shape="Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
+   SectionName=K520_307   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K521_308   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K522_309   Material=0  Shape="Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K523_310   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K524_311   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K525_312   Material=0  Shape="Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
+   SectionName=K526_313   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K527_314   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K528_315   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K529_316   Material=0  Shape="Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
+   SectionName=K530_317   Material=0  Shape="Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
+   SectionName=K601_318   Material=0  Shape="Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
+   SectionName=K602_319   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K603_320   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K604_321   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K605_322   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K606_323   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
+   SectionName=K607_324   Material=0  Shape="Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
+   SectionName=K608_325   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K609_326   Material=0  Shape="Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
+   SectionName=K610_327   Material=0  Shape="Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
+   SectionName=K611_328   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K612_329   Material=0  Shape="Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
+   SectionName=K613_330   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K614_331   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
    SectionName=K615_332   Material=0   Shape=Rectangular   t3=0.5   t2=0.3
-   SectionName=K616_333   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K617_334   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K618_335   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K619_336   Material=0  SHAPE "Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
-   SectionName=K620_337   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K621_338   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K622_339   Material=0  SHAPE "Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K623_340   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K624_341   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K625_342   Material=0  SHAPE "Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
-   SectionName=K626_343   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K627_344   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K628_345   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K629_346   Material=0  SHAPE "Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
-   SectionName=K630_347   Material=0  SHAPE "Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
-   SectionName=K701_348   Material=0  SHAPE "Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
-   SectionName=K702_349   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K703_350   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K704_351   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K705_352   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K706_353   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
-   SectionName=K707_354   Material=0  SHAPE "Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
-   SectionName=K708_355   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K709_356   Material=0  SHAPE "Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
-   SectionName=K710_357   Material=0  SHAPE "Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
-   SectionName=K711_358   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K712_359   Material=0  SHAPE "Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
-   SectionName=K713_360   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K714_361   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K616_333   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K617_334   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K618_335   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K619_336   Material=0  Shape="Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
+   SectionName=K620_337   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K621_338   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K622_339   Material=0  Shape="Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K623_340   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K624_341   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K625_342   Material=0  Shape="Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
+   SectionName=K626_343   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K627_344   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K628_345   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K629_346   Material=0  Shape="Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
+   SectionName=K630_347   Material=0  Shape="Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
+   SectionName=K701_348   Material=0  Shape="Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
+   SectionName=K702_349   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K703_350   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K704_351   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K705_352   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K706_353   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
+   SectionName=K707_354   Material=0  Shape="Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
+   SectionName=K708_355   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K709_356   Material=0  Shape="Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
+   SectionName=K710_357   Material=0  Shape="Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
+   SectionName=K711_358   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K712_359   Material=0  Shape="Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
+   SectionName=K713_360   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K714_361   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
    SectionName=K715_362   Material=0   Shape=Rectangular   t3=0.5   t2=0.3
-   SectionName=K716_363   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K717_364   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K718_365   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K719_366   Material=0  SHAPE "Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
-   SectionName=K720_367   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K721_368   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K722_369   Material=0  SHAPE "Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K723_370   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K724_371   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K725_372   Material=0  SHAPE "Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
-   SectionName=K726_373   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K727_374   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K728_375   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K729_376   Material=0  SHAPE "Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
-   SectionName=K730_377   Material=0  SHAPE "Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
-   SectionName=K801_378   Material=0  SHAPE "Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
-   SectionName=K802_379   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K803_380   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K804_381   Material=0  SHAPE "Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
-   SectionName=K805_382   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K806_383   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
-   SectionName=K807_384   Material=0  SHAPE "Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
-   SectionName=K808_385   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K809_386   Material=0  SHAPE "Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
-   SectionName=K810_387   Material=0  SHAPE "Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
-   SectionName=K811_388   Material=0  SHAPE "Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
-   SectionName=K812_389   Material=0  SHAPE "Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
-   SectionName=K813_390   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K814_391   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K716_363   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K717_364   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K718_365   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K719_366   Material=0  Shape="Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
+   SectionName=K720_367   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K721_368   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K722_369   Material=0  Shape="Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K723_370   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K724_371   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K725_372   Material=0  Shape="Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
+   SectionName=K726_373   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K727_374   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K728_375   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K729_376   Material=0  Shape="Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
+   SectionName=K730_377   Material=0  Shape="Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
+   SectionName=K801_378   Material=0  Shape="Tee"  t3=0.45  t2=0.52  tf=0.15  tw=0.25
+   SectionName=K802_379   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K803_380   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K804_381   Material=0  Shape="Tee"  t3=0.5  t2=0.54  tf=0.12  tw=0.3
+   SectionName=K805_382   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K806_383   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.135  tw=0.25
+   SectionName=K807_384   Material=0  Shape="Tee"  t3=0.5  t2=0.72  tf=0.12  tw=0.3
+   SectionName=K808_385   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K809_386   Material=0  Shape="Tee"  t3=0.5  t2=0.32  tf=0.15  tw=0.25
+   SectionName=K810_387   Material=0  Shape="Tee"  t3=0.5  t2=0.39  tf=0.135  tw=0.25
+   SectionName=K811_388   Material=0  Shape="Tee"  t3=0.5  t2=0.78  tf=0.12  tw=0.3
+   SectionName=K812_389   Material=0  Shape="Tee"  t3=0.5  t2=0.76  tf=0.12  tw=0.3
+   SectionName=K813_390   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K814_391   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
    SectionName=K815_392   Material=0   Shape=Rectangular   t3=0.5   t2=0.3
-   SectionName=K816_393   Material=0  SHAPE "Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
-   SectionName=K817_394   Material=0  SHAPE "Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
-   SectionName=K818_395   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K819_396   Material=0  SHAPE "Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
-   SectionName=K820_397   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K821_398   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K822_399   Material=0  SHAPE "Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K823_400   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K824_401   Material=0  SHAPE "Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
-   SectionName=K825_402   Material=0  SHAPE "Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
-   SectionName=K826_403   Material=0  SHAPE "Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
-   SectionName=K827_404   Material=0  SHAPE "Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
-   SectionName=K828_405   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K829_406   Material=0  SHAPE "Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
-   SectionName=K830_407   Material=0  SHAPE "Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
-   SectionName=K901_408   Material=0  SHAPE "Tee"  t3=0.4  t2=0.52  tf=0.12  tw=0.25
-   SectionName=K902_409   Material=0  SHAPE "Tee"  t3=0.5  t2=0.51  tf=0.12  tw=0.25
-   SectionName=K903_410   Material=0  SHAPE "Tee"  t3=1.1  t2=0.39  tf=0.12  tw=0.25
-   SectionName=K904_411   Material=0  SHAPE "Tee"  t3=0.5  t2=0.39  tf=0.12  tw=0.25
-   SectionName=K905_412   Material=0  SHAPE "Tee"  t3=0.5  t2=0.46  tf=0.12  tw=0.3
-   SectionName=K906_413   Material=0  SHAPE "Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
-   SectionName=K907_414   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K908_415   Material=0  SHAPE "Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
-   SectionName=K909_416   Material=0  SHAPE "Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K816_393   Material=0  Shape="Tee"  t3=0.5  t2=0.58  tf=0.12  tw=0.3
+   SectionName=K817_394   Material=0  Shape="Tee"  t3=0.5  t2=0.53  tf=0.12  tw=0.3
+   SectionName=K818_395   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K819_396   Material=0  Shape="Tee"  t3=0.5  t2=0.48  tf=0.12  tw=0.3
+   SectionName=K820_397   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K821_398   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K822_399   Material=0  Shape="Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K823_400   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K824_401   Material=0  Shape="Tee"  t3=0.5  t2=0.82  tf=0.135  tw=0.3
+   SectionName=K825_402   Material=0  Shape="Tee"  t3=0.5  t2=0.41  tf=0.135  tw=0.25
+   SectionName=K826_403   Material=0  Shape="Tee"  t3=0.5  t2=0.86  tf=0.12  tw=0.3
+   SectionName=K827_404   Material=0  Shape="Tee"  t3=0.5  t2=0.7  tf=0.12  tw=0.3
+   SectionName=K828_405   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K829_406   Material=0  Shape="Tee"  t3=0.5  t2=0.47  tf=0.12  tw=0.3
+   SectionName=K830_407   Material=0  Shape="Tee"  t3=0.5  t2=0.46  tf=0.15  tw=0.3
+   SectionName=K901_408   Material=0  Shape="Tee"  t3=0.4  t2=0.52  tf=0.12  tw=0.25
+   SectionName=K902_409   Material=0  Shape="Tee"  t3=0.5  t2=0.51  tf=0.12  tw=0.25
+   SectionName=K903_410   Material=0  Shape="Tee"  t3=1.1  t2=0.39  tf=0.12  tw=0.25
+   SectionName=K904_411   Material=0  Shape="Tee"  t3=0.5  t2=0.39  tf=0.12  tw=0.25
+   SectionName=K905_412   Material=0  Shape="Tee"  t3=0.5  t2=0.46  tf=0.12  tw=0.3
+   SectionName=K906_413   Material=0  Shape="Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
+   SectionName=K907_414   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K908_415   Material=0  Shape="Tee"  t3=0.5  t2=0.56  tf=0.12  tw=0.3
+   SectionName=K909_416   Material=0  Shape="Tee"  t3=0.5  t2=0.33  tf=0.12  tw=0.25
 
 TABLE:  "SECTION DESIGNER PROPERTIES 01 - GENERAL"
    SectionName=115_147  DesignType="No Check/Design"   DsgnOrChck=Check

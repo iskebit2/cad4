@@ -27,6 +27,7 @@ from domain.definition import (
     SiteInformation,
     SpectrumFunction,
     SpectrumSourceType,
+    ConstraintDefinition,
     get_tsc2018_site_coefficients,
 )
 from domain.plane import Plane
@@ -61,6 +62,7 @@ class Project:
     response_spectrum_cases: dict[str, ResponseSpectrumCase] = field(default_factory=dict)
     auto_seismics: dict[str, AutoSeismicTSC2018] = field(default_factory=dict)
     mass_source_map: dict[str, float] = field(default_factory=dict)
+    constraint_definitions: dict[str, ConstraintDefinition] = field(default_factory=dict)
     section_cuts: dict[str, SectionCut] = field(default_factory=dict)
     diaphragms: dict[str, dict] = field(default_factory=dict)
     grid_lines: list[dict[str, Any]] = field(default_factory=list)
@@ -88,6 +90,8 @@ class Project:
     def add_auto_seismic(self, a: AutoSeismicTSC2018): self.auto_seismics[a.load_pattern] = a
     def add_section_cut(self, sc: SectionCut): 
         self.section_cuts[sc.name] = sc
+    def add_constraint_definition(self, cd: ConstraintDefinition):
+        self.constraint_definitions[cd.name] = cd
 
     def get_section_cut(self, name: str) -> SectionCut | None:
         return self.section_cuts.get(name)

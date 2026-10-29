@@ -12,7 +12,7 @@ Tüm fonksiyonlar saf: Section → list[str]. Yan etki yok, exception fırlatmaz
 Kullanım:
     from tools.section_checks import check_section
     for msg in check_section(section, strict=False):
-        logger.warning("[SectionCheck] %s", msg)
+        logger.debug("[SectionCheck] %s", msg)
 """
 from __future__ import annotations
 
@@ -351,5 +351,5 @@ def check_all_sections(
             out[name] = msgs
             if logger is not None:
                 for m in msgs:
-                    logger.warning("[SectionCheck] %s", m)
+                    logger.debug("[SectionCheck] %s", m)
     return out

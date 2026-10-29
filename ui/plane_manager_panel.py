@@ -517,7 +517,7 @@ class PlaneManagerPanel(BasePanel):
             else:
                 p = None
         except Exception as e:
-            logger.warning(f"[PlaneMgr] Önizleme hatası: {e}")
+            logger.debug(f"[PlaneMgr] Önizleme hatası: {e}")
             p = None
 
         if p is None:
@@ -599,7 +599,7 @@ class PlaneManagerPanel(BasePanel):
                 name=f"Plane_2pt_{self._picked_nodes[0]}_{self._picked_nodes[1]}",
             )
         except Exception as e:
-            logger.warning(f"[PlaneMgr] 2pt plane hatası: {e}")
+            logger.debug(f"[PlaneMgr] 2pt plane hatası: {e}")
             return None
         scene = self._scene()
         if scene is not None:
@@ -622,7 +622,7 @@ class PlaneManagerPanel(BasePanel):
                 name=f"Plane_3pt_{self._picked_nodes[0]}",
             )
         except Exception as e:
-            logger.warning(f"[PlaneMgr] 3pt plane hatası: {e}")
+            logger.debug(f"[PlaneMgr] 3pt plane hatası: {e}")
             return None
         scene = self._scene()
         if scene is not None:
@@ -699,7 +699,7 @@ class PlaneManagerPanel(BasePanel):
         if self._preview_name.strip():
             p.name = self._preview_name.strip()
         if p.name in proj.planes:
-            logger.warning(f"[PlaneMgr] '{p.name}' zaten var, oluşturulmadı.")
+            logger.debug(f"[PlaneMgr] '{p.name}' zaten var, oluşturulmadı.")
             return
 
         # Sınır/depth son değerler (form'dan)
@@ -729,7 +729,7 @@ class PlaneManagerPanel(BasePanel):
     def _do_edit(self, plane: Plane):
         scene = self._scene()
         if scene is None:
-            logger.warning("[PlaneMgr] Sahne yok, edit açılamadı.")
+            logger.debug("[PlaneMgr] Sahne yok, edit açılamadı.")
             return
         pp = None
         if self.app and hasattr(self.app, "panels"):
@@ -737,7 +737,7 @@ class PlaneManagerPanel(BasePanel):
             if pp_info:
                 pp = pp_info["instance"]
         if pp is None:
-            logger.warning("[PlaneMgr] PlanePlotPanel bulunamadı.")
+            logger.debug("[PlaneMgr] PlanePlotPanel bulunamadı.")
             return
         pp.open(scene=scene, plane=plane)
         logger.info(f"[PlaneMgr] Plane Plot: {plane.name}")
@@ -757,7 +757,7 @@ class PlaneManagerPanel(BasePanel):
             return
         old = plane.name
         if new_name in proj.planes and new_name != old:
-            logger.warning(f"[PlaneMgr] '{new_name}' zaten var.")
+            logger.debug(f"[PlaneMgr] '{new_name}' zaten var.")
             return
         proj.planes.pop(old, None)
         plane.name = new_name
@@ -808,7 +808,7 @@ class PlaneManagerPanel(BasePanel):
             if pp_info:
                 pp = pp_info["instance"]
         if pp is None:
-            logger.warning("[PlaneMgr] PlanePlotPanel bulunamadı")
+            logger.debug("[PlaneMgr] PlanePlotPanel bulunamadı")
             return
         pp.open(scene=scene, plane=plane)
         logger.info(f"[PlaneMgr] Plot: {plane.name}")

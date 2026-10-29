@@ -265,7 +265,7 @@ class PlaneDrawManager:
                 logger.info(f"[PDM] p0={self.p0.label}, aday p1={node.label}, U={u_len:.1f}mm")
 
                 if u_len < self.MIN_U_LENGTH:
-                    logger.warning(f"[PDM] U çok kısa ({u_len:.1f} < {self.MIN_U_LENGTH})")
+                    logger.debug(f"[PDM] U çok kısa ({u_len:.1f} < {self.MIN_U_LENGTH})")
                     return True
 
                 self.p1 = node
@@ -284,7 +284,7 @@ class PlaneDrawManager:
                 logger.info(f"[PDM] aday p2={node.label}, V_perp={v_len:.1f}mm")
 
                 if v is None or v_len < self.MIN_V_LENGTH:
-                    logger.warning(f"[PDM] V çok kısa ({v_len:.1f} < {self.MIN_V_LENGTH}), reddet")
+                    logger.debug(f"[PDM] V çok kısa ({v_len:.1f} < {self.MIN_V_LENGTH}), reddet")
                     self.p2 = old_p2
                     return True
 
@@ -339,13 +339,13 @@ class PlaneDrawManager:
 
         dims = self._dims()
         if dims is None:
-            logger.warning("[PlaneDraw] Geçersiz geometri, iptal")
+            logger.debug("[PlaneDraw] Geçersiz geometri, iptal")
             self.cancel()
             return
 
         u_len, v_len = dims
         if u_len < self.MIN_U_LENGTH or v_len < self.MIN_V_LENGTH:
-            logger.warning(f"[PlaneDraw] Uzunluklar çok kısa (u={u_len:.1f}, v={v_len:.1f})")
+            logger.debug(f"[PlaneDraw] Uzunluklar çok kısa (u={u_len:.1f}, v={v_len:.1f})")
             self.cancel()
             return
 
@@ -408,7 +408,7 @@ class PlaneDrawManager:
         cam = self.engine.cam
         w, h = self.engine.w, self.engine.h
         if not cam or not self.engine.scene:
-            logger.warning(f"[FIND] cam={cam}, scene={self.engine.scene}")
+            logger.debug(f"[FIND] cam={cam}, scene={self.engine.scene}")
             return None
 
         mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
@@ -437,7 +437,7 @@ class PlaneDrawManager:
         #                 f"ekran=({nearest[1]:.0f},{nearest[2]:.0f}) "
         #                 f"mesafe={nearest[0]**0.5:.1f}px")
         # else:
-        #     logger.warning("[FIND] hiç node yok (visible=False?)")
+        #     logger.debug("[FIND] hiç node yok (visible=False?)")
 
         return best_node
 
@@ -486,7 +486,7 @@ class PlaneDrawManager:
             if loc_color == -1:
                 loc_color = shader.get_loc("uColor")   # güvenlik fallback
             if loc_color == -1:
-                logger.warning("[PlaneDraw] shader'da 'color' veya 'uColor' yok")
+                logger.debug("[PlaneDraw] shader'da 'color' veya 'uColor' yok")
                 return
 
             # --- Çizim ---

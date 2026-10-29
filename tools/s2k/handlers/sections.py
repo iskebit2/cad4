@@ -138,7 +138,11 @@ def _map_sap_to_local(row) -> tuple[SectionType, dict[str, float]]:
             **analysis,
         }
     if shape in ("SD Section", "General"):
-        return SectionType.CUSTOM, {**analysis}
+        return SectionType.CUSTOM, {
+            "h": _safe_float(row, "t3", 0.2),
+            "b": _safe_float(row, "t2", 0.1),
+            **analysis,
+        }
 
     logger.info("[SectionMap] Bilinmeyen Shape=%r, RECT fallback", shape)
     return SectionType.RECT, {
@@ -296,21 +300,49 @@ def handle_area_props(ctx: LoadContext, df: pd.DataFrame) -> None:
 # SD SECTION
 # ============================================================================
 def handle_sd_general(ctx: LoadContext, df: pd.DataFrame) -> None:
-    """SECTION DESIGNER PROPERTIES 01 - GENERAL."""
+    if df is None or df.empty:
+        return
     for _, r in df.iterrows():
         name = str(r.get("SectionName", "")).strip()
         if not name:
             continue
         sd = ctx.sd_sections.setdefault(name, SDSection(name=name))
-        sd.design_type = str(r.get("DesignType", "No Check/Design")).strip()
-        sd.axis_angle = _safe_float(r, "AxisAngle", 90.0)
-        sd.mesh_sz_abs = _safe_float(r, "MeshSzAbs", 0.0)
-        sd.mesh_sz_rel = _safe_float(r, "MeshSzRel", 0.05)
-        sd.dsgn_or_chck = str(r.get("DsgnOrChck", "Check")).strip()
-        sd.include_v_str = str(r.get("IncludeVStr", "No")).strip().upper() == "YES"
-        sd.n_polygon = int(_safe_float(r, "nPolygon", 0))
-        # base material — v10'da "BaseMat" kolonu
-        sd.base_material = str(r.get("BaseMat", sd.base_material)).strip()
+
+        # NaN-safe alan okuma
+        def _str(key, default=""):
+            v = r.get(key)
+            if v is None or (isinstance(v, float) and v != v):
+                return default
+            s = str(v).strip()
+            return s if s and s.lower() != "nan" else default
+
+        def _int(key, default=0):
+            v = _safe_float(r, key, float(default))
+            return int(v) if v == v else default
+
+        design = _str("DesignType", "")
+        if design:
+            sd.design_type = design
+
+        dsgn = _str("DsgnOrChck", "")
+        if dsgn:
+            sd.dsgn_or_chck = dsgn
+
+        base = _str("BaseMat", "")
+        if base:
+            sd.base_material = base
+
+        if "nPolygon" in r:
+            sd.n_polygon = _int("nPolygon", sd.n_polygon)
+
+        if "AxisAngle" in r:
+            sd.axis_angle = _safe_float(r, "AxisAngle", sd.axis_angle)
+        if "MeshSzAbs" in r:
+            sd.mesh_sz_abs = _safe_float(r, "MeshSzAbs", sd.mesh_sz_abs)
+        if "MeshSzRel" in r:
+            sd.mesh_sz_rel = _safe_float(r, "MeshSzRel", sd.mesh_sz_rel)
+        if "IncludeVStr" in r:
+            sd.include_v_str = _str("IncludeVStr", "No").upper() == "YES"
 
 
 def handle_sd_polygon(ctx: LoadContext, df: pd.DataFrame) -> None:
@@ -339,9 +371,10 @@ def handle_sd_polygon(ctx: LoadContext, df: pd.DataFrame) -> None:
             for r in rows
         ]
         shape = SDShape(
-            name=shp, shape_kind="Polygon", material=mat,
-            z_order=z_order, fill_color=color, points=pts,
-        )
+                        name=shp, shape_kind="Polygon", material=mat,
+                        z_order=z_order, fill_color=color, points=pts,
+                        reinforcing=str(first.get("Reinforcing", "No")).strip().upper() == "YES",
+                    )
         sd = ctx.sd_sections.setdefault(sec, SDSection(name=sec))
         sd.shapes.append(shape)
 

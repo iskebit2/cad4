@@ -44,7 +44,7 @@ class CreateElementCommand(Command):
         if self.created is None:
             return
         if not self.scene.remove_element(self.created):
-            logger.warning(
+            logger.debug(
                 f"[CreateCmd] undo reddedildi: {self.element_type} "
                 "(bağlı eleman olabilir)"
             )

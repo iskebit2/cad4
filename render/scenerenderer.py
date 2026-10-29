@@ -286,7 +286,19 @@ class SceneRenderer:
         self._last_progress_value = 0.0
         if scene is None:
             scene = self.scene
-
+        # ★ GEÇİCİ DEBUG
+        
+        sd_frames = []
+        for f in scene.frames.values():
+            sec = getattr(f, "section", None)
+            if sec and getattr(sec, "sd_section", None) is not None:
+                sd_frames.append(f.label)
+        logger.debug(
+            "[update_geo] total_frames=%d, sd_frames=%s",
+            len(scene.frames), sd_frames[:5],
+        )
+        # ★ SON
+        
         flt = getattr(scene, '_render_filter', None)
 
         def _f(d):
@@ -310,7 +322,7 @@ class SceneRenderer:
                 try:
                     progress_cb(value, msg)
                 except Exception as e:
-                    logger.warning(f"progress_cb hatası: {e}")
+                    logger.debug(f"progress_cb hatası: {e}")
 
         # ---- 1. Elementleri al ----
         _progress(0.00, "Hazırlanıyor...")

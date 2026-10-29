@@ -8,14 +8,21 @@ from tools.s2k.context import LoadContext
 
 logger = logging.getLogger(__name__)
 
+def _to_bool(v, default=False):
+    if v is None:
+        return default
+    return str(v).strip().upper() in ("YES", "TRUE", "1")
 
 def _safe_float(row, key, default=0.0):
     val = row.get(key)
-    if val is None:
+    if val is None or str(val).strip() in ("", "None", "nan", "NaN"):
         return default
     try:
-        return float(val)
-    except (ValueError, TypeError):
+        f = float(val)
+        if f != f:   # NaN
+            return default
+        return f
+    except (TypeError, ValueError):
         return default
 
 
@@ -80,13 +87,31 @@ def handle_frame_auto_mesh(ctx: LoadContext, df: pd.DataFrame) -> None:
         }
 
 def handle_frame_output_stations(ctx: LoadContext, df: pd.DataFrame) -> None:
-    """FRAME OUTPUT STATION ASSIGNMENTS (v25) / FRAME OUTPUT STATION ASSIGNMENTS (v10)."""
-    ctx.df_frame_output_stations = df
+    """FRAME OUTPUT STATION ASSIGNMENTS.
 
+    Kolonlar: Frame, StationType, MinNumSta, AddAtElmInt, AddAtPtLoad, MaxStaSpcg
+    """
+    if df is None or df.empty:
+        return
+    ctx.df_frame_output_stations = df
+    for _, r in df.iterrows():
+        fid = str(r.get("Frame", "")).strip()
+        if not fid:
+            continue
+        ctx.frame_output_stations[fid] = {
+            "station_type": str(r.get("StationType", "MinNumSta")).strip(),
+            "min_num_sta": int(_safe_float(r, "MinNumSta", 3)),
+            "add_at_elm_int": _to_bool(r.get("AddAtElmInt"), True),
+            "add_at_pt_load": _to_bool(r.get("AddAtPtLoad"), True),
+            "max_sta_spcg": _safe_float(r, "MaxStaSpcg", 0.0) or None,
+        }
 
 def handle_frame_insertion_points(ctx: LoadContext, df: pd.DataFrame) -> None:
-    """FRAME INSERTION POINT ASSIGNMENTS."""
-    ctx.df_frame_insertion = df
+    """FRAME INSERTION POINT ASSIGNMENTS.
+
+    Kolonlar: Frame, CardinalPt, Mirror2, Mirror3, Transform, CoordSys,
+              JtOffsetXI/YI/ZI, JtOffsetXJ/YJ/ZJ
+    """
     if df is None or df.empty:
         return
     for _, r in df.iterrows():
@@ -95,9 +120,9 @@ def handle_frame_insertion_points(ctx: LoadContext, df: pd.DataFrame) -> None:
             continue
         ctx.frame_insertion_points[fid] = {
             "cardinal_pt": str(r.get("CardinalPt", "10 (centroid)")).strip(),
-            "mirror2": str(r.get("Mirror2", "No")).strip(),
-            "mirror3": str(r.get("Mirror3", "No")).strip(),
-            "transform": str(r.get("Transform", "Yes")).strip(),
+            "mirror2": _to_bool(r.get("Mirror2")),
+            "mirror3": _to_bool(r.get("Mirror3")),
+            "transform": _to_bool(r.get("Transform"), True),
             "coord_sys": str(r.get("CoordSys", "Local")).strip(),
             "jt_offset_xi": _safe_float(r, "JtOffsetXI"),
             "jt_offset_yi": _safe_float(r, "JtOffsetYI"),
@@ -109,8 +134,10 @@ def handle_frame_insertion_points(ctx: LoadContext, df: pd.DataFrame) -> None:
 
 
 def handle_frame_end_offsets(ctx: LoadContext, df: pd.DataFrame) -> None:
-    """FRAME OFFSET ALONG LENGTH ASSIGNMENTS."""
-    ctx.df_frame_end_offsets = df
+    """FRAME OFFSET ALONG LENGTH ASSIGNMENTS.
+
+    Kolonlar: Frame, Type, LengthI, LengthJ, RigidFactor
+    """
     if df is None or df.empty:
         return
     for _, r in df.iterrows():
@@ -126,31 +153,35 @@ def handle_frame_end_offsets(ctx: LoadContext, df: pd.DataFrame) -> None:
 
 
 def handle_frame_local_axes(ctx: LoadContext, df: pd.DataFrame) -> None:
-    """FRAME LOCAL AXES ASSIGNMENTS 1 - TYPICAL."""
-    ctx.df_frame_local_axes = df
+    """FRAME LOCAL AXES ASSIGNMENTS 1 - TYPICAL.
+
+    Kolonlar: Frame, Angle, MirrorAbt2, MirrorAbt3
+    """
     if df is None or df.empty:
         return
     for _, r in df.iterrows():
         fid = str(r.get("Frame", "")).strip()
         if not fid:
             continue
-        # rotation_deg zaten _parse_frame_assign'dan geliyor; v10 ek alanları sakla
         ctx.frame_local_axes[fid] = {
             "angle": _safe_float(r, "Angle", 0.0),
-            "mirror_abt2": str(r.get("MirrorAbt2", "No")).strip(),
-            "mirror_abt3": str(r.get("MirrorAbt3", "No")).strip(),
+            "mirror_abt2": _to_bool(r.get("MirrorAbt2")),
+            "mirror_abt3": _to_bool(r.get("MirrorAbt3")),
         }
 
 
 def handle_frame_load_transfer(ctx: LoadContext, df: pd.DataFrame) -> None:
-    """FRAME LOAD TRANSFER OPTIONS."""
-    ctx.df_frame_load_transfer = df
+    """FRAME LOAD TRANSFER OPTIONS.
+
+    Kolonlar: Frame, Transfer
+    """
     if df is None or df.empty:
         return
     for _, r in df.iterrows():
         fid = str(r.get("Frame", "")).strip()
         if fid:
-            ctx.frame_load_transfer[fid] = str(r.get("Transfer", "Yes")).strip()
+            ctx.frame_load_transfer[fid] = _to_bool(r.get("Transfer"), True)
+
 
 
 def handle_frame_section_rebar_col(ctx: LoadContext, df: pd.DataFrame) -> None:
@@ -199,5 +230,16 @@ def handle_frame_section_rebar_beam(ctx: LoadContext, df: pd.DataFrame) -> None:
 
 
 def handle_frame_time_dependent(ctx: LoadContext, df: pd.DataFrame) -> None:
-    """FRAME SECTION PROPERTIES 13 - TIME DEPENDENT."""
-    ctx.df_frame_time_dependent = df
+    """FRAME SECTION PROPERTIES 13 - TIME DEPENDENT.
+
+    Kolonlar: SectionName, TypeSize, AutoSFSize
+    """
+    if df is None or df.empty:
+        return
+    for _, r in df.iterrows():
+        sec = str(r.get("SectionName", "")).strip()
+        if sec:
+            ctx.frame_time_dependent[sec] = {
+                "type_size": str(r.get("TypeSize", "Auto")).strip(),
+                "auto_sf_size": _safe_float(r, "AutoSFSize", 1.0),
+            }

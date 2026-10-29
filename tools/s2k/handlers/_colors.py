@@ -84,5 +84,5 @@ def color_from_string(s) -> tuple[float, float, float]:
         except ValueError:
             pass
 
-    logger.warning("[Color] Bilinmeyen format: %r → default", text)
+    logger.debug("[Color] Bilinmeyen format: %r → default", text)
     return DEFAULT_COLOR

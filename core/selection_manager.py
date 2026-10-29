@@ -36,7 +36,7 @@ class SelectionManager:
             #pass(f"  Calling scene_renderer.update_geo()")
             self.r.update_geo(scene)
         else:
-            logger.warning("  No scene_renderer available!")
+            logger.debug("  No scene_renderer available!")
     
     def _clear_all(self):
         """Tüm seçimleri temizle"""

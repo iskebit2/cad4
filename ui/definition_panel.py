@@ -21,9 +21,11 @@ from typing import (
 
 from imgui_bundle import imgui
 
-from data.enums import LinkPropType, SectionType
+from data.enums import ConstraintType, LinkPropType, SectionType
 from domain.definition import (
+    AreaSection,
     AutoSeismicTSC2018,
+    ConstraintDefinition,
     LinkProp,
     LinkPropLinear,
     LoadCase,
@@ -96,11 +98,11 @@ def _name_attr(obj) -> str:
 # ============================================================================
 # (cls, container_attr, label, factory, clone)
 DEFINITIONS: list[tuple] = [
-    (Material, "materials", "Malzemeler",
+    (Material, "materials", "MATERIAL PROPERTIES",
         lambda p: Material(name=_unique_name(p.materials, "MALZEME")),
         lambda m: dataclasses.replace(m, color=tuple(m.color))),
 
-    (Section, "sections", "Kesitler",
+    (Section, "sections", "FRAME SECTION PROPERTIES",
         lambda p: Section(
             name=_unique_name(p.sections, "KESIT"),
             profile_type=SectionType.RECT,
@@ -111,53 +113,86 @@ DEFINITIONS: list[tuple] = [
             name=s.name, profile_type=s.profile_type,
             profile_params=dict(s.profile_params),
             material=s.material, color=tuple(s.color),
+            rebar_column=dict(s.rebar_column or {}),
+            rebar_beam=dict(s.rebar_beam or {}),
+            time_dependent=dict(s.time_dependent or {}),
+            sd_section=s.sd_section,        # referans (kopya değil)
         )),
 
-    (LoadPattern, "load_patterns", "Yük Paternleri",
+    # ★ YENİ: AreaSection
+    (AreaSection, "area_sections", "AREA SECTION PROPERTIES",
+        lambda p: AreaSection(
+            name=_unique_name(p.area_sections, "ASEC"),
+            material=next(iter(p.materials.values()), None),
+        ),
+        lambda s: AreaSection(
+            name=s.name, prop_type=s.prop_type, area_type=s.area_type,
+            material=s.material, mat_angle=s.mat_angle,
+            thickness=s.thickness, bend_thick=s.bend_thick,
+            drill_dof=s.drill_dof, color=tuple(s.color),
+            membrane_f11=s.membrane_f11, membrane_f22=s.membrane_f22,
+            membrane_f12=s.membrane_f12,
+            bending_m11=s.bending_m11, bending_m22=s.bending_m22,
+            bending_m12=s.bending_m12,
+            shear_v13=s.shear_v13, shear_v23=s.shear_v23,
+            mass=s.mass, weight=s.weight,
+            rebar_mat=s.rebar_mat, rebar_opt=s.rebar_opt,
+            type_size=s.type_size, auto_sf_size=s.auto_sf_size,
+        )),
+
+    # ★ YENİ: ConstraintDefinition
+    (ConstraintDefinition, "constraint_definitions", "CONSTRAINT DEFINITIONS",
+        lambda p: ConstraintDefinition(
+            name=_unique_name(p.constraint_definitions, "CONSTR"),
+            constraint_type=ConstraintType.DIAPHRAGM,
+        ),
+        dataclasses.replace),
+
+    (LoadPattern, "load_patterns", "LOAD PATTERN DEFINITIONS",
         lambda p: LoadPattern(name=_unique_name(p.load_patterns, "PATTERN")),
         dataclasses.replace),
 
-    (LoadCase, "load_cases", "Yük Durumları",
+    (LoadCase, "load_cases", "LOAD CASE DEFINITIONS",
         lambda p: LoadCase(name=_unique_name(p.load_cases, "CASE")),
         lambda c: dataclasses.replace(
             c, static_assignments=[dataclasses.replace(a) for a in c.static_assignments])),
 
-    (ModalCase, "modal_cases", "Modal Durumlar",
+    (ModalCase, "modal_cases", "CASE - MODAL",
         lambda p: ModalCase(name=_unique_name(p.modal_cases, "MODAL")),
         dataclasses.replace),
 
-    (LoadCombination, "combinations", "Kombinasyonlar",
+    (LoadCombination, "combinations", "COMBINATION DEFINITIONS",
         lambda p: LoadCombination(name=_unique_name(p.combinations, "COMBO")),
         lambda c: dataclasses.replace(
             c, items=[dataclasses.replace(i) for i in c.items])),
 
-    (SpectrumFunction, "spectrum_functions", "Spektrum Fonksiyonları",
+    (SpectrumFunction, "spectrum_functions", "FUNCTION - RESPONSE SPECTRUM",
         lambda p: SpectrumFunction(name=_unique_name(p.spectrum_functions, "SPEC")),
         dataclasses.replace),
 
-    (ResponseSpectrumCase, "response_spectrum_cases", "Tepki Spektrum Durumları",
+    (ResponseSpectrumCase, "response_spectrum_cases", "CASE - RESPONSE SPECTRUM",
         lambda p: ResponseSpectrumCase(name=_unique_name(p.response_spectrum_cases, "RSC")),
         lambda c: dataclasses.replace(
             c, assignments=[dataclasses.replace(a) for a in c.assignments])),
 
-    (AutoSeismicTSC2018, "auto_seismics", "Otomatik Sismik (TSC2018)",
+    (AutoSeismicTSC2018, "auto_seismics", "AUTO SEISMIC - TSC2018",
         lambda p: AutoSeismicTSC2018(load_pattern=_unique_name(p.auto_seismics, "SEISMIC")),
         dataclasses.replace),
-    (LinkProp, "link_props", "Link Özellikleri",
-    lambda p: LinkPropLinear(
-        name=_unique_name(p.link_props, "LINK"),
-        prop_type=LinkPropType.LINEAR,
-    ),
-    lambda lp: LinkPropLinear(
-        name=lp.name,
-        prop_type=lp.prop_type,
-        DOF=dict(getattr(lp, "DOF", {}) or {}),
-        Fixed=dict(getattr(lp, "Fixed", {}) or {}),
-        Ke=dict(getattr(lp, "Ke", {}) or {}),
-        Ce=dict(getattr(lp, "Ce", {}) or {}),
-    )),
-    
-    (SectionCut, "section_cuts", "Section Cuts",
+
+    (LinkProp, "link_props", "LINK PROPERTY DEFINITIONS",
+        lambda p: LinkPropLinear(
+            name=_unique_name(p.link_props, "LINK"),
+            prop_type=LinkPropType.LINEAR,
+        ),
+        lambda lp: LinkPropLinear(
+            name=lp.name, prop_type=lp.prop_type,
+            DOF=dict(getattr(lp, "DOF", {}) or {}),
+            Fixed=dict(getattr(lp, "Fixed", {}) or {}),
+            Ke=dict(getattr(lp, "Ke", {}) or {}),
+            Ce=dict(getattr(lp, "Ce", {}) or {}),
+        )),
+
+    (SectionCut, "section_cuts", "SECTION CUTS",
         lambda p: SectionCut(name=_unique_name(p.section_cuts, "CUT")),
         dataclasses.replace),
 ]
@@ -227,7 +262,7 @@ class DefinitionPanel(BasePanel):
         try:
             hints = get_type_hints(cls)
         except Exception:
-            logger.warning(f"[DefinitionPanel] get_type_hints({cls.__name__}) başarısız")
+            logger.debug(f"[DefinitionPanel] get_type_hints({cls.__name__}) başarısız")
             hints = {}
         self._hints_cache[cls] = hints
         return hints
@@ -244,7 +279,7 @@ class DefinitionPanel(BasePanel):
         self._unsupported_fields.clear()
 
         imgui.set_next_window_size(imgui.ImVec2(1000, 680), imgui.Cond_.first_use_ever)
-        expanded, opened = imgui.begin("Tanım Yöneticisi", True)
+        expanded, opened = imgui.begin("Definition Manager", True)
         if not opened:
             self.close()
             imgui.end()
@@ -262,7 +297,7 @@ class DefinitionPanel(BasePanel):
         cls, container_attr, label, factory, clone = DEFINITIONS[self._current_idx]
         container = getattr(project, container_attr, {})
 
-        self._draw_toolbar(container)
+        self._draw_toolbar(container, container_attr)
         imgui.separator()
 
         imgui.columns(2, "def_cols", borders=True)
@@ -281,7 +316,7 @@ class DefinitionPanel(BasePanel):
     def _draw_type_selector(self):
         labels = [d[2] for d in DEFINITIONS]
         imgui.set_next_item_width(320)
-        if imgui.begin_combo("Tanım Tipi", labels[self._current_idx]):
+        if imgui.begin_combo("Table", labels[self._current_idx]):
             for i, lbl in enumerate(labels):
                 clicked, _ = imgui.selectable(lbl, i == self._current_idx)
                 if clicked and i != self._current_idx:
@@ -293,54 +328,48 @@ class DefinitionPanel(BasePanel):
     # -----------------------------------------------------------------
     # ARAÇ ÇUBUĞU
     # -----------------------------------------------------------------
-    def _draw_toolbar(self, container):
-        if imgui.button("+ Yeni"):
+    def _draw_toolbar(self, container, container_attr: str):
+        if imgui.button("+ New"):
             self._create_new()
         imgui.same_line()
+
         can_dup = self._selected_name in container
+
+        # Duplicate
         if not can_dup:
             imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1))
-        if imgui.button("Kopyala") and can_dup:
+        if imgui.button("Duplicate") and can_dup:
             self._duplicate(container)
         if not can_dup:
             imgui.pop_style_color()
         imgui.same_line()
+
+        # Delete
         if not can_dup:
             imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1))
-        if imgui.button("Sil") and can_dup:
+        if imgui.button("Delete") and can_dup:
             self._confirm_delete_name = self._selected_name
         if not can_dup:
             imgui.pop_style_color()
         imgui.same_line()
+
+        # Search
         imgui.set_next_item_width(250)
-        _, self._search = imgui.input_text("Arama", self._search)
-
-        # --- Seç butonu ---
+        _, self._search = imgui.input_text("Search", self._search)
         imgui.same_line()
-        cls, _, _, _, _ = DEFINITIONS[self._current_idx]
-        can_select = (cls in (Section, Material) and self._selected_name is not None)
-        if not can_select:
-            imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1))
-        if imgui.button("Seç ▾" if cls is Section else "Seç") and can_select:
-            if cls is Section:
-                imgui.open_popup("##select_by_section_popup")
-            else:
-                self._select_by_definition(cls, self._selected_name)
-        if not can_select:
-            imgui.pop_style_color()
-        if imgui.is_item_hovered() and not can_select:
-            imgui.set_tooltip("Sadece bir Section veya Material seçiliyken kullanılabilir.")
 
-        # Section için popup
-        if cls is Section and can_select:
-            if imgui.begin_popup("##select_by_section_popup"):
-                if imgui.menu_item("Frame'leri Seç", "", False)[0]:
-                    self._select_by_section(self._selected_name, target="frames")
-                    imgui.close_current_popup()
-                if imgui.menu_item("Area'ları Seç", "", False)[0]:
-                    self._select_by_section(self._selected_name, target="areas")
-                    imgui.close_current_popup()
-                imgui.end_popup()
+        # Select in Scene
+        cls = DEFINITIONS[self._current_idx][0]
+        if not can_dup:
+            imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1))
+        if imgui.button("Select 🔍") and can_dup:
+            self._select_by_definition(cls, self._selected_name, container_attr)
+        if not can_dup:
+            imgui.pop_style_color()
+        if imgui.is_item_hovered() and not can_dup:
+            imgui.set_tooltip(
+                "Selects all scene elements using the selected record."
+            )
 
     # -----------------------------------------------------------------
     # LİSTE
@@ -414,7 +443,7 @@ class DefinitionPanel(BasePanel):
             return self._render_input(obj, name, tp, cur, project)
         except Exception as e:
             msg = f"{type(obj).__name__}.{name}: {type(e).__name__}: {e}"
-            logger.warning(f"[DefinitionPanel] Render hata — {msg}")
+            logger.debug(f"[DefinitionPanel] Render hata — {msg}")
             self._render_errors.add(msg)
             imgui.text_colored(imgui.ImVec4(1, 0.5, 0.3, 1.0), f'{name}: ⚠ render hata')
             if imgui.is_item_hovered():
@@ -430,89 +459,90 @@ class DefinitionPanel(BasePanel):
             if name == "profile_type":
                 return self._draw_section_type_editor(obj)
             if name == "profile_params":
-                changed = self._draw_section_params(obj)
-                # Katalogdan seç
-                if imgui.button(f"Katalog ▾##cat_{id(obj)}"):
-                    imgui.open_popup(f"##sec_cat_popup_{id(obj)}")
-                self._draw_section_catalog_popup(obj)
-                # Avatar
-                imgui.spacing()
-                imgui.text_colored(imgui.ImVec4(0.6, 0.7, 0.85, 1.0), 'Önizleme:')
-                draw_section_preview(obj, avail_w=160, avail_h=120)
-                return changed
+                return self._draw_section_params(obj)
+            if name == "sd_section":
+                return self._draw_sd_section_summary(obj)
+            if name == "rebar_column":
+                return self._draw_rebar_dict(obj, name)
+            if name == "rebar_beam":
+                return self._draw_rebar_dict(obj, name)
+            if name == "time_dependent":
+                return self._draw_time_dependent(obj)
+
+        # --- AreaSection özel ---
+        if isinstance(obj, AreaSection):
+            if name == "prop_type":
+                return self._draw_areasec_prop_type(obj)
+            if name == "thickness":
+                return self._draw_float_named(obj, name, "Kalınlık", step=1.0)
+
+        # --- ConstraintDefinition özel ---
+        if isinstance(obj, ConstraintDefinition):
+            if name == "constraint_type":
+                return self._draw_constraint_type_editor(obj)
+            if name in ("ux", "uy", "uz", "rx", "ry", "rz"):
+                return self._draw_bool_named(obj, name, name.upper())
+            if name in ("u1", "u2", "u3", "r1", "r2", "r3"):
+                return self._draw_bool_named(obj, name, name.upper())
+
         # --- LinkProp özel ---
         if isinstance(obj, LinkProp):
             if name == "prop_type":
                 return self._draw_linkprop_type_editor(obj)
             if name in ("DOF", "Fixed", "Ke", "Ce"):
                 return self._draw_linkprop_dict(obj, name)
-            
-        # --- Özel editörler ---
-        if isinstance(obj, Section):
-            if name == "profile_type":
-                return self._draw_section_type_editor(obj)
-            if name == "profile_params":
-                return self._draw_section_params(obj)
 
-        # --- Material.name için katalog menüsü ---
+        # --- Material.name katalog ---
         if isinstance(obj, Material) and name == "name":
             return self._draw_material_name_with_catalog(obj)
-        
-        # --- RENK (özel: 3-float tuple ama paletle) ---
+        if isinstance(obj, LoadCombination) and name == "items":
+            return self._draw_combination_items(obj)
+
+        # --- Renk ---
         if name == "color" and get_origin(tp) is tuple and len(get_args(tp)) == 3:
             changed, new_color = color_edit3(name, cur or (0.8, 0.8, 0.8))
             if changed:
                 setattr(obj, name, new_color)
                 if hasattr(self, "_on_section_color_changed"):
                     self._on_section_color_changed(obj)
-        
+            return changed
+
         # --- Enum ---
         if _is_enum_type(tp):
             return self._render_enum(obj, name, tp, cur)
 
-        # --- bool ---
+        # --- bool / int / float / str ---
         if tp is bool:
             c, v = imgui.checkbox(name, bool(cur))
             if c:
-                setattr(obj, name, v)
-                return True
+                setattr(obj, name, v); return True
             return False
-
-        # --- int ---
         if tp is int:
             c, v = imgui.input_int(name, int(cur or 0))
             if c:
-                setattr(obj, name, v)
-                return True
+                setattr(obj, name, v); return True
             return False
-
-        # --- float ---
         if tp is float:
             c, v = imgui.input_float(name, float(cur or 0.0))
             if c:
-                setattr(obj, name, v)
-                return True
+                setattr(obj, name, v); return True
             return False
-
-        # --- str ---
         if tp is str:
             c, v = imgui.input_text(name, str(cur or ""))
             if c:
-                setattr(obj, name, v)
-                return True
+                setattr(obj, name, v); return True
             return False
 
-        # --- dataclass referansı (Material gibi) ---
+        # --- dataclass referansı ---
         if isinstance(tp, type) and is_dataclass(tp):
             return self._render_dataclass_ref(obj, name, tp, cur, project)
 
-        # --- Tuple[float, ...] (renk) ---
+        # --- tuple[float, ...] ---
         origin = get_origin(tp)
         args = get_args(tp)
         if origin is tuple and args and all(a is float for a in args):
             return self._render_float_tuple(obj, name, args, cur)
 
-        # --- Desteklenmeyen ---
         self._mark_unsupported(obj, name, tp, cur)
         return False
 
@@ -610,6 +640,17 @@ class DefinitionPanel(BasePanel):
                     section.profile_params.update(_DEFAULT_SECTION_PARAMS.get(values[i], {}))
                     changed = True
             imgui.end_combo()
+
+        if changed:
+            section.profile_params.clear()
+            section.profile_params.update(_DEFAULT_SECTION_PARAMS.get(section.profile_type, {}))
+        
+        # ★ Önizleme
+        imgui.separator()
+        try:
+            draw_section_preview(section, avail_w=280, avail_h=200)
+        except Exception as e:
+            imgui.text_colored(imgui.ImVec4(1.0, 0.5, 0.3, 1.0), f"Önizleme hatası: {e}")
         return changed
 
     # -----------------------------------------------------------------
@@ -675,6 +716,18 @@ class DefinitionPanel(BasePanel):
             imgui.bullet_text(f"I22 = {I22:.4e} mm⁴")
             imgui.bullet_text(f"J   = {J:.4e} mm⁴")
 
+        # ★ SD varsa SD özet
+        if getattr(section, "sd_section", None) is not None:
+            return changed
+        
+        # ★ Önizleme geri gelsin
+        imgui.separator()
+        imgui.text_colored(imgui.ImVec4(0.6, 0.75, 1.0, 1.0), "Önizleme:")
+        try:
+            draw_section_preview(section, avail_w=280, avail_h=200)
+        except Exception as e:
+            imgui.text_colored(imgui.ImVec4(1.0, 0.5, 0.3, 1.0), f"Önizleme hatası: {e}")
+            
         return changed
 
     def _compute_section_props(self, section):
@@ -1039,37 +1092,92 @@ class DefinitionPanel(BasePanel):
         )
 
 
-    def _select_by_definition(self, cls, name: str):
-        """
-        Material için: belirli bir Material'i kullanan Frame + Area'ları seç.
-        """
+    def _select_by_definition(self, cls, name: str, container_attr: str):
+        """Bir tanımı kullanan tüm sahne elemanlarını seç."""
         project = getattr(self.app, "current_project", None)
         if project is None or project.scene is None:
             return
+        
         scn = project.scene
         scn.clear_selections()
-
-        if cls is not Material:
-            return
-
-        n_frames = 0
-        for frame in scn.frames.values():
-            sec = getattr(frame, "section", None)
-            mat = getattr(sec, "material", None) if sec else None
-            if mat is not None and getattr(mat, "name", None) == name:
-                frame.is_selected = True
-                n_frames += 1
-
-        n_areas = 0
-        for area in scn.areas.values():
-            mat = getattr(area, "material", None)
-            if mat is not None and getattr(mat, "name", None) == name:
-                area.is_selected = True
-                n_areas += 1
-
+        
+        n_frames = n_areas = n_links = n_nodes = 0
+        
+        if cls is Section:
+            for f in scn.frames.values():
+                if f.section and getattr(f.section, "name", None) == name:
+                    f.is_selected = True
+                    n_frames += 1
+            for a in scn.areas.values():
+                if getattr(a, "section_name", "") == name:
+                    a.is_selected = True
+                    n_areas += 1
+        
+        elif cls is Material:
+            for f in scn.frames.values():
+                sec = f.section
+                mat = getattr(sec, "material", None) if sec else None
+                if mat and getattr(mat, "name", None) == name:
+                    f.is_selected = True
+                    n_frames += 1
+            for a in scn.areas.values():
+                mat = getattr(a, "material", None)
+                if mat and getattr(mat, "name", None) == name:
+                    a.is_selected = True
+                    n_areas += 1
+            for a in scn.areas.values():
+                sec = getattr(a, "area_section", None)
+                mat = getattr(sec, "material", None) if sec else None
+                if mat and getattr(mat, "name", None) == name:
+                    a.is_selected = True
+                    n_areas += 1
+        
+        elif cls is AreaSection:
+            for a in scn.areas.values():
+                if getattr(a, "area_section", None) and a.area_section.name == name:
+                    a.is_selected = True
+                    n_areas += 1
+                elif getattr(a, "section_name", "") == name:
+                    a.is_selected = True
+                    n_areas += 1
+        
+        elif cls is LinkProp:
+            for l in scn.links.values():
+                if getattr(l, "propname", "") == name:
+                    l.is_selected = True
+                    n_links += 1
+        
+        elif cls is LoadPattern:
+            # Yük pattern'lı frame'ler + area'lar + node'lar
+            for f in scn.frames.values():
+                if any(getattr(load, "pattern_name", "") == name
+                    for load in f.dist_loads):
+                    f.is_selected = True
+                    n_frames += 1
+            for a in scn.areas.values():
+                for attr in ("uniform_loads", "uniform_to_frame_loads"):
+                    if any(getattr(load, "pattern_name", "") == name
+                        for load in getattr(a, attr, [])):
+                        a.is_selected = True
+                        n_areas += 1
+                        break
+            for n in scn.nodes.values():
+                if any(getattr(load, "pattern_name", "") == name
+                    for load in n.loads):
+                    n.is_selected = True
+                    n_nodes += 1
+        
+        # ConstraintDefinition → node'lar
+        elif cls is ConstraintDefinition:
+            for n in scn.nodes.values():
+                if getattr(n, "constraint_name", None) == name:
+                    n.is_selected = True
+                    n_nodes += 1
+        
         self._notify_selection_changed(scn)
         logger.info(
-            f"[Filter] Material '{name}' → {n_frames} frame + {n_areas} area seçildi"
+            "[Filter] %s '%s' → %d frame, %d area, %d link, %d node",
+            cls.__name__, name, n_frames, n_areas, n_links, n_nodes,
         )
 
 
@@ -1141,3 +1249,225 @@ class DefinitionPanel(BasePanel):
 
         logger.info("[DefPanel] Referanslar güncellendi: %d frame, %d area",
                     n_frames, n_areas)
+
+    # ---------------------------------------------------------------------------
+    # SD SECTION ÖZETİ (salt okunur)
+    # ---------------------------------------------------------------------------
+    def _draw_sd_section_summary(self, section) -> bool:
+        sd = getattr(section, "sd_section", None)
+        if sd is None:
+            imgui.text_disabled("SD Section tanımı yok")
+            return False
+
+        n_shapes = len(sd.shapes or [])
+        n_pts = sum(len(sh.points) for sh in (sd.shapes or []))
+        imgui.text_colored(
+            imgui.ImVec4(0.65, 0.8, 1.0, 1.0),
+            f"SD: {n_shapes} shape, {n_pts} pt — {sd.design_type}",
+        )
+        if imgui.is_item_hovered():
+            lines = [
+                f"Design: {sd.design_type}",
+                f"nPolygon: {sd.n_polygon}",
+                f"AxisAngle: {sd.axis_angle:g}°",
+                f"Mesh: abs={sd.mesh_sz_abs:g} rel={sd.mesh_sz_rel:g}",
+            ]
+            for i, sh in enumerate(sd.shapes or []):
+                lines.append(f"Shape[{i}]: {sh.name} ({len(sh.points)} pt)")
+            imgui.set_tooltip("\n".join(lines))
+        return False
+
+
+    # ---------------------------------------------------------------------------
+    # REBAR DICT (rebar_column / rebar_beam)
+    # ---------------------------------------------------------------------------
+    def _draw_rebar_dict(self, section, name: str) -> bool:
+        d = getattr(section, name, None)
+        if not isinstance(d, dict):
+            imgui.text_disabled(f"{name}: <dict değil>")
+            return False
+
+        if not d:
+            imgui.text_disabled(f"{name}: <boş>")
+            if imgui.button(f"Yeni {name}"):
+                setattr(section, name, {})
+                return True
+            return False
+
+        changed = False
+        imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), name)
+        imgui.indent(12)
+
+        for k in sorted(d.keys()):
+            v = d[k]
+            imgui.set_next_item_width(200)
+            if isinstance(v, bool):
+                c, nv = imgui.checkbox(k, v)
+            elif isinstance(v, int):
+                c, nv = imgui.input_int(k, v)
+            elif isinstance(v, float):
+                c, nv = imgui.input_float(k, v)
+            elif isinstance(v, str):
+                c, nv = imgui.input_text(k, v)
+            else:
+                imgui.text_disabled(f"{k}: {v!r}")
+                continue
+            if c:
+                d[k] = nv
+                changed = True
+
+        imgui.unindent(12)
+        return changed
+
+
+    # ---------------------------------------------------------------------------
+    # TIME DEPENDENT
+    # ---------------------------------------------------------------------------
+    def _draw_time_dependent(self, section) -> bool:
+        d = getattr(section, "time_dependent", None)
+        if not isinstance(d, dict):
+            imgui.text_disabled("time_dependent: <dict değil>")
+            return False
+
+        if not d:
+            imgui.text_disabled("time_dependent: <boş>")
+            if imgui.button("Yeni time_dependent"):
+                setattr(section, "time_dependent", {"type_size": "Auto", "auto_sf_size": 1.0})
+                return True
+            return False
+
+        changed = False
+        imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), "time_dependent")
+        imgui.indent(12)
+        for k in sorted(d.keys()):
+            v = d[k]
+            imgui.set_next_item_width(200)
+            if isinstance(v, str):
+                c, nv = imgui.input_text(k, v)
+            elif isinstance(v, (int, float)):
+                c, nv = imgui.input_float(k, float(v))
+                nv = type(v)(nv)
+            else:
+                imgui.text_disabled(f"{k}: {v!r}")
+                continue
+            if c:
+                d[k] = nv
+                changed = True
+        imgui.unindent(12)
+        return changed
+
+
+    # ---------------------------------------------------------------------------
+    # AREA SECTION PROP TYPE
+    # ---------------------------------------------------------------------------
+    def _draw_areasec_prop_type(self, sec) -> bool:
+        from data.enums import PropAreaType
+        values = list(PropAreaType)
+        labels = [getattr(pt, "name", str(pt)) for pt in values]
+        try:
+            cur_idx = values.index(sec.prop_type)
+        except (ValueError, TypeError):
+            cur_idx = 0
+        changed = False
+        if imgui.begin_combo("prop_type", labels[cur_idx]):
+            for i, lbl in enumerate(labels):
+                c, _ = imgui.selectable(lbl, i == cur_idx)
+                if c and i != cur_idx:
+                    sec.prop_type = values[i]
+                    changed = True
+            imgui.end_combo()
+        return changed
+
+
+    # ---------------------------------------------------------------------------
+    # CONSTRAINT TYPE
+    # ---------------------------------------------------------------------------
+    def _draw_constraint_type_editor(self, cd) -> bool:
+        values = list(ConstraintType)
+        labels = [getattr(ct, "name", str(ct)) for ct in values]
+        try:
+            cur_idx = values.index(cd.constraint_type) if cd.constraint_type else 0
+        except (ValueError, TypeError):
+            cur_idx = 0
+        changed = False
+        if imgui.begin_combo("constraint_type", labels[cur_idx]):
+            for i, lbl in enumerate(labels):
+                c, _ = imgui.selectable(lbl, i == cur_idx)
+                if c and i != cur_idx:
+                    cd.constraint_type = values[i]
+                    changed = True
+            imgui.end_combo()
+        return changed
+
+
+    # ---------------------------------------------------------------------------
+    # BASİT YARDIMCILAR
+    # ---------------------------------------------------------------------------
+    def _draw_float_named(self, obj, name: str, label: str, step: float = 1.0) -> bool:
+        cur = float(getattr(obj, name, 0.0) or 0.0)
+        imgui.set_next_item_width(200)
+        c, v = imgui.input_float(label, cur, step, 10.0)
+        if c:
+            setattr(obj, name, float(v))
+            return True
+        return False
+
+
+    def _draw_bool_named(self, obj, name: str, label: str) -> bool:
+        cur = bool(getattr(obj, name, False))
+        imgui.set_next_item_width(200)
+        c, v = imgui.checkbox(label, cur)
+        if c:
+            setattr(obj, name, bool(v))
+            return True
+        return False
+
+    def _draw_combination_items(self, combo) -> bool:
+        """LoadCombination.items — ComboItem listesi editörü."""
+        items = getattr(combo, "items", None)
+        if not isinstance(items, list):
+            imgui.text_disabled("items: <liste değil>")
+            return False
+
+        changed = False
+        imgui.text_colored(imgui.ImVec4(0.7, 0.9, 0.7, 1.0), "Items")
+        imgui.indent(12)
+
+        # Mevcut item'lar
+        to_delete = None
+        for i, it in enumerate(items):
+            imgui.push_id(f"combo_item_{i}")
+            try:
+                imgui.text(f"[{i}]")
+                imgui.same_line()
+                imgui.set_next_item_width(200)
+                c1, case_name = imgui.input_text(
+                    "Case/Pat", getattr(it, "case_or_pattern_name", ""))
+                if c1:
+                    it.case_or_pattern_name = case_name
+                    changed = True
+                imgui.same_line()
+                imgui.set_next_item_width(100)
+                c2, sf = imgui.input_float(
+                    "SF", float(getattr(it, "scale_factor", 1.0)), 0.1, 0.01)
+                if c2:
+                    it.scale_factor = sf
+                    changed = True
+                imgui.same_line()
+                if imgui.small_button("X"):
+                    to_delete = i
+            finally:
+                imgui.pop_id()
+
+        if to_delete is not None:
+            del items[to_delete]
+            changed = True
+
+        # Yeni ekle
+        if imgui.button("+ Add Item"):
+            from domain.definition import ComboItem
+            items.append(ComboItem(case_or_pattern_name="", scale_factor=1.0))
+            changed = True
+
+        imgui.unindent(12)
+        return changed

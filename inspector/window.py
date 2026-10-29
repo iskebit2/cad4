@@ -439,7 +439,7 @@ class InspectorWindow:
 
     def _select_via_scene(self, el):
         if el is None or not hasattr(el, "unique_id"):
-            logger.warning("_select_via_scene: geçersiz element: %r", el)
+            logger.debug("_select_via_scene: geçersiz element: %r", el)
             return
         app = getattr(self, "app", None)
         if app and getattr(app, "engine", None):

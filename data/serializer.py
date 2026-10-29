@@ -391,13 +391,13 @@ def load_project_file(path: Path) -> Any:
         try:
             proj.unit_system = UnitSystem(raw_unit)
         except ValueError:
-            logger.warning(
+            logger.debug(
                 "[Load] Geçersiz unit_system değeri %r; N_MM kullanılıyor.",
                 raw_unit,
             )
             proj.unit_system = UnitSystem.N_MM
     else:
-        logger.warning(
+        logger.debug(
             "[Load] Beklenmeyen unit_system türü %s; N_MM kullanılıyor.",
             type(raw_unit).__name__,
         )
@@ -547,7 +547,7 @@ def load_project_file(path: Path) -> Any:
             plane = _decode_plane(pd)
             loaded_planes[plane.name] = plane
         except Exception as e:
-            logger.warning(f"[Load Debug] Plane yüklenemedi: {e}")
+            logger.debug(f"[Load Debug] Plane yüklenemedi: {e}")
     proj.planes = loaded_planes
     
 

@@ -126,7 +126,7 @@ class UnitSystem(Enum):
                 if us.force_unit.lower() == force and us.length_unit.lower() == length:
                     return us
 
-        logger.warning("[Units] Tanınmayan CurrUnits=%r → N_MM", raw)
+        logger.debug("[Units] Tanınmayan CurrUnits=%r → N_MM", raw)
         return cls.N_MM
 
     @staticmethod
@@ -198,7 +198,7 @@ def factor(dim: Dimension, from_sys: UnitSystem, to_sys: UnitSystem) -> float:
     if dim == Dimension.WEIGHT_DENSITY:
         return force_ratio / length_ratio**3
 
-    logger.warning("[Units] Bilinmeyen Dimension: %r → factor=1.0", dim)
+    logger.debug("[Units] Bilinmeyen Dimension: %r → factor=1.0", dim)
     return 1.0
 
 
@@ -210,7 +210,7 @@ def convert_value(dim, value, from_sys, to_sys):
     try:
         return float(value) * factor(dim, from_sys, to_sys)
     except (TypeError, ValueError):
-        logger.warning("[Units] convert_value(%s, %r) → dönüştürülemedi", dim, value)
+        logger.debug("[Units] convert_value(%s, %r) → dönüştürülemedi", dim, value)
         return value
 
 
@@ -355,7 +355,7 @@ def _convert_field(
             )
             return 1
     except Exception as e:
-        logger.warning("[Units] %s dönüştürülemedi: %s", field_path, e)
+        logger.debug("[Units] %s dönüştürülemedi: %s", field_path, e)
     return 0
 
 

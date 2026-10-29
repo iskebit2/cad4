@@ -240,7 +240,7 @@ class InspectorController:
             try:
                 s._is_dirty = True
             except Exception:
-                logger.warning("scene dirty API yok — renderer güncellenmeyebilir")
+                logger.debug("scene dirty API yok — renderer güncellenmeyebilir")
 
     def _resolve_catalog_refs(self, values):
         """'section' → Section nesnesi, 'material' → Material nesnesi, ..."""

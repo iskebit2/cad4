@@ -502,11 +502,11 @@ class SDConvertPanel(BasePanel):
         - Önce paylaşılan Node'ları ekler, sonra Area'ları
         """
         if not self._preview_frame or not self._edge_selected:
-            logger.warning("[SDPanel] Dönüşüm için frame veya seçili kenar yok")
+            logger.debug("[SDPanel] Dönüşüm için frame veya seçili kenar yok")
             return
 
         if not self.app or not self.app.engine or not self.app.engine.scene:
-            logger.warning("[SDPanel] engine veya scene yok")
+            logger.debug("[SDPanel] engine veya scene yok")
             return
 
         frame = self._preview_frame
@@ -515,7 +515,7 @@ class SDConvertPanel(BasePanel):
 
         sd = getattr(section, 'sd_section', None)
         if sd is None:
-            logger.warning(f"[SDPanel] '{frame.label}' sd_section yok")
+            logger.debug(f"[SDPanel] '{frame.label}' sd_section yok")
             return
 
         poly = next(
@@ -524,7 +524,7 @@ class SDConvertPanel(BasePanel):
             None,
         )
         if poly is None:
-            logger.warning(f"[SDPanel] '{frame.label}' Polygon shape yok")
+            logger.debug(f"[SDPanel] '{frame.label}' Polygon shape yok")
             return
 
         # Frame düşey mi?
@@ -584,7 +584,7 @@ class SDConvertPanel(BasePanel):
             new_areas.append(area)
 
         if not new_areas:
-            logger.warning("[SDPanel] Üretilecek area yok")
+            logger.debug("[SDPanel] Üretilecek area yok")
             return
 
         # Node paylaşımı — aynı 3D konumdaki node'ları tek nesneye indir
