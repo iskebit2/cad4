@@ -543,6 +543,15 @@ class Polygon(Element):
         self.is_temporary = False
         self.uniform_to_frame_loads: list[Any] = []
         self.associated_frame_ids: list[int] = []
+        self.assigned_loads: list[D.AreaUniformLoad] = []   # yüzey yükü
+        self.load_pattern: str = ""                        # hangi pattern'a ait
+        self.transfer_target: str = "frames"               # frames / areas
+        self.transfer_dist_type: str = "one_way"           # DistType
+        self.is_load_area: bool = False                    # load transfer aktif
+
+    def collect_loads(self) -> list[D.AreaUniformLoad]:
+        """Bu polygon'a atanmış yükler."""
+        return list(self.assigned_loads)
 
     def is_valid(self) -> bool: return len(self.nodes) >= 3
 

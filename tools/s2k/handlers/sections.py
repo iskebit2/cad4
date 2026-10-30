@@ -52,7 +52,7 @@ def _dim_modifier(row, key: str, default: float = 1.0) -> float:
 # ============================================================================
 # SAP Shape → SectionType + params (S2K birimi — float)
 # ============================================================================
-def _map_sap_to_local(row) -> tuple[SectionType, dict[str, float]]:
+def _map_sap_to_local(row, sd_section=None) -> tuple[SectionType, dict[str, float]]:
     """SAP satırını SectionType + params'a çevir. Değerler S2K biriminde (float)."""
     shape = str(row.get("Shape", "Rectangle")).strip()
 
@@ -137,7 +137,10 @@ def _map_sap_to_local(row) -> tuple[SectionType, dict[str, float]]:
             "t": _safe_float(row, "tw", 10),
             **analysis,
         }
-    if shape in ("SD Section", "General"):
+    if sd_section is not None or shape in ("SD Section", "SD"):
+        return SectionType.SD, {**analysis}
+
+    if shape in ("General",):
         return SectionType.CUSTOM, {
             "h": _safe_float(row, "t3", 0.2),
             "b": _safe_float(row, "t2", 0.1),
@@ -182,7 +185,8 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
             continue
 
         try:
-            s_type, s_params = _map_sap_to_local(row)
+            sd = ctx.sd_sections.get(sect_name)
+            s_type, s_params = _map_sap_to_local(row, sd_section=sd)
         except Exception as e:
             logger.error("[FrameProps] '%s' dönüşüm HATASI: %s", sect_name, e, exc_info=True)
             continue

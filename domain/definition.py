@@ -522,10 +522,221 @@ class ProjectInfo:
     description: str = ""
     author: str = ""
 
+@dataclass
+class WindResult:
+    """Wind analizi sonucu — bir yön için."""
+    direction: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    q_p: float = 0.0
+    q_b: float = 0.0
+    z_ref: float = 0.0
+    e: float = 0.0
+
+    zones_cpe10: list[dict] = field(default_factory=list)
+    zones_cpe1: list[dict] = field(default_factory=list)
+    # Her zone dict:
+    #   {"label", "surface", "table_type", "pitch", "coords",
+    #    "cpe10": (min, max), "cpe1": (min, max),
+    #    "F_MN_P", "F_MN_M", "F_MX_P", "F_MX_M"}
 
 @dataclass
 class LoadManager:
+    # Rüzgar
     wind_zones: dict[str, list[Any]] = field(default_factory=dict)
+    wind_results: dict[str, "WindResult"] = field(default_factory=dict)
+
+    # Kar
+    snow_loads: list[dict] = field(default_factory=list)   # {pattern, value, polygon_id}
+
+    # Deprem (mevcut project.response_spectrum_cases yeterli)
+
+    # Kalıcı alan yükü atamaları ve sonraki frame aktarımı.
+    area_load_transfers: list[dict] = field(default_factory=list)
+    # {polygon_id, source_type, transfer_target, dist_type, load: AreaUniformLoad}
+    area_frame_transfers: list[dict] = field(default_factory=list)
+    area_frame_base_loads: list[dict] = field(default_factory=list)
+
+    def add_area_load_transfer(
+        self,
+        polygon,
+        load: AreaUniformLoad,
+        *,
+        transfer_target: str = "frames",
+        dist_type: DistType = DistType.ONE_WAY_U1,
+    ) -> dict:
+        """Store an area-load assignment and keep the polygon's legacy list in sync."""
+        if polygon is None or not hasattr(polygon, "unique_id"):
+            raise TypeError("Area load transfer requires a model polygon")
+        if not isinstance(load, AreaUniformLoad):
+            raise TypeError("Area load transfer requires an AreaUniformLoad")
+        if transfer_target not in ("frames", "areas"):
+            raise ValueError("transfer_target must be 'frames' or 'areas'")
+
+        distribution = DistType.from_input(dist_type)
+        stored_load = AreaUniformLoad(
+            pattern_name=load.pattern_name,
+            direction=load.direction,
+            value=float(load.value),
+            coordinate_system=load.coordinate_system,
+            source_name=load.source_name,
+        )
+        polygon.assigned_loads.append(stored_load)
+        polygon.transfer_target = transfer_target
+        polygon.transfer_dist_type = distribution.value
+        polygon.is_load_area = True
+        polygon.mark_dirty()
+
+        record = {
+            "polygon_id": int(polygon.unique_id),
+            "source_type": "uniform",
+            "transfer_target": transfer_target,
+            "dist_type": distribution.value,
+            "load": stored_load,
+            "source_key": f"polygon:{int(polygon.unique_id)}",
+        }
+        self.area_load_transfers.append(record)
+        return record
+
+    def area_load_transfers_for_polygon(self, polygon_id: int) -> list[dict]:
+        """Return persisted area-load transfers associated with a polygon."""
+        return [
+            transfer
+            for transfer in self.area_load_transfers
+            if int(transfer.get("polygon_id", -1)) == int(polygon_id)
+        ]
+
+    def replace_polygon_frame_transfers(
+        self,
+        scene,
+        polygon_id: int,
+        frame_loads: dict[int, dict[str, FrameDistributedLoad]],
+        *,
+        source_key: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Replace one area's frame-load contribution without clobbering other sources."""
+        from copy import deepcopy
+
+        polygon_id = int(polygon_id)
+        source_key = source_key or f"polygon:{polygon_id}"
+        old_records = [
+            item for item in self.area_frame_transfers
+            if item.get("source_key") == source_key
+        ]
+        affected = {
+            (int(item["frame_id"]), str(item["pattern_name"]))
+            for item in old_records
+        }
+        new_records = []
+        for frame_id, pattern_loads in frame_loads.items():
+            for pattern_name, load_set in pattern_loads.items():
+                frame_id = int(frame_id)
+                affected.add((frame_id, str(pattern_name)))
+                new_records.append({
+                    "source_key": source_key,
+                    "polygon_id": polygon_id,
+                    "frame_id": frame_id,
+                    "pattern_name": str(pattern_name),
+                    "load": deepcopy(load_set),
+                    **(metadata or {}),
+                })
+
+        self.area_frame_transfers = [
+            item for item in self.area_frame_transfers
+            if item.get("source_key") != source_key
+        ]
+        self.area_frame_transfers.extend(new_records)
+
+        frames = {
+            int(frame.unique_id): frame for frame in scene.frames.values()
+        }
+        bases = {
+            (int(item["frame_id"]), str(item["pattern_name"])): item.get("load")
+            for item in self.area_frame_base_loads
+        }
+        base_records = {
+            (int(item["frame_id"]), str(item["pattern_name"])): item
+            for item in self.area_frame_base_loads
+        }
+        for frame_id, pattern_name in affected:
+            frame = frames.get(frame_id)
+            if frame is None:
+                continue
+            key = (frame_id, pattern_name)
+            if key not in base_records:
+                base_load = frame.dist_load_sets.get(pattern_name)
+                record = {
+                    "frame_id": frame_id,
+                    "pattern_name": pattern_name,
+                    "load": deepcopy(base_load) if base_load is not None else None,
+                }
+                self.area_frame_base_loads.append(record)
+                base_records[key] = record
+                bases[key] = record["load"]
+
+            contributions = [
+                item["load"] for item in self.area_frame_transfers
+                if int(item["frame_id"]) == frame_id
+                and str(item["pattern_name"]) == pattern_name
+            ]
+            baseline = bases.get(key)
+            if not contributions:
+                if baseline is None:
+                    frame.dist_load_sets.pop(pattern_name, None)
+                else:
+                    frame.dist_load_sets[pattern_name] = deepcopy(baseline)
+            else:
+                combined = (
+                    deepcopy(baseline)
+                    if baseline is not None
+                    else deepcopy(contributions[0])
+                )
+                combined.segments = (
+                    list(combined.segments)
+                    if baseline is not None else []
+                )
+                for contribution in contributions:
+                    combined.segments.extend(
+                        deepcopy(contribution.segments)
+                    )
+                frame.dist_load_sets[pattern_name] = combined
+            frame.mark_dirty()
+
+        transferred_ids = sorted({
+            int(frame_id) for frame_id in frame_loads
+        })
+        for transfer in self.area_load_transfers:
+            if int(transfer.get("polygon_id", -1)) == polygon_id:
+                transfer["transferred_frame_ids"] = transferred_ids
+
+    def record_wind_zone_transfer(
+        self,
+        polygon_id: int,
+        *,
+        source_key: str,
+        direction_key: str,
+        zone_label: str,
+        cpe_kind: str,
+        dist_type: DistType,
+        loads: list[AreaUniformLoad],
+    ) -> dict:
+        """Persist a user-requested wind-zone transfer with its source metadata."""
+        self.area_load_transfers = [
+            item for item in self.area_load_transfers
+            if item.get("source_key") != source_key
+        ]
+        record = {
+            "polygon_id": int(polygon_id),
+            "source_type": "wind_zone",
+            "transfer_target": "frames",
+            "dist_type": DistType.from_input(dist_type).value,
+            "source_key": source_key,
+            "direction_key": str(direction_key),
+            "zone_label": zone_label,
+            "cpe_kind": cpe_kind,
+            "load": loads,
+        }
+        self.area_load_transfers.append(record)
+        return record
 
 @dataclass
 class ReportManager: pass
@@ -540,6 +751,12 @@ class AnalysisManager:
 
 @dataclass
 class GridPlaneDef:
+    __unit_schema__ = {
+        "origin": Dimension.LENGTH,
+        "spacing_u": Dimension.LENGTH,
+        "spacing_v": Dimension.LENGTH,
+    }
+
     name: str = ""
     origin: tuple[float, float, float] = (0.0, 0.0, 0.0)
     normal: tuple[float, float, float] = (0.0, 0.0, 1.0)
@@ -583,6 +800,7 @@ class GridConfig:
     planes_visibility: dict[str, bool] = field(default_factory=lambda: {
         "XY": True, "XZ": False, "YZ": False,
     })
+    user_planes: list["GridPlaneDef"] = field(default_factory=list)
 
 
 @dataclass
@@ -837,6 +1055,7 @@ class AreaUniformLoad:
     direction: LoadDirection = LoadDirection.GLOBAL_Z
     value: float = 0.0
     coordinate_system: str = "GLOBAL"
+    source_name: str = ""
 
     __unit_schema__ = {"value": Dimension.AREA_LOAD}
 

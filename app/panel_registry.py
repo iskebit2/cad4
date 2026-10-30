@@ -25,6 +25,7 @@ from PIL import Image
 from assets.icons_base64 import ICON_DATA
 from inspector import InspectorWindow
 from ui.definition_panel import DefinitionPanel
+from ui.area_to_frame_panel import AreaToFramePanel
 from ui.frame_load_panel import FrameLoadPanel
 from ui.grid_panel import GridPanel
 from ui.joint_load_panel import JointLoadPanel
@@ -145,7 +146,7 @@ PANEL_SPECS = [
         "shortcut":   "CTRL+P",
         "menu_label": "Inspector / Özellikler",
         "icon":       "layout",
-        "context": ["scene", "catalog"],
+        "context": ["scene", "catalog", "project"],
     },
     {
         "name":       "visibility",
@@ -209,7 +210,18 @@ PANEL_SPECS = [
         "shortcut":   None,
         "menu_label": "Alan Yükü Atama",
         "icon":       "arrow-down-circle",
-        "context": ["selection_areas", "patterns"],
+        "context": ["project", "selection_polygons"],
+    },
+    {
+        "name":       "area_to_frame",
+        "cls":        AreaToFramePanel,
+        "title":      "Area to Frame",
+        "category":   "Yükler",
+        "quick":      True,
+        "shortcut":   None,
+        "menu_label": "Area to Frame",
+        "icon":       "arrow-down",
+        "context":    ["project", "scene", "selection_polygons"],
     },
     {
         "name":       "assign_frame_distributed_load",

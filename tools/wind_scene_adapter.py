@@ -6,7 +6,7 @@ import numpy as np
 
 from core.units import Dimension, UnitSystem, convert_value
 from data.enums import PolygonType
-from domain.definition import WindDirectionResult
+from domain.definition import WindDirectionResult, WindResult
 from structload.windcalc.wind_analyzer import WindAnalyzer
 
 
@@ -111,10 +111,47 @@ class WindSceneAdapter:
         }
 
     @staticmethod
-    def store_zones(project, direction_key: str, zones: list[Any]) -> None:
+    def store_zones(
+        project,
+        direction_key: str,
+        zones: list[Any],
+        engine_data: dict[str, Any] | None = None,
+        direction: tuple[float, float, float] | None = None,
+    ) -> None:
         if not hasattr(project.loads, "wind_zones"):
             project.loads.wind_zones = {}
         project.loads.wind_zones[direction_key] = list(zones)
+        if engine_data is None:
+            return
+
+        zone_data = [
+            {
+                "label": zone.label,
+                "surface": zone.surface,
+                "table_type": zone.table_type,
+                "pitch": float(zone.pitch),
+                "coords": np.asarray(zone.coords, dtype=float).tolist(),
+                "cpe": list(WindSceneAdapter._coefficient_pair(zone.cpe10)),
+            }
+            for zone in zones
+        ]
+        project.loads.wind_results[direction_key] = WindResult(
+            direction=tuple(direction or (0.0, 0.0, 0.0)),
+            q_p=float(engine_data["q_p"]),
+            q_b=float(engine_data["q_b"]),
+            z_ref=float(engine_data["z_ref"]),
+            e=float(engine_data["e"]),
+            zones_cpe10=zone_data,
+            zones_cpe1=[
+                {
+                    **zone,
+                    "cpe": list(
+                        WindSceneAdapter._coefficient_pair(source.cpe1)
+                    ),
+                }
+                for zone, source in zip(zone_data, zones)
+            ],
+        )
 
     @staticmethod
     def update_direction_result(

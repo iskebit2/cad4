@@ -3,6 +3,8 @@
 Kesit 2D önizleme çizici.
 Section.profile_type + profile_params + color'dan otomatik avatar üretir.
 """
+from typing import Callable
+
 from imgui_bundle import imgui
 
 from data.enums import SectionType
@@ -225,56 +227,113 @@ def _draw_fallback(dl, x0, y0, aw, ah, _color, _params):
     dl.add_rect(x0 + 4, y0 + 4, x0 + aw - 4, y0 + ah - 4,
                 _color_u32_dark((0.6, 0.6, 0.7)), thickness=1.0)
 
+def _draw_sd(draw_list, origin, avail_w, avail_h, params, color, sd_section=None):
+    """SD Section — polygon'lardan kesit önizleme.
+
+    `section.sd_section` `draw_section_preview` içinden parametre olarak geçmeli.
+    """
+    import numpy as np
+
+    if sd_section is None or not sd_section.shapes:
+        imgui.text_disabled("SD Section (no shapes)")
+        return
+
+    # Tüm noktalar
+    all_pts = []
+    for sh in sd_section.shapes:
+        for p in sh.points:
+            all_pts.append((p.x, p.y))
+
+    if len(all_pts) < 3:
+        imgui.text_disabled("SD Section (no points)")
+        return
+
+    xs = [p[0] for p in all_pts]
+    ys = [p[1] for p in all_pts]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    w = max(max_x - min_x, 1e-6)
+    h = max(max_y - min_y, 1e-6)
+    scale = min(avail_w / w, avail_h / h) * 0.85
+
+    cx = origin.x + (avail_w - w * scale) / 2
+    cy = origin.y + (avail_h - h * scale) / 2
+
+    # Her shape için polygon (outline + hafif fill)
+    for sh in sd_section.shapes:
+        pts = [(p.x, p.y) for p in sh.points]
+        if len(pts) < 3:
+            continue
+
+        screen_pts = [
+            imgui.ImVec2(
+                cx + (x - min_x) * scale,
+                cy + (max_y - y) * scale,
+            )
+            for x, y in pts
+        ]
+
+        # Fill — hafif saydam
+        r, g, b = sh.fill_color[:3] if sh.fill_color else color[:3]
+        fill_col = imgui.get_color_u32(imgui.ImVec4(r, g, b, 0.35))
+        draw_list.add_convex_poly_filled(screen_pts, fill_col)
+
+        # Outline
+        edge_col = imgui.get_color_u32(imgui.ImVec4(r, g, b, 0.95))
+        n = len(screen_pts)
+        for i in range(n):
+            draw_list.add_line(
+                screen_pts[i], screen_pts[(i + 1) % n],
+                edge_col, 2.0,
+            )
+
+    imgui.dummy(imgui.ImVec2(avail_w, avail_h))
 
 # Tip → çizici eşleşmesi
-_PROFILE_DRAWERS = {
+_PROFILE_DRAWERS: dict[SectionType, Callable] = {
     SectionType.RECT:    _draw_rect,
     SectionType.CIRCLE:  _draw_circle,
     SectionType.PIPE:    _draw_pipe,
     SectionType.BOX:     _draw_box,
-    SectionType.TUBE:    _draw_box,   # TUBE ≈ BOX
+    SectionType.TUBE:    _draw_box,
     SectionType.I:       _draw_i,
     SectionType.C:       _draw_c,
-    SectionType.CHANNEL: _draw_c,     # CHANNEL ≈ C
+    SectionType.CHANNEL: _draw_c,
     SectionType.L:       _draw_l,
     SectionType.T:       _draw_t,
+    SectionType.CUSTOM:  _draw_fallback,
+    SectionType.SD:      _draw_sd,
 }
 
 
 # ============================================================================
 # ANA API
 # ============================================================================
-def draw_section_preview(section, avail_w: float = 160.0, avail_h: float = 120.0):
-    """
-    Verilen Section için 2D önizleme çizer.
-    ImGui draw_list kullanır — çağrıldığı yere widget yerleştirir.
+def draw_section_preview(section, avail_w=200, avail_h=150):
+    if section is None:
+        return
 
-    Args:
-        section: Section dataclass
-        avail_w: Maksimum genişlik (piksel)
-        avail_h: Maksimum yükseklik (piksel)
-    """
-    # Arkaplan kutusu
-    dl = _DrawListAdapter(imgui.get_window_draw_list())
-    cur_x, cur_y = imgui.get_cursor_screen_pos()
+    drawer = _PROFILE_DRAWERS.get(section.profile_type, _draw_fallback)
+    color = tuple(section.color) if section.color else (0.7, 0.7, 0.7)
+    params = section.profile_params or {}
+    sd = getattr(section, "sd_section", None)
 
-    # Arkaplan
-    bg_col = _color_u32((0.10, 0.12, 0.18), 1.0)
-    border_col = _color_u32((0.25, 0.30, 0.40), 1.0)
-    dl.add_rect_filled(cur_x, cur_y, cur_x + avail_w, cur_y + avail_h, bg_col)
-    dl.add_rect(cur_x, cur_y, cur_x + avail_w, cur_y + avail_h, border_col, thickness=1.0)
+    try:
+        raw_dl = imgui.get_window_draw_list()
+        origin = imgui.get_cursor_screen_pos()
 
-    # Profil çiz
-    if section is not None:
-        drawer = _PROFILE_DRAWERS.get(section.profile_type, _draw_fallback)
-        color = tuple(section.color) if section.color else (0.7, 0.7, 0.7)
-        try:
-            drawer(
-                dl, cur_x, cur_y, avail_w, avail_h,
-                color, section.profile_params or {},
-            )
-        except Exception:
-            logger.exception("Kesit önizleme çizimi başarısız; fallback çiziliyor")
-            _draw_fallback(dl, cur_x, cur_y, avail_w, avail_h, color, {})
+        # ★ SD özel — ham draw_list (ImVec2 doğrudan)
+        if section.profile_type == SectionType.SD or sd is not None:
+            _draw_sd(raw_dl, origin, avail_w, avail_h, params, color, sd)
+            return
 
-    imgui.dummy(imgui.ImVec2(avail_w, avail_h + 4))
+        # ★ Diğer tipler — adapter ile sar
+        dl = _DrawListAdapter(raw_dl)
+        drawer(dl, origin.x, origin.y, avail_w, avail_h, color, params)
+
+        # ★ Çizim alanı reserve et (ESKİDEN VARDI)
+        imgui.dummy(imgui.ImVec2(avail_w, avail_h + 4))
+
+    except Exception:
+        logger.exception("[SectionPreview] Preview hatası")
+        imgui.text_disabled("(preview)")

@@ -202,6 +202,19 @@ def polygon_schema():
         GroupSpec("İlişkili Frame'ler", [
             FieldSpec("associated_frame_ids", "list", "İlişkili Frame ID'leri"),
         ], default_open=False),
+        GroupSpec("Alan Yükleri (Load Manager)", [
+            FieldSpec(
+                "assigned_loads_summary", "list",
+                "Atanmış yükler (kaydedilmiş)",
+            ),
+            FieldSpec(
+                "area_load_transfer_summary", "list",
+                "Load Manager aktarım kayıtları",
+            ),
+            FieldSpec("transfer_target", "str", "Aktarım hedefi"),
+            FieldSpec("transfer_dist_type", "str", "Tributary tipi"),
+            FieldSpec("is_load_area", "bool", "Yük alanı etkin"),
+        ], default_open=True),
         GroupSpec("Yükler (Uniform to Frame)", [
             FieldSpec("uniform_to_frame_loads", "list_object", "Yük Tanımları",
                       item_schema=[

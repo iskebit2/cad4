@@ -492,15 +492,22 @@ class S2KExporter:
                     f'tw={cls._g(tw)}   tf={cls._g(tw)}   '
                     f'Color=Red   FromFile=No'
                 )
+            elif pt_name == "SD" or getattr(sec, "sd_section", None) is not None:
+                lines.append(
+                    f'   SectionName={name}   Material={mat_name}   '
+                    f'Shape="SD Section"   Area={...}   I33={...}   '
+                    f'I22={...}   J={...}   Color=Red   FromFile=No'
+                )
             else:
                 # CUSTOM / SD → General (analiz özellikleri ile)
                 area = p.get("Area", 0.0)
                 i33 = p.get("I33", 0.0)
                 i22 = p.get("I22", 0.0)
                 j = p.get("J", 0.0)
+                shape_ = "SD Section"if pt_name == "SD" else "General"
                 lines.append(
                     f'   SectionName={name}   Material={mat_name}   '
-                    f'Shape="General"   t3=1   t2=1   '
+                    f'Shape={shape_}   t3=1   t2=1   '
                     f'Area={cls._g(area)}   I33={cls._g(i33)}   '
                     f'I22={cls._g(i22)}   J={cls._g(j)}   '
                     f'Color=Red   FromFile=No'

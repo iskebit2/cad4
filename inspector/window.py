@@ -16,6 +16,8 @@ from typing import Any
 
 from imgui_bundle import imgui
 
+from core.units import UnitSystem
+from domain.element import Polygon
 from inspector.controller import InspectorController
 from inspector.widgets.base import DrawContext
 from inspector.widgets.group import GroupDrawer
@@ -558,13 +560,60 @@ class InspectorWindow:
 
         if not hasattr(self, "_draw_ctx"):
             self._draw_ctx = DrawContext(values=c.selection.values)
-        self._draw_ctx.values = c.selection.values
+        self._draw_ctx.values = self._values_for_selection()
         self._draw_ctx.changed = False
         self._draw_ctx.catalog = self.catalog
 
         self._group_drawer.open_groups = self._form_open_groups
         for gi, group in enumerate(c.schema):
             self._group_drawer.draw(gi, group, self._draw_ctx)
+
+    def _values_for_selection(self):
+        controller = self.controller
+        values = controller.selection.values
+        if (
+            not controller.selection.is_single
+            or not isinstance(controller.selection.primary, Polygon)
+            or self.project is None
+        ):
+            return values
+
+        polygon = controller.selection.primary
+        enriched = dict(values)
+        transfers = self.project.loads.area_load_transfers_for_polygon(
+            int(polygon.unique_id),
+        )
+        summaries = []
+        for transfer in transfers:
+            load = transfer.get("load")
+            loads = load if isinstance(load, list) else [load]
+            pattern_names = [
+                str(getattr(item, "pattern_name", ""))
+                for item in loads if item is not None
+            ]
+            transferred_ids = transfer.get("transferred_frame_ids", ())
+            details = [
+                str(transfer.get("source_type", "area")),
+                ", ".join(name for name in pattern_names if name),
+            ]
+            if transfer.get("zone_label"):
+                details.append(str(transfer["zone_label"]))
+            if transferred_ids:
+                details.append(
+                    "Frame ID: "
+                    + ", ".join(str(item) for item in transferred_ids)
+                )
+            summaries.append(" | ".join(item for item in details if item))
+        enriched["area_load_transfer_summary"] = summaries
+        unit_system = self.project.unit_system
+        if not isinstance(unit_system, UnitSystem):
+            unit_system = UnitSystem.from_sap(unit_system)
+        unit = f"{unit_system.force_unit}/{unit_system.length_unit}²"
+        enriched["assigned_loads_summary"] = [
+            f"{summary} | {unit}"
+            for summary in enriched.get("assigned_loads_summary", ())
+        ]
+        return enriched
 
         # elements = c.selection.elements
         # if elements:

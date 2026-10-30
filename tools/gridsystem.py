@@ -361,6 +361,14 @@ class GridSystem:
         self.user_planes.append(pdef)
         self.rebuild_user_plane(pdef)
 
+    def set_user_planes(self, planes: list[GridPlaneDef]):
+        """Replace runtime work planes with the project's persisted definitions."""
+        self.user_planes = list(planes)
+        names = {plane.name for plane in self.user_planes}
+        if self.active_user_plane not in names:
+            self.active_user_plane = None
+        self.rebuild_all()
+
     def remove_user_plane(self, name: str):
         pdef = self.get_user_plane(name)
         if pdef is None:

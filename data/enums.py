@@ -103,6 +103,7 @@ class SectionType(Enum):
     BOX = "BOX"
     CHANNEL = "CHANNEL"
     CUSTOM = "CUSTOM"
+    SD = "SD Section"
 
 class LinkPropType(IntEnum):
     LINEAR = 1

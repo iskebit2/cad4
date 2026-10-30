@@ -11,6 +11,7 @@ from imgui_bundle import imgui
 
 from data.enums import GridPlane
 from domain.definition import GridPlaneDef
+from domain.plane import Plane
 from logging_config import CadLogger
 from ui.base_panel import BasePanel
 
@@ -43,6 +44,10 @@ class GridPanel(BasePanel):
         self._new_count_u = 10
         self._new_count_v = 10
         self._name_seq = 1
+        self._grid_plane_orientation = "XY"
+        self._grid_plane_coordinate: float | None = None
+        self._grid_plane_depth: float | None = None
+        self._grid_plane_depth_unit = None
 
     # ----------------------------------------------------------------
     # CONTEXT
@@ -91,6 +96,13 @@ class GridPanel(BasePanel):
     def on_unit_changed(self):
         """Birim değişince text cache'i yenile."""
         self._sync_texts_from_project()
+        if self.project is not None and self._grid_plane_depth is not None:
+            new_unit = self.project.unit_system
+            if self._grid_plane_depth_unit != new_unit:
+                old_default = Plane.default_grid_plane_depth(self._grid_plane_depth_unit)
+                new_default = Plane.default_grid_plane_depth(new_unit)
+                self._grid_plane_depth *= new_default / old_default
+                self._grid_plane_depth_unit = new_unit
 
     # ----------------------------------------------------------------
     # DRAW
@@ -208,11 +220,11 @@ class GridPanel(BasePanel):
         if gp is None or gs is None:
             return
 
-        gp.x_coords = list(x_list)
-        gp.y_coords = list(y_list)
-        gp.z_coords = list(z_list)
+        gp.x_coords = sorted(set(x_list))
+        gp.y_coords = sorted(set(y_list))
+        gp.z_coords = sorted(set(z_list))
 
-        gs.set_coords(x_list, y_list, z_list)
+        gs.set_coords(gp.x_coords, gp.y_coords, gp.z_coords)
 
         cam = self.camera
         if cam is not None:
@@ -238,21 +250,45 @@ class GridPanel(BasePanel):
     def _draw_work_planes(self):
         gs = self.grid_system
 
+        self._draw_project_grid_plane_creator()
+        imgui.spacing()
+        imgui.separator()
+
         imgui.text_colored(
-            imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Aktif Work Plane",
+            imgui.ImVec4(0.5, 0.8, 1.0, 1.0), "Aktif Plane",
         )
         imgui.separator()
 
-        active_name = getattr(gs, "active_user_plane", None)
-        if active_name is None:
+        project = self.project
+        active_plane_id = (
+            project.plane_mgr.active_plane_id if project is not None else None
+        )
+        active_plane = next(
+            (
+                plane for plane in project.planes.values()
+                if plane.plane_id == active_plane_id
+            ),
+            None,
+        ) if project is not None else None
+        if active_plane is None:
             imgui.text_colored(
                 imgui.ImVec4(0.7, 0.7, 0.7, 1.0), "(yok — global grid)",
             )
         else:
             imgui.text_colored(
-                imgui.ImVec4(0.4, 0.9, 0.5, 1.0), f"Aktif: {active_name}",
+                imgui.ImVec4(0.4, 0.9, 0.5, 1.0),
+                f"Aktif Plane: {active_plane.name}",
             )
-            if imgui.button("Aktifliği Kaldır", imgui.ImVec2(-1, 0)):
+            if imgui.button("Plane etkinliğini kaldır", imgui.ImVec2(-1, 0)):
+                project.plane_mgr.deactivate()
+
+        active_name = getattr(gs, "active_user_plane", None)
+        if active_name is not None:
+            imgui.text_colored(
+                imgui.ImVec4(0.4, 0.9, 0.5, 1.0),
+                f"Aktif GridSystem Work Plane: {active_name}",
+            )
+            if imgui.button("Grid Work Plane etkinliğini kaldır"):
                 gs.set_active_user_plane(None)
 
         imgui.spacing()
@@ -297,6 +333,10 @@ class GridPanel(BasePanel):
 
             if to_delete is not None:
                 gs.remove_user_plane(to_delete.name)
+                self.grid.user_planes = [
+                    plane for plane in self.grid.user_planes
+                    if plane.name != to_delete.name
+                ]
 
         imgui.spacing()
         imgui.separator()
@@ -358,6 +398,110 @@ class GridPanel(BasePanel):
         if imgui.button("Ekle ve Aktifleştir", imgui.ImVec2(btn_w, 0)):
             self._create_and_add_plane(activate=True)
 
+    def _draw_project_grid_plane_creator(self):
+        project = self.project
+        if project is None:
+            return
+
+        imgui.text_colored(
+            imgui.ImVec4(0.5, 0.8, 1.0, 1.0),
+            "Project Grid koordinatından Plane oluştur",
+        )
+        imgui.separator()
+
+        if imgui.begin_combo(
+            "Düzlem yönü##grid_plane_orientation",
+            self._grid_plane_orientation,
+        ):
+            for orientation in ("XY", "XZ", "YZ"):
+                if imgui.selectable(
+                    orientation, orientation == self._grid_plane_orientation,
+                )[1]:
+                    self._grid_plane_orientation = orientation
+                    self._grid_plane_coordinate = None
+            imgui.end_combo()
+
+        levels = Plane.grid_levels(project.grid, self._grid_plane_orientation)
+        if not levels:
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.6, 0.5, 1.0),
+                "Bu yönde kullanılabilir grid koordinatı yok.",
+            )
+            return
+        if self._grid_plane_coordinate not in levels:
+            self._grid_plane_coordinate = levels[0]
+        level_axis = {"XY": "Z", "XZ": "Y", "YZ": "X"}[
+            self._grid_plane_orientation
+        ]
+        level_label = f"{level_axis} = {self._grid_plane_coordinate:g}"
+        if imgui.begin_combo("Grid koordinatı##grid_plane_level", level_label):
+            for value in levels:
+                label = f"{level_axis} = {value:g}"
+                if imgui.selectable(
+                    label, value == self._grid_plane_coordinate,
+                )[1]:
+                    self._grid_plane_coordinate = value
+            imgui.end_combo()
+
+        if (
+            self._grid_plane_depth is None
+            or self._grid_plane_depth_unit != project.unit_system
+        ):
+            self._grid_plane_depth = Plane.default_grid_plane_depth(
+                project.unit_system,
+            )
+            self._grid_plane_depth_unit = project.unit_system
+        depth_unit = project.unit_system.length_unit
+        _, self._grid_plane_depth = imgui.input_float(
+            f"Derinlik (±, {depth_unit})##grid_plane_depth",
+            self._grid_plane_depth,
+            step=self._grid_plane_depth * 0.1,
+        )
+        self._grid_plane_depth = max(0.0, self._grid_plane_depth)
+
+        if imgui.button("Plane oluştur##project_grid_plane", imgui.ImVec2(-1, 0)):
+            self._create_project_grid_plane(activate=False)
+        if imgui.button(
+            "Oluştur ve etkinleştir##project_grid_plane",
+            imgui.ImVec2(-1, 0),
+        ):
+            self._create_project_grid_plane(activate=True)
+
+    def _create_project_grid_plane(self, activate: bool):
+        project = self.project
+        if project is None or self._grid_plane_coordinate is None:
+            return
+        try:
+            if self._grid_plane_depth_unit != project.unit_system:
+                self._grid_plane_depth = Plane.default_grid_plane_depth(
+                    project.unit_system,
+                )
+                self._grid_plane_depth_unit = project.unit_system
+            orientation = self._grid_plane_orientation
+            level_axis = {"XY": "Z", "XZ": "Y", "YZ": "X"}[orientation]
+            name = (
+                f"Grid_{orientation}_{level_axis}_"
+                f"{self._grid_plane_coordinate:g}"
+            )
+            base_name = name
+            suffix = 1
+            while name in project.planes:
+                name = f"{base_name}_{suffix}"
+                suffix += 1
+            plane = Plane.from_grid(
+                project.grid,
+                orientation,
+                grid_coordinate=self._grid_plane_coordinate,
+                name=name,
+                depth_minus=self._grid_plane_depth,
+                depth_plus=self._grid_plane_depth,
+            )
+            project.add_plane(plane)
+            if activate:
+                project.plane_mgr.activate(plane)
+        except (TypeError, ValueError) as error:
+            logger.error("[GridPanel] Grid plane oluşturulamadı: %s", error)
+
     def _create_and_add_plane(self, activate: bool = False):
         gs = self.grid_system
         if not gs:
@@ -384,6 +528,11 @@ class GridPanel(BasePanel):
             visible=True,
         )
         gs.add_user_plane(pdef)
+        self.grid.user_planes = [
+            plane for plane in self.grid.user_planes
+            if plane.name != pdef.name
+        ]
+        self.grid.user_planes.append(pdef)
         if activate:
             gs.set_active_user_plane(pdef.name)
 

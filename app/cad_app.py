@@ -58,11 +58,11 @@ from core.input_manager import (
     MOUSE_BUTTON_MIDDLE,
     MOUSE_BUTTON_RIGHT,
 )
-from core.plane_draw_manager import PlaneDrawManager
+from core.plane_draw_manager import PlaneCreationTool
 from core.units import UnitSystem, convert_project_units
 from data.enums import GridPlane
 from domain.definition import Section, WindDirectionResult
-from domain.element import Area, Frame, Link, Node
+from domain.element import Area, Frame, Link, Node, Polygon
 from domain.project import Project
 from inspector import InspectorWindow
 from inspector.catalog_project import ProjectCatalog
@@ -187,6 +187,12 @@ class CadApp:
         frame_load = self.panels.get("assign_frame_distributed_load")
         if frame_load:
             frame_load["instance"].on_apply = self._apply_frame_distributed_load
+
+        area_to_frame = self.panels.get("area_to_frame")
+        if area_to_frame:
+            area_to_frame["instance"].on_transfer_complete = (
+                self._on_area_load_transfer_complete
+            )
 
         render_settings = self.panels.get("render_settings")
         if render_settings:
@@ -357,7 +363,9 @@ class CadApp:
                     wind["directions"][direction_key] = record
                 record.w_dir = direction
                 WindSceneAdapter.update_direction_result(record, zones, engine_data)
-                WindSceneAdapter.store_zones(project, direction_key, zones)
+                WindSceneAdapter.store_zones(
+                    project, direction_key, zones, engine_data, direction,
+                )
                 self._wind_analysis_status = f"{len(zones)} rüzgar bölgesi hesaplandı."
                 panel = self.panels.get("wind", {}).get("instance")
                 if panel is not None:
@@ -410,6 +418,9 @@ class CadApp:
             "selection":        lambda: selection,
             "selection_frames": lambda: [e for e in selection if isinstance(e, Frame)],
             "selection_areas":  lambda: [e for e in selection if isinstance(e, Area)],
+            "selection_polygons": lambda: [
+                e for e in selection if isinstance(e, Polygon)
+            ],
             "selection_links":  lambda: [e for e in selection if isinstance(e, Link)],
             "selection_nodes":  lambda: [e for e in selection if isinstance(e, Node)],
             "patterns":         lambda: list(getattr(project, "load_patterns", {}).keys()),
@@ -468,9 +479,10 @@ class CadApp:
         try:
             self.engine = Engine(w, h)
             self.engine.init_gl()
+            self.engine.set_working_plane_provider(self._active_working_plane)
             self.engine.on_hover_changed_callback = self._on_hover_changed
             self.engine.sel_mgr.on_selection_changed = self._on_selection_changed
-            self.engine.plane_draw_mgr = PlaneDrawManager(self.engine)
+            self.engine.plane_draw_mgr = PlaneCreationTool(self.engine)
             if self.engine.renderer:
                 self.engine.renderer.set_plane_draw_mgr(self.engine.plane_draw_mgr)
             self.initialized = True
@@ -480,6 +492,12 @@ class CadApp:
         except Exception:
             logger.exception("[Init] Engine başlatma hatası")
             self.initialized = True
+
+    def _active_working_plane(self):
+        project = self.current_project
+        if project is None or project.scene is None:
+            return None
+        return project.plane_mgr.active_plane
 
     def frame(self, dt: float) -> None:
         self._ensure_engine()
@@ -723,6 +741,9 @@ class CadApp:
                     self.engine.grid.set_plane(GridPlane[plane_name], visible=vis)
                 except KeyError:
                     pass
+            self.engine.grid.set_user_planes(
+                getattr(g, "user_planes", [])
+            )
         else:
             self.engine.fit_view()
 
@@ -750,6 +771,7 @@ class CadApp:
 
         # --- Renderer yenile ---
         if self.engine and self.engine.scene and self.engine.renderer:
+            self.engine.scene.mark_dirty()
             self.engine.renderer.update_geo(self.engine.scene)
 
         # --- Kamera bounds ---
@@ -856,6 +878,14 @@ class CadApp:
             # frame.dist_loads'e YAZMA — property türetir
             frame.mark_dirty()
 
+        self._set_loads_visible(True)
+        if self.engine and self.engine.scene and self.engine.renderer:
+            self.engine.renderer.update_geo(self.engine.scene)
+            self.engine.scene.clear_dirty()
+
+    def _on_area_load_transfer_complete(self, frames) -> None:
+        if not frames:
+            return
         self._set_loads_visible(True)
         if self.engine and self.engine.scene and self.engine.renderer:
             self.engine.renderer.update_geo(self.engine.scene)
@@ -1131,6 +1161,16 @@ class CadApp:
         pdm = getattr(eng, "plane_draw_mgr", None)
         if pdm and pdm.is_active and pdm.on_key_press(key):
             return
+
+        for entry in self.panels.values():
+            panel = entry["instance"]
+            handler = getattr(panel, "on_key_press", None)
+            if (
+                getattr(panel, "visible", False)
+                and callable(handler)
+                and handler(key)
+            ):
+                return
 
         if eng.input:
             eng.input.handle_key_down(key)

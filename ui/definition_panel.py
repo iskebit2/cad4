@@ -635,22 +635,33 @@ class DefinitionPanel(BasePanel):
             for i, lbl in enumerate(labels):
                 c, _ = imgui.selectable(lbl, i == cur_idx)
                 if c and i != cur_idx:
-                    section.profile_type = values[i]
-                    section.profile_params.clear()
-                    section.profile_params.update(_DEFAULT_SECTION_PARAMS.get(values[i], {}))
+                    new_type = values[i]
+                    # SD'ye geçerken sd_section korunmalı
+                    if new_type == SectionType.SD:
+                        if getattr(section, "sd_section", None) is None:
+                            imgui.close_current_popup()
+                            return False
+                        # params temizlenmez
+                    elif section.profile_type == SectionType.SD:
+                        # SD'den çıkarken sd_section temizlenmeli mi? Şimdilik koru
+                        pass
+                    section.profile_type = new_type
+                    if new_type not in (SectionType.SD,):
+                        section.profile_params.clear()
+                        section.profile_params.update(
+                            _DEFAULT_SECTION_PARAMS.get(new_type, {}))
                     changed = True
             imgui.end_combo()
 
-        if changed:
-            section.profile_params.clear()
-            section.profile_params.update(_DEFAULT_SECTION_PARAMS.get(section.profile_type, {}))
-        
-        # ★ Önizleme
+        if section.profile_type == SectionType.SD or getattr(section, "sd_section", None) is not None:
+            return changed   # SD önizlemesi _draw_section_params'ta
+
+        # ★ Önizleme — SD için sd_section, CUSTOM için h/b
         imgui.separator()
         try:
             draw_section_preview(section, avail_w=280, avail_h=200)
         except Exception as e:
-            imgui.text_colored(imgui.ImVec4(1.0, 0.5, 0.3, 1.0), f"Önizleme hatası: {e}")
+            imgui.text_colored(imgui.ImVec4(1.0, 0.5, 0.3, 1.0), f"Preview error: {e}")
         return changed
 
     # -----------------------------------------------------------------
@@ -670,6 +681,30 @@ class DefinitionPanel(BasePanel):
             if c:
                 p[key] = v
                 changed = True
+        # ★ SD Section → özel gösterim
+        if st == SectionType.SD or getattr(section, "sd_section", None) is not None:
+            sd = section.sd_section
+            if sd is None:
+                imgui.text_disabled("SD Section has no geometry")
+                return False
+
+            imgui.text_colored(imgui.ImVec4(0.65, 0.8, 1.0, 1.0),
+                            f"SD Section: {sd.design_type}")
+            imgui.bullet_text(f"Shapes: {len(sd.shapes or [])}")
+            total_pts = sum(len(sh.points) for sh in (sd.shapes or []))
+            imgui.bullet_text(f"Points: {total_pts}")
+            imgui.bullet_text(f"AxisAngle: {sd.axis_angle:g}°")
+            imgui.bullet_text(f"nPolygon: {sd.n_polygon or len(sd.shapes or [])}")
+            
+            # Önizleme
+            imgui.separator()
+            try:
+                self._draw_sd_preview(sd, avail_w=280, avail_h=200)
+            except Exception as e:
+                imgui.text_colored(imgui.ImVec4(1.0, 0.5, 0.3, 1.0), f"Preview error: {e}")
+
+            return changed
+
 
         if st == SectionType.RECT:
             _float_field("h", "Yükseklik h")
@@ -717,16 +752,16 @@ class DefinitionPanel(BasePanel):
             imgui.bullet_text(f"J   = {J:.4e} mm⁴")
 
         # ★ SD varsa SD özet
-        if getattr(section, "sd_section", None) is not None:
-            return changed
+        # if getattr(section, "sd_section", None) is not None:
+        #     return changed
         
-        # ★ Önizleme geri gelsin
-        imgui.separator()
-        imgui.text_colored(imgui.ImVec4(0.6, 0.75, 1.0, 1.0), "Önizleme:")
-        try:
-            draw_section_preview(section, avail_w=280, avail_h=200)
-        except Exception as e:
-            imgui.text_colored(imgui.ImVec4(1.0, 0.5, 0.3, 1.0), f"Önizleme hatası: {e}")
+        # # ★ Önizleme geri gelsin
+        # imgui.separator()
+        # imgui.text_colored(imgui.ImVec4(0.6, 0.75, 1.0, 1.0), "Önizleme:")
+        # try:
+        #     draw_section_preview(section, avail_w=280, avail_h=200)
+        # except Exception as e:
+        #     imgui.text_colored(imgui.ImVec4(1.0, 0.5, 0.3, 1.0), f"Önizleme hatası: {e}")
             
         return changed
 
@@ -1471,3 +1506,72 @@ class DefinitionPanel(BasePanel):
 
         imgui.unindent(12)
         return changed
+
+    # ---------------------------------------------------------------------------
+    # SD SECTION ÖNİZLEME (imgui draw list, earcut ile üçgenleme)
+    # ---------------------------------------------------------------------------
+    def _draw_sd_preview(self, sd, avail_w: float = 280, avail_h: float = 200):
+        """SD polygon'ı earcut ile üçgenleyip imgui draw list ile çiz."""
+        import numpy as np
+        import mapbox_earcut as earcut
+
+        if not sd or not sd.shapes:
+            imgui.text_disabled("SD Section (no shapes)")
+            return
+
+        all_pts = [(float(p.x), float(p.y)) for sh in sd.shapes for p in sh.points]
+        if len(all_pts) < 3:
+            imgui.text_disabled("SD Section (no points)")
+            return
+
+        xs = [p[0] for p in all_pts]
+        ys = [p[1] for p in all_pts]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        w = max(max_x - min_x, 1e-6)
+        h = max(max_y - min_y, 1e-6)
+        scale = min(avail_w / w, avail_h / h) * 0.85
+
+        draw_list = imgui.get_window_draw_list()
+        origin = imgui.get_cursor_screen_pos()
+        cx = origin.x + (avail_w - w * scale) / 2
+        cy = origin.y + (avail_h - h * scale) / 2
+
+        def to_screen(x, y):
+            return imgui.ImVec2(
+                cx + (x - min_x) * scale,
+                cy + (max_y - y) * scale,
+            )
+
+        for sh in sd.shapes:
+            pts = [(float(p.x), float(p.y)) for p in sh.points]
+            n = len(pts)
+            if n < 3:
+                continue
+
+            tri_idx = []
+            try:
+                coords = np.array(pts, dtype=np.float32)
+                rings = np.array([n], dtype=np.uint32)
+                tri_idx = earcut.triangulate_float32(coords, rings).tolist()
+            except Exception as e:
+                logger.warning("[SD preview] earcut hatası: %s", e)
+
+            r, g, b = sh.fill_color[:3] if sh.fill_color else (0.7, 0.7, 0.7)
+            fill_col = imgui.get_color_u32(imgui.ImVec4(r, g, b, 0.35))
+
+            for i in range(0, len(tri_idx) - 2, 3):
+                p0 = to_screen(*pts[tri_idx[i]])
+                p1 = to_screen(*pts[tri_idx[i + 1]])
+                p2 = to_screen(*pts[tri_idx[i + 2]])
+                draw_list.add_triangle_filled(p0, p1, p2, fill_col)
+
+            edge_col = imgui.get_color_u32(imgui.ImVec4(r, g, b, 0.95))
+            for i in range(n):
+                draw_list.add_line(
+                    to_screen(*pts[i]),
+                    to_screen(*pts[(i + 1) % n]),
+                    edge_col, 2.0,
+                )
+
+        imgui.dummy(imgui.ImVec2(avail_w, avail_h))

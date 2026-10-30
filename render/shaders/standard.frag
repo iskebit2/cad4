@@ -12,6 +12,7 @@ in vec3      FragPos;
 in vec3      Normal;
 in vec3      VertexColor;
 flat in uint vID;
+flat in float PlaneOpacity;
 
 // ---- MRT output ----
 layout(location = 0) out vec4 FragColor;
@@ -76,7 +77,7 @@ void main() {
     } else if (renderMode == 0) {
         // Normal debug
         baseColor = norm * 0.5 + 0.5;
-        FragColor = vec4(baseColor, alpha);
+        FragColor = vec4(baseColor, alpha * PlaneOpacity);
         FragID    = vID;
         return;
     } else {
@@ -117,6 +118,6 @@ void main() {
     // --- Brightness + tonemap + gamma ---
     color = tonemap(color * lights.globalBrightness);
 
-    FragColor = vec4(color, alpha);
+    FragColor = vec4(color, alpha * PlaneOpacity);
     FragID    = vID;
 }

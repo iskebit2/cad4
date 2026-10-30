@@ -229,42 +229,7 @@ class DrawManager:
         return best_node
     
     def _screen_to_world_xy(self, x, y):
-        """
-        Ekran koordinatını Z=0 düzlemindeki dünya koordinatına çevir.
-        """
-        cam = self.engine.cam
-        w, h = self.engine.w, self.engine.h
-        
-        if not cam:
-            return None
-        
-        v = cam.get_view_matrix()
-        p = cam.get_projection_matrix()
-        
-        nx = 2 * x / w - 1
-        ny = 1 - 2 * y / h
-        
-        inv = glm.inverse(p * v)
-        
-        near = inv * glm.vec4(nx, ny, -1, 1)
-        far = inv * glm.vec4(nx, ny, 1, 1)
-        
-        near = glm.vec3(near) / near.w
-        far = glm.vec3(far) / far.w
-        
-        direction = glm.normalize(far - near)
-
-        
-
-        if abs(direction.z) > 1e-6:
-            t = -near.z / direction.z
-            if t > 0:
-                result = near + direction * t
-                
-                return result
-            
-        
-        return None
+        return self.engine.screen_to_world(x, y)
     
     # =========================================================
     # PREVIEW RENDER

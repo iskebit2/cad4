@@ -122,6 +122,11 @@ class SceneRenderer:
         self.load_renderer = LoadRenderer()
 
         self.selected_plane = None
+        self.active_plane = None
+        self.show_active_plane_axes = True
+        self._active_plane_association_signature = None
+        self._plane_association_ssbo = None
+        self.plane_fade_alpha = 0.22
         self._sel_plane_tri_vao = None
         self._sel_plane_tri_vbo = None
         self._sel_plane_line_vao = None
@@ -256,7 +261,7 @@ class SceneRenderer:
         self.marquee = m
 
     def set_plane_draw_mgr(self, pdm):
-        """PlaneDrawManager referansı (CadApp tarafından verilir)."""
+        """PlaneCreationTool preview referansı (CadApp tarafından verilir)."""
         self.plane_draw_mgr = pdm
 
     def set_engine(self, e):
@@ -543,6 +548,9 @@ class SceneRenderer:
     def render(self, cam, target_fbo=0): # <-- target_fbo varsayılan 0 eklendi
         if not cam:
             return
+        if self.scene is not None:
+            self.scene.refresh_plane_associations()
+        self._sync_active_plane_associations()
         
         glBindFramebuffer(GL_FRAMEBUFFER, self.mrt_fbo)
         glClearColor(0.15, 0.15, 0.15, 1.0)
@@ -574,6 +582,8 @@ class SceneRenderer:
         for r in [self.frame_r, self.node_r, self.area_r, self.link_r, self.polygon_r]:
             if r:
                 r.render_mode = mode
+        for shader in (self.standard_shader, self.simple_shader, self.node_shader):
+            self._set_plane_fade_uniforms(shader)
 
         logger.info("mode=%s show_node=%s node_r.icount=%d",
             self.render_mode, self.show.get('node'), self.node_r.icount if self.node_r else -1)
@@ -596,6 +606,9 @@ class SceneRenderer:
         
         elif self.render_mode == 'simple':
             self._render_simple(mvp, v, p)
+
+        if self.active_plane is not None:
+            self._draw_active_plane(mvp)
         
         # 2. MRT'den Hedef FBO'ya (Qt'nin FBO'suna) Blit et
 
@@ -1035,6 +1048,12 @@ class SceneRenderer:
         
         if self.lighting and hasattr(self.lighting, 'cleanup'):
             self.lighting.cleanup()
+        if (
+            self._plane_association_ssbo
+            and glIsBuffer(self._plane_association_ssbo)
+        ):
+            glDeleteBuffers(1, [int(self._plane_association_ssbo)])
+            self._plane_association_ssbo = None
         
         self._cleanup_mrt()
 
@@ -1093,12 +1112,7 @@ class SceneRenderer:
         if plane is None or self.overlay_shader is None:
             return
 
-        # VAO/VBO lazy init
-        if self._sel_plane_tri_vao is None:
-            self._sel_plane_tri_vao = glGenVertexArrays(1)
-            self._sel_plane_tri_vbo = glGenBuffers(1)
-            self._sel_plane_line_vao = glGenVertexArrays(1)
-            self._sel_plane_line_vbo = glGenBuffers(1)
+        self._ensure_plane_overlay_buffers()
 
         shader = self.overlay_shader
         shader.use()
@@ -1119,6 +1133,175 @@ class SceneRenderer:
             from OpenGL.GL import GL_TRUE, glDepthMask
             glDepthMask(GL_TRUE)
             glDisable(GL_BLEND)
+
+    def _sync_active_plane_associations(self):
+        project = getattr(self.scene, "project", None) if self.scene is not None else None
+        manager = getattr(project, "plane_mgr", None)
+        self.active_plane = manager.active_plane if manager is not None else None
+        if self.active_plane is None:
+            self._active_plane_association_signature = None
+            return
+
+        plane = self.active_plane
+        signature = (
+            id(plane),
+            plane.plane_id,
+            plane.association_revision,
+        )
+        if signature != self._active_plane_association_signature:
+            ids = sorted({
+                unique_id
+                for associated in plane.associated.values()
+                for unique_id in associated
+            })
+            data = np.asarray([len(ids), *ids], dtype=np.uint32)
+            if self._plane_association_ssbo is None:
+                self._plane_association_ssbo = glGenBuffers(1)
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, self._plane_association_ssbo)
+            glBufferData(
+                GL_SHADER_STORAGE_BUFFER,
+                data.nbytes,
+                data,
+                GL_DYNAMIC_DRAW,
+            )
+            self._active_plane_association_signature = signature
+        glBindBufferBase(
+            GL_SHADER_STORAGE_BUFFER,
+            2,
+            self._plane_association_ssbo,
+        )
+
+    def _set_plane_fade_uniforms(self, shader):
+        if shader is None:
+            return
+        shader.use()
+        use_fade = shader.get_loc("usePlaneFade")
+        if use_fade != -1:
+            glUniform1i(use_fade, int(self.active_plane is not None))
+        fade_alpha = shader.get_loc("planeFadeAlpha")
+        if fade_alpha != -1:
+            glUniform1f(fade_alpha, self.plane_fade_alpha)
+
+    def _ensure_plane_overlay_buffers(self):
+        if self._sel_plane_tri_vao is None:
+            self._sel_plane_tri_vao = glGenVertexArrays(1)
+            self._sel_plane_tri_vbo = glGenBuffers(1)
+            self._sel_plane_line_vao = glGenVertexArrays(1)
+            self._sel_plane_line_vbo = glGenBuffers(1)
+
+    def _draw_active_plane(self, mvp):
+        plane = self.active_plane
+        if plane is None or self.overlay_shader is None:
+            return
+
+        extent = max(float(self.size) * 0.5, 1.0)
+        u0 = -extent if plane.u_min is None else float(plane.u_min)
+        u1 = extent if plane.u_max is None else float(plane.u_max)
+        v0 = -extent if plane.v_min is None else float(plane.v_min)
+        v1 = extent if plane.v_max is None else float(plane.v_max)
+        if u0 >= u1 or v0 >= v1:
+            return
+
+        corners = [
+            plane.to_3d((u0, v0)),
+            plane.to_3d((u1, v0)),
+            plane.to_3d((u1, v1)),
+            plane.to_3d((u0, v1)),
+        ]
+        triangles = np.asarray(
+            (corners[0], corners[1], corners[2],
+             corners[0], corners[2], corners[3]),
+            dtype=np.float32,
+        )
+        offset = plane.normal * max(float(self.size) * 1e-6, 1e-4)
+        boundary = np.asarray(
+            (
+                corners[0] + offset, corners[1] + offset,
+                corners[1] + offset, corners[2] + offset,
+                corners[2] + offset, corners[3] + offset,
+                corners[3] + offset, corners[0] + offset,
+            ),
+            dtype=np.float32,
+        )
+
+        self._ensure_plane_overlay_buffers()
+        shader = self.overlay_shader
+        shader.use()
+        if self._overlay_mvp_loc != -1:
+            glUniformMatrix4fv(self._overlay_mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
+        if self._overlay_color_loc == -1:
+            return
+
+        blend_enabled = bool(glIsEnabled(GL_BLEND))
+        depth_enabled = bool(glIsEnabled(GL_DEPTH_TEST))
+        cull_enabled = bool(glIsEnabled(GL_CULL_FACE))
+        depth_write = bool(glGetBooleanv(GL_DEPTH_WRITEMASK))
+        line_width = float(glGetFloatv(GL_LINE_WIDTH))
+        try:
+            glDrawBuffer(GL_COLOR_ATTACHMENT0)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glEnable(GL_DEPTH_TEST)
+            glDisable(GL_CULL_FACE)
+            glDepthMask(GL_FALSE)
+
+            glBindVertexArray(self._sel_plane_tri_vao)
+            glBindBuffer(GL_ARRAY_BUFFER, self._sel_plane_tri_vbo)
+            glBufferData(GL_ARRAY_BUFFER, triangles.nbytes, triangles, GL_STREAM_DRAW)
+            glEnableVertexAttribArray(0)
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * 4, None)
+            glUniform4f(self._overlay_color_loc, 0.18, 0.66, 0.96, 0.16)
+            glDrawArrays(GL_TRIANGLES, 0, len(triangles))
+
+            glDepthMask(GL_TRUE)
+            glDisable(GL_DEPTH_TEST)
+            glBindVertexArray(self._sel_plane_line_vao)
+            glBindBuffer(GL_ARRAY_BUFFER, self._sel_plane_line_vbo)
+            glBufferData(GL_ARRAY_BUFFER, boundary.nbytes, boundary, GL_STREAM_DRAW)
+            glEnableVertexAttribArray(0)
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * 4, None)
+            glLineWidth(2.0)
+            glUniform4f(self._overlay_color_loc, 0.98, 0.80, 0.25, 0.95)
+            glDrawArrays(GL_LINES, 0, len(boundary))
+
+            if self.show_active_plane_axes:
+                axis_length = max(min(u1 - u0, v1 - v0) * 0.15, 1.0)
+                axis_origin = plane.origin + offset
+                axes = (
+                    (plane.u, (0.95, 0.28, 0.24, 1.0)),
+                    (plane.v, (0.28, 0.90, 0.42, 1.0)),
+                    (plane.normal, (0.30, 0.55, 1.0, 1.0)),
+                )
+                for axis, color in axes:
+                    vertices = np.asarray(
+                        (axis_origin, axis_origin + axis * axis_length),
+                        dtype=np.float32,
+                    )
+                    glBufferData(
+                        GL_ARRAY_BUFFER,
+                        vertices.nbytes,
+                        vertices,
+                        GL_STREAM_DRAW,
+                    )
+                    glUniform4f(self._overlay_color_loc, *color)
+                    glDrawArrays(GL_LINES, 0, 2)
+        finally:
+            glDrawBuffers(2, [GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1])
+            glBindVertexArray(0)
+            glDepthMask(GL_TRUE if depth_write else GL_FALSE)
+            glLineWidth(line_width)
+            if depth_enabled:
+                glEnable(GL_DEPTH_TEST)
+            else:
+                glDisable(GL_DEPTH_TEST)
+            if cull_enabled:
+                glEnable(GL_CULL_FACE)
+            else:
+                glDisable(GL_CULL_FACE)
+            if blend_enabled:
+                glEnable(GL_BLEND)
+            else:
+                glDisable(GL_BLEND)
 
     def _render_plane_solid(self, plane, shader):
         """Verilen plane için 8-köşe kutu çiz."""

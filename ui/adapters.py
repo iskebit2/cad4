@@ -346,6 +346,7 @@ def values_to_link(link, v: dict[str, Any]) -> None:
 def polygon_to_values(poly) -> dict[str, Any]:
     pt = getattr(poly, "poly_type", None)
     loads = getattr(poly, "uniform_to_frame_loads", [])
+    assigned_loads = getattr(poly, "assigned_loads", [])
     return {
         "label": poly.label,
         "is_visible": poly.is_visible,
@@ -354,6 +355,19 @@ def polygon_to_values(poly) -> dict[str, Any]:
         "poly_type": pt.name if hasattr(pt, "name") else str(pt),
         "windplane": dict(getattr(poly, "windplane", {}) or {}),
         "associated_frame_ids": list(getattr(poly, "associated_frame_ids", [])),
+        "transfer_target": str(getattr(poly, "transfer_target", "frames")),
+        "transfer_dist_type": str(
+            getattr(poly, "transfer_dist_type", "one_way")
+        ),
+        "is_load_area": bool(getattr(poly, "is_load_area", False)),
+        "assigned_loads_summary": [
+            (
+                f"{load.source_name or load.pattern_name} | "
+                f"{load.pattern_name} | {float(load.value):g} "
+                f"({load.direction.value})"
+            )
+            for load in assigned_loads
+        ],
         "uniform_to_frame_loads": [
             {
                 "pattern_name": l.pattern_name,
@@ -389,6 +403,13 @@ def values_to_polygon(poly, v: dict[str, Any]) -> None:
     wp = v.get("windplane")
     if isinstance(wp, dict):
         poly.windplane = wp
+
+    if "transfer_target" in v:
+        poly.transfer_target = str(v["transfer_target"])
+    if "transfer_dist_type" in v:
+        poly.transfer_dist_type = str(v["transfer_dist_type"])
+    if "is_load_area" in v:
+        poly.is_load_area = bool(v["is_load_area"])
 
     loads_v = v.get("uniform_to_frame_loads")
     if isinstance(loads_v, list):

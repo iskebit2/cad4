@@ -132,6 +132,9 @@ def test_run_callback_analyzes_and_saves_zones_to_project_loads(tmp_path):
     before_polygons = set(app.current_project.scene.polygons)
     app._process_wind_queue()
     assert app.current_project.loads.wind_zones["01"]
+    stored_wind = app.current_project.loads.wind_results["01"]
+    assert stored_wind.q_p > 0.0
+    assert stored_wind.zones_cpe10
     assert "bölgesi hesaplandı" in app._wind_analysis_status
     assert set(app.current_project.scene.nodes) == before_nodes
     assert set(app.current_project.scene.polygons) == before_polygons
@@ -139,6 +142,7 @@ def test_run_callback_analyzes_and_saves_zones_to_project_loads(tmp_path):
     project_path = tmp_path / "wind.cd4"
     app.current_project.save(str(project_path))
     loaded_project = Project.load(str(project_path))
+    assert loaded_project.loads.wind_results["01"].q_p == stored_wind.q_p
     assert isinstance(
         loaded_project.analysis.wind["directions"]["01"], WindDirectionResult
     )

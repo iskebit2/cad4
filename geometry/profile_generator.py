@@ -41,6 +41,7 @@ class ProfileGenerator:
             SectionType.C: self._c_profile,
             SectionType.CHANNEL: self._c_profile,
             SectionType.CUSTOM: self._custom_profile,
+            SectionType.SD: self._custom_profile,
         }
     
     def get_profile(self, 
@@ -111,7 +112,7 @@ class ProfileGenerator:
         validated = dict(params) if isinstance(params, dict) else {}
 
         # ★ CUSTOM için min eşik 1e-6 — link section 10 mm = 0.01 m için
-        if section_type == SectionType.CUSTOM:
+        if section_type in (SectionType.CUSTOM, SectionType.SD):
             for key in ['b', 'h', 't', 'tw', 'tf', 'r', 'ro', 'ri']:
                 if key in validated:
                     try:

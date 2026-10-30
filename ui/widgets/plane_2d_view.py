@@ -19,6 +19,8 @@ import numpy as np
 from imgui_bundle import imgui
 
 from domain.plane import ChangeOp, Plane
+from ui.widgets.plane_2d_loads import LoadOverlay
+from ui.widgets.plane_2d_tools import PlaceDistLoadTool, ToolContext, ToolKind
 
 
 def _rot(v, deg):
@@ -94,6 +96,23 @@ class Plane2DView:
         self._first_load = True
         self.sel_mgr = None
 
+        self.load_overlay = LoadOverlay()
+        self.active_tool = ToolKind.SELECT
+        self.active_tool_obj = None
+        self._tool_state: dict = {}       # aktif tool durumu
+
+        # Annotation
+        self.annotations: list[dict] = []  # {uv_pos, text, color}
+
+        # Ölçüm
+        self.measurements: list[dict] = []  # {p0_uv, p1_uv, distance}
+
+        # Snap
+        self.snap_enabled = True
+        self.snap_tolerance_px = 10.0
+        self.snap_to_grid = False
+
+
     def _get_mods(self):
         if self._mods_getter:
             try:
@@ -102,6 +121,10 @@ class Plane2DView:
                 pass
         io = imgui.get_io()
         return bool(getattr(io, "key_ctrl", False)), bool(getattr(io, "key_shift", False))
+
+    @staticmethod
+    def _is_over_canvas(mx, my, cx, cy, cw, ch) -> bool:
+        return cx <= mx <= cx + cw and cy <= my <= cy + ch
 
     @property
     def selected(self):
@@ -188,7 +211,7 @@ class Plane2DView:
                         min(margin * min(view_w / w, view_h / h), self.MAX_ZOOM))
         uc = 0.5 * (umin + umax)
         vc = 0.5 * (vmin + vmax)
-        self.pan = (-uc, -vc)
+        self.pan = tuple(-value for value in _rot((uc, vc), self.view_rotation))
 
     def reset_view(self):
         self.view_rotation = 0.0
@@ -311,48 +334,199 @@ class Plane2DView:
             return
 
         dl = draw_list
+        to_screen, from_screen = self._factory(cx, cy, cw, ch)
+
+        # 1) Arka plan + grid + eksenler
+        self._draw_background(dl, cx, cy, cw, ch)
+        if self.show_grid:
+            self._draw_grid(dl, cx, cy, cw, ch, to_screen, from_screen)
+        if self.show_axes:
+            self._draw_axes(dl, to_screen)
+
+        # 2) Assoc / excluded / pending elemanlar
+        self._draw_all_elements(dl, to_screen)
+
+        # 3) Rubber band
+        self._draw_rubber(dl)
+
+        # 4) Input (pan/zoom/seçim/tool click)
+        if imgui.is_key_pressed(imgui.Key.escape) and self.active_tool_obj is not None:
+            self.active_tool_obj.cancel()
+        self._handle_input(imgui_ctx, cx, cy, cw, ch, to_screen, from_screen)
+
+        # 5) Yük katmanı
+        self._draw_load_overlay(dl, to_screen)
+
+        # 6) Annotation + measurement
+        self._draw_annotations(dl, to_screen)
+        self._draw_measurements(dl, to_screen)
+
+        # 7) Aktif tool preview + paneli
+        self._draw_active_tool(dl, imgui_ctx, to_screen, from_screen,
+                            cx, cy, cw, ch)
+
+
+    # ------------------------------------------------------------------
+    #  draw() yardımcıları
+    # ------------------------------------------------------------------
+    def _draw_background(self, dl, cx, cy, cw, ch):
         dl.add_rect_filled(
             imgui.ImVec2(cx, cy), imgui.ImVec2(cx + cw, cy + ch), self.COL_BG
         )
 
-        to_screen, from_screen = self._factory(cx, cy, cw, ch)
-
-        # Grid
-        if self.show_grid:
-            self._draw_grid(dl, cx, cy, cw, ch, to_screen, from_screen)
-
-        # Eksenler
-        if self.show_axes:
-            self._draw_axes(dl, to_screen)
-
-        # --- Assoc elemanlar ---
+    def _draw_all_elements(self, dl, to_screen):
         for kind, eid in self._iter_assoc_ids():
             self._draw_element(dl, kind, eid, to_screen, mode="assoc")
-
-        # --- Excluded (soluk) ---
         for kind, eid in self._iter_excluded_ids():
             self._draw_element(dl, kind, eid, to_screen, mode="excluded")
-
-        # --- Pending ADD draft'ları (sarı kesikli) ---
         for kind, eid, data in self._iter_pending_add_ids():
             self._draw_draft(dl, kind, eid, data, to_screen)
 
-        # --- Rubber ---
-        if self._rubber and self._rubber_start and self._rubber_end:
-            x0, y0 = self._rubber_start
-            x1, y1 = self._rubber_end
-            rx0, rx1 = min(x0, x1), max(x0, x1)
-            ry0, ry1 = min(y0, y1), max(y0, y1)
-            dl.add_rect_filled(
-                imgui.ImVec2(rx0, ry0), imgui.ImVec2(rx1, ry1), self.COL_RUBBER
-            )
-            dl.add_rect(
-                imgui.ImVec2(rx0, ry0), imgui.ImVec2(rx1, ry1), 0xFFFFD060
+    def _draw_rubber(self, dl):
+        if not (self._rubber and self._rubber_start and self._rubber_end):
+            return
+        x0, y0 = self._rubber_start
+        x1, y1 = self._rubber_end
+        rx0, rx1 = min(x0, x1), max(x0, x1)
+        ry0, ry1 = min(y0, y1), max(y0, y1)
+        dl.add_rect_filled(
+            imgui.ImVec2(rx0, ry0), imgui.ImVec2(rx1, ry1), self.COL_RUBBER
+        )
+        dl.add_rect(
+            imgui.ImVec2(rx0, ry0), imgui.ImVec2(rx1, ry1), 0xFFFFD060
+        )
+
+    def _draw_load_overlay(self, dl, to_screen):
+        if self.scene is None or self.plane is None:
+            return
+        frame_map = getattr(self.scene, "frames", {}) or {}
+        node_map = getattr(self.scene, "nodes", {}) or {}
+        self.load_overlay.draw(
+            dl, self.plane, self.scene, frame_map, node_map,
+            to_screen, self.selected, self.hover,
+        )
+
+    def _draw_annotations(self, dl, to_screen):
+        for ann in self.annotations:
+            sx, sy = to_screen(*ann["uv"])
+            dl.add_text(
+                imgui.ImVec2(sx, sy),
+                ann.get("color", 0xFFE0E0E0),
+                ann["text"],
             )
 
-        # --- Input ---
-        self._handle_input(imgui_ctx, cx, cy, cw, ch, to_screen, from_screen)
+    def _draw_measurements(self, dl, to_screen):
+        for m in self.measurements:
+            p0 = to_screen(*m["p0"])
+            p1 = to_screen(*m["p1"])
+            dl.add_line(imgui.ImVec2(*p0), imgui.ImVec2(*p1), 0xFFFFFF00, 1.5)
+            dl.add_line(
+                imgui.ImVec2(p0[0], p0[1] - 4),
+                imgui.ImVec2(p0[0], p0[1] + 4),
+                0xFFFFFF00,
+            )
+            dl.add_line(
+                imgui.ImVec2(p1[0], p1[1] - 4),
+                imgui.ImVec2(p1[0], p1[1] + 4),
+                0xFFFFFF00,
+            )
+            mid = ((p0[0] + p1[0]) * 0.5, (p0[1] + p1[1]) * 0.5)
+            dl.add_text(imgui.ImVec2(*mid), 0xFF00FF00, f"{m['distance']:.2f}")
 
+    def _draw_active_tool(self, dl, imgui_ctx, to_screen, from_screen,
+                        cx, cy, cw, ch):
+        if self.active_tool == ToolKind.SELECT:
+            return
+
+        # ToolContext — canvas dışındaysa uv/snap None
+        io = imgui_ctx.get_io()
+        mx, my = io.mouse_pos
+        over = self._is_over_canvas(mx, my, cx, cy, cw, ch)
+        if over:
+            uv = from_screen(mx, my)
+            snap = self._compute_snap(uv, to_screen)
+        else:
+            uv = None
+            snap = None
+
+        ctx = ToolContext(
+            mouse_uv=uv,
+            snap_uv=snap,
+            mods=self._get_mods(),
+            hover=self.hover,
+            zoom=self.zoom,
+        )
+        if self.active_tool_obj is not None:
+            self.active_tool_obj.on_move(ctx, self.scene, self.plane)
+            self.active_tool_obj.draw_preview(dl, to_screen, ctx)
+        self._draw_tool_preview(dl, to_screen, ctx)
+
+    # ------------------------------------------------------------------
+    def set_tool(self, kind: ToolKind, **kwargs):
+        self.active_tool = kind
+        if kind == ToolKind.PLACE_DIST_LOAD:
+            tool = PlaceDistLoadTool()
+            # pattern'ları projeden al
+            if self.scene and hasattr(self.scene, "project") and self.scene.project:
+                tool.set_patterns(list(self.scene.project.load_patterns.keys()))
+            self.active_tool_obj = tool
+        else:
+            self.active_tool_obj = None
+        self._tool_state.clear()
+
+    def _draw_tool_preview(self, dl, to_screen, ctx):
+        """Aktif tool'un canlı preview'ı."""
+        st = self._tool_state
+        if self.active_tool == ToolKind.DRAW_LINE:
+            p0 = st.get("p0")
+            p1 = ctx.snap_uv or ctx.mouse_uv
+            if p0 and p1:
+                s0 = to_screen(*p0)
+                s1 = to_screen(*p1)
+                dl.add_line(imgui.ImVec2(*s0), imgui.ImVec2(*s1), 0xFF00FFFF, 2.0)
+        elif self.active_tool == ToolKind.MEASURE:
+            p0 = st.get("p0")
+            p1 = ctx.snap_uv or ctx.mouse_uv
+            if p0 and p1:
+                s0 = to_screen(*p0)
+                s1 = to_screen(*p1)
+                dl.add_line(imgui.ImVec2(*s0), imgui.ImVec2(*s1), 0xFFFFFF00, 1.5)
+                d = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+                dl.add_text(imgui.ImVec2(*s0), 0xFF00FF00, f"{d:.2f}")
+
+    # ------------------------------------------------------------------
+    def _compute_snap(self, uv_mouse, to_screen) -> tuple[float, float]:
+        """Snap: node > midpoint > grid > ham uv."""
+        if not self.snap_enabled or self.scene is None:
+            return uv_mouse
+        if self.snap_to_grid:
+            # Grid adımına yuvarla
+            step = self._current_grid_step()
+            return (round(uv_mouse[0] / step) * step, round(uv_mouse[1] / step) * step)
+
+        # Node snap
+        best = None
+        best_d = self.snap_tolerance_px
+        for nid, node in self.scene.nodes.items():
+            uvn = self.plane.to_2d((node.x, node.y, node.z))
+            sx, sy = to_screen(*uvn)
+            sm = to_screen(*uv_mouse)
+            d = math.hypot(sx - sm[0], sy - sm[1])
+            if d < best_d:
+                best_d = d
+                best = uvn
+        return best if best else uv_mouse
+
+    def _current_grid_step(self) -> float:
+        """Grid adımını döndür (zoom'a göre)."""
+        target_px = 40.0
+        world_step = target_px / max(self.zoom, 1e-6)
+        exp = math.floor(math.log10(max(world_step, 1e-9)))
+        base = 10 ** exp
+        for m in (1, 2, 5, 10):
+            if base * m >= world_step:
+                return base * m
+        return base * 10
     # ------------------------------------------------------------------
     def _draw_grid(self, dl, cx, cy, cw, ch, to_screen, from_screen):
         # Görünür u/v aralığı
@@ -556,7 +730,6 @@ class Plane2DView:
     #  Input
     # ------------------------------------------------------------------
     def _handle_input(self, imgui_ctx, cx, cy, cw, ch, to_screen, from_screen):
-        ctrl, shift = self._get_mods()
         io = imgui_ctx.get_io()
         mx, my = io.mouse_pos
         over = cx <= mx <= cx + cw and cy <= my <= cy + ch
@@ -564,57 +737,61 @@ class Plane2DView:
         self.clicked = None
         self.clicked_empty = False
 
-        if not over:
-            self.hover = None
-            self._panning = False
-            self._pan_anchor = None
-            self._rubber = False
-            return
-
-        # Hover
-        self.hover = self._hit_test(mx, my, to_screen)
+        self.hover = self._hit_test(mx, my, to_screen) if over else None
 
         # Zoom
-        if io.mouse_wheel != 0:
+        if over and io.mouse_wheel != 0:
             self._apply_zoom(io.mouse_wheel, mx, my, cx, cy, cw, ch)
 
         # Pan
         space = self._is_space(imgui_ctx)
         start_pan = (
-            imgui_ctx.is_mouse_clicked(2)
-            or imgui_ctx.is_mouse_clicked(1)
-            or (space and imgui_ctx.is_mouse_clicked(0))
+            over and (
+                imgui_ctx.is_mouse_clicked(2)
+                or imgui_ctx.is_mouse_clicked(1)
+                or (space and imgui_ctx.is_mouse_clicked(0))
+            )
         )
         if start_pan and not self._rubber:
             self._panning = True
             self._pan_anchor = (mx, my)
 
         if self._panning:
-            if (imgui_ctx.is_mouse_down(2) or imgui_ctx.is_mouse_down(1)
-                    or imgui_ctx.is_mouse_down(0)):
+            if (
+                imgui_ctx.is_mouse_down(2)
+                or imgui_ctx.is_mouse_down(1)
+                or imgui_ctx.is_mouse_down(0)
+            ):
                 if self._pan_anchor:
                     du = (mx - self._pan_anchor[0]) / self.zoom
-                    dv = (my - self._pan_anchor[1]) / self.zoom
-                    # Ekran deltası → view deltası (rotation dikkate)
-                    r = math.radians(self.view_rotation)
-                    cs, sn = math.cos(r), math.sin(r)
-                    ddu = du * cs - dv * sn
-                    ddv = -(du * sn + dv * cs)
-                    self.pan = (self.pan[0] + ddu, self.pan[1] + ddv)
+                    dv = -(my - self._pan_anchor[1]) / self.zoom
+                    self.pan = (self.pan[0] + du, self.pan[1] + dv)
                     self._pan_anchor = (mx, my)
             else:
                 self._panning = False
                 self._pan_anchor = None
 
-        # Seçim
-        if imgui_ctx.is_mouse_clicked(0) and not self._panning and not space:
-            hit = self._hit_test(mx, my, to_screen)
-            if hit is not None:
-                self.clicked = hit
-            else:
-                self._rubber = True
-                self._rubber_start = (mx, my)
-                self._rubber_end = (mx, my)
+        if (
+            over
+            and imgui_ctx.is_mouse_clicked(0)
+            and not self._panning
+            and not space
+        ):
+            if self.active_tool_obj is not None:
+                uv = from_screen(mx, my)
+                snap = self._compute_snap(uv, to_screen)
+                ctx = ToolContext(
+                    mouse_uv=uv, snap_uv=snap,
+                    mods=self._get_mods(),
+                    hover=self.hover,
+                    zoom=self.zoom,
+                )
+                consumed = self.active_tool_obj.on_click(ctx, self.scene, self.plane)
+                if consumed:
+                    return
+            self._rubber = True
+            self._rubber_start = (mx, my)
+            self._rubber_end = (mx, my)
 
         if self._rubber:
             self._rubber_end = (mx, my)
@@ -630,41 +807,41 @@ class Plane2DView:
         x0, y0 = self._rubber_start
         x1, y1 = self._rubber_end
         if abs(x1 - x0) < 3 and abs(y1 - y0) < 3:
-            self.clicked_empty = True
+            self.clicked = self._hit_test(x1, y1, to_screen)
+            self.clicked_empty = self.clicked is None
             return
 
         rx0, rx1 = min(x0, x1), max(x0, x1)
         ry0, ry1 = min(y0, y1), max(y0, y1)
-        hit = set()
+        hit = []
         for kind, eid in self._iter_assoc_ids():
-            for uv in self._element_uvs(kind, eid):
-                sx, sy = to_screen(*uv)
-                if rx0 <= sx <= rx1 and ry0 <= sy <= ry1:
-                    hit.add((kind, eid))
-                    break
+            points = [
+                to_screen(*uv) for uv in self._element_uvs(kind, eid)
+            ]
+            if _element_intersects_rect(
+                kind, points, (rx0, ry0, rx1, ry1)
+            ):
+                hit.append((kind, eid))
 
         ctrl, shift = self._get_mods()
 
-        # sel_mgr varsa oraya yaz
         if self.sel_mgr is not None:
             elements = []
             for kind, eid in hit:
                 el = self._kind_id_to_element(kind, eid)
                 if el is not None:
                     elements.append(el)
-
             from core.selection_policy import SelectionMode
             if ctrl:
-                # Toggle: her elemanı ayrı ayrı toggle et
-                for el in elements:
-                    self.sel_mgr.select(el, additive=True)
+                mode = SelectionMode.TOGGLE
             elif shift:
-                self.sel_mgr.select_multiple(elements, mode=SelectionMode.ADD)
+                mode = SelectionMode.ADD
             else:
-                self.sel_mgr.select_multiple(elements, mode=SelectionMode.REPLACE)
+                mode = SelectionMode.REPLACE
+            self.sel_mgr.select_multiple(elements, mode=mode)
             return
 
-        # Fallback (sel_mgr yoksa, demo)
+        hit = set(hit)
         if ctrl:
             self._own_selected ^= hit
         elif shift:
@@ -722,7 +899,26 @@ class Plane2DView:
                 best_d = d
                 best = (kind, eid)
 
-        return best
+        if best is not None:
+            return best
+
+        for kind, eid in self._iter_assoc_ids():
+            if kind not in ("area", "poly"):
+                continue
+            points = [
+                to_screen(*uv) for uv in self._element_uvs(kind, eid)
+            ]
+            if _point_in_polygon((mx, my), points):
+                return kind, eid
+            if len(points) >= 3 and any(
+                _dist_point_segment(
+                    (mx, my), points[index], points[(index + 1) % len(points)]
+                ) <= self.HIT_RADIUS_PX
+                for index in range(len(points))
+            ):
+                return kind, eid
+
+        return None
 
     @staticmethod
     def _is_space(imgui_ctx):
@@ -734,6 +930,30 @@ class Plane2DView:
         except Exception:
             return False
 
+    @staticmethod
+    def _is_over_canvas(mx, my, cx, cy, cw, ch) -> bool:
+        return cx <= mx <= cx + cw and cy <= my <= cy + ch
+
+    def _make_tool_context(
+        self, imgui_ctx, cx, cy, cw, ch, to_screen, from_screen
+    ):
+        """Aktif tool için ToolContext üret. Canvas dışındaysa uv/snap None."""
+        io = imgui_ctx.get_io()
+        mx, my = io.mouse_pos
+        over = self._is_over_canvas(mx, my, cx, cy, cw, ch)
+        if over:
+            uv = from_screen(mx, my)
+            snap = self._compute_snap(uv, to_screen)
+        else:
+            uv = None
+            snap = None
+        return ToolContext(
+            mouse_uv=uv,
+            snap_uv=snap,
+            mods=self._get_mods(),
+            hover=self.hover,
+            zoom=self.zoom,
+        )
 
 # ----------------------------------------------------------------------
 def _dist_point_segment(p, a, b):
@@ -750,3 +970,87 @@ def _dist_point_segment(p, a, b):
     cx = ax + dx * t
     cy = ay + dy * t
     return math.hypot(px - cx, py - cy)
+
+
+def _point_in_polygon(point, vertices):
+    if len(vertices) < 3:
+        return False
+    x, y = point
+    inside = False
+    previous = vertices[-1]
+    for current in vertices:
+        x0, y0 = previous
+        x1, y1 = current
+        if (y0 > y) != (y1 > y):
+            crossing_x = x0 + (y - y0) * (x1 - x0) / (y1 - y0)
+            if x < crossing_x:
+                inside = not inside
+        previous = current
+    return inside
+
+
+def _segment_intersects_rect(a, b, rect):
+    left, top, right, bottom = rect
+
+    def inside(point):
+        return left <= point[0] <= right and top <= point[1] <= bottom
+
+    if inside(a) or inside(b):
+        return True
+
+    edges = (
+        ((left, top), (right, top)),
+        ((right, top), (right, bottom)),
+        ((right, bottom), (left, bottom)),
+        ((left, bottom), (left, top)),
+    )
+    for c, d in edges:
+        denominator = (
+            (b[0] - a[0]) * (d[1] - c[1])
+            - (b[1] - a[1]) * (d[0] - c[0])
+        )
+        if abs(denominator) < 1e-12:
+            continue
+        t = (
+            (c[0] - a[0]) * (d[1] - c[1])
+            - (c[1] - a[1]) * (d[0] - c[0])
+        ) / denominator
+        u = (
+            (c[0] - a[0]) * (b[1] - a[1])
+            - (c[1] - a[1]) * (b[0] - a[0])
+        ) / denominator
+        if 0.0 <= t <= 1.0 and 0.0 <= u <= 1.0:
+            return True
+    return False
+
+
+def _element_intersects_rect(kind, points, rect):
+    if not points:
+        return False
+    left, top, right, bottom = rect
+    inside = lambda point: (
+        left <= point[0] <= right and top <= point[1] <= bottom
+    )
+
+    if kind == "node":
+        return inside(points[0])
+    if any(inside(point) for point in points):
+        return True
+    if kind in ("frame", "link"):
+        return (
+            len(points) >= 2
+            and _segment_intersects_rect(points[0], points[1], rect)
+        )
+    if kind in ("area", "poly") and len(points) >= 3:
+        if any(
+            _segment_intersects_rect(
+                points[index], points[(index + 1) % len(points)], rect
+            )
+            for index in range(len(points))
+        ):
+            return True
+        rect_corners = (
+            (left, top), (right, top), (right, bottom), (left, bottom)
+        )
+        return any(_point_in_polygon(corner, points) for corner in rect_corners)
+    return False

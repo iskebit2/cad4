@@ -32,6 +32,7 @@ from domain.definition import (
     FrameTemperatureLoad,
     GeneralProjectInfo,
     GridConfig,
+    GridPlaneDef,
     LinkProp,
     LinkPropLinear,
     LoadCase,
@@ -58,9 +59,10 @@ from domain.definition import (
     StaticLoadAssignment,
     WindConfig,
     WindDirectionResult,
+    WindResult,
 )
 from domain.element import Area, Frame, Link, Node, Polygon
-from domain.plane import ASSOC_KINDS, PendingChange, Plane
+from domain.plane import ASSOC_KINDS, ASSOC_STATUSES, PendingChange, Plane
 from domain.scene import Scene
 from logging_config import CadLogger
 from structload.windcalc.zone import Zone
@@ -104,9 +106,11 @@ DATACLASS_REGISTRY: dict[str, type] = {
     "LinkPropLinear": LinkPropLinear,
     "Restraint": Restraint,
     "GridConfig": GridConfig,
+    "GridPlaneDef": GridPlaneDef,
     "AnalysisManager": AnalysisManager,
     "LoadManager": LoadManager,
     "WindDirectionResult": WindDirectionResult,
+    "WindResult": WindResult,
     "Zone": Zone,
     "ReportManager": ReportManager,
     "SectionCut": SectionCut,
@@ -150,6 +154,10 @@ def _encode_plane(p: Plane) -> dict:
         "auto_assoc_ignore_bounds": p.auto_assoc_ignore_bounds,
         "associated": {k: sorted(int(x) for x in v) for k, v in p.associated.items()},
         "excluded":   {k: sorted(int(x) for x in v) for k, v in p.excluded.items()},
+        "association_status": {
+            k: {str(uid): status for uid, status in statuses.items()}
+            for k, statuses in p.association_status.items()
+        },
         "pending": [
             {"op": pc.op, "kind": pc.kind, "id": pc.id, "data": _encode(pc.data)}
             for pc in p.pending.values()
@@ -179,6 +187,12 @@ def _decode_plane(d: dict) -> Plane:
     for k in ASSOC_KINDS:
         p.associated[k] = set(int(x) for x in d.get("associated", {}).get(k, []))
         p.excluded[k]   = set(int(x) for x in d.get("excluded",   {}).get(k, []))
+        statuses = d.get("association_status", {}).get(k, {})
+        if any(status not in ASSOC_STATUSES for status in statuses.values()):
+            raise ValueError(f"Invalid plane association status in {k}")
+        p.association_status[k] = {
+            int(uid): status for uid, status in statuses.items()
+        }
     for pc_data in d.get("pending", []):
         pc = PendingChange(
             op=pc_data["op"],
@@ -219,7 +233,7 @@ def _encode(obj: Any) -> Any:
     if hasattr(obj, "__dict__"):
         data = {"__object__": type(obj).__name__}
         for k, v in obj.__dict__.items():
-            if k == "project":
+            if k in ("project", "_plane_associations_dirty"):
                 continue
             if k == "is_selected":
                 continue   # ← seçim state'i kaydedilmesin

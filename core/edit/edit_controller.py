@@ -359,8 +359,11 @@ class EditController:
             return False
 
     def _refresh(self):
+        scene = self.engine.scene
+        if scene is not None:
+            scene.mark_dirty()
         try:
-            self.engine.renderer.update_geo(self.engine.scene)
+            self.engine.renderer.update_geo(scene)
         except Exception:
             logger.exception("renderer.update_geo hatası")
 

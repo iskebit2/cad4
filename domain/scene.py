@@ -21,10 +21,28 @@ class Scene:
         self.show_local_axes_scale = 1.0
         self.units = "N, mm, C"
         self._is_dirty: bool = True
+        self._plane_associations_dirty: bool = True
         self._render_filter: set | None = None
 
     def mark_dirty(self):
         self._is_dirty = True
+        self.invalidate_plane_associations()
+
+    def invalidate_plane_associations(self):
+        self._plane_associations_dirty = True
+
+    def mark_plane_associations_current(self):
+        self._plane_associations_dirty = False
+
+    def refresh_plane_associations(self, force: bool = False) -> bool:
+        if not force and not getattr(self, "_plane_associations_dirty", True):
+            return False
+        if self.project is None:
+            self.mark_plane_associations_current()
+            return False
+        self.project.plane_mgr.refresh_all(self)
+        self.mark_plane_associations_current()
+        return True
 
     def is_dirty(self) -> bool:
         return self._is_dirty

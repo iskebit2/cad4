@@ -7,6 +7,7 @@
 // ---- Vertex'ten gelen ----
 in vec3      VertexColor;
 flat in uint PickID;
+flat in float PlaneOpacity;
 
 // ---- MRT output ----
 layout(location = 0) out vec4 FragColor;
@@ -20,6 +21,6 @@ uniform float alpha;
 void main() {
     vec3 color = useVertexColor ? VertexColor : objectColor;
 
-    FragColor = vec4(color, alpha);
+    FragColor = vec4(color, alpha * PlaneOpacity);
     FragID    = PickID;
 }

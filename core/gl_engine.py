@@ -4,11 +4,14 @@ Pure OpenGL + Domain Engine — Kivy bağımsız.
 
 KivyCADWidget bu sınıfı kullanır ama bu sınıf Kivy'yi bilmez.
 """
+from __future__ import annotations
 
 import time
 from pathlib import Path
+from typing import Callable, Sequence, TYPE_CHECKING
 
 from pyglm import glm
+import numpy as np
 
 glm.silence(2)
 from OpenGL.GL import GL_VERSION, glGetString
@@ -30,6 +33,9 @@ from render.scenerenderer import SceneRenderer
 from render.shaderprogram import ShaderProgram
 from render.snapsquare import SnapSquareRenderer
 from tools.gridsystem import GridSystem
+
+if TYPE_CHECKING:
+    from domain.plane import Plane
 
 logger = CadLogger.get(__name__)
 
@@ -75,6 +81,7 @@ class Engine:
         self.edit = None
         self.sel_policy = None
         self.grid = None
+        self.working_plane_provider: Callable[[], Plane | None] | None = None
 
         self.active_smart_plane_mode = False
 
@@ -209,6 +216,51 @@ class Engine:
         self.cam.update_bounds(c, s)
         self.cam.focus_on_model()
 
+    def set_working_plane_provider(
+        self, provider: Callable[[], Plane | None] | None
+    ) -> None:
+        self.working_plane_provider = provider
+
+    @property
+    def active_working_plane(self) -> Plane | None:
+        if self.working_plane_provider is None:
+            return None
+        return self.working_plane_provider()
+
+    def focus_plane(self, plane: Plane, padding: float = 1.15) -> bool:
+        if self.cam is None:
+            return False
+        if not np.isfinite(padding) or padding <= 0.0:
+            raise ValueError("Plane fit padding pozitif ve sonlu olmalı")
+
+        center, size = (
+            self.renderer.get_bounds()
+            if self.renderer is not None
+            else (self.cam.model_center, self.cam.model_size)
+        )
+        center = np.asarray(center, dtype=float)
+        half_extents = np.full(3, max(float(size), 1.0) * 0.5)
+        local_center = plane.world_to_local(center)
+        u_extent = float(np.dot(np.abs(plane.u), half_extents))
+        v_extent = float(np.dot(np.abs(plane.v), half_extents))
+        u_min, u_max, v_min, v_max = plane.boundary
+        u_min = local_center[0] - u_extent if u_min is None else float(u_min)
+        u_max = local_center[0] + u_extent if u_max is None else float(u_max)
+        v_min = local_center[1] - v_extent if v_min is None else float(v_min)
+        v_max = local_center[1] + v_extent if v_max is None else float(v_max)
+
+        focus = plane.to_3d(((u_min + u_max) * 0.5, (v_min + v_max) * 0.5))
+        width = max(u_max - u_min, 1.0)
+        height = max(v_max - v_min, 1.0)
+        aspect = max(float(self.cam.aspect_ratio), 1e-6)
+        half_height = max(height * 0.5, width / (2.0 * aspect))
+        fit_distance = max(2.0 * half_height * padding, 1.0)
+
+        self.cam.look_at_plane(
+            focus, plane.u, plane.v, plane.normal, fit_radius=fit_distance
+        )
+        return True
+
     
     def redraw_scene(self, full_rebuild: bool = True):
         if not self.renderer:
@@ -265,11 +317,9 @@ class Engine:
         # else:
             #pass(f"[HOOK] hover_id=0 → işlem yok")
 
-    def update_world_pos(self, x, y):
-        if not self.cam or not self.input:
-            return
-        if self.hover_id > 0 and self.hover_element_type == 'node':
-            return
+    def screen_ray(self, x, y):
+        if not self.cam:
+            return None
 
         v = self.cam.get_view_matrix()
         p = self.cam.get_projection_matrix()
@@ -279,22 +329,148 @@ class Engine:
 
         near = inv * glm.vec4(nx, ny, -1, 1)
         far = inv * glm.vec4(nx, ny, 1, 1)
+        if abs(near.w) < 1e-12 or abs(far.w) < 1e-12:
+            return None
         near = glm.vec3(near) / near.w
         far = glm.vec3(far) / far.w
-        direction = glm.normalize(far - near)
+        direction = far - near
+        if glm.length(direction) < 1e-12:
+            return None
+        direction = glm.normalize(direction)
+        return np.asarray(near, dtype=float), np.asarray(direction, dtype=float)
 
-        if abs(direction.z) > 1e-6:
-            t = -near.z / direction.z
-            if t > 0:
-                self.input.mouse_world_pos = near + direction * t
+    def screen_to_working_plane(
+        self,
+        x: float,
+        y: float,
+        plane: Plane | None = None,
+        *,
+        grid_coordinates: tuple[Sequence[float], Sequence[float]] | None = None,
+        orthogonal_origin: tuple[float, float] | None = None,
+    ) -> tuple[glm.vec3, glm.vec2] | None:
+        plane = self.active_working_plane if plane is None else plane
+        if plane is None:
+            return None
+        if self.input is not None:
+            if grid_coordinates is None:
+                grid_coordinates = self.input.working_plane_grid_coordinates
+            if orthogonal_origin is None:
+                orthogonal_origin = self.input.working_plane_orthogonal_origin
+        ray = self.screen_ray(x, y)
+        if ray is None:
+            return None
+        origin, direction = ray
+        point = plane.intersect_ray(origin, direction)
+        if point is None:
+            return None
+        coords = plane.world_to_local(point)
+        uv = self.constrain_working_plane_coordinates(
+            (float(coords[0]), float(coords[1])),
+            grid_coordinates=grid_coordinates,
+            orthogonal_origin=orthogonal_origin,
+        )
+        if not plane.bounds_contains_uv(*uv):
+            return None
+        point = plane.to_3d(uv)
+        return (
+            glm.vec3(*point),
+            glm.vec2(*uv),
+        )
+
+    @staticmethod
+    def constrain_working_plane_coordinates(
+        coords: tuple[float, float],
+        *,
+        grid_coordinates: tuple[Sequence[float], Sequence[float]] | None = None,
+        orthogonal_origin: tuple[float, float] | None = None,
+    ) -> tuple[float, float]:
+        """Snap local coordinates to grid lines, then constrain to an orthogonal axis."""
+        u, v = map(float, coords)
+        if not np.isfinite((u, v)).all():
+            raise ValueError("Plane koordinatları sonlu olmalı")
+        if grid_coordinates is not None:
+            if len(grid_coordinates) != 2:
+                raise ValueError("Grid koordinatları u ve v çizgileri içermeli")
+            snapped = []
+            for value, lines in zip((u, v), grid_coordinates):
+                values = np.asarray(lines, dtype=float)
+                if (
+                    values.ndim != 1
+                    or values.size == 0
+                    or not np.isfinite(values).all()
+                ):
+                    raise ValueError("Grid koordinatları boş veya geçersiz")
+                snapped.append(float(values[np.argmin(np.abs(values - value))]))
+            u, v = snapped
+        if orthogonal_origin is not None:
+            anchor = np.asarray(orthogonal_origin, dtype=float)
+            if anchor.shape != (2,) or not np.isfinite(anchor).all():
+                raise ValueError("Ortho başlangıcı iki sonlu koordinat içermeli")
+            delta_u, delta_v = u - anchor[0], v - anchor[1]
+            if abs(delta_u) >= abs(delta_v):
+                v = float(anchor[1])
+            else:
+                u = float(anchor[0])
+        return u, v
+
+    def screen_to_world(self, x: float, y: float) -> glm.vec3 | None:
+        plane = self.active_working_plane
+        if plane is not None:
+            hit = self.screen_to_working_plane(x, y, plane)
+            return hit[0] if hit is not None else None
+
+        ray = self.screen_ray(x, y)
+        if ray is None:
+            return None
+        origin, direction = ray
+        if abs(direction[2]) <= 1e-12:
+            return None
+        distance = -origin[2] / direction[2]
+        if distance < 0.0:
+            return None
+        return glm.vec3(*(origin + distance * direction))
+
+    def update_world_pos(self, x: float, y: float) -> None:
+        if not self.cam or not self.input:
+            return
+
+        self.input.mouse_plane_valid = False
+        plane = self.active_working_plane
+        has_hovered_node = (
+            self.hover_id > 0 and self.hover_element_type == "node"
+        )
+        if has_hovered_node and plane is None:
+            return
+
+        hit = (
+            self.screen_to_working_plane(x, y, plane)
+            if plane is not None
+            else None
+        )
+        if hit is not None:
+            plane_world, plane_coords = hit
+            self.input.mouse_plane_pos = plane_world
+            self.input.mouse_plane_coords = plane_coords
+            self.input.mouse_plane_valid = True
+            if not has_hovered_node:
+                self.input.mouse_world_pos = plane_world
                 self.input.mouse_world_valid = True
-                return
+            return
+
+        if has_hovered_node:
+            return
+        world = self.screen_to_world(x, y)
+        if world is not None:
+            self.input.mouse_world_pos = world
+            self.input.mouse_world_valid = True
+            return
         self.input.mouse_world_valid = False
 
     def clear_hover(self):
         self.hover_id = 0
         self.hover_element_type = None
         self.input.mouse_world_valid = False
+        self.input.mouse_plane_valid = False
 
     def enable_hover(self, enabled=True):
         self.hover_enabled = enabled

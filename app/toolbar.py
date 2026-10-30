@@ -170,12 +170,12 @@ class Toolbar:
                     imgui.same_line(spacing=2)
                     if imgui.button(label):
                         clicked = True
-            elif label:
-                if imgui.button(label, _vec2(*icon_size)):
-                    clicked = True
             else:
-                text = (fallback or "?")[:3]
-                if imgui.button(text, _vec2(*icon_size)):
+                text = (label or fallback or "?").strip()
+                if len(text) > 10:
+                    text = f"{text[:8]}.."
+                button_width = max(40.0, min(120.0, len(text) * 8.0 + 16.0))
+                if imgui.button(text, _vec2(button_width, 24.0)):
                     clicked = True
         finally:
             imgui.pop_id()

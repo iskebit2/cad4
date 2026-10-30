@@ -37,6 +37,13 @@ class InputManager:
     mouse_wheel:      float    = 0.0
     mouse_world_pos:  glm.vec3 = field(default_factory=lambda: glm.vec3(0, 0, 0))
     mouse_world_valid: bool    = False
+    mouse_plane_pos: glm.vec3 = field(default_factory=lambda: glm.vec3(0, 0, 0))
+    mouse_plane_coords: glm.vec2 = field(default_factory=lambda: glm.vec2(0, 0))
+    mouse_plane_valid: bool = False
+    working_plane_grid_coordinates: (
+        tuple[tuple[float, ...], tuple[float, ...]] | None
+    ) = None
+    working_plane_orthogonal_origin: tuple[float, float] | None = None
 
     # --- Drag (marquee) ---
     is_dragging:    bool = False

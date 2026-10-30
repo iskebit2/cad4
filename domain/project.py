@@ -48,6 +48,9 @@ class Project:
     unit_system: UnitSystem = UnitSystem.N_MM
     grid: GridConfig = field(default_factory=GridConfig)
     planes: dict[str, Plane] = field(default_factory=dict)
+    _active_plane_id: str | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
 
     # --- ESKİ DEFINITION MANAGER MİRASI (Doğrudan Project'e monte edildi) ---
     materials: dict[str, Material] = field(default_factory=dict)

@@ -109,13 +109,18 @@ class Camera:
         self.distance = self.model_size * 1.1
         self.pitch = 30.0
         self.yaw = -45.0
+        self.up = glm.vec3(0.0, 0.0, 1.0)
         self.view_mode = "PERSPECTIVE"
+        self.view_preset = None
         self._invalidate()
 
     # ==================================================================
     # Kontroller
     # ==================================================================
     def orbit(self, dx, dy):
+        if self.view_preset == "working_plane":
+            self.up = glm.vec3(0.0, 0.0, 1.0)
+            self.view_preset = None
         self.yaw -= dx * self.ORBIT_SENSITIVITY
         self.pitch += dy * self.ORBIT_SENSITIVITY
         self.pitch = float(np.clip(self.pitch, self.min_pitch, self.max_pitch))
@@ -220,6 +225,7 @@ class Camera:
         p = presets[preset]
         self.pitch = p["pitch"]
         self.yaw = p["yaw"]
+        self.up = glm.vec3(0.0, 0.0, 1.0)
         self.view_mode = p["view_mode"]
         self.view_preset = preset
         self._invalidate()
@@ -254,14 +260,19 @@ class Camera:
         n = glm.normalize(glm.vec3(*n) if not isinstance(n, glm.vec3) else n)
         v = glm.normalize(glm.vec3(*v) if not isinstance(v, glm.vec3) else v)
 
-        d = fit_radius if fit_radius else max(self.model_size, 1000.0) * 1.2
+        d = (
+            float(fit_radius)
+            if fit_radius is not None
+            else max(self.model_size, 1000.0) * 1.2
+        )
 
         self.target = origin
         self.distance = d
         self.pitch = math.degrees(math.asin(max(-1.0, min(1.0, n.z))))
         self.yaw   = math.degrees(math.atan2(n.y, n.x))
 
-        # KRİTİK: view matrix'in up'ı düzlemin V ekseni olmalı
         self.up = v
+        self.view_mode = "ORTHO"
+        self.view_preset = "working_plane"
 
         self._invalidate()

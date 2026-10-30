@@ -322,7 +322,7 @@ class S2KLoader:
             if name not in ctx.sections:
                 ctx.sections[name] = DomSection(
                     name=name,
-                    profile_type=SectionType.CUSTOM,
+                    profile_type=SectionType.SD,
                     sd_section=sd,
                 )
 

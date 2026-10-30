@@ -1,6 +1,6 @@
 # core/plane_draw_manager.py
 """
-PlaneDrawManager — 3 nokta ile 3D'de plane (düzlem) kurma.
+PlaneCreationTool — 3 nokta ile 3D'de plane (düzlem) kurma.
 
 Akış:
     AŞAMA 0 (p0 bekle)  → tıkla node → AŞAMA 1
@@ -63,7 +63,7 @@ from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
 
-class PlaneDrawManager:
+class PlaneCreationTool:
     """3 nokta ile plane oluşturma — görsel önizleme dahil."""
 
     # Aşamalar
@@ -363,9 +363,17 @@ class PlaneDrawManager:
         # origin: p0 + u/2 + v/2 (merkez)
         origin = p0 + u_hat * (u_len * 0.5) + v_hat * (v_len * 0.5)
 
-        # Projedeki tüm plane isimleri
-        project = getattr(self.engine.scene, "project", None) if self.engine.scene else None
-        name = f"Plane_{len(project.planes) + 1 if project else 1}"
+        scene = self.engine.scene
+        project = getattr(scene, "project", None) if scene is not None else None
+        if project is None:
+            logger.error("[PlaneCreation] Plane kaydı için proje bağlamı bulunamadı")
+            self.cancel()
+            return
+
+        plane_index = 1
+        while f"Plane_{plane_index}" in project.planes:
+            plane_index += 1
+        name = f"Plane_{plane_index}"
 
         plane = Plane(
             origin=origin,
@@ -381,17 +389,8 @@ class PlaneDrawManager:
             depth_plus=self.depth_plus,
         )
 
-        # Assoc hesapla
-        if self.engine.scene is not None:
-            try:
-                plane.refresh_assoc(self.engine.scene)
-            except Exception:
-                logger.exception("[PlaneDraw] assoc hesabı hatası")
-
-        # Projeye ekle
-        if project is not None:
-            project.planes[name] = plane
-            logger.info(f"[PlaneDraw] '{name}' projeye eklendi")
+        project.plane_mgr.add(plane)
+        logger.info(f"[PlaneDraw] '{name}' projeye eklendi")
 
         self.completed_plane = plane
         logger.info(
@@ -770,3 +769,6 @@ class PlaneDrawManager:
                 glDeleteVertexArrays(1, [int(vao)])
         self._tri_vao = self._tri_vbo = None
         self._line_vao = self._line_vbo = None
+
+
+PlaneDrawManager = PlaneCreationTool

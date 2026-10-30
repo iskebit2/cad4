@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from pyglm import glm
 import numpy as np
 
-from core.plane_draw_manager import PlaneDrawManager
+from core.plane_draw_manager import PlaneCreationTool, PlaneDrawManager
 from domain.element import Node
 
 
@@ -15,7 +15,7 @@ def _manager():
         get_projection_matrix=lambda: glm.mat4(1),
     )
     engine = SimpleNamespace(cam=camera, w=100, h=100)
-    manager = PlaneDrawManager.__new__(PlaneDrawManager)
+    manager = PlaneCreationTool.__new__(PlaneCreationTool)
     manager.engine = engine
     manager.p0 = Node(0, 0, 0)
     manager.p1 = None
@@ -47,6 +47,10 @@ def test_p0_to_p1_preview_tracks_cursor_and_draws_arrow():
     assert np.allclose(vertices[4], point)
     assert not np.allclose(vertices[2], vertices[3])
     assert not np.allclose(vertices[4], vertices[5])
+
+
+def test_plane_draw_manager_remains_a_compatible_alias():
+    assert PlaneDrawManager is PlaneCreationTool
 
 
 def test_p1_to_p2_preview_builds_perpendicular_rectangle():
