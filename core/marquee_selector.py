@@ -123,36 +123,20 @@ class MarqueeSelector:
     # ------------------------------------------------------------------
 
     def _get_elements(self):
-
         rect = self._get_rect()
-
         if rect is None:
             return []
-
         x1, y1, x2, y2, cross, win_w, win_h = rect
-
         cam = self.engine.cam
+        mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
 
-        mvp = (
-            cam.get_projection_matrix()
-            @ cam.get_view_matrix()
-        )
-
+        flt = getattr(self.engine.scene, "_render_filter", None)
         selected = []
-
         for element in self.engine.scene.all_elements.values():
-
-            if self._in_rect(
-                element,
-                (x1, y1),
-                (x2, y2),
-                mvp,
-                win_w,
-                win_h,
-                cross,
-            ):
+            if flt is not None and element.unique_id not in flt:
+                continue
+            if self._in_rect(element, (x1, y1), (x2, y2), mvp, win_w, win_h, cross):
                 selected.append(element)
-
         return selected
 
     # ------------------------------------------------------------------

@@ -15,6 +15,7 @@ import numpy as np
 from core.units import UnitSystem
 from data.enums import ENUM_REGISTRY
 from domain.definition import (
+    AreaSection,
     AnalysisManager,
     AreaGravityLoad,
     AreaRefTemperatureLoad,
@@ -60,6 +61,13 @@ from domain.definition import (
     WindConfig,
     WindDirectionResult,
     WindResult,
+    ConstraintDefinition,
+    LoadSegment,
+    MassAssembly,
+    MassContribution,
+    SDPolygonPoint,
+    SDShape,
+    SDSection,
 )
 from domain.element import Area, Frame, Link, Node, Polygon
 from domain.plane import ASSOC_KINDS, ASSOC_STATUSES, PendingChange, Plane
@@ -102,6 +110,7 @@ DATACLASS_REGISTRY: dict[str, type] = {
     "AreaWindPressureLoad": AreaWindPressureLoad,
     "Material": Material,
     "Section": Section,
+    "AreaSection": AreaSection,
     "LinkProp": LinkProp,
     "LinkPropLinear": LinkPropLinear,
     "Restraint": Restraint,
@@ -115,6 +124,13 @@ DATACLASS_REGISTRY: dict[str, type] = {
     "ReportManager": ReportManager,
     "SectionCut": SectionCut,
     "QuadDefinition": QuadDefinition,
+    "ConstraintDefinition": ConstraintDefinition,
+    "LoadSegment": LoadSegment,
+    "MassAssembly": MassAssembly,
+    "MassContribution": MassContribution,
+    "SDPolygonPoint": SDPolygonPoint,
+    "SDShape": SDShape,
+    "SDSection": SDSection,
 }
 
 CLASS_REGISTRY: dict[str, type] = {

@@ -1,5 +1,6 @@
 """User-controlled polygon-to-frame area-load transfer panel."""
 from __future__ import annotations
+from copy import deepcopy
 
 import numpy as np
 from imgui_bundle import imgui
@@ -7,11 +8,8 @@ from imgui_bundle import imgui
 from core.units import Dimension, UnitSystem, convert_value
 from data.enums import DistType, LoadDirection, PolygonType
 from domain.definition import AreaUniformLoad, LoadPattern
-from domain.element import Node, Polygon
-from domain.polygon_load_transfer import (
-    build_polygon_frame_loads,
-    transfer_polygon_loads_to_frames,
-)
+from domain.element import Frame, Node, Polygon
+from tools.polygon_load_transfer import  build_polygon_frame_loads
 from logging_config import CadLogger
 from ui.base_panel import BasePanel
 
@@ -37,10 +35,22 @@ class AreaToFramePanel(BasePanel):
         self._cpi_positive = 0.2
         self._cpi_negative = -0.3
 
+        self._step: float = 200.0
+        self._step_initialized: bool = False
+        self._n_bins: int = 12
+
     def set_context(self, ctx: dict):
         super().set_context(ctx)
         self.project = ctx.get("project")
         self.scene = ctx.get("scene")
+
+        if self.project is not None and not self._step_initialized:
+            self._step = convert_value(
+                Dimension.LENGTH, 200.0, UnitSystem.N_MM,
+                self.project.unit_system,
+            )
+            self._step_initialized = True
+
         self.selection_polygons = [
             item for item in (ctx.get("selection_polygons") or [])
             if isinstance(item, Polygon)
@@ -88,42 +98,57 @@ class AreaToFramePanel(BasePanel):
             imgui.text("Sahnede aktarım yapılabilecek polygon yok.")
             return
 
+        # --- Polygon seçimi ---
         selected = self._selected_polygon()
         if selected is None:
             selected = polygons[0]
             self._selected_polygon_id = int(selected.unique_id)
+
         current_label = self._polygon_label(selected)
         if imgui.begin_combo("Polygon", current_label):
             for polygon in polygons:
                 is_selected = int(polygon.unique_id) == self._selected_polygon_id
-                if imgui.selectable(
-                    self._polygon_label(polygon), is_selected,
-                )[1]:
+                if imgui.selectable(self._polygon_label(polygon), is_selected)[1]:
                     self._selected_polygon_id = int(polygon.unique_id)
                     selected = polygon
             imgui.end_combo()
 
+        # --- Polygon yükleri ---
         self._draw_polygon_loads(selected)
         imgui.separator()
+
+        # --- Frame assoc ---
         self._draw_frame_associations(selected)
         imgui.separator()
-        changed, distribution_index = imgui.combo(
+
+        # --- Tributary dağıtımı ---
+        distribution_labels = ["One way (U1)", "One way (U2)", "Two way"]
+        distribution_values = ["one_way_u1", "one_way_u2", "two_way"]
+        current_dist_idx = self._distribution_index(selected.transfer_dist_type)
+        changed, new_dist_idx = imgui.combo(
             "Tributary dağıtımı",
-            self._distribution_index(selected.transfer_dist_type),
-            ["One way (U1)", "One way (U2)", "Two way"],
+            current_dist_idx,
+            distribution_labels,
         )
         if changed:
-            selected.transfer_dist_type = [
-                "one_way_u1", "one_way_u2", "two_way",
-            ][distribution_index]
+            selected.transfer_dist_type = distribution_values[new_dist_idx]
             selected.mark_dirty()
 
+        # --- Rüzgar zone aktarımı ---
         self._draw_wind_zone_transfers(selected)
         imgui.separator()
+
+        # --- Grid ayarları (proje biriminde) ---
+        self._draw_grid_settings()
+        imgui.separator()
+
+        # --- Durum + Aktar ---
         if self._status:
             imgui.text_wrapped(self._status)
+
         if selected.assigned_loads and imgui.button(
-            "Seçili frame'lere aktar##area_to_frame", imgui.ImVec2(-1, 0),
+            "Seçili frame'lere aktar##area_to_frame",
+            imgui.ImVec2(-1, 0),
         ):
             try:
                 self._transfer(selected)
@@ -134,6 +159,38 @@ class AreaToFramePanel(BasePanel):
                 self._status = "Alan yükü aktarımı başarısız oldu; log'a bakın."
                 logger.exception("[AreaToFrame] Aktarım başarısız.")
 
+
+    def _draw_grid_settings(self) -> None:
+        """Grid adımı ve bin sayısı — proje biriminde."""
+        length_unit = self.project.unit_system.length_unit
+
+        # 1 metre'nin proje birimindeki karşılığı
+        one_meter = convert_value(
+            Dimension.LENGTH, 1.0, UnitSystem.N_M,
+            self.project.unit_system,
+        )
+        step_min = 0.05 * one_meter   # 5 cm
+        step_max = 2.00 * one_meter   # 2 m
+
+        # Grid adımı
+        imgui.text(f"Grid adımı ({length_unit})")
+        imgui.same_line(180)
+        imgui.push_item_width(120)
+        _, self._step = imgui.input_float(
+            "##step", self._step,
+            0.01 * one_meter, 0.1 * one_meter,
+        )
+        imgui.pop_item_width()
+        self._step = max(step_min, min(step_max, self._step))
+
+        # Bin sayısı
+        imgui.text("Bin sayısı")
+        imgui.same_line(180)
+        imgui.push_item_width(120)
+        _, self._n_bins = imgui.input_int("##n_bins", self._n_bins)
+        imgui.pop_item_width()
+        self._n_bins = max(3, min(50, self._n_bins))
+
     def _draw_polygon_loads(self, polygon: Polygon):
         transfers = self.project.loads.area_load_transfers_for_polygon(
             int(polygon.unique_id),
@@ -142,11 +199,9 @@ class AreaToFramePanel(BasePanel):
             f"Atanmış alan yükü: {len(getattr(polygon, 'assigned_loads', ())) }"
         )
         for load in polygon.assigned_loads:
-            source = load.source_name or load.pattern_name
-            imgui.bullet_text(
-                f"{source} | {load.pattern_name} | {load.value:g} "
-                f"{self._area_load_unit()}"
-            )
+            unit = self._area_load_unit()   # "kN/m²" veya "N/mm²"
+            imgui.bullet_text(f"{load.pattern_name} | {load.value:.3f} {unit}")
+
         wind_transfers = [
             item for item in transfers
             if item.get("source_type") == "wind_zone"
@@ -173,38 +228,91 @@ class AreaToFramePanel(BasePanel):
                 )
 
     def _draw_frame_associations(self, polygon: Polygon):
-        frames = sorted(
-            self.scene.frames.values(),
-            key=lambda frame: (frame.label or "", int(frame.unique_id)),
+        """Seçili frame'leri polygona assoc et."""
+        
+        # Sahnede seçili frame'ler
+        selected_frames = self._selected_frames_from_scene()
+        
+        imgui.text_colored(
+            imgui.ImVec4(0.85, 0.9, 0.95, 1.0),
+            "Aktarım Hedefi",
         )
-        imgui.text("Aktarım hedefi olan frame'leri kendiniz seçin:")
-        if not frames:
-            imgui.text_disabled("Sahnede frame bulunmuyor.")
-            return
-        selected_ids = {
-            int(frame_id) for frame_id in polygon.associated_frame_ids
-        }
-        changed = False
-        for frame in frames:
-            frame_id = int(frame.unique_id)
-            checked, value = imgui.checkbox(
-                f"{frame.label or 'Frame'} (ID {frame_id})##area_frame_{frame_id}",
-                frame_id in selected_ids,
+        
+        # Sahnede kaç frame seçili
+        if selected_frames:
+            ids_str = ", ".join(str(f.unique_id) for f in selected_frames[:8])
+            if len(selected_frames) > 8:
+                ids_str += f" ... (+{len(selected_frames) - 8})"
+            imgui.text(f"Sahnede seçili: {len(selected_frames)} frame")
+            imgui.text_colored(
+                imgui.ImVec4(0.6, 0.85, 0.7, 1.0),
+                f"  ID: {ids_str}",
             )
-            if checked:
-                if value:
-                    selected_ids.add(frame_id)
-                else:
-                    selected_ids.discard(frame_id)
-                changed = True
-        if changed:
-            polygon.associated_frame_ids = sorted(selected_ids)
+        else:
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.6, 0.5, 1.0),
+                "Sahnede frame seçili değil.",
+            )
+        
+        # Ata butonu
+        can_assign = bool(selected_frames)
+        if not can_assign:
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1.0),
+            )
+        
+        if imgui.button(
+            "Seçili frame'leri polygona ata##af_assign",
+            imgui.ImVec2(-1, 0),
+        ) and can_assign:
+            polygon.associated_frame_ids = sorted(
+                int(f.unique_id) for f in selected_frames
+            )
             polygon.mark_dirty()
             self.scene.mark_dirty()
+            self._status = (
+                f"{len(polygon.associated_frame_ids)} frame polygona atandı."
+            )
+            logger.info(
+                "[AreaToFrame] %s: %d frame assoc",
+                polygon.label, len(polygon.associated_frame_ids),
+            )
+        
+        if not can_assign:
+            imgui.pop_style_color(1)
+        
+        # Mevcut assoc durum
+        assoc_count = len(polygon.associated_frame_ids)
+        imgui.spacing()
+        if assoc_count > 0:
+            imgui.text_colored(
+                imgui.ImVec4(0.55, 0.85, 0.6, 1.0),
+                f"Assoc edilmiş: {assoc_count} frame",
+            )
+            imgui.same_line()
+            if imgui.small_button("Temizle##af_clear"):
+                polygon.associated_frame_ids = []
+                polygon.mark_dirty()
+                self.scene.mark_dirty()
+                self._status = "Assoc temizlendi."
+        else:
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.6, 0.5, 1.0),
+                "⚠ Henüz assoc yok — sahne üzerinden frame seçip 'ata' butonuna basın.",
+            )
 
-        imgui.text(
-            f"Seçili hedef frame: {len(polygon.associated_frame_ids)}"
-        )
+
+    def _selected_frames_from_scene(self) -> list[Frame]:
+        """Sahnede seçili frame'leri döndür."""
+        if self.scene is None:
+            return []
+        try:
+            return [
+                el for el in self.scene.get_selected()
+                if isinstance(el, Frame)
+            ]
+        except Exception:
+            return []
 
     def _wind_zone_entries(self, polygon: Polygon):
         source_refs = {
@@ -345,11 +453,9 @@ class AreaToFramePanel(BasePanel):
                 )
                 pressure = sign * q_p * (cpe - cpi)
                 value = convert_value(
-                    Dimension.AREA_LOAD,
-                    pressure,
-                    UnitSystem.KN_M,
-                    self.project.unit_system,
-                )
+                                        Dimension.AREA_LOAD, pressure, UnitSystem.KN_M,
+                                        self.project.unit_system,
+                                    )
                 loads.append(AreaUniformLoad(
                     pattern_name=pattern_name,
                     direction=LoadDirection.LOCAL_2,
@@ -372,11 +478,13 @@ class AreaToFramePanel(BasePanel):
         source_key = f"wind:{direction_key}:{zone_index}"
         distribution = DistType.from_input(surface.transfer_dist_type)
         generated = build_polygon_frame_loads(
-            self.scene,
-            zone_polygon,
-            loads,
-            dist_type=distribution,
-        )
+                                                self.scene,
+                                                zone_polygon,
+                                                loads,
+                                                dist_type=distribution,
+                                                step=self._step,        # ★ ekle
+                                                n_bins=self._n_bins,    # ★ ekle
+                                            )
         manager = self.project.loads
         manager.record_wind_zone_transfer(
             int(surface.unique_id),
@@ -419,20 +527,49 @@ class AreaToFramePanel(BasePanel):
         return segment_count
 
     def _transfer(self, polygon: Polygon) -> int:
-        generated = transfer_polygon_loads_to_frames(self.scene, polygon)
-        frames = {
-            int(frame.unique_id): frame
-            for frame in self.scene.frames.values()
-        }
+
+        generated = build_polygon_frame_loads(
+            self.scene, polygon,
+            step=self._step,
+            n_bins=self._n_bins,
+        )
+
+        if not generated:
+            self._status = "Aktarım için segment üretilemedi."
+            return 0
+
+        # ★ Frame'lere YAZ
+        manager = getattr(
+            getattr(self.scene, "project", None), "loads", None,
+        )
+        if manager is not None and hasattr(
+            manager, "replace_polygon_frame_transfers"
+        ):
+            manager.replace_polygon_frame_transfers(
+                self.scene, int(polygon.unique_id), generated,
+            )
+        else:
+            # Fallback — doğrudan yaz
+            frames_map = {
+                int(frame.unique_id): frame
+                for frame in self.scene.frames.values()
+            }
+            for frame_id, pattern_loads in generated.items():
+                frame = frames_map.get(frame_id)
+                if frame is None:
+                    continue
+                for pattern_name, load_set in pattern_loads.items():
+                    frame.dist_load_sets[pattern_name] = deepcopy(load_set)
+                    frame.mark_dirty()
+
+        self.scene.mark_dirty()
+
         touched = {
-            frame_id: frames[frame_id]
-            for frame_id in generated
-            if frame_id in frames
+            int(fid) for fid in generated
         }
-        if touched:
-            self.scene.mark_dirty()
-            if callable(self.on_transfer_complete):
-                self.on_transfer_complete(list(touched.values()))
+        if touched and callable(self.on_transfer_complete):
+            self.on_transfer_complete(list(touched))
+
         segment_count = sum(
             len(load_set.segments)
             for pattern_loads in generated.values()
@@ -440,7 +577,7 @@ class AreaToFramePanel(BasePanel):
         )
         self._status = (
             f"{segment_count} yayılı yük segmenti "
-            f"{len(touched)} frame'e aktarıldı."
+            f"{len(generated)} frame'e aktarıldı."
         )
         logger.info("[AreaToFrame] %s", self._status)
         return segment_count
@@ -450,10 +587,8 @@ class AreaToFramePanel(BasePanel):
         return polygon.label or f"Polygon {polygon.unique_id}"
 
     def _area_load_unit(self) -> str:
-        unit_system = self.project.unit_system
-        if not isinstance(unit_system, UnitSystem):
-            unit_system = UnitSystem.from_sap(unit_system)
-        return f"{unit_system.force_unit}/{unit_system.length_unit}²"
+        unit = self.project.unit_system
+        return f"{unit.force_unit}/{unit.length_unit}²"
 
     @staticmethod
     def _distribution_index(value) -> int:

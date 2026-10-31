@@ -32,7 +32,6 @@ from ui.joint_load_panel import JointLoadPanel
 from ui.load_assign_panel import LoadAssignPanel
 from ui.load_display_panel import LoadDisplayPanel
 from ui.plane_manager_panel import PlaneManagerPanel
-from ui.plane_plot_panel import PlanePlotPanel
 from ui.project_panels import (
     AnalysisManagerPanel,
     ProjectConfigPanel,
@@ -45,6 +44,7 @@ from ui.sd_convert_panel import SDConvertPanel
 from ui.view_filter_panel import ViewFilterPanel
 from ui.visibility_panel import VisibilityPanel
 from ui.zones_panel import ZonesPanel
+from ui.load_manager_panel import LoadManagerPanel
 
 # ======================================================================
 # Panel Kayıtları
@@ -178,18 +178,20 @@ PANEL_SPECS = [
         "menu_label": "Plane Manager",
         "icon":       "layers","context": [],
     },
-    {
-        "name":       "plane_plot",
-        "cls":        PlanePlotPanel,
-        "title":      "Plane Plot (2D)",
-        "category":   "Görünüm",
-        "quick":      False,
-        "shortcut":   None,
-        "menu_label": "Plane Plot (2D)",
-        "icon":       "grid","context": [],
-    },
-
     # --- Yükler ---
+    {
+    "name":       "load_manager",
+    "cls":        LoadManagerPanel,
+    "title":      "Load Manager",
+    "category":   "Yükler",
+    "quick":      True,
+    "shortcut":   "F9",
+    "menu_label": "Load Manager",
+    "icon":       "layers",
+    "context":    ["project", "scene", "patterns",
+                   "selection_polygons", "selection_frames",
+                   "selection_nodes", "renderer"],
+},
     {
     "name":       "assign_joint_load",
     "cls":        JointLoadPanel,

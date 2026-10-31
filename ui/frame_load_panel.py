@@ -76,7 +76,7 @@ class FrameLoadPanel(BasePanel):
     ]
 
     def __init__(self, on_apply: Callable = None):
-        self.visible = False
+        
         self.on_apply = on_apply
 
         self.pattern_name = "DEAD"

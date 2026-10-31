@@ -1,18 +1,4 @@
 # logging_config.py
-"""
-Merkezi log yapılandırması.
-
-Tasarım:
-    - KONSOL  : sadece WARNING+ (veya CAD_LOG_CONSOLE_LEVEL ile override)
-    - DOSYA   : DEBUG+ (logs/cad.log, rotate 4 MB x 5)
-
-Environment:
-    CAD_LOG_LEVEL=DEBUG          # tüm cad.* logger'ları için (root)
-    CAD_LOG_CONSOLE_LEVEL=WARNING # konsol handler seviyesi
-    CAD_LOG_FILE_LEVEL=DEBUG      # dosya handler seviyesi
-    CAD_LOG_DIR=logs             # log dizini
-    CAD_LOG_TO_CONSOLE=1         # 0 yaparsanız konsol tamamen kapanır
-"""
 
 from __future__ import annotations
 
@@ -89,12 +75,15 @@ class CadLogger:
     # Modül bazlı seviyeler (dosya handler'ı bunları kullanır).
     # Değer yoksa → NOTSET (root'tan miras)
     MODULE_LEVELS: dict[str, str] = {
-        "cad.tools.s2k.loader":       "INFO",
-        "cad.tools.s2k_utils":       "INFO",
-        "cad.geometry.scenebuilder": "INFO",
-        "cad.data.serializer":       "INFO",
-        "cad.core.gl_engine":        "INFO",
-        "cad.render.axes_renderer":  "INFO",
+        "cad.core.pickpass":            "WARNING",
+    "cad.render.load_renderer":     "INFO",
+    "cad.render.scenerenderer":     "INFO",   # render için info yeter
+    "cad.ui.plane_manager_panel":   "WARNING",
+    "cad.app.cad_app":              "INFO",
+    "cad.core.plane_draw_manager":  "WARNING",
+    "cad.core.camera":              "WARNING",
+    "cad.core.input_manager":       "WARNING",
+    "cad.tools.gridsystem":         "WARNING",
     }
 
     ROOT_NAME = "cad"
@@ -112,9 +101,9 @@ class CadLogger:
 
     @classmethod
     def _file_level(cls) -> int:
-        """Dosya için minimum seviye. Varsayılan: DEBUG."""
-        name = cls._env("CAD_LOG_FILE_LEVEL", "DEBUG").upper()
-        return getattr(logging, name, logging.DEBUG)
+        """Dosya için minimum seviye. Varsayılan: INFO."""
+        name = cls._env("CAD_LOG_FILE_LEVEL", "INFO").upper()
+        return getattr(logging, name, logging.INFO)
 
     @classmethod
     def _root_level(cls) -> int:

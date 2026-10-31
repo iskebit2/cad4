@@ -205,6 +205,17 @@ def factor(dim: Dimension, from_sys: UnitSystem, to_sys: UnitSystem) -> float:
 def convert_value(dim, value, from_sys, to_sys):
     if dim is None or value is None or from_sys == to_sys:
         return value
+    # ★ numpy array desteği
+    if hasattr(value, "dtype") and hasattr(value, "shape"):
+        try:
+            import numpy as np
+            return np.asarray(value, dtype=float) * factor(dim, from_sys, to_sys)
+        except Exception:
+            logger.debug(
+                "[Units] convert_value(%s, ndarray) → dönüştürülemedi",
+                dim,
+            )
+            return value
     if isinstance(value, (tuple, list)):
         return type(value)(convert_value(dim, v, from_sys, to_sys) for v in value)
     try:

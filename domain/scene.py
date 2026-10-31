@@ -2,10 +2,27 @@
 from typing import Any
 
 import numpy as np
-
+from dataclasses import dataclass
 from data.enums import ObjType
 from domain.element import Area, Element, Frame, Link, Node, Polygon
 
+@dataclass
+class Bounds3D:
+    """3D axis-aligned bounding box."""
+    min: np.ndarray    # (3,)
+    max: np.ndarray    # (3,)
+
+    @property
+    def center(self) -> np.ndarray:
+        return 0.5 * (self.min + self.max)
+
+    @property
+    def size(self) -> float:
+        return float(np.linalg.norm(self.max - self.min))
+
+    @property
+    def half_size(self) -> np.ndarray:
+        return 0.5 * (self.max - self.min)
 
 class Scene:
     def __init__(self, project: Any = None):
@@ -14,6 +31,8 @@ class Scene:
         self.areas: dict[int, Area] = {}
         self.links: dict[int, Link] = {}
         self.polygons: dict[int, Polygon] = {}
+        self._bounds: "Bounds3D | None" = None
+
         self.project = project  # Üst proje referansı
         
         self.show_local_axes = False
@@ -24,6 +43,38 @@ class Scene:
         self._plane_associations_dirty: bool = True
         self._render_filter: set | None = None
 
+        # ------------------------------------------------------------------
+    # Faz A.3 — Bounds (manuel cache)
+    # ------------------------------------------------------------------
+    def compute_bounds(self) -> "Bounds3D | None":
+        """Node'lardan bounds hesapla — O(N). Manuel."""
+        if not self.nodes:
+            return None
+        coords = []
+        for n in self.nodes.values():
+            if getattr(n, "is_visible", True):
+                coords.append((n.x, n.y, n.z))
+        if not coords:
+            return None
+        arr = np.array(coords, dtype=float)
+        return Bounds3D(min=arr.min(axis=0), max=arr.max(axis=0))
+
+    @property
+    def bounds(self) -> "Bounds3D | None":
+        """Cache'li — ilk erişimde hesapla, sonra aynı."""
+        if self._bounds is None:
+            self._bounds = self.compute_bounds()
+        return self._bounds
+
+    def refresh_bounds(self) -> "Bounds3D | None":
+        """Manuel refresh — Purge / Zoom Extents."""
+        self._bounds = self.compute_bounds()
+        return self._bounds
+
+    def clear_bounds(self) -> None:
+        """Cache temizle — sonraki erişimde yeniden hesaplanır."""
+        self._bounds = None
+        
     def mark_dirty(self):
         self._is_dirty = True
         self.invalidate_plane_associations()
@@ -214,7 +265,7 @@ class Scene:
         elif isinstance(element, Polygon):self.add_polygon(element)
         else: return False
         return True
-
+    
     def __repr__(self) -> str:
         return (
             f"<Scene nodes={len(self.nodes)} frames={len(self.frames)} "

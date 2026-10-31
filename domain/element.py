@@ -479,7 +479,9 @@ class Area(Element):
         if self.thick_over is not None:
             return self.thick_over
         if self.area_section is not None:
-            return self.area_section.thickness
+            t = getattr(self.area_section, "thickness", None)
+            if t is not None:
+                return float(t)
         return float(self.__dict__.get("thickness", 0.0))
 
     @thickness.setter
@@ -499,22 +501,13 @@ class Area(Element):
             return proj.sections.get(self.section_name)
         return None
 
-    # --- yeni yardımcılar ---
-    @property
-    def effective_thickness(self) -> float:
-        """ThickOver varsa onu, yoksa AreaSection.thickness, yoksa kendi thickness."""
-        if self.thick_over is not None:
-            return self.thick_over
-        if self.area_section is not None:
-            return self.area_section.thickness
-        return self.thickness
-
     @property
     def effective_bend_thick(self) -> float:
         if self.area_section is not None:
-            return self.area_section.effective_bend_thick
+            t = getattr(self.area_section, "effective_bend_thick", None)
+            if t is not None:
+                return float(t)
         return self.thickness
-
 
 # ============================================================================
 # LINK

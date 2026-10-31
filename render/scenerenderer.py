@@ -49,6 +49,10 @@ class SceneRenderer:
         
         # Render modu: 'shaded' veya 'wireframe'
         self.render_mode = 'simple'
+
+        # Faz A.0 — 3D ↔ 2D görünüm (F2)
+        self.projection: str = "3d"          # "3d" | "plane_2d"
+        self._saved_render_mode: str = "shaded"  # F2 öncesi
         
         # Renderer'ları oluştur
         self.frame_r = FrameRenderer(self.standard_shader)
@@ -516,7 +520,36 @@ class SceneRenderer:
             return [0.0, 1.0, 0.0]
         else:  # Node
             return [1.0, 1.0, 1.0]
-        
+
+    # ==================================================================
+    # Faz A.0 — F2: 3D ↔ 2D top view
+    # ==================================================================
+    def toggle_projection(self) -> bool:
+        if self.camera is None:
+            return False
+
+        if self.projection == "plane_2d":
+            # 2D → 3D
+            self.camera.restore_view()
+            self.render_mode = self._saved_render_mode
+            self.projection = "3d"
+            return True
+
+        # 3D → 2D
+        self._saved_render_mode = self.render_mode
+        self.camera.save_view()
+
+        # ★ Aktif plane varsa plane'e dik, yoksa top view
+        plane = self.active_plane   # _sync_active_plane_associations zaten set ediyor
+        if plane is not None and self.engine is not None:
+            self.engine.focus_plane(plane)
+        else:
+            self.camera.set_top_view()
+
+        self.render_mode = "simple"
+        self.projection = "plane_2d"
+        return True
+    
     def toggle_render_mode(self):
         modes = ['shaded', 'line', 'simple', 'normal']
         idx = modes.index(self.render_mode) if self.render_mode in modes else 0
@@ -607,7 +640,7 @@ class SceneRenderer:
         elif self.render_mode == 'simple':
             self._render_simple(mvp, v, p)
 
-        if self.active_plane is not None:
+        if self.active_plane is not None and self.projection != "plane_2d":
             self._draw_active_plane(mvp)
         
         # 2. MRT'den Hedef FBO'ya (Qt'nin FBO'suna) Blit et
@@ -637,13 +670,18 @@ class SceneRenderer:
         # 4.7 LOADS (yük görselleri)
         self._draw_loads(cam)
 
-        # 4.8 Plane çizimi tekrar bak!
-        if self.plane_draw_mgr and self.plane_draw_mgr.is_active:
+        # 4.8 Plane çizimi — 2D modda gizle
+        if (self.plane_draw_mgr and self.plane_draw_mgr.is_active
+                and self.projection != "plane_2d"):
             mvp_pdm = p * v * self.model_mat
             self.plane_draw_mgr.render_preview(mvp_pdm, self.overlay_shader)
 
         # 4.9 Seçili plane (statik)
-        if self.selected_plane is not None:
+        if (
+            self.selected_plane is not None
+            and self.selected_plane is not self.active_plane
+            and self.projection != "plane_2d"
+        ):
             self._draw_selected_plane(mvp)
             
         # 5. MARQUEE - renkleri düzeltilmiş
@@ -1108,12 +1146,39 @@ class SceneRenderer:
 
     def _draw_selected_plane(self, mvp):
         plane = self.selected_plane
-        
-        if plane is None or self.overlay_shader is None:
+        if (
+            plane is None
+            or self.overlay_shader is None
+            or self.projection == "plane_2d"
+        ):
             return
 
-        self._ensure_plane_overlay_buffers()
+        extent = max(float(self.size) * 0.5, 1.0)
+        u0 = -extent if plane.u_min is None else float(plane.u_min)
+        u1 = extent if plane.u_max is None else float(plane.u_max)
+        v0 = -extent if plane.v_min is None else float(plane.v_min)
+        v1 = extent if plane.v_max is None else float(plane.v_max)
+        if u0 >= u1 or v0 >= v1:
+            return
 
+        corners = (
+            plane.to_3d((u0, v0)),
+            plane.to_3d((u1, v0)),
+            plane.to_3d((u1, v1)),
+            plane.to_3d((u0, v1)),
+        )
+        offset = plane.normal * max(float(self.size) * 1e-6, 1e-4)
+        boundary = np.asarray(
+            (
+                corners[0] + offset, corners[1] + offset,
+                corners[1] + offset, corners[2] + offset,
+                corners[2] + offset, corners[3] + offset,
+                corners[3] + offset, corners[0] + offset,
+            ),
+            dtype=np.float32,
+        )
+
+        self._ensure_plane_overlay_buffers()
         shader = self.overlay_shader
         shader.use()
         if self._overlay_mvp_loc != -1:
@@ -1121,18 +1186,42 @@ class SceneRenderer:
         if self._overlay_color_loc == -1:
             return
 
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glEnable(GL_DEPTH_TEST)
-        from OpenGL.GL import GL_FALSE as GLF
-        from OpenGL.GL import glDepthMask
-        glDepthMask(GLF)
+        blend_enabled = bool(glIsEnabled(GL_BLEND))
+        depth_enabled = bool(glIsEnabled(GL_DEPTH_TEST))
+        cull_enabled = bool(glIsEnabled(GL_CULL_FACE))
+        depth_write = bool(glGetBooleanv(GL_DEPTH_WRITEMASK))
+        line_width = float(glGetFloatv(GL_LINE_WIDTH))
         try:
-            self._render_plane_solid(plane, shader)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glDisable(GL_DEPTH_TEST)
+            glDisable(GL_CULL_FACE)
+            glDepthMask(GL_FALSE)
+
+            glBindVertexArray(self._sel_plane_line_vao)
+            glBindBuffer(GL_ARRAY_BUFFER, self._sel_plane_line_vbo)
+            glBufferData(GL_ARRAY_BUFFER, boundary.nbytes, boundary, GL_STREAM_DRAW)
+            glEnableVertexAttribArray(0)
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * 4, None)
+            glLineWidth(2.0)
+            glUniform4f(self._overlay_color_loc, 0.98, 0.80, 0.25, 0.95)
+            glDrawArrays(GL_LINES, 0, len(boundary))
         finally:
-            from OpenGL.GL import GL_TRUE, glDepthMask
-            glDepthMask(GL_TRUE)
-            glDisable(GL_BLEND)
+            glBindVertexArray(0)
+            glDepthMask(GL_TRUE if depth_write else GL_FALSE)
+            glLineWidth(line_width)
+            if depth_enabled:
+                glEnable(GL_DEPTH_TEST)
+            else:
+                glDisable(GL_DEPTH_TEST)
+            if cull_enabled:
+                glEnable(GL_CULL_FACE)
+            else:
+                glDisable(GL_CULL_FACE)
+            if blend_enabled:
+                glEnable(GL_BLEND)
+            else:
+                glDisable(GL_BLEND)
 
     def _sync_active_plane_associations(self):
         project = getattr(self.scene, "project", None) if self.scene is not None else None
@@ -1238,7 +1327,7 @@ class SceneRenderer:
         depth_write = bool(glGetBooleanv(GL_DEPTH_WRITEMASK))
         line_width = float(glGetFloatv(GL_LINE_WIDTH))
         try:
-            glDrawBuffer(GL_COLOR_ATTACHMENT0)
+            
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
             glEnable(GL_DEPTH_TEST)
@@ -1286,7 +1375,7 @@ class SceneRenderer:
                     glUniform4f(self._overlay_color_loc, *color)
                     glDrawArrays(GL_LINES, 0, 2)
         finally:
-            glDrawBuffers(2, [GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1])
+            
             glBindVertexArray(0)
             glDepthMask(GL_TRUE if depth_write else GL_FALSE)
             glLineWidth(line_width)

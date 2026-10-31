@@ -83,24 +83,27 @@ class DrawManager:
         logger.info("[Draw] Polygon çizimi iptal edildi")
     
     def close(self):
-        """C tuşu veya ilk noktaya tıkla — poligonu kapat ve oluştur."""
         if len(self.points) < 3:
             logger.warning(f"[Draw] En az 3 nokta gerekli (şu an {len(self.points)}), iptal")
             self.cancel()
             return
-        
+
         polygon = Polygon(list(self.points), label="")
-        
-        # Scene'e ekle
         scene = self.engine.scene
         scene.add_polygon(polygon)
-        
-        # Renderer'ı güncelle (yeni buffer'lar üretir)
+
+        # ★ Faz A.3 — Plane assoc yenile
+        project = getattr(scene, "project", None)
+        mgr = getattr(project, "plane_mgr", None) if project else None
+        active_plane = mgr.active_plane if mgr else None
+        if active_plane is not None:
+            active_plane.refresh_assoc(scene)
+            if hasattr(self.engine, "apply_plane_filter"):
+                self.engine.apply_plane_filter()
+
         self.engine.renderer.update_geo(scene)
-        
-        # Yeni poligonu seç
         self.engine.sel_mgr.select(polygon)
-        
+
         logger.info(f"[Draw] Polygon oluşturuldu: {len(self.points)} köşe, id={polygon.unique_id}")
         self.cancel()
     

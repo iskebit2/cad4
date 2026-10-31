@@ -80,6 +80,7 @@ class ImGuiFileDialog:
         self.on_cancel = on_cancel
 
         self.error = ""
+        self._overwrite_pending = False   # ★
         self.selected_file = None
         self.filename_input = default_name
         self._center_next = True
@@ -93,6 +94,7 @@ class ImGuiFileDialog:
         if not self.visible:
             return
         self.visible = False
+        self._overwrite_pending = False   # ★
         if cancelled:
             cb = self.on_cancel
             if callable(cb):
@@ -147,12 +149,8 @@ class ImGuiFileDialog:
         # "Enter" ile onayla → _dir_input_committed
         changed, new_dir = imgui.input_text("##dir", self.current_dir)
         enter = imgui.is_key_pressed(imgui.Key.enter) and imgui.is_item_focused()
-        if (changed or enter) and os.path.isdir(new_dir):
-            self._navigate_to(new_dir)
         imgui.pop_item_width()
-
-        # Sadece Enter ile (veya focus kaybı + geçerliyse) uygula
-        if changed and os.path.isdir(new_dir):
+        if (changed or enter) and os.path.isdir(new_dir):
             self._navigate_to(new_dir)
 
         imgui.same_line()
@@ -200,6 +198,7 @@ class ImGuiFileDialog:
                     self.selected_file = entry.full
                     self.filename_input = entry.name
                     self.error = ""
+                    self._overwrite_pending = False   # ★
         finally:
             imgui.end_child()
 
@@ -258,8 +257,9 @@ class ImGuiFileDialog:
         if new != self.current_dir:
             self.current_dir = new
             self.selected_file = None
-            self._cache_key = None  # yeniden tara
+            self._cache_key = None
             self.error = ""
+            self._overwrite_pending = False   # ★
 
     # ------------------------------------------------------------------
     # Onay
@@ -273,7 +273,6 @@ class ImGuiFileDialog:
             if not name:
                 self.error = "Dosya adı gerekli"
                 return
-            # Yol ayracı içeren isimleri reddet (save modunda basit isim beklenir)
             if os.path.basename(name) != name:
                 self.error = "Sadece dosya adı girin (klasör yolu değil)"
                 return
@@ -283,10 +282,14 @@ class ImGuiFileDialog:
             target = os.path.join(self.current_dir, name)
 
             if os.path.exists(target):
-                # Basit üzerine-yazma onayı: hata olarak göster, tekrar Tamam'a basınca geç
-                if self.error != "Dosya zaten var. Üzerine yazmak için tekrar Tamam'a basın.":
-                    self.error = "Dosya zaten var. Üzerine yazmak için tekrar Tamam'a basın."
+                if not self._overwrite_pending:
+                    self._overwrite_pending = True
+                    self.error = (
+                        "Dosya zaten var. Üzerine yazmak için "
+                        "tekrar Tamam'a basın."
+                    )
                     return
+                self._overwrite_pending = False
                 self.error = ""
         else:
             if not self.selected_file:
@@ -299,9 +302,8 @@ class ImGuiFileDialog:
 
         assert target is not None
         cb = self.on_select
-
-        # Önce kapat, sonra callback → callback içinde open() çağrılabilir
         self.visible = False
+        self._overwrite_pending = False
         if callable(cb):
             cb(target)
 

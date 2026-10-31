@@ -51,6 +51,7 @@ class Camera:
     _position: glm.vec3 | None = None
     _view_matrix: glm.mat4 | None = None
     _projection_matrix: glm.mat4 | None = None
+    _saved_3d_view: dict | None = None
 
     # --- View / Plan filter ---
     active_plane: str | None = None
@@ -117,9 +118,23 @@ class Camera:
     # ==================================================================
     # Kontroller
     # ==================================================================
+    def set_top_view(self) -> None:
+        """Üstten bakış — 2D görünüm için."""
+        self.pitch = 90.0
+        self.yaw = -90.0
+        self.up = glm.vec3(0.0, 1.0, 0.0)   # +Y, forward'a dik
+        self.view_mode = "ORTHO"
+        self.view_preset = "top"
+        self.distance = max(self.model_size * 2.0, 2000.0)
+        self._invalidate()
+
     def orbit(self, dx, dy):
         if self.view_preset == "working_plane":
             self.up = glm.vec3(0.0, 0.0, 1.0)
+            self.view_preset = None
+        elif self.view_preset == "top":
+            # ★ Top view'den orbit: pitch 89'a (gimbal lock önlemi)
+            self.pitch = 89.0
             self.view_preset = None
         self.yaw -= dx * self.ORBIT_SENSITIVITY
         self.pitch += dy * self.ORBIT_SENSITIVITY
@@ -166,7 +181,7 @@ class Camera:
             self.target.y + self.distance * math.cos(p) * math.sin(y),
             self.target.z + self.distance * math.sin(p),
         )
-        self._view_matrix = None
+        # self._view_matrix = None
 
     def _invalidate(self):
         self._update_position()
@@ -212,20 +227,20 @@ class Camera:
 
     def set_view_preset(self, preset):
         presets = {
-            "front":  {"pitch": 0,   "yaw": -90,  "view_mode": "ORTHO"},
-            "back":   {"pitch": 0,   "yaw": 90,   "view_mode": "ORTHO"},
-            "top":    {"pitch": 89,  "yaw": -90,  "view_mode": "ORTHO"},
-            "bottom": {"pitch": -89, "yaw": -90,  "view_mode": "ORTHO"},
-            "left":   {"pitch": 0,   "yaw": 180,  "view_mode": "ORTHO"},
-            "right":  {"pitch": 0,   "yaw": 0,    "view_mode": "ORTHO"},
-            "iso":    {"pitch": 30,  "yaw": -45,  "view_mode": "PERSPECTIVE"},
+            "front":  {"pitch": 0,   "yaw": -90,  "view_mode": "ORTHO", "up": (0,0,1)},
+            "back":   {"pitch": 0,   "yaw": 90,   "view_mode": "ORTHO", "up": (0,0,1)},
+            "top":    {"pitch": 90,  "yaw": -90,  "view_mode": "ORTHO", "up": (0,1,0)},
+            "bottom": {"pitch": -90, "yaw": -90,  "view_mode": "ORTHO", "up": (0,1,0)},
+            "left":   {"pitch": 0,   "yaw": 180,  "view_mode": "ORTHO", "up": (0,0,1)},
+            "right":  {"pitch": 0,   "yaw": 0,    "view_mode": "ORTHO", "up": (0,0,1)},
+            "iso":    {"pitch": 30,  "yaw": -45,  "view_mode": "PERSPECTIVE", "up": (0,0,1)},
         }
         if preset not in presets:
             return
         p = presets[preset]
         self.pitch = p["pitch"]
         self.yaw = p["yaw"]
-        self.up = glm.vec3(0.0, 0.0, 1.0)
+        self.up = glm.vec3(*p["up"])
         self.view_mode = p["view_mode"]
         self.view_preset = preset
         self._invalidate()
@@ -276,3 +291,56 @@ class Camera:
         self.view_preset = "working_plane"
 
         self._invalidate()
+
+    # ==================================================================
+    # Faz A.0 — View save/restore (F2: 3D ↔ 2D top)
+    # ==================================================================
+    def save_view(self) -> None:
+        """Mevcut kamerayı kaydet (F2 3D→2D geçişinde)."""
+        self._saved_3d_view = {
+            "target": (float(self.target.x),
+                       float(self.target.y),
+                       float(self.target.z)),
+            "distance": float(self.distance),
+            "pitch": float(self.pitch),
+            "yaw": float(self.yaw),
+            "up": (float(self.up.x),
+                   float(self.up.y),
+                   float(self.up.z)),
+            "view_mode": self.view_mode,
+            "view_preset": self.view_preset,
+        }
+
+    def restore_view(self) -> bool:
+        """Kaydedilmiş kamerayı geri yükle (F2 2D→3D geçişinde)."""
+        s = self._saved_3d_view
+        if s is None:
+            return False
+        self.target = glm.vec3(*s["target"])
+        self.distance = s["distance"]
+        self.pitch = s["pitch"]
+        self.yaw = s["yaw"]
+        self.up = glm.vec3(*s["up"])
+        self.view_mode = s["view_mode"]
+        self.view_preset = s["view_preset"]
+        self._saved_3d_view = None
+        self._invalidate()
+        return True
+
+
+    def set_level_filter(self, z_min: float, z_max: float) -> None:
+        """Z aralığı filtresi — sadece z_min ≤ z ≤ z_max arasındaki elemanlar görünür.
+
+        Frame/Area/Polygon için eleman merkezinin z'si kullanılır.
+        """
+        if z_min > z_max:
+            z_min, z_max = z_max, z_min
+        self.set_section_filter(
+            normal=(0.0, 0.0, 1.0),
+            origin=(0.0, 0.0, 0.0),
+            min_s=float(z_min),
+            max_s=float(z_max),
+        )
+
+    def clear_level_filter(self) -> None:
+        self.clear_section_filter()

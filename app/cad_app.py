@@ -493,11 +493,61 @@ class CadApp:
             logger.exception("[Init] Engine başlatma hatası")
             self.initialized = True
 
+    def _toggle_2d(self) -> None:
+        if not self.engine or not self.engine.renderer:
+            return
+        r = self.engine.renderer
+        # ★ 2D'ye geçerken plane draw modu iptal (preview görünmesin)
+        if r.projection != "plane_2d":
+            pdm = getattr(self.engine, "plane_draw_mgr", None)
+            if pdm is not None and pdm.is_active:
+                pdm.cancel()
+        return r.toggle_projection()
+
     def _active_working_plane(self):
         project = self.current_project
         if project is None or project.scene is None:
             return None
         return project.plane_mgr.active_plane
+
+    def _on_plane_selected(self, plane) -> None:
+        project = self.current_project
+        if project is None:
+            return
+
+        if plane is None:
+            project.plane_mgr.deactivate()
+        else:
+            project.plane_mgr.activate(plane)
+
+        logger.info("[Plane] Aktif: %s", plane.name if plane else "None")
+
+        if self.engine is None:
+            return
+        scn = self.engine.scene
+
+        # ★ Kamera değişmez — sadece filtre
+        self.engine.apply_plane_filter()
+        if self.engine.renderer is not None and scn is not None:
+            self.engine.renderer.update_geo(scn)
+        if self.engine.sel_mgr:
+            self.engine.sel_mgr.clear()
+
+
+    def _screen_to_plane_uv(self, mx, my, plane):
+        """Screen → plane uv (ray-plane intersection)."""
+        eng = self.engine
+        if eng is None:
+            return None
+        ray = eng.screen_ray(mx, my)
+        if ray is None:
+            return None
+        origin, direction = ray
+        point = plane.intersect_ray(origin, direction)
+        if point is None:
+            return None
+        coords = plane.world_to_local(point)
+        return (float(coords[0]), float(coords[1]))
 
     def frame(self, dt: float) -> None:
         self._ensure_engine()
@@ -528,6 +578,18 @@ class CadApp:
 
         # 5) Paneller
         self._draw_panels()
+
+
+        # ★ Plane creation tamamlandı → otomatik aktif + 2D
+        pdm = getattr(self.engine, "plane_draw_mgr", None) if self.engine else None
+        if (pdm is not None and not pdm.is_active
+                and getattr(pdm, "completed_plane", None) is not None):
+            plane = pdm.completed_plane
+            pdm.completed_plane = None   # tüket
+            self._on_plane_selected(plane)
+            r = self.engine.renderer
+            if r is not None and r.projection != "plane_2d":
+                self._toggle_2d()
 
         # 6) Pick
         if self.engine and self.engine.pending_pick_check:
@@ -598,6 +660,10 @@ class CadApp:
             "show_only":        self.toggle_show_only,
             "convert_to_link":  lambda: self.convert_selected_frames_to_links("DefaultLink"),
             "on_unit_change":   self.set_unit_system,
+            "toggle_view_2d": lambda: (
+            self.engine.renderer.toggle_projection()
+            if self.engine and self.engine.renderer else None
+        ),
         }
         for name in self.panels:
             cmds[name] = (lambda n=name: self.toggle_panel(n))
@@ -612,6 +678,10 @@ class CadApp:
                 self._get_loads_visible()
             ),
             "show_only":  lambda: self._show_only_ids is not None,
+            "toggle_view_2d": lambda: bool(
+            self.engine and self.engine.renderer
+            and self.engine.renderer.projection == "plane_2d"
+        ),
         }
         for name, entry in self.panels.items():
             inst = entry["instance"]
@@ -750,6 +820,15 @@ class CadApp:
         if self.engine.sel_mgr:
             self.engine.sel_mgr.clear()
 
+        # ★ Plane Manager resetle
+        pm = self.panels.get("plane_manager", {}).get("instance")
+        if pm is not None:
+            pm._selected_name = None
+            pm._form_open = False
+            pm._editing_plane = None
+            pm._clear_preview()
+            pm._set_render_preview(None)
+
 
     def _on_update_geo(self) -> None:
         if self.engine and self.engine.renderer and self.engine.scene:
@@ -774,13 +853,10 @@ class CadApp:
             self.engine.scene.mark_dirty()
             self.engine.renderer.update_geo(self.engine.scene)
 
-        # --- Kamera bounds ---
-        if self.engine and self.engine.cam and self.engine.grid:
-            try:
-                center, size = self.engine.grid.get_bounds()
-                self.engine.cam.update_bounds(center, size)
-            except Exception:
-                pass
+        # --- Bounds refresh (birim değişti, koordinatlar yeni birimde) ---
+        if self.engine and self.engine.scene:
+            self.engine.scene.refresh_bounds()
+            self.engine.fit_view()
 
         # --- GridPanel text cache ---
         panel = self.panels.get("grid", {}).get("instance")
@@ -1200,8 +1276,21 @@ class CadApp:
                 self.toggle_panel(panel_name)
                 return
 
+        # Faz A.0 — F2: 3D ↔ 2D top view
+        if key == glfw.KEY_F2:
+            if eng.renderer:
+                return self._toggle_2d()
+            return
+        
         if key == glfw.KEY_F3:
             return eng.renderer.toggle_render_mode()
+
+        if key == glfw.KEY_F5:
+            if self.engine:
+                return self.engine.zoom_extents()
+            return
+
+
         if key == glfw.KEY_D and not eng.input.is_ctrl_pressed():
             return self._toggle_draw_mode()
         if key == glfw.KEY_W and eng.input.is_shift_pressed():

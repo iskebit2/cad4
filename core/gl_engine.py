@@ -206,16 +206,31 @@ class Engine:
 
     
     def fit_view(self):
+        """Kamerayı model bounds'a fit et.
+
+        Öncelik: scene.bounds > grid.get_bounds > no-op.
+        """
         if not self.renderer:
             return
-        self.renderer._update_bounds_from_nodes()
-        c1, s1 = self.renderer.get_bounds()
-        c2, s2 = self.grid.get_bounds()
-        c, s = (c1, s1) if s1 >= s2 else (c2, s2)
-        
-        self.cam.update_bounds(c, s)
+
+        scene_bounds = self.scene.bounds if self.scene else None
+        grid_bounds = self.grid.get_bounds() if self.grid else None
+
+        if scene_bounds is not None:
+            self.cam.update_bounds(scene_bounds.center, scene_bounds.size)
+        elif grid_bounds is not None:
+            self.cam.update_bounds(*grid_bounds)
+        else:
+            return
+
         self.cam.focus_on_model()
 
+    def zoom_extents(self) -> None:
+        """Manuel: bounds'u yeniden hesapla + fit (Autodesk Zoom Extents)."""
+        if self.scene is not None:
+            self.scene.refresh_bounds()
+        self.fit_view()
+        
     def set_working_plane_provider(
         self, provider: Callable[[], Plane | None] | None
     ) -> None:
@@ -479,17 +494,95 @@ class Engine:
             self.hover_element_type = None
 
     # ------------------------------------------------------------------
-    # PLAN FILTER (Kivy'den çağrılır)
+    # PLAN FILTER
     # ------------------------------------------------------------------
-    def apply_plane_filter(self, plane=None, offset=0.0, direction="positive"):
-        """Kameraya plan filter uygula ve sahneyi yeniden build et."""
-        if plane is None:
-            self.cam.clear_plane_filter()
-        else:
-            self.cam.set_plane_filter(plane, offset, direction)
-        self.renderer.apply_plane_filter(self.cam)
-        if self.scene:
-            self.renderer.update_geo(self.scene)
+    def apply_plane_filter(self, camera_or_plane=None):
+        """Plane crop veya section (level) filtresi uygula.
+
+        Öncelik:
+        1. plane_mgr.active_plane varsa → plane.associated (u/v + depth)
+        2. camera.section_active → section (z aralığı)
+        3. İkisi de yok → filtre kaldır
+        """
+        if not self.scene:
+            return
+
+        # Öncelik 1: plane crop
+        project = getattr(self.scene, "project", None)
+        mgr = getattr(project, "plane_mgr", None) if project else None
+        active_plane = mgr.active_plane if mgr else None
+
+        if active_plane is not None:
+            # Plane assoc = crop
+            ids: set[int] = set()
+            for s in active_plane.associated.values():
+                ids |= s
+            self.scene._render_filter = ids
+            # is_visible de güncelle (renderer)
+            for el in self.scene.all_elements.values():
+                el.is_visible = el.unique_id in ids
+            return
+
+        # Öncelik 2: section filter
+        
+        camera = camera_or_plane if camera_or_plane is not None else self.cam
+
+        if camera is not None and camera.section_active:
+            test = camera.is_element_visible_by_section
+            visible_ids: set[int] = set()
+            for node in self.scene.nodes.values():
+                if test((node.x, node.y, node.z)):
+                    visible_ids.add(node.unique_id)
+                    node.is_visible = True
+                else:
+                    node.is_visible = False
+            for frame in self.scene.frames.values():
+                ni, nj = frame.node_i, frame.node_j
+                mx = (ni.x + nj.x) * 0.5
+                my = (ni.y + nj.y) * 0.5
+                mz = (ni.z + nj.z) * 0.5
+                if test((mx, my, mz)):
+                    visible_ids.add(frame.unique_id)
+                    frame.is_visible = True
+                else:
+                    frame.is_visible = False
+            for area in self.scene.areas.values():
+                if not area.nodes: continue
+                mx = sum(n.x for n in area.nodes) / len(area.nodes)
+                my = sum(n.y for n in area.nodes) / len(area.nodes)
+                mz = sum(n.z for n in area.nodes) / len(area.nodes)
+                if test((mx, my, mz)):
+                    visible_ids.add(area.unique_id)
+                    area.is_visible = True
+                else:
+                    area.is_visible = False
+            for link in self.scene.links.values():
+                ni, nj = link.node_i, link.node_j
+                mx = (ni.x + nj.x) * 0.5
+                my = (ni.y + nj.y) * 0.5
+                mz = (ni.z + nj.z) * 0.5
+                if test((mx, my, mz)):
+                    visible_ids.add(link.unique_id)
+                    link.is_visible = True
+                else:
+                    link.is_visible = False
+            for poly in self.scene.polygons.values():
+                if not poly.nodes: continue
+                mx = sum(n.x for n in poly.nodes) / len(poly.nodes)
+                my = sum(n.y for n in poly.nodes) / len(poly.nodes)
+                mz = sum(n.z for n in poly.nodes) / len(poly.nodes)
+                if test((mx, my, mz)):
+                    visible_ids.add(poly.unique_id)
+                    poly.is_visible = True
+                else:
+                    poly.is_visible = False
+            self.scene._render_filter = visible_ids
+            return
+
+        # Öncelik 3: filtre kaldır
+        self.scene._render_filter = None
+        for el in self.scene.all_elements.values():
+            el.is_visible = True
 
     # ------------------------------------------------------------------
     # INTERNAL

@@ -36,13 +36,13 @@ SRC_ELEMENT = 3
 
 class PlaneManagerPanel(BasePanel):
 
-    PANEL_W = 640
-    PANEL_H = 720
+    PANEL_W = 560
+    PANEL_H = 620
 
     def __init__(self):
         self.app = None
         self.visible = False
-
+        self._compact: bool = False
         self._selected_name: str | None = None
 
         # Yeni plane formu
@@ -52,6 +52,10 @@ class PlaneManagerPanel(BasePanel):
         # Grid kaynağı
         self._grid_plane_name = "XY"
         self._depth_unit_system = None
+        self._grid_options_grid = None
+        self._grid_options_key = None
+        self._grid_options: tuple[tuple[str, str], ...] = ()
+        self._grid_option_labels: dict[str, str] = {}
 
         # 2pt / 3pt kaynağı: seçilen node ID'leri (unique_id, int)
         self._picked_nodes: list[int] = []
@@ -155,23 +159,31 @@ class PlaneManagerPanel(BasePanel):
         return True
 
     def _scene_bbox(self):
-        """Sahnenin (center, size) sınırları. Boşsa None."""
+        """Scene bounds (Faz A.3 cache) — (center, size) veya None."""
         scene = self._scene()
         if scene is None:
             return None
         try:
-            return scene.get_bounds()
+            b = scene.bounds   # property, cache
+            if b is None:
+                return None
+            return (b.center, b.size)
         except Exception:
             return None
 
+    def _default_depth(self) -> float:
+        """Program varsayılanı: 500 mm (unit sistemine göre)."""
+        project = self._project()
+        return Plane.default_grid_plane_depth(
+            project.unit_system if project else None
+        )
+    
     # ------------------------------------------------------------------
     #  open / close
     # ------------------------------------------------------------------
     def open(self):
         self.visible = True
-        proj = self._project()
-        if proj and proj.planes and self._selected_name is None:
-            self._selected_name = next(iter(proj.planes.keys()))
+        
 
     def close(self):
         self.visible = False
@@ -186,16 +198,31 @@ class PlaneManagerPanel(BasePanel):
         proj = self._project()
         if proj is None:
             return
-        scene = self._scene()
-        if scene is not None:
-            refreshed = scene.refresh_plane_associations()
-            if refreshed and self._preview is not None:
-                self._preview.refresh_assoc(scene)
 
-        imgui.set_next_window_size(imgui.ImVec2(self.PANEL_W, self.PANEL_H), imgui.Cond_.first_use_ever)
-        imgui.set_next_window_pos(imgui.ImVec2(1300 - self.PANEL_W - 20, 60), imgui.Cond_.first_use_ever)
+        # # ★ Konum + boyut — kompakt: sağ alt; tam: sol üst
+        # if self._compact:
+        #     io = imgui.get_io()
+        #     disp = io.display_size
+        #     w, h = 360, 280
+        #     imgui.set_next_window_pos(
+        #         imgui.ImVec2(disp.x - w - 10, disp.y - h - 10),
+        #         imgui.Cond_.always,
+        #     )
+        #     imgui.set_next_window_size(
+        #         imgui.ImVec2(w, h), imgui.Cond_.always,
+        #     )
+        # else:
+        #     imgui.set_next_window_pos(
+        #         imgui.ImVec2(1300 - self.PANEL_W - 20, 60),
+        #         imgui.Cond_.first_use_ever,
+        #     )
+        #     imgui.set_next_window_size(
+        #         imgui.ImVec2(self.PANEL_W, self.PANEL_H),
+        #         imgui.Cond_.first_use_ever,
+        #     )
 
-        expanded, opened = imgui.begin("Plane Manager", True)
+        # ★ Pencere kimliği sabit — kompakt/tam aynı pencere
+        expanded, opened = imgui.begin("Plane Manager##pm", True)
         try:
             if not opened:
                 self.visible = False
@@ -205,24 +232,30 @@ class PlaneManagerPanel(BasePanel):
             if not expanded:
                 return
 
-            self._draw_toolbar()
-            imgui.separator()
+            if self._compact:
+                self._draw_compact_toolbar()
+                imgui.separator()
+                self._draw_compact_body()
+            else:
+                self._draw_toolbar()
+                imgui.separator()
 
-            imgui.begin_child(
-                "pm_list", imgui.ImVec2(230, 0), imgui.ChildFlags_.borders
-            )
-            try:
-                self._draw_list()
-            finally:
-                imgui.end_child()
+                imgui.begin_child(
+                    "pm_list", imgui.ImVec2(230, 0),
+                    imgui.ChildFlags_.borders,
+                )
+                try:
+                    self._draw_list()
+                finally:
+                    imgui.end_child()
 
-            imgui.same_line()
+                imgui.same_line()
 
-            imgui.begin_child("pm_detail", imgui.ImVec2(0, 0))
-            try:
-                self._draw_detail()
-            finally:
-                imgui.end_child()
+                imgui.begin_child("pm_detail", imgui.ImVec2(0, 0))
+                try:
+                    self._draw_detail()
+                finally:
+                    imgui.end_child()
 
         finally:
             imgui.end()
@@ -231,11 +264,18 @@ class PlaneManagerPanel(BasePanel):
     #  Toolbar
     # ------------------------------------------------------------------
     def _draw_toolbar(self):
+        # Kompakt mod toggle
+        icon = "▣" if self._compact else "▢"
+        if imgui.button(icon, imgui.ImVec2(30, 0)):
+            self._compact = not self._compact
+
         proj = self._project()
         n = len(proj.planes) if proj else 0
-        imgui.text_colored(imgui.ImVec4(0.7, 0.8, 0.9, 1.0), f'{n} plane')
+        imgui.text_colored(
+            imgui.ImVec4(0.7, 0.8, 0.9, 1.0), f"{n} plane"
+        )
 
-        imgui.same_line(120)
+        imgui.same_line(100)
         if imgui.button("+ Yeni"):
             self._open_new_plane_form()
 
@@ -245,26 +285,57 @@ class PlaneManagerPanel(BasePanel):
             imgui.push_style_color(
                 imgui.Col_.button, imgui.ImVec4(0.25, 0.25, 0.25, 1.0)
             )
-            imgui.button("Sil", imgui.ImVec2(60, 0))
+            imgui.button("Sil", imgui.ImVec2(50, 0))
             imgui.pop_style_color(1)
         else:
-            if imgui.button("Sil", imgui.ImVec2(60, 0)):
+            if imgui.button("Sil", imgui.ImVec2(50, 0)):
                 self._pending_delete = sel.name
 
         imgui.same_line()
-        if sel is not None and imgui.button("Düzenle", imgui.ImVec2(70, 0)):
+        if sel is not None and imgui.button("Düzenle", imgui.ImVec2(65, 0)):
             self._open_new_plane_form(from_plane=sel)
 
         imgui.same_line()
-        if sel is not None and imgui.button("Plot", imgui.ImVec2(60, 0)):
+        if sel is not None and imgui.button("Plot", imgui.ImVec2(50, 0)):
             self._do_plot(sel)
 
         imgui.same_line()
-        if sel is not None and imgui.button("Yenile", imgui.ImVec2(70, 0)):
+        if sel is not None and imgui.button("Yenile", imgui.ImVec2(60, 0)):
             scene = self._scene()
             if scene is not None:
                 sel.refresh_assoc(scene)
+                proj = self._project()
+                if (proj is not None
+                        and proj.plane_mgr.active_plane is sel
+                        and self.app is not None
+                        and self.app.engine is not None):
+                    eng = self.app.engine
+                    if eng.renderer is not None:
+                        eng.apply_plane_filter()
+                        eng.renderer.update_geo(scene)
                 logger.info(f"[PlaneMgr] '{sel.name}' assoc yenilendi.")
+
+        # ★ Kaynak seçimi toolbar'da (form açıksa)
+        if self._form_open and getattr(self, "_editing_plane", None) is None:
+            imgui.separator()
+            imgui.text_colored(
+                imgui.ImVec4(0.85, 0.9, 0.95, 1.0), "Kaynak:"
+            )
+            imgui.same_line()
+            for i, label in enumerate(
+                ("Grid", "2pt", "3pt", "Eleman")
+            ):
+                if i > 0:
+                    imgui.same_line()
+                if imgui.radio_button(
+                    f"{label}##pm_src{i}",
+                    self._new_source == i,
+                ):
+                    self._new_source = i
+                    self._picked_nodes = []
+                    self._picked_element_id = None
+                    self._preview_error = None
+                    self._refresh_preview()
 
         if self._pending_delete:
             self._draw_delete_confirm()
@@ -293,22 +364,40 @@ class PlaneManagerPanel(BasePanel):
         proj = self._project()
         if not proj:
             return
+
+        # Default scene — sadece seç
+        is_default = (self._selected_name is None)
+        if imgui.selectable(
+            "◆ Tüm Scene (Default)##pm_default", is_default
+        )[0]:
+            self._selected_name = None
+            self._set_render_preview(None)
+
+        imgui.separator()
+
         planes = proj.planes
         if not planes:
-            imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0), 'Henüz plane yok.')
+            imgui.text_colored(
+                imgui.ImVec4(0.6, 0.6, 0.6, 1.0), "Henüz plane yok."
+            )
             imgui.spacing()
-            imgui.text_colored(imgui.ImVec4(0.5, 0.5, 0.5, 1.0), "'+ Yeni' ile başla.")
+            imgui.text_colored(
+                imgui.ImVec4(0.5, 0.5, 0.5, 1.0), "'+ Yeni' ile başla."
+            )
             return
 
         for name in sorted(planes.keys()):
             p = planes[name]
             is_sel = (name == self._selected_name)
-            flags = imgui.SelectableFlags_.allow_double_click
-            if imgui.selectable(f"{name}##pm", is_sel, flags)[1]:
+            if imgui.selectable(f"{name}##pm", is_sel)[1]:
                 self._selected_name = name
+                # ★ Sadece boundary preview — activate/update_geo YOK
+                self._set_render_preview(p)
             imgui.same_line(180)
             n_assoc = sum(len(s) for s in p.associated.values())
-            imgui.text_colored(imgui.ImVec4(0.5, 0.7, 0.85, 1.0), f'{n_assoc:4d}')
+            imgui.text_colored(
+                imgui.ImVec4(0.5, 0.7, 0.85, 1.0), f"{n_assoc:4d}"
+            )
 
     # ------------------------------------------------------------------
     #  Detay
@@ -322,7 +411,25 @@ class PlaneManagerPanel(BasePanel):
 
         sel = self._selected_plane()
         if sel is None:
-            imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0), "Bir plane seç veya '+ Yeni'.")
+            proj = self._project()
+            is_active_default = (
+                proj is not None
+                and proj.plane_mgr.active_plane is None
+            )
+            if is_active_default and self._selected_name is None:
+                imgui.text_colored(
+                    imgui.ImVec4(0.4, 0.9, 0.65, 1.0),
+                    "◆ Tüm Scene aktif (default)",
+                )
+                imgui.text_colored(
+                    imgui.ImVec4(0.6, 0.6, 0.6, 1.0),
+                    "Bir plane seçmek için listeden tıkla.",
+                )
+            else:
+                imgui.text_colored(
+                    imgui.ImVec4(0.6, 0.6, 0.6, 1.0),
+                    "Bir plane seç veya '+ Yeni'.",
+                )
             return
 
         proj = self._project()
@@ -333,9 +440,15 @@ class PlaneManagerPanel(BasePanel):
                 "Aktif çalışma düzlemi",
             )
             if imgui.button("Etkin düzlemi devre dışı bırak"):
-                proj.plane_mgr.deactivate()
+                if self.app is not None and hasattr(self.app, "_on_plane_selected"):
+                    self.app._on_plane_selected(None)
+                else:
+                    proj.plane_mgr.deactivate()
         elif imgui.button("Bu plane'i etkinleştir"):
-            proj.plane_mgr.activate(sel)
+            if self.app is not None and hasattr(self.app, "_on_plane_selected"):
+                self.app._on_plane_selected(sel)
+            else:
+                proj.plane_mgr.activate(sel)
 
         engine = getattr(self.app, "engine", None) if self.app else None
         if engine is not None and imgui.button("Kamerayı plane'e hizala"):
@@ -402,6 +515,215 @@ class PlaneManagerPanel(BasePanel):
         imgui.spacing()
         imgui.separator()
 
+    # ------------------------------------------------------------------
+    #  Kompakt mod — mode toggle, plane listesi, mouse, depth
+    # ------------------------------------------------------------------
+    def _draw_compact_toolbar(self):
+        """Kompakt mod üst toolbar — sadece ikonlar."""
+        proj = self._project()
+        if proj is None:
+            return
+        app = self.app
+        eng = getattr(app, "engine", None) if app else None
+        sel = self._selected_plane()
+        active = proj.plane_mgr.active_plane
+        editing = getattr(self, "_editing_plane", None) is not None
+
+        # Tooltip'li ikon buton — tek satır helper
+        def _ibtn(label, tip, enabled=True, color=None):
+            if color is not None:
+                imgui.push_style_color(imgui.Col_.button, color)
+            if not enabled:
+                imgui.push_style_color(
+                    imgui.Col_.button,
+                    imgui.ImVec4(0.25, 0.25, 0.25, 1.0),
+                )
+                imgui.push_style_color(
+                    imgui.Col_.text, imgui.ImVec4(0.5, 0.5, 0.5, 1.0)
+                )
+            clicked = imgui.button(label, imgui.ImVec2(26, 24))
+            if not enabled:
+                imgui.pop_style_color(2)
+            if color is not None:
+                imgui.pop_style_color(1)
+            if imgui.is_item_hovered():
+                imgui.set_tooltip(tip)
+            return clicked and enabled
+
+        # 1) Kompakt/tam toggle
+        if _ibtn("▢", "Tam mod"):
+            self._compact = False
+        imgui.same_line(0, 2)
+
+        # 2) + Yeni
+        if _ibtn("+", "Yeni plane"):
+            self._open_new_plane_form()
+        imgui.same_line(0, 2)
+
+        # 3) Sil
+        if sel is not None:
+            if _ibtn("x", "Sil"):
+                self._pending_delete = sel.name
+            imgui.same_line(0, 2)
+
+        # 4) Düzenle
+        if sel is not None:
+            if _ibtn("*", "Düzenle"):
+                self._open_new_plane_form(from_plane=sel)
+            imgui.same_line(0, 2)
+
+        # 5) Aktif / Deaktif
+        if sel is not None:
+            is_active = (active is sel)
+            tip = "Deaktif et" if is_active else "Aktif et"
+            col = (
+                imgui.ImVec4(0.20, 0.55, 0.30, 1.0) if is_active
+                else None
+            )
+            if _ibtn("O", tip, color=col):
+                if app is not None and hasattr(app, "_on_plane_selected"):
+                    app._on_plane_selected(None if is_active else sel)
+            imgui.same_line(0, 2)
+
+        # 6) Kamera hizala
+        if sel is not None:
+            if _ibtn("@", "Kamera hizala"):
+                if eng is not None:
+                    eng.focus_plane(sel)
+            imgui.same_line(0, 2)
+
+        # 7) Plot (2D)
+        if sel is not None:
+            if _ibtn(">", "2D görünüm"):
+                self._do_plot(sel)
+            imgui.same_line(0, 2)
+
+        # 8) Kaynak (form açıkken)
+        if self._form_open and not editing:
+            for src_id, icon, tip in (
+                (SRC_GRID, "#", "Grid"),
+                (SRC_2PT, "|", "2 Nokta"),
+                (SRC_3PT, "/", "3 Nokta"),
+                (SRC_ELEMENT, "~", "Eleman"),
+            ):
+                is_cur = (self._new_source == src_id)
+                col = (
+                    imgui.ImVec4(0.20, 0.45, 0.75, 1.0) if is_cur
+                    else None
+                )
+                if _ibtn(icon, tip, color=col):
+                    if not is_cur:
+                        self._new_source = src_id
+                        self._picked_nodes = []
+                        self._picked_element_id = None
+                        self._preview_error = None
+                        self._refresh_preview()
+                imgui.same_line(0, 2)
+
+        # 9) Oluştur / Güncelle
+        if self._form_open and self._preview is not None:
+            if editing:
+                if _ibtn("v", "Güncelle",
+                         color=imgui.ImVec4(0.20, 0.55, 0.30, 1.0)):
+                    self._do_update_from_preview()
+            else:
+                if _ibtn("v", "Oluştur",
+                         color=imgui.ImVec4(0.20, 0.55, 0.30, 1.0)):
+                    self._do_create_from_preview()
+            imgui.same_line(0, 2)
+
+        # 10) Vazgeç
+        if self._form_open:
+            if _ibtn("^", "Vazgeç",
+                     color=imgui.ImVec4(0.55, 0.25, 0.25, 1.0)):
+                self._form_open = False
+                self._editing_plane = None
+                self._clear_preview()
+
+    def _draw_compact_body(self):
+        proj = self._project()
+        if proj is None:
+            return
+        app = self.app
+        eng = getattr(app, "engine", None) if app else None
+        r = eng.renderer if eng else None
+
+        # ★ Mode toggle
+        if r is not None:
+            is_2d = (r.projection == "plane_2d")
+            mode_label = "2D" if is_2d else "3D"
+            color = (
+                imgui.ImVec4(0.20, 0.55, 0.85, 1.0) if is_2d
+                else imgui.ImVec4(0.25, 0.65, 0.35, 1.0)
+            )
+            imgui.push_style_color(imgui.Col_.button, color)
+            if imgui.button(mode_label, imgui.ImVec2(44, 22)):
+                if app is not None and hasattr(app, "_toggle_2d"):
+                    app._toggle_2d()
+            imgui.pop_style_color(1)
+
+        imgui.separator()
+
+        # ★ Plane listesi
+        active = proj.plane_mgr.active_plane
+        imgui.begin_child(
+            "##pm_compact_list", imgui.ImVec2(0, 130),
+            imgui.ChildFlags_.borders,
+        )
+        try:
+            is_default = (active is None)
+            label = "◆ Tüm Scene"
+            if is_default:
+                label = "* " + label
+            if imgui.selectable(
+                f"{label}##c", (self._selected_name is None)
+            )[0]:
+                self._selected_name = None
+                if app is not None and hasattr(
+                    app, "_on_plane_selected"
+                ):
+                    app._on_plane_selected(None)
+
+            for name in sorted(proj.planes.keys()):
+                p = proj.planes[name]
+                is_sel = (name == self._selected_name)
+                is_act = (active is p)
+                prefix = "* " if is_act else "  "
+                if imgui.selectable(f"{prefix}{name}##c", is_sel)[0]:
+                    self._selected_name = name
+                    if app is not None and hasattr(
+                        app, "_on_plane_selected"
+                    ):
+                        app._on_plane_selected(p)
+        finally:
+            imgui.end_child()
+
+        imgui.separator()
+
+        # ★ Mouse uv/W
+        if active is not None and app is not None:
+            io = imgui.get_io()
+            if not io.want_capture_mouse:
+                mx, my = io.mouse_pos
+                uv = app._screen_to_plane_uv(mx, my, active)
+                if uv is not None:
+                    world = active.to_3d(uv)
+                    imgui.text(f"u={uv[0]:.1f} v={uv[1]:.1f}")
+                    imgui.text(
+                        f"W=({world[0]:.1f},{world[1]:.1f},"
+                        f"{world[2]:.1f})"
+                    )
+                else:
+                    imgui.text_colored(
+                        imgui.ImVec4(0.6, 0.5, 0.5, 1.0),
+                        "(plane dışında)",
+                    )
+        else:
+            imgui.text_colored(
+                imgui.ImVec4(0.6, 0.6, 0.6, 1.0),
+                "(aktif plane yok)",
+            )
+
     # ==================================================================
     #  YENİ PLANE FORMU veya DÜZENLE
     # ==================================================================
@@ -450,29 +772,16 @@ class PlaneManagerPanel(BasePanel):
 
     def _draw_new_plane_form(self):
         editing = getattr(self, "_editing_plane", None) is not None
-        
+
         if editing:
-            imgui.text_colored(imgui.ImVec4(0.9, 0.8, 0.5, 1.0), '─── Plane Düzenle ───')
-            imgui.text_colored(imgui.ImVec4(0.7, 0.7, 0.7, 1.0), 'Kaynak: mevcut plane (kopya)')
-            imgui.spacing()
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.8, 0.5, 1.0), "─── Plane Düzenle ───"
+            )
         else:
-            imgui.text_colored(imgui.ImVec4(0.85, 0.9, 0.95, 1.0), '─── Yeni Plane ───')
-            imgui.text("Kaynak")
-            imgui.same_line(120)
-            for i, label in enumerate(
-                ("Grid", "2 Nokta", "3 Nokta", "Seçili Eleman")
-            ):
-                if i > 0:
-                    imgui.same_line()
-                if imgui.radio_button(
-                    f"{label}##pm_source{i}", self._new_source == i
-                ):
-                    self._new_source = i
-                    self._picked_nodes = []
-                    self._picked_element_id = None
-                    self._preview_error = None
-                    self._refresh_preview()
-            imgui.spacing()
+            imgui.text_colored(
+                imgui.ImVec4(0.85, 0.9, 0.95, 1.0), "─── Yeni Plane ───"
+            )
+            # Kaynak detayı (radio toolbar'da)
             if self._new_source == SRC_GRID:
                 self._draw_grid_source()
             elif self._new_source == SRC_2PT:
@@ -483,11 +792,10 @@ class PlaneManagerPanel(BasePanel):
                 self._draw_element_source()
             imgui.spacing()
 
-        # Önizleme (düzenleme modunda da)
         if self._preview is not None:
             self._draw_preview()
             imgui.spacing()
-            
+
             if editing:
                 if imgui.button("Güncelle", imgui.ImVec2(120, 0)):
                     self._do_update_from_preview()
@@ -504,7 +812,9 @@ class PlaneManagerPanel(BasePanel):
                     self._form_open = False
                     self._clear_preview()
         else:
-            imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0), 'Önizleme yok.')
+            imgui.text_colored(
+                imgui.ImVec4(0.6, 0.6, 0.6, 1.0), "Önizleme yok."
+            )
             if self._preview_error:
                 imgui.text_colored(
                     imgui.ImVec4(0.95, 0.55, 0.45, 1.0),
@@ -526,6 +836,54 @@ class PlaneManagerPanel(BasePanel):
             )
             return
 
+        options = self._get_grid_options(grid)
+        if not options:
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.6, 0.5, 1.0),
+                "Grid'de seçilebilir düzlem yok.",
+            )
+            return
+        if self._grid_plane_name not in self._grid_option_labels:
+            self._grid_plane_name = next(
+                (k for k, _ in options if k.startswith("grid::XY::")),
+                options[0][0],
+            )
+
+        imgui.text("Grid düzlemi")
+        imgui.same_line(120)
+        selected_label = self._grid_option_labels[self._grid_plane_name]
+        if imgui.begin_combo("##pm_grid_plane", selected_label):
+            clipper = imgui.ListClipper()
+            clipper.begin(len(options))
+            while clipper.step():
+                for index in range(
+                    clipper.display_start, clipper.display_end
+                ):
+                    name, label = options[index]
+                    is_selected = name == self._grid_plane_name
+                    if imgui.selectable(label, is_selected)[1]:
+                        self._grid_plane_name = name
+                        self._refresh_preview()
+                    if is_selected:
+                        imgui.set_item_default_focus()
+            clipper.end()
+            imgui.end_combo()
+
+    def _get_grid_options(self, grid) -> tuple[tuple[str, str], ...]:
+        coordinate_lists = tuple(
+            getattr(grid, f"{axis.lower()}_coords", ())
+            for axis in "XYZ"
+        )
+        user_planes = getattr(grid, "user_planes", ())
+        cache_key = (
+            *((id(values), len(values)) for values in coordinate_lists),
+            id(user_planes),
+            len(user_planes),
+            tuple((id(plane), plane.name) for plane in user_planes),
+        )
+        if grid is self._grid_options_grid and cache_key == self._grid_options_key:
+            return self._grid_options
+
         options = []
         for orientation in ("XY", "XZ", "YZ"):
             level_axis = {"XY": "Z", "XZ": "Y", "YZ": "X"}[orientation]
@@ -538,36 +896,51 @@ class PlaneManagerPanel(BasePanel):
             )
         options.extend(
             (f"user::{plane.name}", f"Kullanıcı: {plane.name}")
-            for plane in grid.user_planes
+            for plane in user_planes
         )
-        if not options:
-            imgui.text_colored(
-                imgui.ImVec4(0.9, 0.6, 0.5, 1.0),
-                "Grid'de seçilebilir düzlem yok.",
-            )
-            return
-        option_keys = [key for key, _label in options]
-        if self._grid_plane_name not in option_keys:
-            self._grid_plane_name = next(
-                (
-                    key for key in option_keys
-                    if key.startswith("grid::XY::")
-                ),
-                option_keys[0],
-            )
 
-        imgui.text("Grid düzlemi")
-        imgui.same_line(120)
-        selected_label = dict(options)[self._grid_plane_name]
-        if imgui.begin_combo("##pm_grid_plane", selected_label):
-            for name, label in options:
-                is_selected = name == self._grid_plane_name
-                if imgui.selectable(label, is_selected)[1]:
-                    self._grid_plane_name = name
-                    self._refresh_preview()
-                if is_selected:
-                    imgui.set_item_default_focus()
-            imgui.end_combo()
+        self._grid_options_grid = grid
+        self._grid_options_key = cache_key
+        self._grid_options = tuple(options)
+        self._grid_option_labels = dict(options)
+        return self._grid_options
+
+    def _apply_smart_bounds(self, p: Plane):
+        """u/v sınırları sahne bbox'tan; depth program varsayılanı."""
+        bbox = self._scene_bbox()
+
+        us, vs = [], []
+        scene = self._scene()
+        if scene is not None:
+            for nd in scene.nodes.values():
+                u, v = p.to_2d((nd.x, nd.y, nd.z))
+                us.append(u)
+                vs.append(v)
+
+        if us:
+            margin_u = max(0.05 * (max(us) - min(us)), 100.0)
+            margin_v = max(0.05 * (max(vs) - min(vs)), 100.0)
+            p.u_min = min(us) - margin_u
+            p.u_max = max(us) + margin_u
+            p.v_min = min(vs) - margin_v
+            p.v_max = max(vs) + margin_v
+        elif bbox is not None:
+            center, size = bbox
+            half = max(float(size), 1.0) * 0.6
+            p.u_min = -half
+            p.u_max = +half
+            p.v_min = -half
+            p.v_max = +half
+        else:
+            p.u_min, p.u_max = -5000.0, 5000.0
+            p.v_min, p.v_max = -5000.0, 5000.0
+
+        # ★ Depth — sabit program varsayılanı
+        default = self._default_depth()
+        p.depth_minus = default
+        p.depth_plus = default
+
+        self._sync_pv_from_plane(p)
 
     # ------------------------------------------------------------------
     #  2/3 nokta kaynağı
@@ -899,60 +1272,69 @@ class PlaneManagerPanel(BasePanel):
 
     def _draw_preview(self):
         p = self._preview
-        imgui.text_colored(imgui.ImVec4(0.85, 0.9, 0.95, 1.0), '─── Önizleme ───')
+        imgui.text_colored(
+            imgui.ImVec4(0.85, 0.9, 0.95, 1.0), "─── Önizleme ───"
+        )
         imgui.push_item_width(220)
-        _, self._preview_name = imgui.input_text("İsim##pm_pvname",
-                                                  self._preview_name, 128)
+        _, self._preview_name = imgui.input_text(
+            "İsim##pm_pvname", self._preview_name, 128
+        )
         imgui.pop_item_width()
 
         o, n = p.origin, p.normal
-        imgui.text(f"origin : ({o[0]:.2f}, {o[1]:.2f}, {o[2]:.2f})")
-        imgui.text(f"normal : ({n[0]:.3f}, {n[1]:.3f}, {n[2]:.3f})")
+        imgui.text(f"origin : ({o[0]:.1f}, {o[1]:.1f}, {o[2]:.1f})")
+        imgui.text(f"normal : ({n[0]:.2f}, {n[1]:.2f}, {n[2]:.2f})")
 
-        # Assoc özeti
         total = sum(len(s) for s in p.associated.values())
-        imgui.text_colored(imgui.ImVec4(0.6, 0.85, 0.7, 1.0), f'assoc : {total}')
+        imgui.text_colored(
+            imgui.ImVec4(0.6, 0.85, 0.7, 1.0), f"assoc : {total}"
+        )
         for k in ASSOC_KINDS:
             n_a = len(p.associated.get(k, set()))
             if n_a:
-                imgui.text_colored(imgui.ImVec4(0.7, 0.8, 0.85, 1.0), f'  {k:6s}: {n_a}')
+                imgui.text_colored(
+                    imgui.ImVec4(0.7, 0.8, 0.85, 1.0),
+                    f"  {k:6s}: {n_a}",
+                )
 
-        # Sınırları düzenle (collapsible)
+        # u/v sınırları — collapse, depth YOK
         if imgui.tree_node("Sınırları Düzenle##pm_bounds"):
             imgui.push_item_width(120)
+            changed = False
+
             imgui.text("u")
             imgui.same_line()
-            _, self._pv_u_min = imgui.input_float("##pv_umin", self._pv_u_min, 0.0, 0.0)
+            c, self._pv_u_min = imgui.input_float(
+                "##pv_umin", self._pv_u_min, 0.0, 0.0
+            )
+            changed = changed or c
             imgui.same_line()
-            _, self._pv_u_max = imgui.input_float("##pv_umax", self._pv_u_max, 0.0, 0.0)
-
+            c, self._pv_u_max = imgui.input_float(
+                "##pv_umax", self._pv_u_max, 0.0, 0.0
+            )
+            changed = changed or c
             imgui.text("v")
             imgui.same_line()
-            _, self._pv_v_min = imgui.input_float("##pv_vmin", self._pv_v_min, 0.0, 0.0)
+            c, self._pv_v_min = imgui.input_float(
+                "##pv_vmin", self._pv_v_min, 0.0, 0.0
+            )
+            changed = changed or c
             imgui.same_line()
-            _, self._pv_v_max = imgui.input_float("##pv_vmax", self._pv_v_max, 0.0, 0.0)
-
-            imgui.text("depth -")
-            imgui.same_line()
-            _, self._pv_depth_minus = imgui.input_float("##pv_dm", self._pv_depth_minus, 0.0, 0.0)
-            imgui.text("depth +")
-            imgui.same_line()
-            _, self._pv_depth_plus = imgui.input_float("##pv_dp", self._pv_depth_plus, 0.0, 0.0)
+            c, self._pv_v_max = imgui.input_float(
+                "##pv_vmax", self._pv_v_max, 0.0, 0.0
+            )
+            changed = changed or c
             imgui.pop_item_width()
 
-            # Değiştiyse preview'a uygula
-            p.u_min = self._pv_u_min
-            p.u_max = self._pv_u_max
-            p.v_min = self._pv_v_min
-            p.v_max = self._pv_v_max
-            p.depth_minus = self._pv_depth_minus
-            p.depth_plus = self._pv_depth_plus
-
-            # Assoc'u yeniden hesapla (sınır değişti)
-            scene = self._scene()
-            if scene is not None:
-                p.refresh_assoc(scene)
-
+            # ★ Sadece değişince refresh
+            if changed:
+                p.u_min = self._pv_u_min
+                p.u_max = self._pv_u_max
+                p.v_min = self._pv_v_min
+                p.v_max = self._pv_v_max
+                scene = self._scene()
+                if scene is not None:
+                    p.refresh_assoc(scene)
             imgui.tree_pop()
 
     # ------------------------------------------------------------------
@@ -989,22 +1371,6 @@ class PlaneManagerPanel(BasePanel):
             f"depth=±{p.depth_plus:.0f})"
         )
 
-    def _do_edit(self, plane: Plane):
-        scene = self._scene()
-        if scene is None:
-            logger.debug("[PlaneMgr] Sahne yok, edit açılamadı.")
-            return
-        pp = None
-        if self.app and hasattr(self.app, "panels"):
-            pp_info = self.app.panels.get("plane_plot")   # ← "plane_plot"
-            if pp_info:
-                pp = pp_info["instance"]
-        if pp is None:
-            logger.debug("[PlaneMgr] PlanePlotPanel bulunamadı.")
-            return
-        pp.open(scene=scene, plane=plane)
-        logger.info(f"[PlaneMgr] Plane Plot: {plane.name}")
-
     def _do_delete(self, name: str):
         proj = self._project()
         if not proj:
@@ -1018,15 +1384,18 @@ class PlaneManagerPanel(BasePanel):
         proj = self._project()
         if not proj:
             return
+        clean_name = new_name.strip()
+        if not clean_name:
+            return
         old = plane.name
-        if new_name in proj.planes and new_name != old:
-            logger.debug(f"[PlaneMgr] '{new_name}' zaten var.")
+        if clean_name in proj.planes and clean_name != old:
+            logger.debug(f"[PlaneMgr] '{clean_name}' zaten var.")
             return
         proj.planes.pop(old, None)
-        plane.name = new_name
-        proj.planes[new_name] = plane
-        self._selected_name = new_name
-        logger.info(f"[PlaneMgr] Yeniden adlandırıldı: '{old}' → '{new_name}'")
+        plane.name = clean_name
+        proj.planes[clean_name] = plane
+        self._selected_name = clean_name
+        logger.info(f"[PlaneMgr] Yeniden adlandırıldı: '{old}' → '{clean_name}'")
 
     def _do_update_from_preview(self):
         """Düzenleme modunda mevcut plane'i güncelle."""
@@ -1039,7 +1408,8 @@ class PlaneManagerPanel(BasePanel):
 
         # Preview'dan geometriyi al
         p = self._preview
-        
+        old_name = editing.name
+
         # Mevcut plane'in alanlarını güncelle
         editing.u_min = self._pv_u_min
         editing.u_max = self._pv_u_max
@@ -1047,9 +1417,18 @@ class PlaneManagerPanel(BasePanel):
         editing.v_max = self._pv_v_max
         editing.depth_minus = self._pv_depth_minus
         editing.depth_plus = self._pv_depth_plus
-        if self._preview_name.strip() and self._preview_name.strip() != editing.name:
-            editing.name = self._preview_name.strip()
-        
+
+        preview_name = self._preview_name.strip()
+        if preview_name and preview_name != old_name:
+            if preview_name in proj.planes and preview_name != old_name:
+                logger.debug(f"[PlaneMgr] '{preview_name}' zaten var.")
+                preview_name = old_name
+            else:
+                proj.planes.pop(old_name, None)
+                editing.name = preview_name
+                proj.planes[preview_name] = editing
+                self._selected_name = preview_name
+
         # Assoc yenile
         scene = self._scene()
         if scene is not None:
@@ -1061,20 +1440,16 @@ class PlaneManagerPanel(BasePanel):
         logger.info(f"[PlaneMgr] '{editing.name}' güncellendi")
 
     def _do_plot(self, plane: Plane):
-        """Plane Plot panelini aç."""
-        scene = self._scene()
-        if scene is None:
+        """2D görünümü aç — plane'i aktif et + kamera plane'e dik."""
+        if plane is None:
             return
-        pp = None
-        if self.app and hasattr(self.app, "panels"):
-            pp_info = self.app.panels.get("plane_plot")
-            if pp_info:
-                pp = pp_info["instance"]
-        if pp is None:
-            logger.debug("[PlaneMgr] PlanePlotPanel bulunamadı")
-            return
-        pp.open(scene=scene, plane=plane)
-        logger.info(f"[PlaneMgr] Plot: {plane.name}")
+        if self.app is not None and hasattr(self.app, "_on_plane_selected"):
+            self.app._on_plane_selected(plane)
+        if self.app is not None and hasattr(self.app, "_toggle_2d"):
+            r = self.app.engine.renderer if self.app.engine else None
+            if r is not None and r.projection != "plane_2d":
+                self.app._toggle_2d()
+        logger.info(f"[PlaneMgr] Plot (2D): {plane.name}")
         
     @staticmethod
     def _fmt(v):

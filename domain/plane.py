@@ -57,30 +57,15 @@ def _as_vec3(value, name: str) -> np.ndarray:
 #  Plane — sadece davranış; serileştirme serializer'ın işi
 # ----------------------------------------------------------------------
 class Plane:
-    """
-    Sınırlı, derinlikli çalışma düzlemi.
-
-    Geometri:
-        origin  : düzlem merkezi (u/v orta noktası, sınır varsa)
-        normal  : birim normal (depth_plus yönü)
-        u, v    : düzlem içi ortonormal eksenler
-
-    Sınır / derinlik:
-        u_min/u_max/v_min/v_max : dikdörtgen sınır (None = sonsuz)
-        depth_minus/depth_plus  : normal yönünde [-depth_minus, +depth_plus] bant
-
-    Assoc:
-        associated[kind] = set(unique_id int)  — bu plane'e bağlı scene elemanları
-        excluded[kind]   = set(unique_id int)  — auto-assoc'un almadıkları
-        association_status[kind][id]            — gerçek geometriden sınıflandırma
-
-    Pending:
-        pending[(kind, id_str)] = PendingChange
-        op ∈ {ADD, MODIFY, DELETE}
-    """
-
-    # NOT: __slots__ kullanmıyoruz — serializer'ın __dict__ üzerinden
-    # otomatik encode/decode yapabilmesi için.
+    __unit_schema__ = {
+        "origin": Dimension.LENGTH,
+        "u_min": Dimension.LENGTH,
+        "u_max": Dimension.LENGTH,
+        "v_min": Dimension.LENGTH,
+        "v_max": Dimension.LENGTH,
+        "depth_minus": Dimension.LENGTH,
+        "depth_plus": Dimension.LENGTH,
+    }
 
     def __init__(self,
                 origin: np.ndarray,
@@ -167,7 +152,8 @@ class Plane:
         }
         self._association_revision = 0
         self.pending: dict[tuple[str, str], PendingChange] = {}
-    
+
+
     @property
     def x_axis(self) -> np.ndarray:
         return self.u
