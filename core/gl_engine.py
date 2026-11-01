@@ -612,6 +612,58 @@ class Engine:
             if self.on_hover_changed_callback:
                 self.on_hover_changed_callback(None)
 
+    def sync_zone_polygons(self) -> None:
+        """Aktif yönün zone'larını geçici Polygon olarak scene'e ekle."""
+        if self.scene is None:
+            return
+        from domain.element import Node, Polygon
+        from data.enums import PolygonType
+
+        # Mevcut geçici zone'ları sil
+        to_remove = [
+            p for p in self.scene.polygons.values()
+            if getattr(p, "is_temporary", False)
+            and getattr(p, "poly_type", None) == PolygonType.ZONE
+        ]
+        for p in to_remove:
+            self.scene.polygons.pop(p.unique_id, None)
+
+        
+        # Aktif zone'ları ekle — snapshot ile (dict değişimi)
+        snapshot = list(self.scene.polygons.values())
+        for poly in snapshot:
+            if getattr(poly, "is_temporary", False):
+                continue
+            dir_key = poly.show_zones_direction
+            if dir_key is None:
+                continue
+            zones = poly.zone_children_by_direction.get(dir_key, [])
+            for z in zones:
+                if z.get("skip_transfer"):
+                    continue
+                coords = z.get("coords") or []
+                if len(coords) < 3:
+                    continue
+                nodes = [Node(*xyz, label="") for xyz in coords]
+                zp = Polygon(
+                    nodes,
+                    label=z.get("label", ""),
+                    poly_type=PolygonType.ZONE,
+                )
+                zp.is_temporary = True
+                cpe_min = (
+                    z.get("cpe10_override") or z.get("cpe10") or (0, 0)
+                )[0]
+                if cpe_min >= 0:
+                    zp.color = [0.9, 0.3, 0.3, 0.35]
+                else:
+                    zp.color = [0.3, 0.55, 0.9, 0.35]
+                self.scene.polygons[zp.unique_id] = zp
+
+        # Renderer güncelle
+        if self.renderer:
+            self.renderer.update_geo(self.scene)
+
     @staticmethod
     def _element_type(element):
         if element is None:

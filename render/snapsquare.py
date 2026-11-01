@@ -104,7 +104,6 @@ class SnapSquareRenderer:
 
         glDisable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         glUseProgram(self.shader)
         color = self.node_hover_color if hover_node else self.color

@@ -177,3 +177,25 @@ class WindSceneAdapter:
             }
             for zone in zones
         ]
+
+    @staticmethod
+    def build_inputs_for_polygons(scene, project, polygons):
+        """Seçili polygon'lardan structload input."""
+        if not polygons:
+            raise ValueError("Polygon listesi boş")
+
+        # Node'ları topla
+        node_set = {}
+        polygons_dict: dict[str, list[str]] = {}
+        for p in polygons:
+            pts = []
+            for nd in p.nodes:
+                nid = str(nd.unique_id)
+                node_set[nid] = (nd.x, nd.y, nd.z)
+                pts.append(nid)
+            poly_name = p.label or f"Polygon_{p.unique_id}"
+            polygons_dict[poly_name] = pts
+
+        # wind_config — mevcut build_inputs'ten
+        _, _, wind_config = WindSceneAdapter.build_inputs(scene, project)
+        return node_set, polygons_dict, wind_config

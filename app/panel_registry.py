@@ -43,8 +43,9 @@ from ui.s2k_panel import S2KPanel
 from ui.sd_convert_panel import SDConvertPanel
 from ui.view_filter_panel import ViewFilterPanel
 from ui.visibility_panel import VisibilityPanel
-from ui.zones_panel import ZonesPanel
+from ui.wind_analysis_panel import WindAnalysisPanel
 from ui.load_manager_panel import LoadManagerPanel
+from ui.polygon_properties_panel import PolygonPropertiesPanel
 
 # ======================================================================
 # Panel Kayıtları
@@ -116,6 +117,17 @@ PANEL_SPECS = [
     },
 
     # --- Görünüm ---
+    {
+        "name":       "polygon_properties",
+        "cls":        PolygonPropertiesPanel,
+        "title":      "Polygon Özellikleri",
+        "category":   "Görünüm",
+        "quick":      False,
+        "shortcut":   None,
+        "menu_label": "Polygon Özellikleri",
+        "icon":       "edit",
+        "context":    ["scene", "project"],
+    },
     {
     "name":       "render_settings",
     "cls":        RenderSettingsPanel,
@@ -303,16 +315,16 @@ PANEL_SPECS = [
 
     # --- Araçlar ---
     {
-        "name":       "wind",
-        "cls":        ZonesPanel,
-        "title":      "Rüzgar Bölgeleri",
-        "category":   "Araçlar",
-        "quick":      False,
-        "shortcut":   None,
-        "menu_label": "Rüzgar Bölgeleri",
-        "icon":       "wind",
-        "context": ["project", "wind_analysis_ref"],
-    },
+    "name":       "wind_analysis",
+    "cls":        WindAnalysisPanel,
+    "title":      "Rüzgar Analizi",
+    "category":   "Yükler",
+    "quick":      True,
+    "shortcut":   "F10",
+    "menu_label": "Rüzgar Analizi",
+    "icon":       "wind",
+    "context":    ["scene", "project"],
+},
     {
         "name":       "sd_convert",
         "cls":        SDConvertPanel,

@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 
 from core.units import UnitSystem
-from data.enums import ENUM_REGISTRY
+from data.enums import ENUM_REGISTRY, PolygonType
 from domain.definition import (
     AreaSection,
     AnalysisManager,
@@ -219,6 +219,83 @@ def _decode_plane(d: dict) -> Plane:
         p.pending[(pc.kind, pc.id)] = pc
     return p
 
+def _encode_polygon(p) -> dict:
+    """Polygon — zone_children_by_direction dahil."""
+    data = {
+        "__object__": "Polygon",
+        "nodes": [_encode(n) for n in p.nodes],
+        "label": p.label,
+        "poly_type": p.poly_type.value if hasattr(p.poly_type, "value") else str(p.poly_type),
+        "color": list(p.color) if p.color else None,
+        "is_selected": False,
+        "is_visible": p.is_visible,
+        "unique_id": p.unique_id,
+        "pick_id": p.pick_id,
+        "show_axes_override": p.show_axes_override,
+        "windplane": _encode(p.windplane or {}),
+        "is_temporary": p.is_temporary,
+        "uniform_to_frame_loads": [_encode(x) for x in (p.uniform_to_frame_loads or [])],
+        "associated_frame_ids": list(p.associated_frame_ids or []),
+        "assigned_loads": [_encode(x) for x in (p.assigned_loads or [])],
+        "load_pattern": p.load_pattern,
+        "transfer_target": p.transfer_target,
+        "transfer_dist_type": p.transfer_dist_type,
+        "is_load_area": p.is_load_area,
+        "show_zones_direction": p.show_zones_direction,
+        "zone_children_by_direction": {
+            dir_key: [_encode_zone(z) for z in zones]
+            for dir_key, zones in (p.zone_children_by_direction or {}).items()
+        },
+    }
+    return data
+
+
+def _encode_zone(z: dict) -> dict:
+    return {
+        "label": z.get("label", ""),
+        "kind": z.get("kind", ""),
+        "coords": [[float(c) for c in xyz] for xyz in (z.get("coords") or [])],
+        "cpe10": list(z.get("cpe10", (0.0, 0.0))),
+        "cpe1": list(z.get("cpe1", (0.0, 0.0))),
+        "pitch": float(z.get("pitch", 0.0)),
+        "table_type": z.get("table_type", ""),
+        "wind_relation": z.get("wind_relation", ""),
+        "skip_transfer": bool(z.get("skip_transfer", False)),
+        "label_override": z.get("label_override"),
+        "cpe10_override": list(z["cpe10_override"]) if z.get("cpe10_override") else None,
+        "cpe1_override": list(z["cpe1_override"]) if z.get("cpe1_override") else None,
+    }
+
+def _decode_zone_children(obj) -> dict[str, list[dict]]:
+    if not isinstance(obj, dict):
+        return {}
+    # __dict__ sarmalı
+    if "__dict__" in obj:
+        obj = obj["__dict__"]
+    result = {}
+    for dir_key, zones in obj.items():
+        if not isinstance(zones, list):
+            continue
+        result[str(dir_key)] = [
+            {
+                "label": z.get("label", ""),
+                "kind": z.get("kind", ""),
+                "coords": [tuple(float(c) for c in xyz)
+                           for xyz in (z.get("coords") or [])],
+                "cpe10": tuple(z.get("cpe10", [0.0, 0.0])),
+                "cpe1": tuple(z.get("cpe1", [0.0, 0.0])),
+                "pitch": float(z.get("pitch", 0.0)),
+                "table_type": z.get("table_type", ""),
+                "wind_relation": z.get("wind_relation", ""),
+                "skip_transfer": bool(z.get("skip_transfer", False)),
+                "label_override": z.get("label_override"),
+                "cpe10_override": tuple(z["cpe10_override"]) if z.get("cpe10_override") else None,
+                "cpe1_override": tuple(z["cpe1_override"]) if z.get("cpe1_override") else None,
+            }
+            for z in zones
+        ]
+    return result
+
 def _encode(obj: Any) -> Any:
     if obj is None or isinstance(obj, (str, int, float, bool)):
         return obj
@@ -232,7 +309,8 @@ def _encode(obj: Any) -> Any:
 
     if isinstance(obj, Plane):
         return _encode_plane(obj)
-
+    if isinstance(obj, Polygon):
+        return _encode_polygon(obj)
     if isinstance(obj, Enum):
         return {"__enum__": type(obj).__name__, "value": obj.value}
     if isinstance(obj, tuple):
@@ -295,6 +373,34 @@ def _decode(obj: Any) -> Any:
         instance = cls.__new__(cls)
         instance.is_selected = False
         decoded_dict = {}
+
+        if class_name == "Polygon":
+            
+            for k, v in obj.items():
+                if k in ("__object__", "is_selected"):
+                    continue
+                if k == "zone_children_by_direction":
+                    decoded_dict[k] = _decode_zone_children(v)
+                elif k == "poly_type":
+                    try:
+                        decoded_dict[k] = PolygonType(v)
+                    except Exception:
+                        decoded_dict[k] = PolygonType.GENERIC
+                elif k == "nodes":
+                    nodes_list = _decode(v)
+                    decoded_dict[k] = (
+                        nodes_list if isinstance(nodes_list, list) else []
+                    )
+                else:
+                    decoded_dict[k] = _decode(v)
+            instance.__dict__.update(decoded_dict)
+            # Default eksik alanlar
+            if not hasattr(instance, "zone_children_by_direction"):
+                instance.zone_children_by_direction = {}
+            if not hasattr(instance, "show_zones_direction"):
+                instance.show_zones_direction = None
+            return instance
+        
         for k, v in obj.items():
             if k == "__object__":
                 continue
@@ -585,3 +691,4 @@ def load_project_file(path: Path) -> Any:
     proj.scene.project = proj
     
     return proj
+

@@ -4,32 +4,9 @@ import time
 
 from pyglm import glm
 import numpy as np
-from OpenGL.GL import (
-    GL_ARRAY_BUFFER,
-    GL_DEPTH_TEST,
-    GL_FALSE,
-    GL_FLOAT,
-    GL_LINE_STRIP,
-    GL_LINES,
-    GL_STREAM_DRAW,
-    GL_TRIANGLE_FAN,
-    glBindBuffer,
-    glBindVertexArray,
-    glBufferData,
-    glDeleteBuffers,
-    glDeleteVertexArrays,
-    glDisable,
-    glDrawArrays,
-    glEnable,
-    glEnableVertexAttribArray,
-    glGenBuffers,
-    glGenVertexArrays,
-    glUniform4f,
-    glUniformMatrix4fv,
-    glVertexAttribPointer,
-)
+from OpenGL.GL import *
 
-from domain.element import Polygon
+from domain.element import Node, Polygon
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -51,7 +28,7 @@ class DrawManager:
     def __init__(self, engine):
         self.engine = engine
         
-
+        self.mode: str = "sequential"   # "sequential" | "rectangle" | "single_point"
         self.is_active = False
         self.points = []          # seçilen Node objeleri
         self.hover_node = None    # fare şu an hangi node üstünde
@@ -68,12 +45,13 @@ class DrawManager:
     # BAŞLAT / İPTAL / BİTİR
     # =========================================================
     
-    def start(self):
+    def start(self, mode: str = "sequential"):
         self.is_active = True
+        self.mode = mode
         self.points.clear()
         self.hover_node = None
         self.mouse_world_pos = None
-        logger.info("[Draw] Polygon modu aktif")
+        logger.info(f"[Draw] Mod: {mode}")
     
     def cancel(self):
         self.is_active = False
@@ -84,28 +62,12 @@ class DrawManager:
     
     def close(self):
         if len(self.points) < 3:
-            logger.warning(f"[Draw] En az 3 nokta gerekli (şu an {len(self.points)}), iptal")
+            logger.warning(...)
             self.cancel()
             return
-
         polygon = Polygon(list(self.points), label="")
-        scene = self.engine.scene
-        scene.add_polygon(polygon)
-
-        # ★ Faz A.3 — Plane assoc yenile
-        project = getattr(scene, "project", None)
-        mgr = getattr(project, "plane_mgr", None) if project else None
-        active_plane = mgr.active_plane if mgr else None
-        if active_plane is not None:
-            active_plane.refresh_assoc(scene)
-            if hasattr(self.engine, "apply_plane_filter"):
-                self.engine.apply_plane_filter()
-
-        self.engine.renderer.update_geo(scene)
-        self.engine.sel_mgr.select(polygon)
-
-        logger.info(f"[Draw] Polygon oluşturuldu: {len(self.points)} köşe, id={polygon.unique_id}")
-        self.cancel()
+        self.engine.scene.add_polygon(polygon)
+        self._finalize_polygon(polygon)
     
     # =========================================================
     # MOUSE
@@ -133,6 +95,27 @@ class DrawManager:
         if not self.is_active:
             return False
         
+        # === Rectangle modu — 2 nokta ===
+        if self.mode == "rectangle":
+            node = self._find_node_at(x, y)
+            if node is None:
+                return True
+            if not self.points:
+                self.points.append(node)
+            else:
+                self.points.append(node)
+                self._close_rectangle()
+            return True
+
+        # === Single-point modu — 1 nokta = mevcut polygon'dan algıla ===
+        if self.mode == "single_point":
+            node = self._find_node_at(x, y)
+            if node is None:
+                return True
+            self._try_polygon_from_inside(node)
+            return True
+
+        # === Sequential ===
         node = self._find_node_at(x, y)
         #pass(f"[CLICK] tıklama ({x}, {y}) → node={node}")
         if node:
@@ -270,6 +253,8 @@ class DrawManager:
 
         # ---- Depth overlay modu ----
         glDisable(GL_DEPTH_TEST)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         try:
             # ---- Shader ve MVP ----
             shader.use()
@@ -334,13 +319,110 @@ class DrawManager:
                 )
                 _draw(verts, GL_LINES, 2, (0.5, 1.0, 0.5, 0.7))
 
+            # ---- Rectangle modu — önizleme ----
+            if self.mode == "rectangle" and self.mouse_world_pos is not None:
+                if n == 1:
+                    # 1. nokta var, fare 2. nokta → dikdörtgen önizleme
+                    p1 = self.points[0]
+                    p2 = self.mouse_world_pos
+                    # 4 köşe
+                    c0 = (p1.x, p1.y, p1.z)
+                    c1 = (p2.x, p1.y, p1.z)
+                    c2 = (p2.x, p2.y, p2.z)
+                    c3 = (p1.x, p2.y, p2.z)
+                    # Şeffaf dolgu
+                    fill_verts = np.asarray([
+                        *c0, *c1, *c2,
+                        *c0, *c2, *c3,
+                    ], dtype=np.float32)
+                    _draw(fill_verts, GL_TRIANGLES, 6, (0.8, 0.5, 0.9, 0.25))
+                    # Kenar çizgiler
+                    edge_verts = np.asarray([
+                        *c0, *c1,
+                        *c1, *c2,
+                        *c2, *c3,
+                        *c3, *c0,
+                    ], dtype=np.float32)
+                    _draw(edge_verts, GL_LINES, 8, (1.0, 0.9, 0.4, 0.9))
+                    
             # ---- Temizlik ----
             glBindVertexArray(0)
             glBindBuffer(GL_ARRAY_BUFFER, 0)
 
         finally:
             glEnable(GL_DEPTH_TEST)
-                                
+
+    def on_key_press(self, key) -> bool:
+        """Tuş yakala. True → tüketildi."""
+        if not self.is_active:
+            return False
+        import glfw
+        if key in (glfw.KEY_C, glfw.KEY_ENTER):
+            self.close()
+            return True
+        if key == glfw.KEY_ESCAPE:
+            self.cancel()
+            return True
+        return False
+
+    def _close_rectangle(self):
+        """2 nokta → 4 köşeli dikdörtgen (dünya XY düzleminde)."""
+        if len(self.points) < 2:
+            self.cancel()
+            return
+        p1, p2 = self.points[0], self.points[1]
+        scene = self.engine.scene
+        # 4 köşe — p1 ve p2 karşı köşeler
+        corners_xyz = [
+            (p1.x, p1.y, p1.z),
+            (p2.x, p1.y, p1.z),
+            (p2.x, p2.y, p2.z),
+            (p1.x, p2.y, p2.z),
+        ]
+        nodes = []
+        for xyz in corners_xyz:
+            nd = Node(*xyz, label="")
+            scene.add_node(nd)
+            nodes.append(nd)
+        polygon = Polygon(nodes, label="")
+        scene.add_polygon(polygon)
+        self._finalize_polygon(polygon)
+
+    def _try_polygon_from_inside(self, start_node):
+        """1 nokta → mevcut node'lardan boundary analiz et (convex hull)."""
+        scene = self.engine.scene
+        # Basit: seçili node'a en yakın 4 node'u al
+        from domain.element import Node as _Node
+        candidates = []
+        for nd in scene.nodes.values():
+            if nd is start_node:
+                continue
+            d = start_node.distance_to(nd)
+            candidates.append((d, nd))
+        candidates.sort(key=lambda t: t[0])
+        near = [start_node] + [nd for _, nd in candidates[:3]]
+        if len(near) < 3:
+            self.cancel()
+            return
+        polygon = Polygon(near, label="")
+        scene.add_polygon(polygon)
+        self._finalize_polygon(polygon)
+
+    def _finalize_polygon(self, polygon):
+        """Ortak — assoc + render + seçim."""
+        scene = self.engine.scene
+        project = getattr(scene, "project", None)
+        mgr = getattr(project, "plane_mgr", None) if project else None
+        active_plane = mgr.active_plane if mgr else None
+        if active_plane is not None:
+            active_plane.refresh_assoc(scene)
+            if hasattr(self.engine, "apply_plane_filter"):
+                self.engine.apply_plane_filter()
+        self.engine.renderer.update_geo(scene)
+        self.engine.sel_mgr.select(polygon)
+        logger.info(f"[Draw] Polygon: id={polygon.unique_id}")
+        self.cancel()
+
     # =========================================================
     # CLEANUP
     # =========================================================

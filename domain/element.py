@@ -541,6 +541,10 @@ class Polygon(Element):
         self.transfer_target: str = "frames"               # frames / areas
         self.transfer_dist_type: str = "one_way"           # DistType
         self.is_load_area: bool = False                    # load transfer aktif
+        # Faz W1 — Yön bazlı zone children
+        self.zone_children_by_direction: dict[str, list[dict]] = {}
+        self.show_zones_direction: str | None = None
+        
 
     def collect_loads(self) -> list[D.AreaUniformLoad]:
         """Bu polygon'a atanmış yükler."""

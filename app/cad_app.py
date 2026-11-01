@@ -18,7 +18,7 @@ import os
 import queue
 import threading
 import time
-
+from pyglm import glm
 import glfw
 import numpy as np
 from imgui_bundle import imgui
@@ -891,17 +891,33 @@ class CadApp:
                 except Exception:
                     logger.exception("[Selection] %s hook hatası", name)
 
+        polys = [el for el in selected_elements if isinstance(el, Polygon)]
+        if polys:
+            panel = self.panels.get("polygon_properties", {}).get("instance")
+            if panel is not None:
+                if not getattr(panel, "visible", False):
+                    self._prepare_panel_before_open("polygon_properties", panel)
+                panel.open(polygon=polys[0])
+
     def _on_hover_changed(self, element) -> None:
         pass
 
     # ==================================================================
     # GÖRÜNÜM MODLARI
     # ==================================================================
-    def _toggle_draw_mode(self) -> None:
+    def _toggle_draw_mode(self):
         if not self.engine or not self.engine.draw_mgr:
             return
         mgr = self.engine.draw_mgr
-        mgr.close() if mgr.is_active else mgr.start()
+        if mgr.is_active:
+            mgr.cancel()
+            return
+        # ★ Panel aç
+        panel = self.panels.get("polygon_properties", {}).get("instance")
+        if panel is not None and not getattr(panel, "visible", False):
+            self._prepare_panel_before_open("polygon_properties", panel)
+            panel.open()
+        mgr.start(mode="sequential")
 
     def _toggle_plane_draw(self) -> None:
         pdm = getattr(self.engine, "plane_draw_mgr", None)
@@ -1229,6 +1245,11 @@ class CadApp:
             return
         self._sync_from_glfw_mods(mods)
 
+        # DrawManager tuş önceliği
+        if eng.draw_mgr and eng.draw_mgr.is_active:
+            if eng.draw_mgr.on_key_press(key):
+                return
+            
         if keyboard_captured_by_ui():
             if key == glfw.KEY_ESCAPE:
                 self._on_escape()
@@ -1342,14 +1363,31 @@ class CadApp:
         snap = self.engine.snap
         if snap is None or not getattr(self.engine, "hover_visual_enabled", True):
             return
-        mx, my = self.engine.input.mouse_pos.x, self.engine.input.mouse_pos.y
         if not self.engine.draw_mgr:
             return
-        if self.engine.draw_mgr.is_active or self.engine.hover_id > 0:
-            snap.draw_snap(
-                mx, my, w, h, active=True,
-                hover_node=self.engine.hover_element_type == "node",
-            )
+        if not (self.engine.draw_mgr.is_active or self.engine.hover_id > 0):
+            return
+
+        # DrawManager aktifse → hover_node pozisyonunda mavi kare
+        if self.engine.draw_mgr.is_active:
+            hover = self.engine.draw_mgr.hover_node
+            if hover is not None:
+                cam = self.engine.cam
+                mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
+                clip = mvp * glm.vec4(hover.x, hover.y, hover.z, 1.0)
+                if clip.w > 0:
+                    ndc = glm.vec3(clip) / clip.w
+                    nx = (ndc.x + 1.0) * w / 2.0
+                    ny = (1.0 - ndc.y) * h / 2.0
+                    snap.draw_snap(nx, ny, w, h, active=True, hover_node=True)
+                    return
+
+        mx = self.engine.input.mouse_pos.x
+        my = self.engine.input.mouse_pos.y
+        snap.draw_snap(
+            mx, my, w, h, active=True,
+            hover_node=self.engine.hover_element_type == "node",
+        )
 
     def _draw_pdm_hud(self, pdm) -> None:
         stage_text = {
