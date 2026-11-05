@@ -5,7 +5,7 @@ from imgui_bundle import imgui
 
 from core.units import Dimension, UnitSystem, convert_value
 from domain.definition import AreaUniformLoad, DistType, LoadDirection, LoadPattern
-from domain.element import Polygon
+from domain.polygon import Polygon
 from logging_config import CadLogger
 from structload.data.preset_loader import PresetLibrary
 from ui.base_panel import BasePanel

@@ -251,7 +251,7 @@ class _PatternSubPanel:
                     break
 
         # Polygon yükleri
-        for poly in scene.polygons.values():
+        for poly in project.polygons.values():
             for load in getattr(poly, "assigned_loads", None) or []:
                 if getattr(load, "pattern_name", None) == pattern:
                     count += 1

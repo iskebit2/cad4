@@ -133,7 +133,7 @@ def compare_with_sap2000(
     """
     sap_data = parse_sap2000_mass_table(sap_file)
     if not sap_data:
-        print(f"❌ SAP2000 mass tablosu boş veya parse edilemedi: {sap_file}")
+        #print(f"❌ SAP2000 mass tablosu boş veya parse edilemedi: {sap_file}")
         return False
 
     label_to_key = {}
@@ -144,10 +144,10 @@ def compare_with_sap2000(
         except (ValueError, TypeError):
             continue
 
-    print("\n--- SAP2000 Joint Mass Karşılaştırma ---")
-    print(f"{'J':>3} {'X':>7} {'Y':>7} {'Z':>7} "
+    #print("\n--- SAP2000 Joint Mass Karşılaştırma ---")
+    #print(f"{'J':>3} {'X':>7} {'Y':>7} {'Z':>7} "
           f"{'SAP-U1(t)':>10} {'Cad4-U1(t)':>10} {'Fark%':>8} {'Durum':>6}")
-    print("-" * 75)
+    #print("-" * 75)
 
     sap_total = 0.0
     cad_total = 0.0
@@ -159,7 +159,7 @@ def compare_with_sap2000(
         m_sap_ton = sap["U1"]
         key = label_to_key.get(jid)
         if key is None:
-            print(f"{jid:>3} {'?':>7} {'?':>7} {'?':>7} "
+            #print(f"{jid:>3} {'?':>7} {'?':>7} {'?':>7} "
                   f"{m_sap_ton:>10.4f} {'—':>10} {'—':>8} {'YOK':>6}")
             n_bad += 1
             all_ok = False
@@ -180,19 +180,19 @@ def compare_with_sap2000(
                 all_ok = False
         else:
             rel, status = float("nan"), "—"
-        print(f"{jid:>3} {node.x:>7.0f} {node.y:>7.0f} {node.z:>7.0f} "
+        #print(f"{jid:>3} {node.x:>7.0f} {node.y:>7.0f} {node.z:>7.0f} "
               f"{m_sap_ton:>10.4f} {m_cad_ton:>10.4f} "
               f"{rel*100:>7.2f}% {status:>6}")
 
-    print("-" * 75)
+    #print("-" * 75)
     delta = cad_total - sap_total
-    print(f"{'TOP':>3} {'':>7} {'':>7} {'':>7} "
+    #print(f"{'TOP':>3} {'':>7} {'':>7} {'':>7} "
           f"{sap_total:>10.4f} {cad_total:>10.4f} "
           f"{abs(delta)/max(sap_total, 1e-9)*100:>7.2f}%")
-    print(f"\n✅ Uyumlu: {n_ok}, ⚠️ Uyarı: {n_warn}, ❌ Uyumsuz: {n_bad}")
-    print(f"SAP2000 SumAccelUX = {sap_total:.4f} ton = {sap_total*1000:.2f} kg")
-    print(f"Cad4     toplam    = {cad_total:.4f} ton = {cad_total*1000:.2f} kg")
-    print(f"Fark: {delta*1000:+.2f} kg ({delta/max(sap_total,1e-9)*100:+.2f}%)")
+    #print(f"\n✅ Uyumlu: {n_ok}, ⚠️ Uyarı: {n_warn}, ❌ Uyumsuz: {n_bad}")
+    #print(f"SAP2000 SumAccelUX = {sap_total:.4f} ton = {sap_total*1000:.2f} kg")
+    #print(f"Cad4     toplam    = {cad_total:.4f} ton = {cad_total*1000:.2f} kg")
+    #print(f"Fark: {delta*1000:+.2f} kg ({delta/max(sap_total,1e-9)*100:+.2f}%)")
     return all_ok
 
 
@@ -206,13 +206,13 @@ def compare_modal_periods(
     """SAP2000 modal periyotları ile Cad4 periyotlarını karşılaştır."""
     sap_periods = parse_sap2000_modal_periods(sap_file)
     if not sap_periods:
-        print("\n⚠️  SAP2000 modal tablosu bulunamadı, atlandı")
+        #print("\n⚠️  SAP2000 modal tablosu bulunamadı, atlandı")
         return True
 
-    print("\n--- SAP2000 Modal Period Karşılaştırma ---")
-    print(f"{'Mod':>3} {'SAP T(s)':>10} {'Cad4 T(s)':>10} "
+    #print("\n--- SAP2000 Modal Period Karşılaştırma ---")
+    #print(f"{'Mod':>3} {'SAP T(s)':>10} {'Cad4 T(s)':>10} "
           f"{'Fark%':>8} {'Durum':>6}")
-    print("-" * 50)
+    #print("-" * 50)
 
     n_ok = n_warn = n_bad = 0
     all_ok = True
@@ -233,8 +233,8 @@ def compare_modal_periods(
         else:
             status, n_bad = "❌", n_bad + 1
             all_ok = False
-        print(f"{mod_no:>3} {T_sap:>10.4f} {T_cad:>10.4f} "
+        #print(f"{mod_no:>3} {T_sap:>10.4f} {T_cad:>10.4f} "
               f"{rel*100:>7.2f}% {status:>6}")
 
-    print(f"\n✅ Uyumlu: {n_ok}, ⚠️ Uyarı: {n_warn}, ❌ Uyumsuz: {n_bad}")
+    #print(f"\n✅ Uyumlu: {n_ok}, ⚠️ Uyarı: {n_warn}, ❌ Uyumsuz: {n_bad}")
     return all_ok

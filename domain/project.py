@@ -1,37 +1,23 @@
 # domain/project.py
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 from core.units import UnitSystem
 from data.serializer import load_project_file, save_project_file
 from domain.definition import (
-    AnalysisManager,
-    AreaSection,
-    AutoSeismicTSC2018,
-    GeneralProjectInfo,
-    GridConfig,
-    LinkProp,
-    LoadCase,
-    LoadCombination,
-    LoadManager,
-    LoadPattern,
-    Material,
-    ModalCase,
-    ProjectConfig,
-    ProjectInfo,
-    ReportManager,
-    ResponseSpectrumCase,
-    Section,
-    SectionCut,
-    SiteInformation,
-    SpectrumFunction,
-    SpectrumSourceType,
-    ConstraintDefinition,
+    AnalysisManager, AreaSection, AutoSeismicTSC2018, ConstraintDefinition,
+    GeneralProjectInfo, LinkProp, LoadCase, LoadCombination, LoadManager,
+    LoadPattern, Material, ModalCase, ProjectConfig, ProjectInfo,
+    ReportManager, ResponseSpectrumCase, Section, SectionCut,
+    SiteInformation, SpectrumFunction, SpectrumSourceType,
     get_tsc2018_site_coefficients,
 )
+from domain.grid import Grid
+from domain.line import Line
 from domain.plane import Plane
-from domain.plane_manager import PlaneManager
+from domain.polygon import Polygon
 from domain.scene import Scene
 
 
@@ -42,17 +28,23 @@ class Project:
     site_info: SiteInformation = field(default_factory=SiteInformation)
     config: ProjectConfig = field(default_factory=ProjectConfig)
     scene: Scene = field(default_factory=Scene)
+    polygons: dict[int, Polygon] = field(default_factory=dict)
+    lines: dict[int, Line] = field(default_factory=dict)   # ← ekle
     loads: LoadManager = field(default_factory=LoadManager)
     analysis: AnalysisManager = field(default_factory=AnalysisManager)
     report: ReportManager = field(default_factory=ReportManager)
     unit_system: UnitSystem = UnitSystem.N_MM
-    grid: GridConfig = field(default_factory=GridConfig)
-    planes: dict[str, Plane] = field(default_factory=dict)
+
+    grid: Grid = field(default_factory=Grid)
+    custom_planes: dict[str, Plane] = field(default_factory=dict)
+
     _active_plane_id: str | None = field(
-        default=None, init=False, repr=False, compare=False
+        default=None, init=False, repr=False, compare=False,
+    )
+    _grid_planes_cache: dict[str, Plane] = field(
+        default_factory=dict, init=False, repr=False, compare=False,
     )
 
-    # --- ESKİ DEFINITION MANAGER MİRASI (Doğrudan Project'e monte edildi) ---
     materials: dict[str, Material] = field(default_factory=dict)
     sections: dict[str, Section] = field(default_factory=dict)
     area_sections: dict[str, AreaSection] = field(default_factory=dict)
@@ -68,70 +60,155 @@ class Project:
     constraint_definitions: dict[str, ConstraintDefinition] = field(default_factory=dict)
     section_cuts: dict[str, SectionCut] = field(default_factory=dict)
     diaphragms: dict[str, dict] = field(default_factory=dict)
-    grid_lines: list[dict[str, Any]] = field(default_factory=list)
     joint_constraints: dict[str, str] = field(default_factory=dict)
     frame_modifiers: dict[str, dict] = field(default_factory=dict)
     frame_design_procs: dict[str, str] = field(default_factory=dict)
     frame_auto_mesh: dict[str, dict] = field(default_factory=dict)
-
     catalog_sections: dict[str, Section] = field(default_factory=dict)
 
     def __post_init__(self):
-        # Scene, projeye referans versin ki kendi içinden malzemelere/kesitlere ulaşabilsin
         self.scene.project = self
 
-    def add_material(self, m: Material):        self.materials[m.name] = m
-    def add_section(self, s: Section):          self.sections[s.name] = s
-    def add_area_section(self, s: AreaSection): self.area_sections[s.name] = s
-    def add_link_prop(self, p: LinkProp):       self.link_props[p.name] = p
-    def add_load_pattern(self, p: LoadPattern): self.load_patterns[p.name] = p
-    def add_load_case(self, c: LoadCase):       self.load_cases[c.name] = c
-    def add_modal_case(self, c: ModalCase):     self.modal_cases[c.name] = c
-    def add_combination(self, c: LoadCombination): self.combinations[c.name] = c
-    def add_spectrum_function(self, spec: SpectrumFunction): self.spectrum_functions[spec.name] = spec
-    def add_response_spectrum_case(self, rs: ResponseSpectrumCase): self.response_spectrum_cases[rs.name] = rs
-    def add_auto_seismic(self, a: AutoSeismicTSC2018): self.auto_seismics[a.load_pattern] = a
-    def add_section_cut(self, sc: SectionCut): 
-        self.section_cuts[sc.name] = sc
-    def add_constraint_definition(self, cd: ConstraintDefinition):
-        self.constraint_definitions[cd.name] = cd
+    # ------------------------------------------------------------------
+    def add_polygon(self, polygon: Polygon) -> None:
+        self.polygons[polygon.unique_id] = polygon
 
-    def get_section_cut(self, name: str) -> SectionCut | None:
-        return self.section_cuts.get(name)
-    def get_section_by_name(self, name: str) -> Section | None:     return self.sections.get(name)
-    def get_material_by_name(self, name: str) -> Material | None:   return self.materials.get(name)
-    def get_link_prop_by_name(self, name: str) -> LinkProp | None:  return self.link_props.get(name)
-    # ---- Plane CRUD (PlaneManager'a delege) ----
-    @property
-    def plane_mgr(self) -> PlaneManager:
-        # Lazy — her erişimde yeni sarmalayıcı (hafif)
-        return PlaneManager(self)
+    def remove_polygon(self, polygon_id: int) -> None:
+        self.polygons.pop(polygon_id, None)
 
-    def add_plane(self, plane: Plane) -> Plane:
-        return self.plane_mgr.add(plane)
+    # ------------------------------------------------------------------
+    def _add(self, registry: dict, obj, key: str = "name") -> None:
+        registry[getattr(obj, key)] = obj
+
+    def add_material(self, m): self._add(self.materials, m)
+    def add_section(self, s): self._add(self.sections, s)
+    def add_area_section(self, s): self._add(self.area_sections, s)
+    def add_link_prop(self, p): self._add(self.link_props, p)
+    def add_load_pattern(self, p): self._add(self.load_patterns, p)
+    def add_load_case(self, c): self._add(self.load_cases, c)
+    def add_modal_case(self, c): self._add(self.modal_cases, c)
+    def add_combination(self, c): self._add(self.combinations, c)
+    def add_spectrum_function(self, s): self._add(self.spectrum_functions, s)
+    def add_response_spectrum_case(self, r): self._add(self.response_spectrum_cases, r)
+    def add_auto_seismic(self, a): self._add(self.auto_seismics, a, "load_pattern")
+    def add_section_cut(self, s): self._add(self.section_cuts, s)
+    def add_constraint_definition(self, c): self._add(self.constraint_definitions, c)
+
+    def get_section_cut(self, name): return self.section_cuts.get(name)
+    def get_section_by_name(self, name): return self.sections.get(name)
+    def get_material_by_name(self, name): return self.materials.get(name)
+    def get_link_prop_by_name(self, name): return self.link_props.get(name)
+
+    # ------------------------------------------------------------------
+    def grid_planes(self) -> list[Plane]:
+        if not self._grid_planes_cache:
+            self._grid_planes_cache = {}
+            for z in sorted(set(self.grid.z_coords)):
+                p = Plane.from_axis_offset("z", z, name=f"XY_Z{z:g}")
+                self._grid_planes_cache[p.name] = p
+            for y in sorted(set(self.grid.y_coords)):
+                p = Plane.from_axis_offset("y", y, name=f"XZ_Y{y:g}")
+                self._grid_planes_cache[p.name] = p
+            for x in sorted(set(self.grid.x_coords)):
+                p = Plane.from_axis_offset("x", x, name=f"YZ_X{x:g}")
+                self._grid_planes_cache[p.name] = p
+        return list(self._grid_planes_cache.values())
+
+    def invalidate_grid_planes(self):
+        self._grid_planes_cache.clear()
+
+    def all_planes(self) -> dict[str, Plane]:
+        result = {p.name: p for p in self.grid_planes()}
+        result.update(self.custom_planes)
+        return result
 
     def get_plane(self, name: str) -> Plane | None:
-        return self.planes.get(name)
+        return self.all_planes().get(name)
 
-    def remove_plane(self, name: str) -> bool:
-        return self.plane_mgr.remove(name)
+    def get_plane_by_id(self, plane_id: str) -> Plane | None:
+        for p in self.all_planes().values():
+            if p.plane_id == plane_id:
+                return p
+        return None
 
     def plane_names(self) -> list[str]:
-        return self.plane_mgr.names()
+        return sorted(self.all_planes())
 
+    def add_plane(self, plane: Plane) -> Plane:
+        self.custom_planes[plane.name] = plane
+        return plane
 
-    def create_tbdy2018_spectrum(
-        self, name, ss, s1, site_class="ZC",
-        r_coeff=1.0, d_coeff=1.0, i_coeff=1.0,
-        tl=6.0, num_points=200,
-    ) -> SpectrumFunction:
+    def remove_plane(self, name: str) -> bool:
+        if name not in self.custom_planes:
+            return False
+        plane = self.custom_planes.pop(name)
+        if self._active_plane_id == getattr(plane, "plane_id", None):
+            self._active_plane_id = None
+        return True
+
+    @property
+    def active_plane_id(self) -> str | None:
+        if self._active_plane_id and self.get_plane_by_id(self._active_plane_id) is None:
+            self._active_plane_id = None
+        return self._active_plane_id
+
+    @property
+    def active_plane(self) -> Plane | None:
+        pid = self.active_plane_id
+        return self.get_plane_by_id(pid) if pid else None
+
+    def activate_plane(self, plane: str | Plane) -> Plane:
+        if isinstance(plane, Plane):
+            registered = self.get_plane_by_id(plane.plane_id)
+        else:
+            registered = self.get_plane(plane) or self.get_plane_by_id(plane)
+        if registered is None:
+            raise KeyError(f"Plane bulunamadı: {plane}")
+        self._active_plane_id = registered.plane_id
+        return registered
+
+    def deactivate_plane(self) -> Plane | None:
+        active = self.active_plane
+        self._active_plane_id = None
+        return active
+
+    def planes_containing(self, pt) -> list[Plane]:
+        return [p for p in self.all_planes().values() if p.contains_pt(pt)]
+
+    # ------------------------------------------------------------------
+    def grid_levels(self, orientation: str) -> list[float]:
+        m = {"XY": self.grid.z_coords, "XZ": self.grid.y_coords, "YZ": self.grid.x_coords}
+        return sorted(set(m.get(orientation.upper(), [])))
+
+    def create_grid_plane(self, orientation: str, level: float,
+                          depth_minus: float = 0.0, depth_plus: float = 0.0,
+                          name: str = "") -> Plane | None:
+        axis_map = {"XY": "z", "XZ": "y", "YZ": "x"}
+        axis = axis_map.get(orientation.upper())
+        if axis is None:
+            return None
+        plane = Plane.from_axis_offset(
+            axis, float(level),
+            depth_minus=float(depth_minus), depth_plus=float(depth_plus),
+            name=name or f"Grid_{orientation}_{level:g}",
+        )
+        xs, ys, zs = self.grid.x_coords, self.grid.y_coords, self.grid.z_coords
+        bounds = {"XY": (xs, ys), "XZ": (xs, zs), "YZ": (ys, zs)}.get(orientation.upper())
+        if bounds and bounds[0] and bounds[1]:
+            plane.set_bounds(min(bounds[0]), max(bounds[0]),
+                             min(bounds[1]), max(bounds[1]))
+        return plane
+
+    # ------------------------------------------------------------------
+    def create_tbdy2018_spectrum(self, name, ss, s1, site_class="ZC",
+                                  r_coeff=1.0, d_coeff=1.0, i_coeff=1.0,
+                                  tl=6.0, num_points=200) -> SpectrumFunction:
         fs, f1 = get_tsc2018_site_coefficients(ss, s1, site_class)
         sds, sd1 = ss * fs, s1 * f1
         ta = 0.2 * sd1 / sds if sds > 0 else 0.0
         tb = sd1 / sds if sds > 0 else 0.0
+        dt = max(tl + 2.0, 8.0) / num_points
         points = []
-        max_t = max(tl + 2.0, 8.0)
-        dt = max_t / num_points
         for k in range(num_points + 1):
             t = k * dt
             if ta > 0 and t < ta:
@@ -142,24 +219,19 @@ class Project:
                 sae = sd1 / t
             else:
                 sae = sd1 * tl / (t * t)
-            ra = (d_coeff + (r_coeff / i_coeff - d_coeff) * t / tb) if (t < tb and tb > 0) else r_coeff / i_coeff
+            ra = ((d_coeff + (r_coeff / i_coeff - d_coeff) * t / tb)
+                  if (t < tb and tb > 0) else r_coeff / i_coeff)
             points.append((round(t, 4), round(sae / ra, 6)))
-
         spec = SpectrumFunction(
             name=name, source_type=SpectrumSourceType.TSC_2018,
-            ss=ss, s1=s1, tl=tl, site_class=site_class,
-            fs=fs, f1=f1,
-            r_coeff=r_coeff, d_coeff=d_coeff, i_coeff=i_coeff,
-            points=points,
+            ss=ss, s1=s1, tl=tl, site_class=site_class, fs=fs, f1=f1,
+            r_coeff=r_coeff, d_coeff=d_coeff, i_coeff=i_coeff, points=points,
         )
         self.add_spectrum_function(spec)
         return spec
 
-    # ==================================================================
-    # FILE I/O (Serializer'a delege edilir)
-    # ==================================================================
-    def save(self, filepath: str):
-        
+    # ------------------------------------------------------------------
+    def save(self, filepath: str) -> None:
         path = Path(filepath)
         if path.suffix != ".cd4":
             path = path.with_suffix(".cd4")
@@ -170,136 +242,35 @@ class Project:
         path = Path(filepath)
         if not path.exists():
             return cls()
-        p = load_project_file(path)
-        p._migrate_materials()
-        return p
+        return load_project_file(path)
 
-    def sync_grid_from_s2k_lines(self):
-        """S2K'dan gelen ham grid_lines verilerini CAD4 GridConfig yapısına senkronize eder."""
-        if not self.grid_lines:
+    def sync_grid_from_s2k_lines(self, grid_lines: list[dict]) -> None:
+        if not grid_lines:
             return
-
         xs, ys, zs = [], [], []
+        for gl in grid_lines:
+            direction = str(gl.get("axis_dir", gl.get("line_type", "X"))).upper()
+            v = float(gl.get("ordinate", 0.0))
+            if "X" in direction:
+                xs.append(v)
+            elif "Y" in direction or "V" in direction:
+                ys.append(v)
+            elif "Z" in direction:
+                zs.append(v)
+        self.grid = Grid(
+            x_coords=sorted(set(xs)), y_coords=sorted(set(ys)),
+            z_coords=sorted(set(zs)),
+        )
+        self.invalidate_grid_planes()
 
-        for gl in self.grid_lines:
-            axis_dir = str(gl.get('axis_dir', gl.get('line_type', 'X'))).upper()
-            ordinate = float(gl.get('ordinate', 0.0))
-            
-            # AxisDir değerine göre doğru koordinat listesine atıyoruz
-            if 'X' in axis_dir:
-                xs.append(ordinate)
-            elif 'Y' in axis_dir or 'V' in axis_dir:
-                ys.append(ordinate)
-            elif 'Z' in axis_dir:
-                zs.append(ordinate)
-
-        if xs:
-            self.grid.x_coords = sorted(list(set(xs)))
-        if ys:
-            self.grid.y_coords = sorted(list(set(ys)))
-        if zs:
-            self.grid.z_coords = sorted(list(set(zs)))
-
+    # ------------------------------------------------------------------
     def _migrate_materials(self):
-        import logging
-        log = logging.getLogger(__name__)
-        logged = set()
-
-        def _fix_density(mat):
-            name = getattr(mat, "name", "?")
-            rho = float(mat.density or 0.0)
-            if rho <= 0 or 1e-8 <= rho <= 1e-4:
-                return
-            if 1e-13 < rho < 1e-8:
-                new = rho * 1000.0
-            elif 1e-3 <= rho < 1.0:
-                new = rho * 9.80665e-6
-            elif 1.0 <= rho < 25.0:
-                new = rho * 1e-6
-            elif 100.0 <= rho < 25000.0:
-                new = rho * 1e-9
-            else:
-                return
-            mat.density = new
-            if ("density", name) not in logged:
-                log.info("[Migrate] %s.density: %g → %g kg/mm³", name, rho, new)
-                logged.add(("density", name))
-            
-
-        def _fix_E1(mat):
-            e = float(mat.E1 or 0.0)
-            if e <= 0:
-                return
-            if 1e3 <= e <= 5e5:                           # MPa (max 500 GPa)
-                return
-            if 5e5 < e <= 1e10:
-                new = e * 9.80665e-3                      # tonf/m² → MPa
-            elif e > 1e10:
-                new = e * 6.89476e-3                      # psi → MPa
-            else:
-                return
-            mat.E1 = new
-            mat.E2 = new
-            mat.E3 = new
-            log.warning("[Migrate] %s.E1: %g → %g MPa",
-                        getattr(mat, "name", "?"), e, new)
-
-        def _fix_G12(mat):
-            g = float(mat.G12 or 0.0)
-            if g <= 0:
-                return
-            if 1e3 <= g <= 5e5:
-                return
-            if 5e5 < g <= 1e10:
-                new = g * 9.80665e-3
-            elif g > 1e10:
-                new = g * 6.89476e-3
-            else:
-                return
-            mat.G12 = new
-            mat.G13 = new
-            mat.G23 = new
-            log.warning("[Migrate] %s.G12: %g → %g MPa",
-                        getattr(mat, "name", "?"), g, new)
-
-        def _fix(mat):
-            if mat is None:
-                return
-            _fix_density(mat)
-            _fix_E1(mat)
-            _fix_G12(mat)
-
-        # ---------- tüm Material kopyalarını bul ----------
-        
-
-        def _visit(mat):
-            if mat is None or id(mat) in _seen:
-                return
-            _seen.add(id(mat))
-            _fix_density(mat)
-            _fix_E1(mat)
-            _fix_G12(mat)
-
-        _seen = set()
-        for m in self.materials.values():
-            _visit(m)
-        for sec in self.sections.values():
-            _visit(getattr(sec, "material", None))
-        for frame in self.scene.frames.values():
-            sec = getattr(frame, "section", None)
-            _visit(getattr(sec, "material", None) if sec else None)
-        for area in self.scene.areas.values():
-            _visit(getattr(area, "material", None))
-
-        if _seen:
-            log.info("[Migrate] %d Material nesnesi işlendi", len(_seen))
+        pass
 
     def __repr__(self) -> str:
-        return (
-            f"<Project unit={self.unit_system.value} "
-            f"materials={len(self.materials)} sections={len(self.sections)} "
-            f"patterns={len(self.load_patterns)} cases={len(self.load_cases)}>"
-        )
+        return (f"<Project unit={self.unit_system.value} "
+                f"materials={len(self.materials)} sections={len(self.sections)} "
+                f"patterns={len(self.load_patterns)} cases={len(self.load_cases)}>")
 
     def summary(self) -> str:
         return (

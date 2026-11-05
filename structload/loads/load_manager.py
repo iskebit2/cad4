@@ -325,4 +325,4 @@ if __name__ == "__main__":
 
     manager.assign(103, "G02")
     manager.assign(103, "Q01")
-    print(manager.definition_rows("Q"))
+    #print(manager.definition_rows("Q"))

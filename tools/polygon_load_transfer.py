@@ -10,7 +10,7 @@ import numpy as np
 import math
 from data.enums import DistType, LoadDirection
 from domain.definition import AreaUniformLoad, FrameDistributedLoad
-from domain.element import Polygon
+from domain.polygon import Polygon
 
 _EPS = 1e-9
 

@@ -198,7 +198,7 @@ class EditController:
                     label=v.get("label") or None)
 
     def _build_polygon(self, v):
-        from domain.element import Polygon, PolygonType
+        from domain.polygon import Polygon, PolygonType
         node_labels = v.get("nodes", [])
         if isinstance(node_labels, str):
             node_labels = [s.strip() for s in node_labels.split(",") if s.strip()]

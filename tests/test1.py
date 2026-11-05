@@ -2,7 +2,7 @@ import glfw
 from imgui_bundle import imgui
 from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 
-from domain.element import Polygon
+from domain.polygon import Polygon
 from data.enums import PolygonType
 from tools.s2k.loader import S2KLoader
 from ui.load_manager_panel import LoadManagerPanel
@@ -11,19 +11,19 @@ from ui.load_manager_panel import LoadManagerPanel
 p = S2KLoader(r"tests/simple_steel3.s2k").load()
 s = p.scene
 
-print(f"Node: {len(s.nodes)}, Frame: {len(s.frames)}")
-print(f"Node ID'ler: {sorted(s.nodes.keys())[:20]}")
-print(p.load_patterns)
+#print(f"Node: {len(s.nodes)}, Frame: {len(s.frames)}")
+#print(f"Node ID'ler: {sorted(s.nodes.keys())[:20]}")
+#print(p.load_patterns)
 
 def make_polygon(scene, node_ids, label):
     """Node ID listesinden polygon üret."""
     nodes = [scene.nodes[nid] for nid in node_ids if nid in scene.nodes]
     if len(nodes) < 3:
-        print(f"⚠ {label}: yetersiz node ({len(nodes)})")
+        #print(f"⚠ {label}: yetersiz node ({len(nodes)})")
         return None
     poly = Polygon(nodes, label=label, poly_type=PolygonType.GENERIC)
     scene.add_polygon(poly)
-    print(f"✓ {label}: {len(nodes)} node, id={poly.unique_id}")
+    #print(f"✓ {label}: {len(nodes)} node, id={poly.unique_id}")
     return poly
 
 
@@ -39,7 +39,7 @@ if all(nid in s.nodes for nid in [4, 8, 9, 5]):
     if p2:
         polygons.append(p2)
 
-print(f"Toplam polygon: {len(polygons)}")
+#print(f"Toplam polygon: {len(polygons)}")
 
 
 def main():

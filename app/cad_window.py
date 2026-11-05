@@ -297,9 +297,9 @@ class CadWindow:
                     window_name = ctx.current_window_name
                 except Exception:
                     window_name = "(okunamadı)"
-                    print("\n!!!! MISSING END !!!!")
-                    print(f"Pencere: {window_name!r}")
-                    print(f"Hata: {e}")
+                    #print("\n!!!! MISSING END !!!!")
+                    #print(f"Pencere: {window_name!r}")
+                    #print(f"Hata: {e}")
                 raise
             w, h = glfw.get_framebuffer_size(self.window)
             glViewport(0, 0, w, h)

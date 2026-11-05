@@ -8,12 +8,12 @@ from pyglm import glm
 import numpy as np
 from OpenGL.GL import *
 
-from domain.element import Area, Frame, Link, Polygon
+from domain.element import Area, Frame, Link
 from geometry.area_builder import AreaBuilder
 from geometry.frame_builder import FrameBuilder
 from geometry.link_builder import LinkBuilder
-from geometry.polygon_builder import PolygonBuilder
 from logging_config import CadLogger
+from render.gl_utils import mat4_data
 
 logger = CadLogger.get(__name__)
 
@@ -626,7 +626,7 @@ class BaseRenderer(ABC, Generic[T]):
         shader.use()
         loc = shader.get_loc("mvp")
         if loc != -1:
-            glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
+            glUniformMatrix4fv(loc, 1, GL_FALSE, mat4_data(mvp))
         vc = shader.get_loc("useVertexColor")
         if vc != -1:
             glUniform1i(vc, 1 if color is None else 0)
@@ -926,81 +926,3 @@ class LinkRenderer(BaseRenderer[Link]):
             glUniform1i(loc, 0)
 
         super().render(mvp, model, cam_pos, view, proj)
-
-# =================================================================
-# POLYGON
-# =================================================================
-
-class PolygonRenderer(BaseRenderer[Polygon]):
-    def __init__(self, shader):
-        super().__init__(shader)
-        self.builder = PolygonBuilder()
-        self.vertex_stride = 6 * 4
-        self.has_center = False
-        self.simple_draw_mode = GL_TRIANGLES
-        # Outline buffer
-        self.outline_vao = None
-        self.outline_vbo = None
-        self.outline_vcount = 0
-
-    def build(self, p):
-        return self.builder.build(p)
-
-    def build_lines(self, p):
-        return self.builder.build_lines(p)
-
-    def build_simple(self, p):
-        # DÜZELTME: build_simple kullan (index'ler açılmış)
-        v = self.builder.build_simple(p)
-        if len(v) == 0:
-            return np.array([], dtype=np.float32), np.array([], dtype=np.float32)
-        count = len(v) // 6
-        color = _final_color_for(p)
-        c = np.tile(np.array(color[:3], dtype=np.float32), (count, 1))
-        return v, c
-
-    def draw_mode(self):
-        return GL_TRIANGLES
-
-    def _upload_outline(self, outline_verts):
-        self._cleanup_outline()
-        if len(outline_verts) == 0:
-            return
-        self.outline_vao = glGenVertexArrays(1)
-        self.outline_vbo = glGenBuffers(1)
-        glBindVertexArray(self.outline_vao)
-        glBindBuffer(GL_ARRAY_BUFFER, self.outline_vbo)
-        glBufferData(GL_ARRAY_BUFFER, outline_verts.nbytes, outline_verts, GL_STATIC_DRAW)
-        glEnableVertexAttribArray(0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(0))
-        glBindVertexArray(0)
-        self.outline_vcount = len(outline_verts) // 6
-
-    def _cleanup_outline(self):
-        if self.outline_vao and glIsVertexArray(self.outline_vao):
-            glDeleteVertexArrays(1, [int(self.outline_vao)])
-        if self.outline_vbo and glIsBuffer(self.outline_vbo):
-            glDeleteBuffers(1, [int(self.outline_vbo)])
-        self.outline_vao = self.outline_vbo = None
-        self.outline_vcount = 0
-
-    def render_lines_white(self, mvp, shader):
-        if not self.outline_vao or self.outline_vcount == 0:
-            return
-        shader.use()
-        loc = shader.get_loc("mvp")
-        if loc != -1:
-            glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
-        vc = shader.get_loc("useVertexColor")
-        if vc != -1: glUniform1i(vc, 0)
-        oc = shader.get_loc("objectColor")
-        if oc != -1: glUniform3f(oc, 1.0, 1.0, 1.0)
-        a = shader.get_loc("alpha")
-        if a != -1: glUniform1f(a, 0.9)
-        glBindVertexArray(self.outline_vao)
-        glDrawArrays(GL_LINES, 0, self.outline_vcount)
-        glBindVertexArray(0)
-
-    def cleanup(self):
-        self._cleanup_outline()
-        super().cleanup()

@@ -1,7 +1,4 @@
 # inspector/catalog_project.py
-"""
-Project'i Inspector'ın Catalog protokolüne uyarla.
-"""
 
 class ProjectCatalog:
     def __init__(self, project):
@@ -29,4 +26,4 @@ class ProjectCatalog:
         return sorted(self.project.load_patterns.keys())
 
     def list_planes(self):
-        return sorted(self.project.planes.values(), key=lambda p: p.name)
+        return sorted(self.project.all_planes().values(), key=lambda p: p.name)

@@ -84,6 +84,8 @@ class CadLogger:
     "cad.core.camera":              "WARNING",
     "cad.core.input_manager":       "WARNING",
     "cad.tools.gridsystem":         "WARNING",
+    "cad.render.presentationrenderer":         "DEBUG",
+    "cad.ui.grid_panel": "DEBUG",
     }
 
     ROOT_NAME = "cad"

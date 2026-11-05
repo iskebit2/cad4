@@ -245,10 +245,9 @@ class ProjectBuilder:
     # ==================================================================
     # GRID / CONSTRAINTS
     # ==================================================================
-    def set_grid_lines(self, lines: list[dict]):
-        self.grid_lines = list(lines)
-        self.project.grid_lines = self.grid_lines
-        self.project.sync_grid_from_s2k_lines()
+    def set_grid_lines(self, grid_lines):
+        self.grid_lines = grid_lines or []
+        self.project.sync_grid_from_s2k_lines(self.grid_lines)
 
     def set_joint_constraints(self, constraints: dict[str, str]):
         self.joint_constraints = dict(constraints)

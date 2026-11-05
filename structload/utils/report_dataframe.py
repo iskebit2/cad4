@@ -297,33 +297,33 @@ class ReportDataFrame(pd.DataFrame):
 
         raw_doc.add_paragraph()
 
-    def print(self) -> None:
+    def #print(self) -> None:
         if self.custom_title:
-            print(f"\n{self.custom_title}")
-            print("-" * len(self.custom_title))
+            #print(f"\n{self.custom_title}")
+            #print("-" * len(self.custom_title))
 
         if self.custom_desc:
-            print(f"{self.custom_desc}\n")
+            #print(f"{self.custom_desc}\n")
 
         if self.empty:
-            print("Veri yok")
+            #print("Veri yok")
             return
 
-        print(" | ".join(str(col) for col in self.columns))
+        #print(" | ".join(str(col) for col in self.columns))
 
         if self.column_descriptions:
-            print(
+            #print(
                 " | ".join(
                     self.column_descriptions.get(col, "") for col in self.columns
                 )
             )
 
         if self.column_units:
-            print(
+            #print(
                 " | ".join(
                     self.column_units.get(col, "") for col in self.columns
                 )
             )
 
         for _, row in self.iterrows():
-            print(" | ".join(self._format_row(row)))
+            #print(" | ".join(self._format_row(row)))

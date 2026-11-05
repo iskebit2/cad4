@@ -19,7 +19,8 @@ import glfw
 import numpy as np
 from imgui_bundle import imgui
 
-from domain.element import Area, Frame, Node, Polygon
+from domain.element import Area, Frame, Node
+from domain.polygon import Polygon
 from domain.plane import ASSOC_KINDS, Plane
 from logging_config import CadLogger
 from ui.base_panel import BasePanel
@@ -98,7 +99,7 @@ class PlaneManagerPanel(BasePanel):
 
     def _renderer(self):
         engine = getattr(self.app, "engine", None) if self.app else None
-        return getattr(engine, "renderer", None)
+        return getattr(engine, "presentation_renderer", None)
 
     def _set_render_preview(self, plane: Plane | None):
         renderer = self._renderer()
@@ -764,9 +765,11 @@ class PlaneManagerPanel(BasePanel):
             self._refresh_preview()
 
     def _clear_preview(self):
-        renderer = self._renderer()
-        if renderer is not None and renderer.selected_plane is self._preview:
-            renderer.selected_plane = None
+        proj = self._project()
+
+        
+        if proj is not None and proj._active_plane_id is self._preview:
+            proj._active_plane_id = None
         self._preview = None
         self._preview_error = None
 

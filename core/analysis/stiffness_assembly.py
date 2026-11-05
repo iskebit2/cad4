@@ -236,7 +236,7 @@ def build_stiffness(
     validate: bool = True,
     use_shear_deform: bool = False,
 ) -> StiffnessAssembly:
-    print(f"[STIFF] use_shear_deform = {use_shear_deform}")
+    #print(f"[STIFF] use_shear_deform = {use_shear_deform}")
 
     ensure_dof_indices(scene)
     num_dofs = len(scene.nodes) * 6

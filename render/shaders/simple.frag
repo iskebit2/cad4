@@ -13,6 +13,7 @@ flat in float PlaneOpacity;
 layout(location = 0) out vec4 FragColor;
 layout(location = 1) out uint FragID;
 
+
 // ---- Uniform'lar ----
 uniform bool  useVertexColor;
 uniform vec3  objectColor;

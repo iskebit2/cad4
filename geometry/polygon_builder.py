@@ -3,7 +3,7 @@
 import mapbox_earcut as earcut
 import numpy as np
 
-from domain.element import Polygon
+from domain.polygon import Polygon
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)

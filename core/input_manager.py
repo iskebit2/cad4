@@ -81,6 +81,13 @@ class InputManager:
     )
     _middle_dragged:    bool = field(default=False, init=False, repr=False)
 
+    _last_left_click_time: float = field(default=0.0, init=False, repr=False)
+    _last_left_click_pos: tuple[float, float] = field(
+        default=(0.0, 0.0), init=False, repr=False,
+    )
+    _double_click_interval: float = 0.30
+    _double_click_max_drag: float = 5.0
+
     # ==================================================================
     # FARE KONUMU
     # ==================================================================
@@ -219,6 +226,26 @@ class InputManager:
         self._middle_press_pos = (x, y)
         self._middle_dragged = False
         return False
+
+    def begin_left_click(self, x: float, y: float, now: float) -> bool:
+        """
+        Sol butona basıldığında çağrılır.
+        Dönüş: True → bu bir DOUBLE CLICK; çağıran eylem yapar.
+        """
+        # Konum ve zaman kontrolü
+        dt = now - self._last_left_click_time
+        dx = x - self._last_left_click_pos[0]
+        dy = y - self._last_left_click_pos[1]
+        dist = (dx * dx + dy * dy) ** 0.5
+
+        is_double = (
+            dt < self._double_click_interval
+            and dist < self._double_click_max_drag
+        )
+
+        self._last_left_click_time = now if not is_double else 0.0
+        self._last_left_click_pos = (x, y)
+        return is_double
 
     def update_middle_drag(self, x: float, y: float) -> bool:
         """

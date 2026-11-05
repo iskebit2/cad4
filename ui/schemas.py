@@ -1,7 +1,7 @@
 # ui/schemas.py
 """Her element tipi için hazır şemalar."""
 from data.enums import PolygonType
-from ui.schema import FieldSpec, GroupSpec
+from ui.schema import Field, Group
 
 
 # ============================================================================
@@ -9,54 +9,54 @@ from ui.schema import FieldSpec, GroupSpec
 # ============================================================================
 def node_schema():
     return [
-        GroupSpec("Genel", [
-            FieldSpec("label",      "str",   "Label"),
-            FieldSpec("is_visible", "bool",  "Görünür"),
-            FieldSpec("color",      "color", "Renk (R,G,B)"),
+        Group("Genel", [
+            Field("label",      "str",   "Label"),
+            Field("is_visible", "bool",  "Görünür"),
+            Field("color",      "color", "Renk (R,G,B)"),
         ]),
-        GroupSpec("Konum", [
-            FieldSpec("x", "float", "X", step=0.1, format="%.3f", unit="(L)"),
-            FieldSpec("y", "float", "Y", step=0.1, format="%.3f", unit="(L)"),
-            FieldSpec("z", "float", "Z", step=0.1, format="%.3f", unit="(L)"),
-            FieldSpec("coord_sys",  "str", "Koordinat Sistemi"),
-            FieldSpec("coord_type", "str", "Tip"),
-            FieldSpec("special_jt", "bool", "Özel Düğüm"),
+        Group("Konum", [
+            Field("x", "float", "X", step=0.1, format="%.3f", unit="(L)"),
+            Field("y", "float", "Y", step=0.1, format="%.3f", unit="(L)"),
+            Field("z", "float", "Z", step=0.1, format="%.3f", unit="(L)"),
+            Field("coord_sys",  "str", "Koordinat Sistemi"),
+            Field("coord_type", "str", "Tip"),
+            Field("special_jt", "bool", "Özel Düğüm"),
         ]),
-        GroupSpec("Mesnet", [
-            FieldSpec("restraint.ux", "bool", "UX"),
-            FieldSpec("restraint.uy", "bool", "UY"),
-            FieldSpec("restraint.uz", "bool", "UZ"),
-            FieldSpec("restraint.rx", "bool", "RX"),
-            FieldSpec("restraint.ry", "bool", "RY"),
-            FieldSpec("restraint.rz", "bool", "RZ"),
+        Group("Mesnet", [
+            Field("restraint.ux", "bool", "UX"),
+            Field("restraint.uy", "bool", "UY"),
+            Field("restraint.uz", "bool", "UZ"),
+            Field("restraint.rx", "bool", "RX"),
+            Field("restraint.ry", "bool", "RY"),
+            Field("restraint.rz", "bool", "RZ"),
         ], default_open=False),
-        GroupSpec("Kütle", [
-            FieldSpec("mass_1", "float", "M1", step=0.1, format="%.3f", unit="(M)"),
-            FieldSpec("mass_2", "float", "M2", step=0.1, format="%.3f", unit="(M)"),
-            FieldSpec("mass_3", "float", "M3", step=0.1, format="%.3f", unit="(M)"),
-            FieldSpec("mmi_1",  "float", "MMI1", step=0.1, format="%.3f", unit="(M·L²)"),
-            FieldSpec("mmi_2",  "float", "MMI2", step=0.1, format="%.3f", unit="(M·L²)"),
-            FieldSpec("mmi_3",  "float", "MMI3", step=0.1, format="%.3f", unit="(M·L²)"),
+        Group("Kütle", [
+            Field("mass_1", "float", "M1", step=0.1, format="%.3f", unit="(M)"),
+            Field("mass_2", "float", "M2", step=0.1, format="%.3f", unit="(M)"),
+            Field("mass_3", "float", "M3", step=0.1, format="%.3f", unit="(M)"),
+            Field("mmi_1",  "float", "MMI1", step=0.1, format="%.3f", unit="(M·L²)"),
+            Field("mmi_2",  "float", "MMI2", step=0.1, format="%.3f", unit="(M·L²)"),
+            Field("mmi_3",  "float", "MMI3", step=0.1, format="%.3f", unit="(M·L²)"),
         ], default_open=False),
-        GroupSpec("Ek Kütle", [
-            FieldSpec("added_mass_1", "float", "ΔM1", step=0.1, format="%.3f", unit="(M)"),
-            FieldSpec("added_mass_2", "float", "ΔM2", step=0.1, format="%.3f", unit="(M)"),
-            FieldSpec("added_mass_3", "float", "ΔM3", step=0.1, format="%.3f", unit="(M)"),
-            FieldSpec("added_mmi_1",  "float", "ΔMMI1", step=0.1, format="%.3f", unit="(M·L²)"),
-            FieldSpec("added_mmi_2",  "float", "ΔMMI2", step=0.1, format="%.3f", unit="(M·L²)"),
-            FieldSpec("added_mmi_3",  "float", "ΔMMI3", step=0.1, format="%.3f", unit="(M·L²)"),
-            FieldSpec("mass_coord_sys", "str", "Kütle CS"),
+        Group("Ek Kütle", [
+            Field("added_mass_1", "float", "ΔM1", step=0.1, format="%.3f", unit="(M)"),
+            Field("added_mass_2", "float", "ΔM2", step=0.1, format="%.3f", unit="(M)"),
+            Field("added_mass_3", "float", "ΔM3", step=0.1, format="%.3f", unit="(M)"),
+            Field("added_mmi_1",  "float", "ΔMMI1", step=0.1, format="%.3f", unit="(M·L²)"),
+            Field("added_mmi_2",  "float", "ΔMMI2", step=0.1, format="%.3f", unit="(M·L²)"),
+            Field("added_mmi_3",  "float", "ΔMMI3", step=0.1, format="%.3f", unit="(M·L²)"),
+            Field("mass_coord_sys", "str", "Kütle CS"),
         ], default_open=False),
-        GroupSpec("Bağlantı", [
-            FieldSpec("constraint_name", "str", "Constraint"),
+        Group("Bağlantı", [
+            Field("constraint_name", "str", "Constraint"),
         ], default_open=False),
-        GroupSpec("Yay (Spring)", [
-            FieldSpec("spring_u1", "float", "U1", step=1.0, format="%.3f", unit="(F/L)"),
-            FieldSpec("spring_u2", "float", "U2", step=1.0, format="%.3f", unit="(F/L)"),
-            FieldSpec("spring_u3", "float", "U3", step=1.0, format="%.3f", unit="(F/L)"),
-            FieldSpec("spring_r1", "float", "R1", step=1.0, format="%.3f", unit="(M/rad)"),
-            FieldSpec("spring_r2", "float", "R2", step=1.0, format="%.3f", unit="(M/rad)"),
-            FieldSpec("spring_r3", "float", "R3", step=1.0, format="%.3f", unit="(M/rad)"),
+        Group("Yay (Spring)", [
+            Field("spring_u1", "float", "U1", step=1.0, format="%.3f", unit="(F/L)"),
+            Field("spring_u2", "float", "U2", step=1.0, format="%.3f", unit="(F/L)"),
+            Field("spring_u3", "float", "U3", step=1.0, format="%.3f", unit="(F/L)"),
+            Field("spring_r1", "float", "R1", step=1.0, format="%.3f", unit="(M/rad)"),
+            Field("spring_r2", "float", "R2", step=1.0, format="%.3f", unit="(M/rad)"),
+            Field("spring_r3", "float", "R3", step=1.0, format="%.3f", unit="(M/rad)"),
         ], default_open=False),
     ]
 
@@ -66,73 +66,73 @@ def node_schema():
 # ============================================================================
 def frame_schema():
     return [
-        GroupSpec("Genel", [
-            FieldSpec("label",      "str",   "Label"),
-            FieldSpec("is_visible", "bool",  "Görünür"),
-            FieldSpec("color",      "color", "Renk"),
+        Group("Genel", [
+            Field("label",      "str",   "Label"),
+            Field("is_visible", "bool",  "Görünür"),
+            Field("color",      "color", "Renk"),
         ]),
-        GroupSpec("Kesit", [
-            FieldSpec("section", "section_ref", "Kesit"),
-            FieldSpec("section_info", "info", "Kesit Özeti"),
+        Group("Kesit", [
+            Field("section", "section_ref", "Kesit"),
+            Field("section_info", "info", "Kesit Özeti"),
         ]),
-        GroupSpec("Geometri", [
-            FieldSpec("rotation_deg", "float", "Rotation (°)",
+        Group("Geometri", [
+            Field("rotation_deg", "float", "Rotation (°)",
                       step=1.0, format="%.2f"),
         ]),
-        GroupSpec("Insertion Point", [
-            FieldSpec("cardinal_pt",         "str",  "Kardinal Nokta"),
-            FieldSpec("mirror2",             "bool", "Mirror 2"),
-            FieldSpec("mirror3",             "bool", "Mirror 3"),
-            FieldSpec("transform",           "bool", "Transform"),
-            FieldSpec("insertion_coord_sys", "str",  "CS"),
-            FieldSpec("jt_offset_i", "str", "I Offset (x,y,z)"),
-            FieldSpec("jt_offset_j", "str", "J Offset (x,y,z)"),
+        Group("Insertion Point", [
+            Field("cardinal_pt",         "str",  "Kardinal Nokta"),
+            Field("mirror2",             "bool", "Mirror 2"),
+            Field("mirror3",             "bool", "Mirror 3"),
+            Field("transform",           "bool", "Transform"),
+            Field("insertion_coord_sys", "str",  "CS"),
+            Field("jt_offset_i", "str", "I Offset (x,y,z)"),
+            Field("jt_offset_j", "str", "J Offset (x,y,z)"),
         ], default_open=False),
-        GroupSpec("End Offset", [
-            FieldSpec("offset_type",     "enum",  "Tip",
+        Group("End Offset", [
+            Field("offset_type",     "enum",  "Tip",
                       choices=["User", "Automatic"]),
-            FieldSpec("offset_length_i", "float", "I Uzunluğu", step=1.0, format="%.3f"),
-            FieldSpec("offset_length_j", "float", "J Uzunluğu", step=1.0, format="%.3f"),
-            FieldSpec("rigid_factor",    "float", "Rigid Factor", step=0.1, format="%.3f"),
+            Field("offset_length_i", "float", "I Uzunluğu", step=1.0, format="%.3f"),
+            Field("offset_length_j", "float", "J Uzunluğu", step=1.0, format="%.3f"),
+            Field("rigid_factor",    "float", "Rigid Factor", step=0.1, format="%.3f"),
         ], default_open=False),
-        GroupSpec("Output Stations", [
-            FieldSpec("station_type", "enum", "Tip",
+        Group("Output Stations", [
+            Field("station_type", "enum", "Tip",
                       choices=["MinNumSta", "MaxStaSpcg", "User"]),
-            FieldSpec("min_num_sta",    "int",   "Min Adet"),
-            FieldSpec("add_at_elm_int", "bool",  "Eleman İçi"),
-            FieldSpec("add_at_pt_load", "bool",  "Noktasal Yükte"),
-            FieldSpec("max_sta_spcg",   "float", "Max Aralık", step=1.0, format="%.3f"),
+            Field("min_num_sta",    "int",   "Min Adet"),
+            Field("add_at_elm_int", "bool",  "Eleman İçi"),
+            Field("add_at_pt_load", "bool",  "Noktasal Yükte"),
+            Field("max_sta_spcg",   "float", "Max Aralık", step=1.0, format="%.3f"),
         ], default_open=False),
-        GroupSpec("Auto Mesh", [
-            FieldSpec("auto_mesh",         "bool",  "Aktif"),
-            FieldSpec("mesh_at_joints",    "bool",  "Düğümlerde"),
-            FieldSpec("mesh_at_frames",    "bool",  "Çubuklarda"),
-            FieldSpec("mesh_num_segments", "int",   "Segment Sayısı"),
-            FieldSpec("mesh_max_length",   "float", "Max Uzunluk", step=1.0, format="%.3f"),
-            FieldSpec("mesh_max_degrees",  "float", "Max Açı", step=1.0, format="%.2f"),
+        Group("Auto Mesh", [
+            Field("auto_mesh",         "bool",  "Aktif"),
+            Field("mesh_at_joints",    "bool",  "Düğümlerde"),
+            Field("mesh_at_frames",    "bool",  "Çubuklarda"),
+            Field("mesh_num_segments", "int",   "Segment Sayısı"),
+            Field("mesh_max_length",   "float", "Max Uzunluk", step=1.0, format="%.3f"),
+            Field("mesh_max_degrees",  "float", "Max Açı", step=1.0, format="%.2f"),
         ], default_open=False),
-        GroupSpec("Local Axes", [
-            FieldSpec("mirror_abt2", "bool", "Mirror 2"),
-            FieldSpec("mirror_abt3", "bool", "Mirror 3"),
+        Group("Local Axes", [
+            Field("mirror_abt2", "bool", "Mirror 2"),
+            Field("mirror_abt3", "bool", "Mirror 3"),
         ], default_open=False),
-        GroupSpec("Design", [
-            FieldSpec("design_proc",   "str",  "Design Prosedürü"),
-            FieldSpec("load_transfer", "bool", "Load Transfer"),
+        Group("Design", [
+            Field("design_proc",   "str",  "Design Prosedürü"),
+            Field("load_transfer", "bool", "Load Transfer"),
         ], default_open=False),
-        GroupSpec("Yayılı Yük Setleri", [
-            FieldSpec("dist_load_sets_list", "list_object",
+        Group("Yayılı Yük Setleri", [
+            Field("dist_load_sets_list", "list_object",
                       "Pattern → Segment Seti",
                       item_schema=[
-                          FieldSpec("pattern_name", "str", "Pattern"),
-                          FieldSpec("coord_sys",    "enum", "CoordSys",
+                          Field("pattern_name", "str", "Pattern"),
+                          Field("coord_sys",    "enum", "CoordSys",
                                     choices=["Local", "Global"]),
-                          FieldSpec("load_dir",     "enum", "Yön",
+                          Field("load_dir",     "enum", "Yön",
                                     choices=["1","2","3","4","5","6",
                                              "7","8","9","10"]),
-                          FieldSpec("mode",         "enum", "Mode",
+                          Field("mode",         "enum", "Mode",
                                     choices=["REPLACE", "ADD"]),
-                          FieldSpec("is_relative",  "bool", "Relative"),
-                          FieldSpec("segments_text", "str", "Segmentler"),
+                          Field("is_relative",  "bool", "Relative"),
+                          Field("segments_text", "str", "Segmentler"),
                       ]),
         ], default_open=True),
     ]
@@ -143,27 +143,27 @@ def frame_schema():
 # ============================================================================
 def area_schema():
     return [
-        GroupSpec("Genel", [
-            FieldSpec("label",      "str",   "Label"),
-            FieldSpec("is_visible", "bool",  "Görünür"),
-            FieldSpec("color",      "color", "Renk"),
+        Group("Genel", [
+            Field("label",      "str",   "Label"),
+            Field("is_visible", "bool",  "Görünür"),
+            Field("color",      "color", "Renk"),
         ]),
-        GroupSpec("Kabuk", [
-            FieldSpec("thickness",    "float", "Kalınlık",
+        Group("Kabuk", [
+            Field("thickness",    "float", "Kalınlık",
                       step=0.1, format="%.3f", unit="(L)"),
-            FieldSpec("material",     "material_ref", "Malzeme"),
-            FieldSpec("section_name", "string_select", "Kesit Adı"),
-            FieldSpec("material_info", "info", "Malzeme Özeti"),
+            Field("material",     "material_ref", "Malzeme"),
+            Field("section_name", "string_select", "Kesit Adı"),
+            Field("material_info", "info", "Malzeme Özeti"),
         ]),
-        GroupSpec("Override", [
-            FieldSpec("thick_over",  "float", "Kalınlık Override",
+        Group("Override", [
+            Field("thick_over",  "float", "Kalınlık Override",
                       step=0.1, format="%.3f", unit="(L)"),
-            FieldSpec("offset_over", "float", "Offset Override",
+            Field("offset_over", "float", "Offset Override",
                       step=0.1, format="%.3f", unit="(L)"),
-            FieldSpec("mat_prop",    "str", "MatProp"),
+            Field("mat_prop",    "str", "MatProp"),
         ], default_open=False),
-        GroupSpec("Alan Kesiti", [
-            FieldSpec("area_section", "info", "AreaSection"),
+        Group("Alan Kesiti", [
+            Field("area_section", "info", "AreaSection"),
         ], default_open=False),
     ]
 
@@ -173,13 +173,13 @@ def area_schema():
 # ============================================================================
 def link_schema():
     return [
-        GroupSpec("Genel", [
-            FieldSpec("label",      "str",   "Label"),
-            FieldSpec("is_visible", "bool",  "Görünür"),
-            FieldSpec("color",      "color", "Renk"),
+        Group("Genel", [
+            Field("label",      "str",   "Label"),
+            Field("is_visible", "bool",  "Görünür"),
+            Field("color",      "color", "Renk"),
         ]),
-        GroupSpec("Link", [
-            FieldSpec("propname", "link_prop_ref", "Prop"),
+        Group("Link", [
+            Field("propname", "link_prop_ref", "Prop"),
         ]),
     ]
 
@@ -187,44 +187,86 @@ def link_schema():
 # ============================================================================
 # POLYGON
 # ============================================================================
+# ui/schemas.py — append (mevcut Group, Field, schema_for korunur)
+
 def polygon_schema():
     return [
-        GroupSpec("Genel", [
-            FieldSpec("label",        "str",   "Label"),
-            FieldSpec("is_visible",   "bool",  "Görünür"),
-            FieldSpec("is_temporary", "bool",  "Geçici (Temp)"),
-            FieldSpec("color",        "color", "Renk"),
+        Group("Genel", [
+            Field("label", "Etiket", "string"),
+            Field("poly_type", "Tip", "enum",
+                  choices=("GENERIC", "SURFACE_ONEWAY", "SURFACE_TWOWAY",
+                           "ZONE", "SECTION_CUT", "LOAD_AREA")),
+            Field("color", "Renk", "color"),
+            Field("is_visible", "Görünür", "bool"),
+            Field("transfer_dist_type", "Dağıtım", "enum",
+                  choices=("one_way_u1", "one_way_u2", "two_way")),
+            Field("is_load_area", "Yük Alanı", "bool"),
         ]),
-        GroupSpec("Poligon", [
-            FieldSpec("poly_type", "enum", "Tip",
-                    choices=[t.name for t in PolygonType]),
+        Group("Zone", [
+            Field("show_zones_direction", "Göster", "string"),
+            Field("zone_count", "Zone Sayısı", "info"),
         ]),
-        GroupSpec("İlişkili Frame'ler", [
-            FieldSpec("associated_frame_ids", "list", "İlişkili Frame ID'leri"),
-        ], default_open=False),
-        GroupSpec("Alan Yükleri (Load Manager)", [
-            FieldSpec(
-                "assigned_loads_summary", "list",
-                "Atanmış yükler (kaydedilmiş)",
-            ),
-            FieldSpec(
-                "area_load_transfer_summary", "list",
-                "Load Manager aktarım kayıtları",
-            ),
-            FieldSpec("transfer_target", "str", "Aktarım hedefi"),
-            FieldSpec("transfer_dist_type", "str", "Tributary tipi"),
-            FieldSpec("is_load_area", "bool", "Yük alanı etkin"),
-        ], default_open=True),
-        GroupSpec("Yükler (Uniform to Frame)", [
-            FieldSpec("uniform_to_frame_loads", "list_object", "Yük Tanımları",
-                      item_schema=[
-                          FieldSpec("pattern_name", "str", "Load Pattern"),
-                          FieldSpec("value", "float", "Değer (kN/m²)"),
-                          FieldSpec("direction", "enum", "Yön",
-                                    choices=["GX", "GY", "GZ", "1", "2", "3", "GRAV", "PX", "PY", "PZ"]),
-                          FieldSpec("dist_type", "enum", "Dağıtım Tipi",
-                                    choices=["One way", "Two way"]),
-                      ]),
+        Group("Bilgi", [
+            Field("vertex_count", "Köşe", "info"),
+            Field("assoc_count", "Assoc", "info"),
+            Field("assigned_loads_summary", "Yükler", "list"),
+        ]),
+        Group("Frame Assoc", [
+            Field("associated_frame_ids", "Frame ID'leri", "list"),
+        ]),
+    ]
+
+
+def line_schema():
+    return [
+        Group("Genel", [
+            Field("label", "Etiket", "string"),
+            Field("color", "Renk", "color"),
+            Field("width", "Kalınlık", "float"),
+            Field("style", "Stil", "enum",
+                  choices=("solid", "dashed", "dash_dot")),
+            Field("visible", "Görünür", "bool"),
+            Field("is_column", "Kolon", "bool"),
+        ]),
+        Group("Geometri", [
+            Field("v1x", "Başlangıç X", "float"),
+            Field("v1y", "Başlangıç Y", "float"),
+            Field("v1z", "Başlangıç Z", "float"),
+            Field("v2x", "Bitiş X", "float"),
+            Field("v2y", "Bitiş Y", "float"),
+            Field("v2z", "Bitiş Z", "float"),
+            Field("length", "Uzunluk", "info"),
+        ]),
+    ]
+
+
+def grid_schema():
+    return [
+        Group("Koordinatlar", [
+            Field("x_coords", "X", "string"),
+            Field("y_coords", "Y", "string"),
+            Field("z_coords", "Z", "string"),
+        ]),
+        Group("Etiketler", [
+            Field("x_labels", "X", "string"),
+            Field("y_labels", "Y", "string"),
+            Field("z_labels", "Z", "string"),
+        ]),
+        Group("Görsel", [
+            Field("show_labels", "Etiket Göster", "bool"),
+            Field("label_position", "Konum", "enum",
+                  choices=("end", "both_ends", "middle")),
+            Field("label_overflow", "Taşma", "float"),
+        ]),
+    ]
+
+
+def plane_schema():
+    return [
+        Group("Genel", [
+            Field("name", "Ad", "string"),
+            Field("depth_minus", "Derinlik -", "float"),
+            Field("depth_plus", "Derinlik +", "float"),
         ]),
     ]
 
@@ -235,12 +277,15 @@ _SCHEMAS = {
     "Area":    area_schema,
     "Link":    link_schema,
     "Polygon": polygon_schema,
+    "Line": line_schema,
+    "Plane": plane_schema,
+    "Grid": grid_schema,
 }
 
 
 def schema_for(element_type: str):
     fn = _SCHEMAS.get(element_type)
-    return fn() if fn else [GroupSpec("Genel", [])]
+    return fn() if fn else [Group("Genel", [])]
 
 
 def multi_schema_for(elements):
@@ -250,9 +295,9 @@ def multi_schema_for(elements):
     if len(types) == 1:
         return schema_for(next(iter(types)))
     return [
-        GroupSpec("Genel", [
-            FieldSpec("label",      "str",   "Label"),
-            FieldSpec("is_visible", "bool",  "Görünür"),
-            FieldSpec("color",      "color", "Renk (R,G,B)"),
+        Group("Genel", [
+            Field("label",      "str",   "Label"),
+            Field("is_visible", "bool",  "Görünür"),
+            Field("color",      "color", "Renk (R,G,B)"),
         ]),
     ]

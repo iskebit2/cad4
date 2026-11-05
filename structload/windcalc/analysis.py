@@ -145,7 +145,7 @@ def analyze(
         w_dir = np.asarray(w_dir, dtype=float)
 
         if verbose:
-            print(f"\n{'=' * 40}\nWIND: {w_key}\n{'=' * 40}")
+            #print(f"\n{'=' * 40}\nWIND: {w_key}\n{'=' * 40}")
 
         engine = WindEngine(
                         points=points,
@@ -203,16 +203,16 @@ def _generate_zones(all_surfaces: dict[str, Surface], e: float) -> None:
 
 
 def _debug_surface(surf: Surface) -> None:
-    print(f"\nSurface: {surf.name}")
-    print(f"  wind_vector: {surf.wind_vector}")
-    print(f"  type       : {surf.surface_type.value}")
-    print(f"  relation   : {surf.wind_relation.value}")
-    print(f"  is_ccw     : {surf.is_ccw}")
-    print("  Exposed edges:")
+    #print(f"\nSurface: {surf.name}")
+    #print(f"  wind_vector: {surf.wind_vector}")
+    #print(f"  type       : {surf.surface_type.value}")
+    #print(f"  relation   : {surf.wind_relation.value}")
+    #print(f"  is_ccw     : {surf.is_ccw}")
+    #print("  Exposed edges:")
     for edge in surf.edges.values():
         if not edge.exposed:
             continue
-        print(
+        #print(
             f"    Edge {edge.index}: "
             f"p1 {edge.p1}, p2 {edge.p2}, "
             f"wind_to_2d={edge.wind_to_2d}, "
@@ -221,7 +221,7 @@ def _debug_surface(surf: Surface) -> None:
             f"angle={edge.angle:7.3f}, "
             f"leading={edge.leading}"
         )
-    print(
+    #print(
         "  >>> SELECTED LEADING:",
         [e.index for e in surf.edges.values() if e.leading],
     )

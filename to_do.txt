@@ -1,0 +1,32 @@
+CAD4 render mimarisi
+
+1. SceneRenderer
+
+Kalıcı model geometrisi
+
+NodeRenderer · FrameRenderer · AreaRenderer · LinkRenderer
+
+
+2. PresentationRenderer
+
+Modelin görsel sunumu
+
+PolygonRenderer · LineRenderer · LoadRenderer · LabelRenderer · GlobalAxisRenderer · LocalAxisRenderer · ZoneRenderer · GridRenderer
+
+etc
+
+3. InteractionRenderer
+
+Kullanıcı etkileşiminin anlık görselleri
+
+DrawingPreview · Marquee · SnapMarker · Hover · MeasurementPreview
+
+etc
+
+4. ImGui
+
+Uygulama arayüzü
+
+Toolbar · Inspector · Panels · Menus
+
+etc

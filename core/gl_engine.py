@@ -1,129 +1,123 @@
 # core/gl_engine.py
-"""
-Pure OpenGL + Domain Engine — Kivy bağımsız.
-
-KivyCADWidget bu sınıfı kullanır ama bu sınıf Kivy'yi bilmez.
-"""
 from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Callable, Sequence, TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING
 
-from pyglm import glm
 import numpy as np
-
-glm.silence(2)
-from OpenGL.GL import GL_VERSION, glGetString
+from OpenGL.GL import *
+from pyglm import glm
 
 from core.camera import Camera
 from core.draw_manager import DrawManager
 from core.edit.edit_controller import EditController
-from core.input_manager import (
-    InputManager,
-)
+from core.input_manager import InputManager
 from core.marquee_selector import MarqueeSelector
+from core.mrt import MRTFramebuffer
 from core.selection_manager import SelectionManager
 from core.selection_policy import SelectionPolicy
 from domain.scene import Scene
-
-# from tools.smart_plane_analysis import SmartPlaneAnalyzer
 from logging_config import CadLogger
+from render.interactionrenderer import InteractionRenderer
+from render.presentationrenderer import PresentationRenderer
 from render.scenerenderer import SceneRenderer
 from render.shaderprogram import ShaderProgram
 from render.snapsquare import SnapSquareRenderer
-from tools.gridsystem import GridSystem
 
 if TYPE_CHECKING:
     from domain.plane import Plane
 
 logger = CadLogger.get(__name__)
 
-# Shader klasörü — modül seviyesinde bir kez
-_here = Path(__file__).resolve().parent
-SHADER_DIR = _here.parent / "render" / "shaders"
+SHADER_DIR = Path(__file__).resolve().parent.parent / "render" / "shaders"
 
 
 class Engine:
-    """Kivy'den bağımsız CAD motoru."""
-    
-    def __init__(self, w, h):
-        self.w, self.h = max(1, w), max(1, h)
-        self.pending_anim = False
-        self.loading = False
 
-        # Shader'lar
-        self.shaders = {}
-        self.pick_s = self.standard_s = self.node_s = None
-        self.simple_s = self.overlay_s = self.preview_s = self.grid_s = None
+    def __init__(self, w: int, h: int):
+        self.w = max(1, w)
+        self.h = max(1, h)
 
-        # Hover/pick durumu
-        self.hover_id = 0
-        self.hover_element_type = None
-        self.hover_enabled = True
-        self.last_hover_x = -1
-        self.last_hover_y = -1
-        self.last_hover_time = 0
-        self.hover_throttle = 0.05
-        self.pending_pick_check = False
+        self.shaders: dict = {}
+        self.pick_s = None
+        self.standard_s = None
+        self.node_s = None
+        self.simple_s = None
+        self.overlay_s = None
+        self.preview_s = None
+        self.grid_s = None
+        self.axes_s = None
 
-        # Alt bileşenler (init_gl'de kurulur)
         self.cam = None
         self.input = None
         self.scene = None
         self.renderer = None
+        self.presentation_renderer = None
+        self.interaction_renderer = None
         self.pick_pass = None
+        self.mrt = None
         self.sel_mgr = None
         self.marquee = None
-        self.loader = None
         self.draw_mgr = None
         self.snap = None
         self.edit = None
         self.sel_policy = None
         self.grid = None
+
+        self.hover_id = 0
+        self.hover_enabled = True
+        self.last_hover_x = -1
+        self.last_hover_y = -1
+        self.last_hover_time = 0.0
+        self.hover_throttle = 0.05
+        self.pending_pick_check = False
+
+        self.show = {
+            "scene": True,
+            "grid": True,
+            "polygon": True,
+            "lines": True,
+            "zones": True,
+            "loads": True,
+            "labels": True,
+            "global_axis": True,
+            "local_axes": False,
+            "interaction": True,
+        }
+
         self.working_plane_provider: Callable[[], Plane | None] | None = None
-
-        self.active_smart_plane_mode = False
-
-        # Callback'ler (KivyCADWidget bağlar)
         self.on_hover_changed_callback = None
 
     # ------------------------------------------------------------------
-    # INIT
-    # ------------------------------------------------------------------
-    
     def init_gl(self):
-        """GL context hazır olunca bir kez çağrılır."""
         logger.info("GL_VERSION: %s", glGetString(GL_VERSION))
         self._init_shaders()
         self._init_camera()
+        self.mrt = MRTFramebuffer(self.w, self.h)
         self._init_components()
 
-    
     def _init_shaders(self):
-        shader_list = ["pick", "standard", "node", "simple",
-                       "2d_overlay", "preview", "grid", "axes"]
-        for name in shader_list:
-            v = SHADER_DIR / f"{name}.vert"
-            f = SHADER_DIR / f"{name}.frag"
+        for name in ("pick", "standard", "node", "simple",
+                     "2d_overlay", "preview", "grid", "axes"):
             try:
-                self.shaders[name] = ShaderProgram(name, str(v), str(f))
+                self.shaders[name] = ShaderProgram(
+                    name,
+                    str(SHADER_DIR / f"{name}.vert"),
+                    str(SHADER_DIR / f"{name}.frag"),
+                )
             except Exception:
-                logger.exception("Shader yükleme hatası (%s)", name)
+                logger.exception("Shader yükleme hatası: %s", name)
                 self.shaders[name] = None
+        self.pick_s = self.shaders["pick"]
+        self.standard_s = self.shaders["standard"]
+        self.node_s = self.shaders["node"]
+        self.simple_s = self.shaders["simple"]
+        self.overlay_s = self.shaders["2d_overlay"]
+        self.preview_s = self.shaders["preview"]
+        self.grid_s = self.shaders["grid"]
+        self.axes_s = self.shaders["axes"]
 
-        self.pick_s = self.shaders.get("pick")
-        self.standard_s = self.shaders.get("standard")
-        self.node_s = self.shaders.get("node")
-        self.simple_s = self.shaders.get("simple")
-        self.overlay_s = self.shaders.get("2d_overlay")
-        self.preview_s = self.shaders.get("preview")
-        self.grid_s = self.shaders.get("grid")
-        self.axes_s = self.shaders.get("axes")
-
-        # self.renderer.set_axes_shader(self.axes_s)
-
-    
     def _init_camera(self):
         self.cam = Camera()
         self.cam.set_aspect(self.w, self.h)
@@ -132,173 +126,207 @@ class Engine:
         self.cam.distance = 50.0
         self.cam._update_position()
 
-    
     def _init_components(self):
         self.scene = Scene()
         self.input = InputManager()
         self.sel_policy = SelectionPolicy(self.input)
-        self.grid = GridSystem(self.grid_s)
         self.snap = SnapSquareRenderer()
+        self.draw_mgr = DrawManager(self)
 
-
-        
-        # self.smart_analyzer = SmartPlaneAnalyzer(
-        #         scene_controller=None,               # şimdilik None
-        #         scene_provider=lambda: self.scene, # ama erişim anında engine.scene
-        #     )
-        
         self.renderer = SceneRenderer(
-            pick_s=self.pick_s,
-            standard_s=self.standard_s,
-            node_s=self.node_s,
-            simple_s=self.simple_s,
-            overlay_s=self.overlay_s,
-            axes_s=self.axes_s,
+            pick_s=self.pick_s, standard_s=self.standard_s,
+            node_s=self.node_s, simple_s=self.simple_s,
+            overlay_s=self.overlay_s, axes_s=self.axes_s,
             w=self.w, h=self.h,
         )
         self.renderer.set_cam(self.cam)
-        self.renderer.set_grid(self.grid)
         self.renderer.set_snap(self.snap)
         self.renderer.set_engine(self)
 
+        self.presentation_renderer = PresentationRenderer(
+            standard_shader=self.standard_s,
+            axes_shader=self.axes_s,
+            overlay_shader=self.overlay_s,
+            simple_shader=self.simple_s,
+            grid_shader=self.grid_s,
+        )
+        self.grid = self.presentation_renderer.grid
+
+        self.interaction_renderer = InteractionRenderer(overlay_shader=self.overlay_s)
+
         self.pick_pass = self.renderer.pick_pass
+        self.pick_pass.set_main_fbo(self.mrt.fbo)
         self.sel_mgr = SelectionManager(self.renderer)
         self.marquee = MarqueeSelector(self, self.sel_mgr, self.sel_policy)
-        self.renderer.set_marquee(self.marquee)
-        self.draw_mgr = DrawManager(self)
         self.edit = EditController(self)
 
-        
     # ------------------------------------------------------------------
-    # PUBLIC API
-    # ------------------------------------------------------------------
-    
-    def resize(self, w, h):
-        self.w, self.h = max(1, w), max(1, h)
+    def resize(self, w: int, h: int):
+        self.w = max(1, w)
+        self.h = max(1, h)
         if self.cam:
             self.cam.set_aspect(self.w, self.h)
         if self.renderer:
             self.renderer.resize(self.w, self.h)
+        if self.mrt:
+            self.mrt.resize(self.w, self.h)
         if self.pick_pass:
             self.pick_pass.set_viewport(self.w, self.h)
+            self.pick_pass.set_main_fbo(self.mrt.fbo)
 
-
-    
-    def load_model(self, builder):
-        self.scene = builder.scene
-        self.renderer.update_geo(self.scene)
-        self.fit_view()
-
-    
-    def set_scene(self, scene):
-        self.scene = scene
-        self.renderer.update_geo(self.scene)
-        self.fit_view()
-
-    
-    def clear_scene(self):
-        self.scene = Scene()
-        self.renderer.set_scene(self.scene)
-        for r in (self.renderer.frame_r, self.renderer.node_r,
-                  self.renderer.area_r, self.renderer.link_r,
-                  self.renderer.polygon_r):
-            r.elements = []
-
-    
-    def fit_view(self):
-        """Kamerayı model bounds'a fit et.
-
-        Öncelik: scene.bounds > grid.get_bounds > no-op.
-        """
-        if not self.renderer:
+    # ------------------------------------------------------------------
+    def update_geo(self, project=None):
+        scene = project.scene if project else self.scene
+        if not scene:
             return
 
+        if self.renderer:
+            self.renderer.update_geo(scene)
+
+        if not (self.presentation_renderer and project):
+            return
+
+        pr = self.presentation_renderer
+        polygons = list(getattr(project, "polygons", {}).values())
+        lines = list(getattr(project, "lines", {}).values())
+
+        pr.update_polygons(polygons)
+        pr.update_lines(lines)
+        self._register_picks(polygons, lines)
+
+        cam_scale = self.renderer._compute_cam_scale() if hasattr(self.renderer, "_compute_cam_scale") else 1.0
+        scene_size = getattr(self.renderer, "size", 1.0)
+        pr.update_loads(scene, camera_scale=cam_scale, scene_size=scene_size)
+
+    def _register_picks(self, polygons, lines):
+        if not self.pick_pass:
+            return
+        pr = self.presentation_renderer
+        for p in polygons:
+            p.pick_id = p.unique_id
+            self.pick_pass.register(p.pick_id, p, pr.polygon)
+        for ln in lines:
+            ln.pick_id = ln.unique_id
+            self.pick_pass.register(ln.pick_id, ln, pr.lines)
+
+    # ------------------------------------------------------------------
+    def render(self, cam, target_fbo: int = 0):
+        if not (cam and self.renderer and self.mrt):
+            return
+
+        self.mrt.bind()
+        self.mrt.clear()
+
+        if self.show.get("scene", True):
+            self.renderer.render(cam, target_fbo)
+
+        glDrawBuffers(2, [GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1])
+
+        if self.show.get("presentation_any", True) and self.presentation_renderer and self.scene:
+            self._render_presentation(cam)
+
+        if self.pick_s and self.presentation_renderer:
+            self._render_presentation_pick(cam)
+
+        self.mrt.blit_to(target_fbo)
+
+        if self.show.get("interaction", True) and self.interaction_renderer:
+            self.interaction_renderer.render(self, self.w, self.h)
+
+    def _render_presentation(self, cam):
+        pr = self.presentation_renderer
+        mvp = cam.get_projection_matrix() * cam.get_view_matrix() * self.renderer.model_mat
+
+        if self.show.get("grid", True) and pr.grid.grid:
+            glDepthMask(GL_FALSE)
+            pr.grid.draw(mvp)
+            glDepthMask(GL_TRUE)
+
+        if self.show.get("polygon", True):
+            glDepthMask(GL_FALSE)
+            pr.polygon.render_simple(mvp, pr.simple_shader or pr.standard_shader, alpha=0.5)
+            pr.polygon.render_lines_white(mvp, pr.simple_shader or pr.standard_shader)
+            glDepthMask(GL_TRUE)
+
+        if self.show.get("lines", True):
+            pr.lines.draw(mvp)
+
+        if self.show.get("zones", True):
+            pr._draw_zones(mvp)
+
+        if self.show.get("loads", True) and pr.loads.enabled:
+            glDisable(GL_DEPTH_TEST)
+            pr.loads.render(mvp)
+            glEnable(GL_DEPTH_TEST)
+
+        if self.show.get("local_axes", False):
+            pr._draw_local_axes(cam, self.scene)
+
+        if self.show.get("global_axis", True):
+            pr._draw_global_axis(cam, self.w, self.h)
+
+        if self.show.get("labels", True):
+            pr._draw_labels(cam, self.scene, self.h)
+
+    def _render_presentation_pick(self, cam):
+        self.mrt.bind()
+        glDrawBuffer(GL_COLOR_ATTACHMENT1)
+        self.presentation_renderer.render_pick(
+            cam, self.renderer.model_mat, self.pick_s,
+        )
+        glDrawBuffer(GL_COLOR_ATTACHMENT0)
+
+    # ------------------------------------------------------------------
+    def set_scene(self, project):
+        self.scene = project.scene
+        self.update_geo(project)
+        self.fit_view()
+
+    def clear_scene(self):
+        self.scene = Scene()
+        self.update_geo()
+        for r in (self.renderer.frame_r, self.renderer.node_r,
+                  self.renderer.area_r, self.renderer.link_r):
+            r.elements = []
+        if self.presentation_renderer:
+            self.presentation_renderer.polygon.elements = []
+
+    def fit_view(self):
         scene_bounds = self.scene.bounds if self.scene else None
-        grid_bounds = self.grid.get_bounds() if self.grid else None
+        project = getattr(self.scene, "project", None)
+        dg = getattr(project, "grid", None)
+        grid_bounds = dg.get_bounds() if dg else None
 
         if scene_bounds is not None:
             self.cam.update_bounds(scene_bounds.center, scene_bounds.size)
         elif grid_bounds is not None:
             self.cam.update_bounds(*grid_bounds)
         else:
-            return
-
+            self.cam.update_bounds((0.0, 0.0, 0.0), 10000.0)
         self.cam.focus_on_model()
 
-    def zoom_extents(self) -> None:
-        """Manuel: bounds'u yeniden hesapla + fit (Autodesk Zoom Extents)."""
-        if self.scene is not None:
+    def zoom_extents(self):
+        if self.scene:
             self.scene.refresh_bounds()
         self.fit_view()
-        
-    def set_working_plane_provider(
-        self, provider: Callable[[], Plane | None] | None
-    ) -> None:
+
+    # ------------------------------------------------------------------
+    def set_working_plane_provider(self, provider):
         self.working_plane_provider = provider
 
     @property
-    def active_working_plane(self) -> Plane | None:
-        if self.working_plane_provider is None:
-            return None
-        return self.working_plane_provider()
+    def active_working_plane(self):
+        return self.working_plane_provider() if self.working_plane_provider else None
 
-    def focus_plane(self, plane: Plane, padding: float = 1.15) -> bool:
-        if self.cam is None:
-            return False
-        if not np.isfinite(padding) or padding <= 0.0:
-            raise ValueError("Plane fit padding pozitif ve sonlu olmalı")
-
-        center, size = (
-            self.renderer.get_bounds()
-            if self.renderer is not None
-            else (self.cam.model_center, self.cam.model_size)
-        )
-        center = np.asarray(center, dtype=float)
-        half_extents = np.full(3, max(float(size), 1.0) * 0.5)
-        local_center = plane.world_to_local(center)
-        u_extent = float(np.dot(np.abs(plane.u), half_extents))
-        v_extent = float(np.dot(np.abs(plane.v), half_extents))
-        u_min, u_max, v_min, v_max = plane.boundary
-        u_min = local_center[0] - u_extent if u_min is None else float(u_min)
-        u_max = local_center[0] + u_extent if u_max is None else float(u_max)
-        v_min = local_center[1] - v_extent if v_min is None else float(v_min)
-        v_max = local_center[1] + v_extent if v_max is None else float(v_max)
-
-        focus = plane.to_3d(((u_min + u_max) * 0.5, (v_min + v_max) * 0.5))
-        width = max(u_max - u_min, 1.0)
-        height = max(v_max - v_min, 1.0)
-        aspect = max(float(self.cam.aspect_ratio), 1e-6)
-        half_height = max(height * 0.5, width / (2.0 * aspect))
-        fit_distance = max(2.0 * half_height * padding, 1.0)
-
-        self.cam.look_at_plane(
-            focus, plane.u, plane.v, plane.normal, fit_radius=fit_distance
-        )
-        return True
-
-    
-    def redraw_scene(self, full_rebuild: bool = True):
-        if not self.renderer:
-            return
-        if full_rebuild:
-            self.renderer.update_geo(self.scene)
-        if hasattr(self.renderer, 'rebuild_pick_ids'):
-            self.renderer.rebuild_pick_ids()
-        self.pending_anim = True
-
-    # ------------------------------------------------------------------
-    # HOVER / PICK (Kivy'den çağrılır)
     # ------------------------------------------------------------------
     def start_hover_pick(self, x, y):
-        if not self.renderer or not self.renderer.pick_pass:
+        if not (self.renderer and self.renderer.pick_pass):
             return
-        
         now = time.time()
         if (now - self.last_hover_time) < self.hover_throttle:
             return
         if x == self.last_hover_x and y == self.last_hover_y:
             return
-        
         if self.renderer.pick_async(x, y):
             self.last_hover_x = x
             self.last_hover_y = y
@@ -310,38 +338,66 @@ class Engine:
             return False
         try:
             pick_id, _, _ = self.renderer.check_pick()
-            #pass(f"[PICK] check_pick → {pick_id}")
-            if pick_id is not None:
-                self.pending_pick_check = False
-                self._update_hover(pick_id)
-                return True
-            elif not self.renderer.pick_pass.pending_pick:
-                self.pending_pick_check = False
-        except Exception as e:
-            logger.error(f"Pick kontrolü hatası: {e}")
+        except Exception:
+            logger.exception("Pick kontrolü")
+            self.pending_pick_check = False
+            return False
+        if pick_id is not None:
+            self.pending_pick_check = False
+            self._update_hover(pick_id)
+            return True
+        if not self.renderer.pick_pass.pending_pick:
             self.pending_pick_check = False
         return False
 
-    def handle_pick_from_hover(self, ctrl=False):
-        #pass(f"[HOOK] hover_id={self.hover_id} ctrl={ctrl}")
-        if self.hover_id > 0 and self.renderer and self.renderer.pick_pass:
-            element = self.renderer.get_element_from_id(self.hover_id)
-            #pass(f"[HOOK] element={type(element).__name__ if element else None}")
+    def handle_pick_from_hover(self, ctrl: bool = False):
+        if self.hover_id > 0 and self.sel_mgr:
+            element = self.sel_mgr.find_element_by_id(self.hover_id)
             if element:
                 self.sel_mgr.select(element, additive=ctrl)
-        # else:
-            #pass(f"[HOOK] hover_id=0 → işlem yok")
 
-    def screen_ray(self, x, y):
+    def _update_hover(self, pick_id):
+        if pick_id == self.hover_id:
+            return
+        self.hover_id = pick_id
+        if pick_id <= 0:
+            self.clear_hover()
+            if self.on_hover_changed_callback:
+                self.on_hover_changed_callback(None)
+            return
+        element = self._find_element(pick_id)
+        if element is None:
+            self.clear_hover()
+            return
+        if self.on_hover_changed_callback:
+            self.on_hover_changed_callback(element)
+
+    def _find_element(self, pick_id):
+        el = self.renderer.get_element_from_id(pick_id)
+        if el is not None:
+            return el
+        project = getattr(self.scene, "project", None) if self.scene else None
+        if project:
+            if pick_id in getattr(project, "polygons", {}):
+                return project.polygons[pick_id]
+            if pick_id in getattr(project, "lines", {}):
+                return project.lines[pick_id]
+        return None
+
+    def clear_hover(self):
+        self.hover_id = 0
+        if self.input:
+            self.input.mouse_world_valid = False
+
+    # ------------------------------------------------------------------
+    def screen_ray(self, x: float, y: float):
         if not self.cam:
             return None
-
         v = self.cam.get_view_matrix()
         p = self.cam.get_projection_matrix()
         nx = 2 * x / self.w - 1
         ny = 1 - 2 * y / self.h
         inv = glm.inverse(p * v)
-
         near = inv * glm.vec4(nx, ny, -1, 1)
         far = inv * glm.vec4(nx, ny, 1, 1)
         if abs(near.w) < 1e-12 or abs(far.w) < 1e-12:
@@ -351,128 +407,36 @@ class Engine:
         direction = far - near
         if glm.length(direction) < 1e-12:
             return None
-        direction = glm.normalize(direction)
-        return np.asarray(near, dtype=float), np.asarray(direction, dtype=float)
+        return (np.asarray(near, dtype=float),
+                np.asarray(glm.normalize(direction), dtype=float))
 
-    def screen_to_working_plane(
-        self,
-        x: float,
-        y: float,
-        plane: Plane | None = None,
-        *,
-        grid_coordinates: tuple[Sequence[float], Sequence[float]] | None = None,
-        orthogonal_origin: tuple[float, float] | None = None,
-    ) -> tuple[glm.vec3, glm.vec2] | None:
-        plane = self.active_working_plane if plane is None else plane
-        if plane is None:
-            return None
-        if self.input is not None:
-            if grid_coordinates is None:
-                grid_coordinates = self.input.working_plane_grid_coordinates
-            if orthogonal_origin is None:
-                orthogonal_origin = self.input.working_plane_orthogonal_origin
+    def screen_to_world(self, x: float, y: float):
         ray = self.screen_ray(x, y)
         if ray is None:
             return None
         origin, direction = ray
-        point = plane.intersect_ray(origin, direction)
-        if point is None:
-            return None
-        coords = plane.world_to_local(point)
-        uv = self.constrain_working_plane_coordinates(
-            (float(coords[0]), float(coords[1])),
-            grid_coordinates=grid_coordinates,
-            orthogonal_origin=orthogonal_origin,
-        )
-        if not plane.bounds_contains_uv(*uv):
-            return None
-        point = plane.to_3d(uv)
-        return (
-            glm.vec3(*point),
-            glm.vec2(*uv),
-        )
 
-    @staticmethod
-    def constrain_working_plane_coordinates(
-        coords: tuple[float, float],
-        *,
-        grid_coordinates: tuple[Sequence[float], Sequence[float]] | None = None,
-        orthogonal_origin: tuple[float, float] | None = None,
-    ) -> tuple[float, float]:
-        """Snap local coordinates to grid lines, then constrain to an orthogonal axis."""
-        u, v = map(float, coords)
-        if not np.isfinite((u, v)).all():
-            raise ValueError("Plane koordinatları sonlu olmalı")
-        if grid_coordinates is not None:
-            if len(grid_coordinates) != 2:
-                raise ValueError("Grid koordinatları u ve v çizgileri içermeli")
-            snapped = []
-            for value, lines in zip((u, v), grid_coordinates):
-                values = np.asarray(lines, dtype=float)
-                if (
-                    values.ndim != 1
-                    or values.size == 0
-                    or not np.isfinite(values).all()
-                ):
-                    raise ValueError("Grid koordinatları boş veya geçersiz")
-                snapped.append(float(values[np.argmin(np.abs(values - value))]))
-            u, v = snapped
-        if orthogonal_origin is not None:
-            anchor = np.asarray(orthogonal_origin, dtype=float)
-            if anchor.shape != (2,) or not np.isfinite(anchor).all():
-                raise ValueError("Ortho başlangıcı iki sonlu koordinat içermeli")
-            delta_u, delta_v = u - anchor[0], v - anchor[1]
-            if abs(delta_u) >= abs(delta_v):
-                v = float(anchor[1])
-            else:
-                u = float(anchor[0])
-        return u, v
-
-    def screen_to_world(self, x: float, y: float) -> glm.vec3 | None:
         plane = self.active_working_plane
         if plane is not None:
-            hit = self.screen_to_working_plane(x, y, plane)
-            return hit[0] if hit is not None else None
+            n = np.asarray(plane.normal, dtype=float)
+            o = np.asarray(plane.origin, dtype=float)
+            denom = float(np.dot(n, direction))
+            if abs(denom) < 1e-12:
+                return None
+            t = float(np.dot(n, o - np.asarray(origin))) / denom
+            if t < 0:
+                return None
+            return glm.vec3(*(origin + t * direction))
 
-        ray = self.screen_ray(x, y)
-        if ray is None:
-            return None
-        origin, direction = ray
         if abs(direction[2]) <= 1e-12:
             return None
-        distance = -origin[2] / direction[2]
-        if distance < 0.0:
+        t = -origin[2] / direction[2]
+        if t < 0:
             return None
-        return glm.vec3(*(origin + distance * direction))
+        return glm.vec3(*(origin + t * direction))
 
-    def update_world_pos(self, x: float, y: float) -> None:
-        if not self.cam or not self.input:
-            return
-
-        self.input.mouse_plane_valid = False
-        plane = self.active_working_plane
-        has_hovered_node = (
-            self.hover_id > 0 and self.hover_element_type == "node"
-        )
-        if has_hovered_node and plane is None:
-            return
-
-        hit = (
-            self.screen_to_working_plane(x, y, plane)
-            if plane is not None
-            else None
-        )
-        if hit is not None:
-            plane_world, plane_coords = hit
-            self.input.mouse_plane_pos = plane_world
-            self.input.mouse_plane_coords = plane_coords
-            self.input.mouse_plane_valid = True
-            if not has_hovered_node:
-                self.input.mouse_world_pos = plane_world
-                self.input.mouse_world_valid = True
-            return
-
-        if has_hovered_node:
+    def update_world_pos(self, x: float, y: float):
+        if not (self.cam and self.input):
             return
         world = self.screen_to_world(x, y)
         if world is not None:
@@ -481,198 +445,12 @@ class Engine:
             return
         self.input.mouse_world_valid = False
 
-    def clear_hover(self):
-        self.hover_id = 0
-        self.hover_element_type = None
-        self.input.mouse_world_valid = False
-        self.input.mouse_plane_valid = False
-
-    def enable_hover(self, enabled=True):
-        self.hover_enabled = enabled
-        if not enabled and self.hover_id != 0:
-            self.hover_id = 0
-            self.hover_element_type = None
-
     # ------------------------------------------------------------------
-    # PLAN FILTER
-    # ------------------------------------------------------------------
-    def apply_plane_filter(self, camera_or_plane=None):
-        """Plane crop veya section (level) filtresi uygula.
-
-        Öncelik:
-        1. plane_mgr.active_plane varsa → plane.associated (u/v + depth)
-        2. camera.section_active → section (z aralığı)
-        3. İkisi de yok → filtre kaldır
-        """
-        if not self.scene:
+    def render_pick_pass(self, cam, target_fbo):
+        if not (cam and self.renderer):
             return
-
-        # Öncelik 1: plane crop
-        project = getattr(self.scene, "project", None)
-        mgr = getattr(project, "plane_mgr", None) if project else None
-        active_plane = mgr.active_plane if mgr else None
-
-        if active_plane is not None:
-            # Plane assoc = crop
-            ids: set[int] = set()
-            for s in active_plane.associated.values():
-                ids |= s
-            self.scene._render_filter = ids
-            # is_visible de güncelle (renderer)
-            for el in self.scene.all_elements.values():
-                el.is_visible = el.unique_id in ids
-            return
-
-        # Öncelik 2: section filter
-        
-        camera = camera_or_plane if camera_or_plane is not None else self.cam
-
-        if camera is not None and camera.section_active:
-            test = camera.is_element_visible_by_section
-            visible_ids: set[int] = set()
-            for node in self.scene.nodes.values():
-                if test((node.x, node.y, node.z)):
-                    visible_ids.add(node.unique_id)
-                    node.is_visible = True
-                else:
-                    node.is_visible = False
-            for frame in self.scene.frames.values():
-                ni, nj = frame.node_i, frame.node_j
-                mx = (ni.x + nj.x) * 0.5
-                my = (ni.y + nj.y) * 0.5
-                mz = (ni.z + nj.z) * 0.5
-                if test((mx, my, mz)):
-                    visible_ids.add(frame.unique_id)
-                    frame.is_visible = True
-                else:
-                    frame.is_visible = False
-            for area in self.scene.areas.values():
-                if not area.nodes: continue
-                mx = sum(n.x for n in area.nodes) / len(area.nodes)
-                my = sum(n.y for n in area.nodes) / len(area.nodes)
-                mz = sum(n.z for n in area.nodes) / len(area.nodes)
-                if test((mx, my, mz)):
-                    visible_ids.add(area.unique_id)
-                    area.is_visible = True
-                else:
-                    area.is_visible = False
-            for link in self.scene.links.values():
-                ni, nj = link.node_i, link.node_j
-                mx = (ni.x + nj.x) * 0.5
-                my = (ni.y + nj.y) * 0.5
-                mz = (ni.z + nj.z) * 0.5
-                if test((mx, my, mz)):
-                    visible_ids.add(link.unique_id)
-                    link.is_visible = True
-                else:
-                    link.is_visible = False
-            for poly in self.scene.polygons.values():
-                if not poly.nodes: continue
-                mx = sum(n.x for n in poly.nodes) / len(poly.nodes)
-                my = sum(n.y for n in poly.nodes) / len(poly.nodes)
-                mz = sum(n.z for n in poly.nodes) / len(poly.nodes)
-                if test((mx, my, mz)):
-                    visible_ids.add(poly.unique_id)
-                    poly.is_visible = True
-                else:
-                    poly.is_visible = False
-            self.scene._render_filter = visible_ids
-            return
-
-        # Öncelik 3: filtre kaldır
-        self.scene._render_filter = None
-        for el in self.scene.all_elements.values():
-            el.is_visible = True
-
-    # ------------------------------------------------------------------
-    # INTERNAL
-    # ------------------------------------------------------------------
-    def _update_hover(self, pick_id):
-        if pick_id == self.hover_id:
-            return
-        self.hover_id = pick_id
-
-        if pick_id > 0:
-            element = self.renderer.get_element_from_id(pick_id)
-            if element is None:
-                self.clear_hover()
-                return
-            element_type = self._element_type(element)
-            self.hover_element_type = element_type
-
-            if element_type == 'node' and hasattr(element, 'x'):
-                self.input.mouse_world_pos = glm.vec3(element.x, element.y, element.z)
-                self.input.mouse_world_valid = True
-
-            # Callback
-            if self.on_hover_changed_callback:
-                self.on_hover_changed_callback(element)
-        else:
-            self.clear_hover()
-            if self.on_hover_changed_callback:
-                self.on_hover_changed_callback(None)
-
-    def sync_zone_polygons(self) -> None:
-        """Aktif yönün zone'larını geçici Polygon olarak scene'e ekle."""
-        if self.scene is None:
-            return
-        from domain.element import Node, Polygon
-        from data.enums import PolygonType
-
-        # Mevcut geçici zone'ları sil
-        to_remove = [
-            p for p in self.scene.polygons.values()
-            if getattr(p, "is_temporary", False)
-            and getattr(p, "poly_type", None) == PolygonType.ZONE
-        ]
-        for p in to_remove:
-            self.scene.polygons.pop(p.unique_id, None)
-
-        
-        # Aktif zone'ları ekle — snapshot ile (dict değişimi)
-        snapshot = list(self.scene.polygons.values())
-        for poly in snapshot:
-            if getattr(poly, "is_temporary", False):
-                continue
-            dir_key = poly.show_zones_direction
-            if dir_key is None:
-                continue
-            zones = poly.zone_children_by_direction.get(dir_key, [])
-            for z in zones:
-                if z.get("skip_transfer"):
-                    continue
-                coords = z.get("coords") or []
-                if len(coords) < 3:
-                    continue
-                nodes = [Node(*xyz, label="") for xyz in coords]
-                zp = Polygon(
-                    nodes,
-                    label=z.get("label", ""),
-                    poly_type=PolygonType.ZONE,
-                )
-                zp.is_temporary = True
-                cpe_min = (
-                    z.get("cpe10_override") or z.get("cpe10") or (0, 0)
-                )[0]
-                if cpe_min >= 0:
-                    zp.color = [0.9, 0.3, 0.3, 0.35]
-                else:
-                    zp.color = [0.3, 0.55, 0.9, 0.35]
-                self.scene.polygons[zp.unique_id] = zp
-
-        # Renderer güncelle
-        if self.renderer:
-            self.renderer.update_geo(self.scene)
-
-    @staticmethod
-    def _element_type(element):
-        if element is None:
-            return None
-        element_type = getattr(element, 'element_type', None)
-        if element_type:
-            return str(element_type).lower()
-        class_name = element.__class__.__name__.lower()
-        for key in ('node', 'frame', 'area', 'link', 'polygon'):
-            if key in class_name:
-                return key
-        return None
+        if hasattr(self.renderer, "render_pick"):
+            self.renderer.render_pick(cam, target_fbo)
+        if self.presentation_renderer and self.pick_s:
+            model = getattr(self.renderer, "model_mat", glm.mat4(1.0))
+            self.presentation_renderer.render_pick(cam, model, self.pick_s)

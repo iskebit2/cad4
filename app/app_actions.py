@@ -1,0 +1,372 @@
+# app/app_actions.py
+from __future__ import annotations
+
+import os
+import queue
+import threading
+
+import numpy as np
+
+from core.units import UnitSystem, convert_project_units
+from domain.definition import WindDirectionResult
+from domain.element import Area, Frame, Link, Node
+from domain.polygon import Polygon
+from domain.project import Project
+from inspector.catalog_project import ProjectCatalog
+from logging_config import CadLogger
+from tools.s2k.loader import S2KLoader
+from tools.wind_scene_adapter import WindSceneAdapter
+from ui.file_dialog import ImGuiFileDialog
+
+logger = CadLogger.get(__name__)
+
+
+class AppActions:
+
+    def __init__(self, app):
+        self.app = app
+        self.file_dialog = ImGuiFileDialog()
+        self._wind_queue: queue.Queue = queue.Queue()
+        self._wind_generation = 0
+        self._wind_status = ""
+
+    # ------------------------------------------------------------------
+    # FILE
+    # ------------------------------------------------------------------
+    def new_project(self) -> None:
+        self.app.set_project(Project())
+        self.app.current_file_path = None
+        self.app._model_text = "MODEL: YENİ SAHNE"
+
+    def load(self, path: str) -> None:
+        self.app.set_project(Project.load(path))
+        if self.app.engine:
+            self.app.engine.fit_view()
+            self.app.engine.sel_mgr.clear()
+        self.app.current_file_path = path
+        self.app._model_text = f"MODEL: {os.path.basename(path)}"
+
+    def save(self, path: str) -> None:
+        self.app.current_project.save(path)
+        self.app.current_file_path = path
+        self.app._model_text = f"MODEL: {os.path.basename(path)}"
+
+    def quick_save(self) -> None:
+        if self.app.current_file_path:
+            self.save(self.app.current_file_path)
+        else:
+            self.save_as_dialog()
+
+    def save_as_dialog(self) -> None:
+        self.file_dialog.open(
+            mode="save", filters=[".cd4"], title="Projeyi Kaydet (.cd4)",
+            initial_dir=os.getcwd(), default_name="model_projesi.cd4",
+            on_select=self.save,
+        )
+
+    def open_dialog(self) -> None:
+        self.file_dialog.open(
+            mode="open", filters=[".cd4"], title="Proje Aç (.cd4)",
+            initial_dir=os.getcwd(), on_select=self.load,
+        )
+
+    def draw_dialog(self) -> None:
+        self.file_dialog.draw()
+
+    def s2k_import(self) -> None:
+        panel = self.app.panels.get("s2k_panel", {}).get("instance")
+        if panel:
+            panel.open(mode=getattr(panel, "MODE_IMPORT", "import"))
+
+    def s2k_export(self) -> None:
+        panel = self.app.panels.get("s2k_panel", {}).get("instance")
+        if panel:
+            panel.open(mode=getattr(panel, "MODE_EXPORT", "export"))
+
+    def on_s2k_import_complete(self, project: Project) -> None:
+        self.app.set_project(project)
+        self.app._model_text = f"MODEL: S2K import ({len(project.scene.frames)} çubuk)"
+
+    def import_s2k_direct(self) -> None:
+        candidates = [
+            os.path.join(os.getcwd(), "tests", "eski_.s2k"),
+            r"D:\Program\cad4\tests\eski_.s2k",
+        ]
+        path = next((p for p in candidates if os.path.exists(p)), None)
+        if not path:
+            return
+        project = S2KLoader(path).load(Project())
+        self.app.set_project(project)
+        self.app._model_text = f"MODEL: eski_.s2k ({len(project.scene.frames)} çubuk)"
+
+    # ------------------------------------------------------------------
+    # PANEL / SELECTION
+    # ------------------------------------------------------------------
+    def prepare_panel(self, name: str, panel) -> None:
+        keys = self.app.panels[name].get("context", [])
+        panel.set_context(self._resolve_context(keys))
+
+    def toggle_panel(self, name: str) -> None:
+        entry = self.app.panels.get(name)
+        if not entry:
+            return
+        p = entry["instance"]
+        if getattr(p, "visible", False):
+            p.close()
+            return
+        self.prepare_panel(name, p)
+        p.open()
+
+    def _resolve_context(self, keys: list[str]) -> dict:
+        if not keys:
+            return {}
+        resolvers = self._context_resolvers()
+        ctx = {}
+        for key in keys:
+            fn = resolvers.get(key)
+            if fn is None:
+                continue
+            ctx[key] = fn()
+        return ctx
+
+    def _context_resolvers(self) -> dict:
+        app = self.app
+        eng = app.engine
+        scn = eng.scene if eng else app.current_project.scene
+        renderer = eng.renderer if eng else None
+        camera = eng.cam if eng else None
+        selection = list(scn.get_selected()) if scn else []
+        project = app.current_project
+        catalog = app._catalog
+
+        return {
+            "scene": lambda: scn,
+            "project": lambda: project,
+            "catalog": lambda: catalog,
+            "selection": lambda: selection,
+            "selection_frames": lambda: [e for e in selection if isinstance(e, Frame)],
+            "selection_areas": lambda: [e for e in selection if isinstance(e, Area)],
+            "selection_polygons": lambda: [e for e in selection if isinstance(e, Polygon)],
+            "selection_links": lambda: [e for e in selection if isinstance(e, Link)],
+            "selection_nodes": lambda: [e for e in selection if isinstance(e, Node)],
+            "patterns": lambda: list(getattr(project, "load_patterns", {}).keys()),
+            "sections": lambda: list(getattr(project, "sections", {}).keys()),
+            "materials": lambda: list(getattr(project, "materials", {}).keys()),
+            "renderer": lambda: renderer,
+            "camera": lambda: camera,
+            "wind_analysis_ref": lambda: self.wind_state(),
+        }
+
+    def on_selection_changed(self, selected: list) -> None:
+        app = self.app
+        if app.engine and app.engine.renderer:
+            app.engine.renderer.update_sel()
+        if app.inspector:
+            app.inspector.set_selection(selected)
+
+        for name, entry in app.panels.items():
+            p = entry["instance"]
+            if not getattr(p, "visible", False):
+                continue
+            hook = getattr(p, "on_scene_selection_changed", None)
+            if callable(hook):
+                hook(selected)
+
+        self._refresh_presentation_renderers()
+
+        polys = [e for e in selected if isinstance(e, Polygon)]
+        if polys:
+            panel = app.panels.get("polygon_properties", {}).get("instance")
+            if panel is not None:
+                if not getattr(panel, "visible", False):
+                    self.prepare_panel("polygon_properties", panel)
+                panel.open(polygon=polys[0])
+
+        try:
+            from domain.line import Line
+        except ImportError:
+            Line = ()
+        lines = [e for e in selected if isinstance(e, Line)]
+        if lines:
+            panel = app.panels.get("line_properties", {}).get("instance")
+            if panel is not None:
+                if not getattr(panel, "visible", False):
+                    self.prepare_panel("line_properties", panel)
+                    panel.open()
+                panel.on_selection_changed(selected)
+
+        self._refresh_presentation_renderers()
+
+    def on_hover_changed(self, element) -> None:
+        pass
+
+    def _refresh_presentation_renderers(self):
+        eng = self.app.engine
+        project = self.app.current_project
+        if not (eng and eng.presentation_renderer and project):
+            return
+        pr = eng.presentation_renderer
+        pr.update_polygons(list(getattr(project, "polygons", {}).values()))
+        pr.update_lines(list(getattr(project, "lines", {}).values()))
+
+    # ------------------------------------------------------------------
+    # WIND
+    # ------------------------------------------------------------------
+    def wind_state(self) -> dict:
+        analysis = self.app.current_project.analysis
+        wind = analysis.wind
+        if not isinstance(wind, dict):
+            wind = {}
+            analysis.wind = wind
+
+        directions = wind.get("directions")
+        if not isinstance(directions, dict):
+            directions = {}
+            wind["directions"] = directions
+        if not directions:
+            directions["01"] = WindDirectionResult(w_dir=(1.0, 0.0, 0.0))
+        if wind.get("active_direction") is None:
+            first = next(iter(directions.values()))
+            if isinstance(first, dict):
+                wind["active_direction"] = tuple(first.get("w_dir", (1.0, 0.0, 0.0)))
+            else:
+                wind["active_direction"] = tuple(getattr(first, "w_dir", (1.0, 0.0, 0.0)))
+        return wind
+
+    def _wind_key(self, w_dir) -> str:
+        directions = self.wind_state()["directions"]
+        for key, record in directions.items():
+            candidate = getattr(record, "w_dir", None)
+            if candidate is None and isinstance(record, dict):
+                candidate = record.get("w_dir")
+            if candidate is not None and np.allclose(candidate, w_dir, atol=1e-8):
+                return str(key)
+        numeric = []
+        for key in directions:
+            try:
+                numeric.append(int(key))
+            except (TypeError, ValueError):
+                continue
+        key = f"{max(numeric, default=0) + 1:02d}"
+        directions[key] = WindDirectionResult(w_dir=tuple(w_dir))
+        return key
+
+    def run_wind(self) -> None:
+        wind = self.wind_state()
+        active = wind.get("active_direction")
+        if active is None:
+            active = next(iter(wind["directions"].values())).w_dir
+        direction = tuple(float(v) for v in active)
+        key = self._wind_key(direction)
+        self._start_wind_analysis(key, direction)
+
+    def select_wind_direction(self, w_dir) -> None:
+        direction = tuple(float(v) for v in w_dir)
+        if len(direction) != 3 or not np.isfinite(direction).all():
+            self._wind_status = "Geçersiz rüzgar yönü."
+            return
+        if np.linalg.norm(direction[:2]) < 1e-12:
+            self._wind_status = "Geçersiz rüzgar yönü."
+            return
+
+        wind = self.wind_state()
+        wind["active_direction"] = direction
+        key = self._wind_key(direction)
+        record = wind["directions"][key]
+        if hasattr(record, "w_dir"):
+            record.w_dir = direction
+        elif isinstance(record, dict):
+            record["w_dir"] = direction
+        self._start_wind_analysis(key, direction)
+
+    def _start_wind_analysis(self, direction_key: str, direction) -> None:
+        project = self.app.current_project
+        eng = self.app.engine
+        scene = eng.scene if eng else project.scene
+        if scene is None:
+            return
+
+        points, polygons, wind_config = WindSceneAdapter.build_inputs(scene, project)
+
+        self._wind_generation += 1
+        generation = self._wind_generation
+        self._wind_status = "Rüzgar analizi çalışıyor..."
+
+        def analyze() -> None:
+            try:
+                zones, engine_data = WindSceneAdapter.analyze(
+                    points, polygons, wind_config, direction,
+                )
+                self._wind_queue.put(
+                    ("done", generation, project, scene, direction_key,
+                     direction, zones, engine_data)
+                )
+            except Exception as exc:
+                self._wind_queue.put(
+                    ("error", generation, project, scene, direction_key,
+                     direction, str(exc))
+                )
+
+        threading.Thread(target=analyze, daemon=True).start()
+
+    def process_wind_queue(self) -> None:
+        while True:
+            try:
+                message = self._wind_queue.get_nowait()
+            except queue.Empty:
+                return
+
+            status, generation, project, scene, key, direction, *payload = message
+            if generation != self._wind_generation:
+                continue
+            if project is not self.app.current_project:
+                continue
+            eng = self.app.engine
+            if eng and eng.scene is not scene:
+                continue
+
+            if status == "error":
+                self._wind_status = f"Rüzgar analizi başarısız: {payload[0]}"
+                continue
+
+            zones, engine_data = payload
+            wind = self.wind_state()
+            record = wind["directions"].get(key)
+            if record is None:
+                record = WindDirectionResult(w_dir=direction)
+                wind["directions"][key] = record
+            if isinstance(record, dict):
+                record = WindDirectionResult(**record)
+                wind["directions"][key] = record
+            record.w_dir = direction
+            WindSceneAdapter.update_direction_result(record, zones, engine_data)
+            WindSceneAdapter.store_zones(project, key, zones, engine_data, direction)
+            self._wind_status = f"{len(zones)} rüzgar bölgesi hesaplandı."
+            panel = self.app.panels.get("wind", {}).get("instance")
+            if panel is not None and hasattr(panel, "_invalidate_zones_cache"):
+                panel._invalidate_zones_cache()
+
+    # ------------------------------------------------------------------
+    # UNIT
+    # ------------------------------------------------------------------
+    def set_unit_system(self, unit_system: UnitSystem) -> None:
+        project = self.app.current_project
+        old = project.unit_system
+        if old == unit_system:
+            return
+        convert_project_units(project, unit_system, reason="ui")
+
+        eng = self.app.engine
+        if eng and eng.grid and project.grid:
+            eng.grid.set_grid(project.grid)
+            eng.grid.mark_dirty()
+        if eng and eng.scene and eng.renderer:
+            eng.scene.mark_dirty()
+            eng.renderer.update_geo(eng.scene)
+        if eng and eng.scene:
+            eng.scene.refresh_bounds()
+            eng.fit_view()
+
+        panel = self.app.panels.get("grid", {}).get("instance")
+        if panel is not None and hasattr(panel, "on_unit_changed"):
+            panel.on_unit_changed()

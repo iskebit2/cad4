@@ -149,7 +149,7 @@ class WindZoneDistributionService:
             sid = int(surface_ref)
         except (ValueError, TypeError):
             # unique_id fallback
-            for poly in scene.polygons.values():
+            for poly in project.polygons.values():
                 if str(getattr(poly, "unique_id", "")) == str(surface_ref):
                     pt = getattr(poly, "poly_type", None)
                     if pt in (PolygonType.SURFACE_ONEWAY,
@@ -157,7 +157,7 @@ class WindZoneDistributionService:
                         return poly
             return None
 
-        for poly in scene.polygons.values():
+        for poly in project.polygons.values():
             if poly.unique_id == sid:
                 pt = getattr(poly, "poly_type", None)
                 if pt in (PolygonType.SURFACE_ONEWAY,
@@ -467,7 +467,7 @@ class WindZoneDistributionService:
     def _collect_zones(cls, scene) -> List[Any]:
         """Sahnedeki ZONE poligonlarını döndürür."""
         zones = []
-        for poly in scene.polygons.values():
+        for poly in project.polygons.values():
             pt = getattr(poly, "poly_type", None)
 
             is_zone = False

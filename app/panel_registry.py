@@ -29,6 +29,7 @@ from ui.area_to_frame_panel import AreaToFramePanel
 from ui.frame_load_panel import FrameLoadPanel
 from ui.grid_panel import GridPanel
 from ui.joint_load_panel import JointLoadPanel
+from ui.line_properties_panel import LinePropertiesPanel
 from ui.load_assign_panel import LoadAssignPanel
 from ui.load_display_panel import LoadDisplayPanel
 from ui.plane_manager_panel import PlaneManagerPanel
@@ -93,6 +94,7 @@ PANEL_SPECS = [
         "menu_label": "Çıkış", "icon": "x","context": [],
     },
     # --- Çizim (mod/aksiyon, panel değil) ---
+    
     {
         "name":       "draw_poly",
         "cls":        None,           # panel sınıfı yok
@@ -117,17 +119,7 @@ PANEL_SPECS = [
     },
 
     # --- Görünüm ---
-    {
-        "name":       "polygon_properties",
-        "cls":        PolygonPropertiesPanel,
-        "title":      "Polygon Özellikleri",
-        "category":   "Görünüm",
-        "quick":      False,
-        "shortcut":   None,
-        "menu_label": "Polygon Özellikleri",
-        "icon":       "edit",
-        "context":    ["scene", "project"],
-    },
+    
     {
     "name":       "render_settings",
     "cls":        RenderSettingsPanel,

@@ -1,432 +1,402 @@
 # core/draw_manager.py
+from __future__ import annotations
 
 import time
 
-from pyglm import glm
+import glfw
 import numpy as np
 from OpenGL.GL import *
+from pyglm import glm
 
-from domain.element import Node, Polygon
+from domain.vertex import Vertex
+from domain.line import Line
+from domain.polygon import Polygon
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
 
 class DrawManager:
-    """
-    Sadece polygon çizimi için state machine.
-    
-    Akış:
-      1. start() → mod aktif
-      2. Node üzerine tıkla → points'e ekle
-      3. İlk noktaya tekrar tıkla veya C/Enter → close() → Polygon oluştur
-      4. ESC → cancel()
-    """
-    
-    SNAP_RADIUS_PX = 15   # Node yakınlık eşiği (piksel)
-    
+    SNAP_RADIUS_PX = 15
+    MOVE_THROTTLE = 0.033
+
     def __init__(self, engine):
         self.engine = engine
-        
-        self.mode: str = "sequential"   # "sequential" | "rectangle" | "single_point"
+        self.mode = "sequential"
         self.is_active = False
-        self.points = []          # seçilen Node objeleri
-        self.hover_node = None    # fare şu an hangi node üstünde
-        self.mouse_world_pos = None   # fare dünya koordinatı (preview için)
-        
-        # Preview buffer (lazy init)
+        self.points: list[Vertex] = []
+        self.hover_node: Vertex | None = None
+        self.hover_is_snap = False
+        self.mouse_world_pos = None
         self.preview_vao = None
         self.preview_vbo = None
-        
-        # Throttle
-        self._last_move_time = 0.0
-    
-    # =========================================================
-    # BAŞLAT / İPTAL / BİTİR
-    # =========================================================
-    
+        self._last_move = 0.0
+
+    # ------------------------------------------------------------------
     def start(self, mode: str = "sequential"):
         self.is_active = True
         self.mode = mode
         self.points.clear()
         self.hover_node = None
+        self.hover_is_snap = False
         self.mouse_world_pos = None
-        logger.info(f"[Draw] Mod: {mode}")
-    
+
     def cancel(self):
         self.is_active = False
         self.points.clear()
         self.hover_node = None
+        self.hover_is_snap = False
         self.mouse_world_pos = None
-        logger.info("[Draw] Polygon çizimi iptal edildi")
-    
+
     def close(self):
-        if len(self.points) < 3:
-            logger.warning(...)
+        if self.mode == "line":
+            self._close_line()
+            return
+        if self.mode == "rectangle":
+            self._close_rectangle()
+            return
+        if self.mode == "single_point":
             self.cancel()
             return
-        polygon = Polygon(list(self.points), label="")
-        self.engine.scene.add_polygon(polygon)
-        self._finalize_polygon(polygon)
-    
-    # =========================================================
-    # MOUSE
-    # =========================================================
-    
+        if len(self.points) < 3:
+            self.cancel()
+            return
+        self._finalize_polygon(Polygon(list(self.points), label=""))
+
+    # ------------------------------------------------------------------
     def on_mouse_move(self, x, y):
         if not self.is_active:
             return
-        
-        # Throttle (30 FPS)
         now = time.time()
-        if now - self._last_move_time < 0.033:
+        if now - self._last_move < self.MOVE_THROTTLE:
             return
-        self._last_move_time = now
-        
-        self.hover_node = self._find_node_at(x, y)
-        
-        # Fare dünya koordinatı (grid düzlemi üzerinde)
-        self.mouse_world_pos = self._screen_to_world_xy(x, y)
+        self._last_move = now
+        target, is_snap = self._find_target(x, y)
+        self.hover_node = target
+        self.hover_is_snap = is_snap
+        self.mouse_world_pos = self.engine.screen_to_world(x, y)
 
-        
-    
     def on_mouse_click(self, x, y) -> bool:
-        """Return True if consumed."""
         if not self.is_active:
             return False
-        
-        # === Rectangle modu — 2 nokta ===
+
+        target, _ = self._find_target(x, y)
+        if target is None:
+            return True
+
+        if self.mode == "line":
+            return self._click_line(target)
+
         if self.mode == "rectangle":
-            node = self._find_node_at(x, y)
-            if node is None:
-                return True
-            if not self.points:
-                self.points.append(node)
-            else:
-                self.points.append(node)
+            self.points.append(target)
+            if len(self.points) == 2:
                 self._close_rectangle()
             return True
 
-        # === Single-point modu — 1 nokta = mevcut polygon'dan algıla ===
         if self.mode == "single_point":
-            node = self._find_node_at(x, y)
-            if node is None:
-                return True
-            self._try_polygon_from_inside(node)
+            self._polygon_from_inside(target)
             return True
 
-        # === Sequential ===
-        node = self._find_node_at(x, y)
-        #pass(f"[CLICK] tıklama ({x}, {y}) → node={node}")
-        if node:
-            logger.info(f"[CLICK] node label={node.label}, coords=({node.x},{node.y},{node.z})")
-        else:
-            # En yakın 5 node'u yazdır
-            self._debug_nearest_nodes(x, y)
-
-        if node is None:
-            return True  # Node yoksa tık yutulur (başka bir şey yapma)
-        
-        # İlk noktaya tıklandı mı? → kapat
-        if len(self.points) >= 3 and node is self.points[0]:
+        if len(self.points) >= 3 and self._same(target, self.points[0]):
             self.close()
             return True
-        
-        # Aynı node'a ardışık tıklama → yok say
-        if self.points and node is self.points[-1]:
+        if self.points and self._same(target, self.points[-1]):
             return True
-        
-        self.points.append(node)
-        #pass(f"[Draw] Nokta eklendi: {node.label} ({len(self.points)} toplam)")
+        self.points.append(target)
         return True
 
-    def _debug_nearest_nodes(self, x, y, count=5):
-        """En yakın node'ları log'la (debug için)."""
-        cam = self.engine.cam
-        w, h = self.engine.w, self.engine.h
-        
-        if not cam or not self.engine.scene:
-            return
-        
-        mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
-        
-        distances = []
-        for node in self.engine.scene.nodes.values():
-            if not node.is_visible:
-                continue
-            
-            clip = mvp * glm.vec4(node.x, node.y, node.z, 1.0)
-            if clip.w <= 0:
-                continue
-            
-            ndc = glm.vec3(clip) / clip.w
-            px = (ndc.x + 1.0) * w / 2.0
-            py = (1.0 - ndc.y) * h / 2.0
-            
-            dx = px - x
-            dy = py - y
-            dist_sq = dx * dx + dy * dy
-            distances.append((dist_sq ** 0.5, node.label, px, py))
-        
-        distances.sort()
-        #pass(f"[CLICK] En yakın {count} node:")
-        # for d, label, px, py in distances[:count]:
-            #pass(f"  {label}: {d:.1f}px mesafe, ekran=({px:.0f},{py:.0f})")
-            
-    # =========================================================
-    # YARDIMCI — NODE BULMA
-    # =========================================================
-    
-    def _find_node_at(self, x, y):
-        """
-        Ekran koordinatına en yakın node'u bul (piksel toleransı).
-        """
-        cam = self.engine.cam
-        w, h = self.engine.w, self.engine.h
-        
-        if not cam or not self.engine.scene:
-            return None
-        
-        mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
-        
-        best_node = None
-        best_dist_sq = self.SNAP_RADIUS_PX ** 2
-        
-        for node in self.engine.scene.nodes.values():
-            if not node.is_visible:
-                continue
-            
-            clip = mvp * glm.vec4(node.x, node.y, node.z, 1.0)
-            if clip.w <= 0:
-                continue
-            
-            ndc = glm.vec3(clip) / clip.w
-            px = (ndc.x + 1.0) * w / 2.0
-            py = (1.0 - ndc.y) * h / 2.0
-            
-            dx = px - x
-            dy = py - y
-            dist_sq = dx * dx + dy * dy
-            
-            if dist_sq < best_dist_sq:
-                best_dist_sq = dist_sq
-                best_node = node
-        
-        return best_node
-    
-    def _screen_to_world_xy(self, x, y):
-        return self.engine.screen_to_world(x, y)
-    
-    # =========================================================
-    # PREVIEW RENDER
-    # =========================================================
-    
-    def _init_preview_buffers(self):
-        if self.preview_vao is not None:
-            return
-        
-        self.preview_vao = glGenVertexArrays(1)
-        self.preview_vbo = glGenBuffers(1)
-
-    def render_preview(self, mvp, shader):
-        """
-        Polygon çizim önizlemesi.
-        
-        Katmanlar (alttan üste):
-        1. Mor yarı saydam dolgu (3+ nokta)
-        2. Sarı çizgi dizisi (2+ nokta, noktalar arası)
-        3. Beyaz aktif çizgi (son nokta → fare)
-        4. Yeşil kapanış ipucu (3+ nokta, son → ilk)
-        
-        Depth test kapalı çizilir (overlay), çıkışta geri açılır.
-        """
-        # ---- Erken çıkışlar ----
-        if not self.is_active:
-            return
-        if not self.points:
-            return
-        if shader is None:
-            return
-
-        # ---- Lazy buffer init ----
-        self._init_preview_buffers()
-
-        # ---- Depth overlay modu ----
-        glDisable(GL_DEPTH_TEST)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        try:
-            # ---- Shader ve MVP ----
-            shader.use()
-
-            mvp_loc = shader.get_loc("mvp")
-            if mvp_loc != -1:
-                glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
-
-            color_loc = shader.get_loc("uColor")
-            if color_loc == -1:
-                return   # shader'da uColor yok — çizim yapma
-
-            # ---- VAO / VBO ----
-            glBindVertexArray(self.preview_vao)
-            glBindBuffer(GL_ARRAY_BUFFER, self.preview_vbo)
-
-            glEnableVertexAttribArray(0)
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * 4, None)
-
-            # ---- Yardımcı: vertex dizisi oluştur ----
-            def _flatten(points):
-                """Liste glm.vec3 / objelerini tek array'e çevir."""
-                out = []
-                for p in points:
-                    out.extend((p.x, p.y, p.z))
-                return np.asarray(out, dtype=np.float32)
-
-            def _draw(verts, mode, count, color):
-                glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts, GL_STREAM_DRAW)
-                glUniform4f(color_loc, *color)
-                glDrawArrays(mode, 0, count)
-
-            n = len(self.points)
-
-            # ---- 1) Mor yarı saydam dolgu (3+ nokta) ----
-            if n >= 3:
-                verts = _flatten(self.points)
-                _draw(verts, GL_TRIANGLE_FAN, n, (0.8, 0.3, 0.8, 0.35))
-
-            # ---- 2) Sarı çizgi dizisi (2+ nokta) ----
-            if n >= 2:
-                verts = _flatten(self.points)
-                _draw(verts, GL_LINE_STRIP, n, (1.0, 1.0, 0.0, 1.0))
-
-            # ---- 3) Beyaz aktif çizgi (son nokta → fare) ----
-            if self.mouse_world_pos is not None:
-                last = self.points[-1]
-                m = self.mouse_world_pos
-                verts = np.asarray(
-                    (last.x, last.y, last.z, m.x, m.y, m.z),
-                    dtype=np.float32,
-                )
-                _draw(verts, GL_LINES, 2, (1.0, 1.0, 1.0, 0.85))
-
-            # ---- 4) Yeşil kapanış ipucu (3+ nokta, son → ilk) ----
-            if n >= 3:
-                first = self.points[0]
-                last = self.points[-1]
-                verts = np.asarray(
-                    (last.x, last.y, last.z, first.x, first.y, first.z),
-                    dtype=np.float32,
-                )
-                _draw(verts, GL_LINES, 2, (0.5, 1.0, 0.5, 0.7))
-
-            # ---- Rectangle modu — önizleme ----
-            if self.mode == "rectangle" and self.mouse_world_pos is not None:
-                if n == 1:
-                    # 1. nokta var, fare 2. nokta → dikdörtgen önizleme
-                    p1 = self.points[0]
-                    p2 = self.mouse_world_pos
-                    # 4 köşe
-                    c0 = (p1.x, p1.y, p1.z)
-                    c1 = (p2.x, p1.y, p1.z)
-                    c2 = (p2.x, p2.y, p2.z)
-                    c3 = (p1.x, p2.y, p2.z)
-                    # Şeffaf dolgu
-                    fill_verts = np.asarray([
-                        *c0, *c1, *c2,
-                        *c0, *c2, *c3,
-                    ], dtype=np.float32)
-                    _draw(fill_verts, GL_TRIANGLES, 6, (0.8, 0.5, 0.9, 0.25))
-                    # Kenar çizgiler
-                    edge_verts = np.asarray([
-                        *c0, *c1,
-                        *c1, *c2,
-                        *c2, *c3,
-                        *c3, *c0,
-                    ], dtype=np.float32)
-                    _draw(edge_verts, GL_LINES, 8, (1.0, 0.9, 0.4, 0.9))
-                    
-            # ---- Temizlik ----
-            glBindVertexArray(0)
-            glBindBuffer(GL_ARRAY_BUFFER, 0)
-
-        finally:
-            glEnable(GL_DEPTH_TEST)
-
     def on_key_press(self, key) -> bool:
-        """Tuş yakala. True → tüketildi."""
         if not self.is_active:
             return False
-        import glfw
         if key in (glfw.KEY_C, glfw.KEY_ENTER):
             self.close()
             return True
         if key == glfw.KEY_ESCAPE:
             self.cancel()
             return True
+        if key == glfw.KEY_BACKSPACE and self.points:
+            self.points.pop()
+            return True
         return False
 
+    # ------------------------------------------------------------------
+    def _click_line(self, target):
+        if not self.points:
+            self.points.append(target)
+            return True
+        if self._same(target, self.points[0]):
+            return True
+        self.points.append(target)
+        self._close_line()
+        return True
+
+    def _close_line(self):
+        if len(self.points) < 2:
+            self.cancel()
+            return
+        v1, v2 = self.points[0], self.points[1]
+        line = Line(v1=v1, v2=v2)
+        project = self._project()
+        if project is not None:
+            project.lines[line.unique_id] = line
+            self.engine.update_geo(project)
+        pr = getattr(self.engine, "presentation_renderer", None)
+        if pr:
+            self._refresh_pr()
+        if self.engine.sel_mgr:
+            self.engine.sel_mgr.select(line)
+        self.cancel()
+
+    # ------------------------------------------------------------------
     def _close_rectangle(self):
-        """2 nokta → 4 köşeli dikdörtgen (dünya XY düzleminde)."""
         if len(self.points) < 2:
             self.cancel()
             return
         p1, p2 = self.points[0], self.points[1]
-        scene = self.engine.scene
-        # 4 köşe — p1 ve p2 karşı köşeler
-        corners_xyz = [
-            (p1.x, p1.y, p1.z),
-            (p2.x, p1.y, p1.z),
-            (p2.x, p2.y, p2.z),
-            (p1.x, p2.y, p2.z),
+        corners = [
+            Vertex(p1.x, p1.y, p1.z),
+            Vertex(p2.x, p1.y, p1.z),
+            Vertex(p2.x, p2.y, p2.z),
+            Vertex(p1.x, p2.y, p2.z),
         ]
-        nodes = []
-        for xyz in corners_xyz:
-            nd = Node(*xyz, label="")
-            scene.add_node(nd)
-            nodes.append(nd)
-        polygon = Polygon(nodes, label="")
-        scene.add_polygon(polygon)
-        self._finalize_polygon(polygon)
+        self._finalize_polygon(Polygon(corners, label=""))
 
-    def _try_polygon_from_inside(self, start_node):
-        """1 nokta → mevcut node'lardan boundary analiz et (convex hull)."""
+    def _polygon_from_inside(self, start):
         scene = self.engine.scene
-        # Basit: seçili node'a en yakın 4 node'u al
-        from domain.element import Node as _Node
-        candidates = []
-        for nd in scene.nodes.values():
-            if nd is start_node:
-                continue
-            d = start_node.distance_to(nd)
-            candidates.append((d, nd))
-        candidates.sort(key=lambda t: t[0])
-        near = [start_node] + [nd for _, nd in candidates[:3]]
+        if not scene:
+            self.cancel()
+            return
+        candidates = sorted(
+            (nd.distance_to(start), nd)
+            for nd in scene.nodes.values()
+            if nd is not start
+        )
+        near = [start] + [nd for _, nd in candidates[:3]]
         if len(near) < 3:
             self.cancel()
             return
-        polygon = Polygon(near, label="")
-        scene.add_polygon(polygon)
-        self._finalize_polygon(polygon)
+        vertices = [
+            Vertex(nd.x, nd.y, nd.z, label=getattr(nd, "label", ""),
+                   source_node_id=getattr(nd, "unique_id", None))
+            for nd in near
+        ]
+        self._finalize_polygon(Polygon(vertices, label=""))
 
-    def _finalize_polygon(self, polygon):
-        """Ortak — assoc + render + seçim."""
-        scene = self.engine.scene
-        project = getattr(scene, "project", None)
-        mgr = getattr(project, "plane_mgr", None) if project else None
-        active_plane = mgr.active_plane if mgr else None
-        if active_plane is not None:
-            active_plane.refresh_assoc(scene)
-            if hasattr(self.engine, "apply_plane_filter"):
-                self.engine.apply_plane_filter()
-        self.engine.renderer.update_geo(scene)
-        self.engine.sel_mgr.select(polygon)
-        logger.info(f"[Draw] Polygon: id={polygon.unique_id}")
+    def _finalize_polygon(self, polygon: Polygon):
+        project = self._project()
+        if project is not None:
+            project.add_polygon(polygon)
+        pr = getattr(self.engine, "presentation_renderer", None)
+        if pr:
+            pr.update_polygons(list(project.polygons.values()))
+            self._refresh_pr()
+        if self.engine.sel_mgr:
+            self.engine.sel_mgr.select(polygon)
         self.cancel()
 
-    # =========================================================
-    # CLEANUP
-    # =========================================================
-    
+    def _project(self):
+        scene = self.engine.scene
+        return getattr(scene, "project", None) if scene else None
+
+    def _refresh_pr(self):
+        pr = getattr(self.engine, "presentation_renderer", None)
+        if pr is None:
+            return
+        project = self._project()
+        if project is not None:
+            pr.update_polygons(list(project.polygons.values()))
+
+    # ------------------------------------------------------------------
+    def _find_target(self, x, y):
+        node = self._find_node(x, y)
+        if node is not None:
+            return self._vertex_from_node(node), False
+        snap = self._find_snap(x, y)
+        if snap is not None:
+            return snap, True
+        return None, False
+
+    def _find_node(self, x, y):
+        scene = self.engine.scene
+        cam = self.engine.cam
+        if not scene or not cam:
+            return None
+        mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
+        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
+        for node in scene.nodes.values():
+            if not node.is_visible:
+                continue
+            p = self._project_pt(mvp, node.x, node.y, node.z)
+            if p is None:
+                continue
+            d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
+            if d2 < best_d2:
+                best_d2 = d2
+                best = node
+        return best
+
+    def _find_snap(self, x, y):
+        project = self._project()
+        if not project:
+            return None
+
+        plane = project.active_plane
+        if plane is not None:
+            axis = ("x", "y", "z")[int(np.argmax(np.abs(plane.normal)))]
+            level = float(np.dot(plane.normal, plane.origin))
+            candidates = project.grid.snap_points_on_plane(axis, level)
+        else:
+            candidates = project.grid.snap_points()
+
+        if not candidates:
+            return None
+
+        mvp = self.engine.cam.get_projection_matrix() @ self.engine.cam.get_view_matrix()
+        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
+        for c in candidates:
+            p = self._project_pt(mvp, c[0], c[1], c[2])
+            if p is None:
+                continue
+            d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
+            if d2 < best_d2:
+                best_d2 = d2
+                best = c
+        if best is None:
+            return None
+        return Vertex(best[0], best[1], best[2])
+
+    def _project_pt(self, mvp, x, y, z):
+        w, h = self.engine.w, self.engine.h
+        clip = mvp * glm.vec4(x, y, z, 1.0)
+        if clip.w <= 1e-9:
+            return None
+        ndc = glm.vec3(clip) / clip.w
+        return (ndc.x + 1.0) * w * 0.5, (1.0 - ndc.y) * h * 0.5
+
+    @staticmethod
+    def _vertex_from_node(node) -> Vertex:
+        return Vertex(
+            node.x, node.y, node.z,
+            label=getattr(node, "label", ""),
+            source_node_id=getattr(node, "unique_id", None),
+        )
+
+    @staticmethod
+    def _same(a, b) -> bool:
+        return (abs(a.x - b.x) < 1e-3
+                and abs(a.y - b.y) < 1e-3
+                and abs(a.z - b.z) < 1e-3)
+
+    # ------------------------------------------------------------------
+    def _ensure_buffer(self):
+        if self.preview_vao is not None:
+            return
+        self.preview_vao = glGenVertexArrays(1)
+        self.preview_vbo = glGenBuffers(1)
+
+    def render_preview(self, mvp, shader):
+        if not self.is_active or not self.points or shader is None:
+            return
+        self._ensure_buffer()
+
+        glDisable(GL_DEPTH_TEST)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        try:
+            shader.use()
+            mvp_loc = shader.get_loc("mvp")
+            if mvp_loc != -1:
+                glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
+            color_loc = shader.get_loc("uColor")
+            if color_loc == -1:
+                return
+
+            glBindVertexArray(self.preview_vao)
+            glBindBuffer(GL_ARRAY_BUFFER, self.preview_vbo)
+            glEnableVertexAttribArray(0)
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 12, None)
+
+            if self.mode == "line":
+                self._render_line_preview(color_loc)
+            else:
+                self._render_polygon_preview(color_loc)
+
+            if self.hover_is_snap and self.hover_node is not None:
+                hn = self.hover_node
+                s = 80.0
+                verts = np.array([
+                    hn.x - s, hn.y, hn.z, hn.x + s, hn.y, hn.z,
+                    hn.x, hn.y - s, hn.z, hn.x, hn.y + s, hn.z,
+                ], np.float32)
+                self._upload_draw(color_loc, verts, GL_LINES, 4, (0.2, 1.0, 0.2, 1.0))
+
+            glBindVertexArray(0)
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
+        finally:
+            glEnable(GL_DEPTH_TEST)
+
+    def _render_line_preview(self, color_loc):
+        n = len(self.points)
+        if n == 0:
+            return
+        last = self.points[-1]
+        if self.mouse_world_pos is not None:
+            m = self.mouse_world_pos
+            verts = np.array([last.x, last.y, last.z, m.x, m.y, m.z], np.float32)
+            self._upload_draw(color_loc, verts, GL_LINES, 2, (1.0, 1.0, 0.0, 0.9))
+        if n >= 1:
+            p = self.points[0]
+            s = 40.0
+            verts = np.array([
+                p.x - s, p.y, p.z, p.x + s, p.y, p.z,
+                p.x, p.y - s, p.z, p.x, p.y + s, p.z,
+            ], np.float32)
+            self._upload_draw(color_loc, verts, GL_LINES, 4, (0.5, 1.0, 0.5, 1.0))
+
+    def _render_polygon_preview(self, color_loc):
+        n = len(self.points)
+        if n >= 3:
+            self._draw_points(color_loc, self.points, GL_TRIANGLE_FAN, (0.8, 0.3, 0.8, 0.35))
+        if n >= 2:
+            self._draw_points(color_loc, self.points, GL_LINE_STRIP, (1.0, 1.0, 0.0, 1.0))
+
+        if self.mouse_world_pos is not None and n >= 1:
+            last = self.points[-1]
+            m = self.mouse_world_pos
+            verts = np.array([last.x, last.y, last.z, m.x, m.y, m.z], np.float32)
+            self._upload_draw(color_loc, verts, GL_LINES, 2, (1.0, 1.0, 1.0, 0.85))
+
+        if n >= 3:
+            first, last = self.points[0], self.points[-1]
+            verts = np.array([last.x, last.y, last.z, first.x, first.y, first.z], np.float32)
+            self._upload_draw(color_loc, verts, GL_LINES, 2, (0.5, 1.0, 0.5, 0.7))
+
+        if self.mode == "rectangle" and n == 1 and self.mouse_world_pos is not None:
+            self._draw_rectangle_preview(color_loc)
+
+    def _draw_points(self, color_loc, points, mode, color):
+        verts = np.array(
+            [(p.x, p.y, p.z) for p in points], np.float32,
+        ).reshape(-1)
+        self._upload_draw(color_loc, verts, mode, len(points), color)
+
+    def _draw_rectangle_preview(self, color_loc):
+        p1, p2 = self.points[0], self.mouse_world_pos
+        c0 = (p1.x, p1.y, p1.z)
+        c1 = (p2.x, p1.y, p1.z)
+        c2 = (p2.x, p2.y, p2.z)
+        c3 = (p1.x, p2.y, p1.z)
+        fill = np.array([*c0, *c1, *c2, *c0, *c2, *c3], np.float32)
+        self._upload_draw(color_loc, fill, GL_TRIANGLES, 6, (0.8, 0.5, 0.9, 0.25))
+        edges = np.array([*c0, *c1, *c1, *c2, *c2, *c3, *c3, *c0], np.float32)
+        self._upload_draw(color_loc, edges, GL_LINES, 8, (1.0, 0.9, 0.4, 0.9))
+
+    def _upload_draw(self, color_loc, verts, mode, count, color):
+        glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts, GL_STREAM_DRAW)
+        glUniform4f(color_loc, *color)
+        glDrawArrays(mode, 0, count)
+
+    # ------------------------------------------------------------------
     def cleanup(self):
         if self.preview_vbo:
             glDeleteBuffers(1, [int(self.preview_vbo)])

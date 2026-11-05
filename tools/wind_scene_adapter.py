@@ -57,12 +57,12 @@ class WindSceneAdapter:
             PolygonType.SURFACE_ONEWAY,
             PolygonType.SURFACE_TWOWAY,
         }
-        for polygon in scene.polygons.values():
+        for polygon in project.polygons.values():
             if polygon.poly_type in explicit_surfaces:
                 add_surface(f"POLYGON_{polygon.unique_id}", polygon.nodes)
 
         if not polygons:
-            for polygon in scene.polygons.values():
+            for polygon in project.polygons.values():
                 if polygon.poly_type not in {
                     PolygonType.ZONE,
                     PolygonType.SECTION_CUT,

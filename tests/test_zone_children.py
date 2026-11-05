@@ -70,7 +70,8 @@ class MockDrawList:
 # ============================================================================
 def build_test_polygon():
     """4x6 dikdörtgen parent + 3 zone (01) + 3 zone (02)."""
-    from domain.element import Node, Polygon
+    from domain.element import Node
+    from domain.polygon import Polygon
     from data.enums import PolygonType
 
     # Parent — 4 köşe (z=0)
@@ -237,36 +238,36 @@ def make_to_screen(canvas_w=800, canvas_h=600, zoom=0.06):
 def run_test():
     poly = build_test_polygon()
 
-    print("\n=== Parent Polygon ===")
-    print(f"  label={poly.label}  nodes={len(poly.nodes)}  "
+    #print("\n=== Parent Polygon ===")
+    #print(f"  label={poly.label}  nodes={len(poly.nodes)}  "
           f"poly_type={poly.poly_type.name}")
-    print(f"  Yönler: {list(poly.zone_children_by_direction.keys())}")
+    #print(f"  Yönler: {list(poly.zone_children_by_direction.keys())}")
     for d, zones in poly.zone_children_by_direction.items():
-        print(f"    Yön {d}: {len(zones)} zone  "
+        #print(f"    Yön {d}: {len(zones)} zone  "
               f"({[z['label'] for z in zones]})")
 
     to_screen = make_to_screen()
 
     # --- Yön 01 ---
-    print("\n=== Render Yön 01 ===")
+    #print("\n=== Render Yön 01 ===")
     dl1 = MockDrawList()
     draw_polygon_with_zones(dl1, poly, "01", to_screen)
-    print(f"  Primitives: {len(dl1.prims)}")
+    #print(f"  Primitives: {len(dl1.prims)}")
     counts = {}
     for p in dl1.prims:
         counts[p.kind] = counts.get(p.kind, 0) + 1
-    print(f"  {counts}")
+    #print(f"  {counts}")
     # İlk zone F etiketi var mı?
     texts = [p.text for p in dl1.prims if p.kind == "text"]
-    print(f"  Labels: {texts[:6]}")
+    #print(f"  Labels: {texts[:6]}")
 
     # --- Yön 02 ---
-    print("\n=== Render Yön 02 ===")
+    #print("\n=== Render Yön 02 ===")
     dl2 = MockDrawList()
     draw_polygon_with_zones(dl2, poly, "02", to_screen)
-    print(f"  Primitives: {len(dl2.prims)}")
+    #print(f"  Primitives: {len(dl2.prims)}")
     texts2 = [p.text for p in dl2.prims if p.kind == "text"]
-    print(f"  Labels: {texts2[:6]}")
+    #print(f"  Labels: {texts2[:6]}")
 
     # --- PNG ---
     try:
@@ -308,11 +309,11 @@ def run_test():
             path = os.path.join(out_dir, f"zone_children_{dir_key}.png")
             fig.savefig(path, dpi=100, facecolor="#1A1A1A")
             plt.close(fig)
-            print(f"  → {path}")
+            #print(f"  → {path}")
     except ImportError:
-        print("  matplotlib yok → PNG atlandı")
+        #print("  matplotlib yok → PNG atlandı")
 
-    print("\n=== Test tamam ===")
+    #print("\n=== Test tamam ===")
 
 
 if __name__ == "__main__":

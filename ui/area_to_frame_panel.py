@@ -8,7 +8,8 @@ from imgui_bundle import imgui
 from core.units import Dimension, UnitSystem, convert_value
 from data.enums import DistType, LoadDirection, PolygonType
 from domain.definition import AreaUniformLoad, LoadPattern
-from domain.element import Frame, Node, Polygon
+from domain.element import Frame, Node
+from domain.polygon import Polygon
 from tools.polygon_load_transfer import  build_polygon_frame_loads
 from logging_config import CadLogger
 from ui.base_panel import BasePanel
@@ -70,7 +71,7 @@ class AreaToFramePanel(BasePanel):
         if self.scene is None:
             return []
         return sorted(
-            self.scene.polygons.values(),
+            self.project.polygons.values(),
             key=lambda polygon: (
                 polygon.label or "", int(polygon.unique_id),
             ),

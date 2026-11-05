@@ -1,7 +1,7 @@
 # ui/zone_viewer_panel.py
 from __future__ import annotations
 from imgui_bundle import imgui
-from domain.element import Polygon
+from domain.polygon import Polygon
 from ui.base_panel import BasePanel
 from logging_config import CadLogger
 from pyglm import glm
@@ -45,7 +45,7 @@ class ZoneViewerPanel(BasePanel):
     def _polygon(self):
         if self._polygon_id is None or self.scene is None:
             return None
-        return self.scene.polygons.get(self._polygon_id)
+        return self.project.polygons.get(self._polygon_id)
 
     def draw_content(self):
         p = self._polygon()

@@ -5,7 +5,7 @@ from typing import Any
 
 
 @dataclass
-class FieldSpec:
+class Field:
     key: str
     kind: str = "str"
     label: str | None = None
@@ -18,9 +18,9 @@ class FieldSpec:
 
 
 @dataclass
-class GroupSpec:
+class Group:
     title: str
-    fields: list[FieldSpec] = field(default_factory=list)
+    fields: list[Field] = field(default_factory=list)
     default_open: bool = True
 
 

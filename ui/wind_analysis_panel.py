@@ -6,7 +6,7 @@ import numpy as np
 from imgui_bundle import imgui
 
 from data.enums import PolygonType
-from domain.element import Polygon
+from domain.polygon import Polygon
 from logging_config import CadLogger
 from ui.base_panel import BasePanel
 
@@ -62,7 +62,7 @@ class WindAnalysisPanel(BasePanel):
         )
 
         candidates = [
-            p for p in self.scene.polygons.values()
+            p for p in self.project.polygons.values()
             if not getattr(p, "is_temporary", False)
             and p.poly_type in (
                 PolygonType.LOAD_AREA,
@@ -169,7 +169,7 @@ class WindAnalysisPanel(BasePanel):
 
     def _run_analysis_all(self):
         surfaces = [
-            p for p in self.scene.polygons.values()
+            p for p in self.project.polygons.values()
             if getattr(p, "_wind_selected", False)
         ]
         if not surfaces:
@@ -266,7 +266,7 @@ class WindAnalysisPanel(BasePanel):
     # ------------------------------------------------------------------
     def _draw_zone_summary(self):
         total = 0
-        for p in self.scene.polygons.values():
+        for p in self.project.polygons.values():
             if getattr(p, "is_temporary", False):
                 continue
             for zones in (p.zone_children_by_direction or {}).values():

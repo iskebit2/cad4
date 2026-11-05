@@ -1933,9 +1933,9 @@ class RaporPaneli(BoxLayout):
     # ==========================================================
     def _debug_df_yazdir(self, instance):
         for i, df in enumerate(self._tables, 1):
-            print(f"\n===== Tablo {i}: {df.custom_title} =====")
-            print(df.to_string())
-            print(f"Shape: {df.shape}, Columns: {list(df.columns)}")
+            #print(f"\n===== Tablo {i}: {df.custom_title} =====")
+            #print(df.to_string())
+            #print(f"Shape: {df.shape}, Columns: {list(df.columns)}")
 
 # ============================================================
 # DEAD / LIVE CONFIG EXPORT

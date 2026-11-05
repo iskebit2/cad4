@@ -157,7 +157,7 @@ class Plane2DView:
         if uid in self.scene.frames:    return "frame"
         if uid in self.scene.areas:     return "area"
         if uid in self.scene.links:     return "link"
-        if uid in self.scene.polygons:  return "poly"
+        if uid in self.project.polygons:  return "poly"
         return None
 
 

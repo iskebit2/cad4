@@ -1,27 +1,18 @@
-2026-11-02 01:26:11 [INFO    ] cad.main: ================================================================
-2026-11-02 01:26:11 [INFO    ] cad.main: CAD4 başlatılıyor
-2026-11-02 01:26:11 [INFO    ] cad.main: Python   : 3.12.10
-2026-11-02 01:26:11 [INFO    ] cad.main: Dizin    : D:\Program\cad4
-2026-11-02 01:26:11 [INFO    ] cad.main: Log dos. : D:\Program\cad4\logs\cad.log
-2026-11-02 01:26:11 [INFO    ] cad.main: ================================================================
-2026-11-02 01:26:11 [INFO    ] cad.main: [1/3] CadWindow oluşturuluyor...
-2026-11-02 01:26:14 [INFO    ] cad.app.cad_window: [CadWindow] ImGui hazır
-2026-11-02 01:26:14 [INFO    ] cad.app.cad_window: Pencere hazır: 1280x800
-2026-11-02 01:26:14 [INFO    ] cad.main: [2/3] CadApp oluşturuluyor...
-2026-11-02 01:26:14 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
-2026-11-02 01:26:14 [INFO    ] cad.main: [3/3] Ana döngü başlıyor
-2026-11-02 01:26:14 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
-2026-11-02 01:26:14 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
-2026-11-02 01:26:14 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=0
-2026-11-02 01:26:19 [INFO    ] cad.render.scenerenderer: mode=simple show_node=True node_r.icount=432
-2026-11-02 01:27:33 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön eklendi: 02 = (0.0, 1.0, 0.0)
-2026-11-02 01:27:34 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön eklendi: 03 = (-1.0, 0.0, 0.0)
-2026-11-02 01:27:36 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön eklendi: 04 = (0.0, -1.0, 0.0)
-2026-11-02 01:27:38 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön 01: 10 zone
-2026-11-02 01:27:38 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön 02: 11 zone
-2026-11-02 01:27:38 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön 03: 10 zone
-2026-11-02 01:27:38 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön 04: 11 zone
-2026-11-02 01:30:02 [INFO    ] cad.ui.polygon_properties_panel: [PolygonPanel] : 8 frame assoc
-2026-11-02 01:30:24 [INFO    ] cad.ui.polygon_properties_panel: [PolygonPanel] : 5 frame assoc
-2026-11-02 01:52:36 [INFO    ] cad.main: [3/3] Ana döngü bitti
-2026-11-02 01:52:37 [INFO    ] cad.main: Çıkış kodu: 0
+2026-11-06 02:39:44 [INFO    ] cad.main: ================================================================
+2026-11-06 02:39:44 [INFO    ] cad.main: CAD4 başlatılıyor
+2026-11-06 02:39:44 [INFO    ] cad.main: Python   : 3.12.10
+2026-11-06 02:39:44 [INFO    ] cad.main: Dizin    : D:\Program\cad4
+2026-11-06 02:39:44 [INFO    ] cad.main: Log dos. : D:\Program\cad4\logs\cad.log
+2026-11-06 02:39:44 [INFO    ] cad.main: ================================================================
+2026-11-06 02:39:44 [INFO    ] cad.main: [1/3] CadWindow oluşturuluyor...
+2026-11-06 02:39:48 [INFO    ] cad.app.cad_window: [CadWindow] ImGui hazır
+2026-11-06 02:39:48 [INFO    ] cad.app.cad_window: Pencere hazır: 1280x800
+2026-11-06 02:39:48 [INFO    ] cad.main: [2/3] CadApp oluşturuluyor...
+2026-11-06 02:39:48 [INFO    ] cad.main: [3/3] Ana döngü başlıyor
+2026-11-06 02:39:48 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-11-06 02:39:48 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=2, u_mvp=0)
+2026-11-06 02:39:48 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-11-06 02:41:44 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön 01: 4 zone
+2026-11-06 02:42:12 [INFO    ] cad.ui.render_settings_panel: [RenderSettings] set_context keys=['renderer', 'scene'] renderer=<render.scenerenderer.SceneRenderer object at 0x00000298F11B8350>
+2026-11-06 02:44:24 [INFO    ] cad.main: [3/3] Ana döngü bitti
+2026-11-06 02:44:24 [INFO    ] cad.main: Çıkış kodu: 0

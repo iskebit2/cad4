@@ -1,197 +1,157 @@
 # core/selection_manager.py
-
 from core.commands import CommandManager, DeleteElementsCommand
 from core.selection_policy import SelectionMode
-from logging_config import CadLogger
 
-logger = CadLogger.get(__name__)
 
 class SelectionManager:
-    """Seçim durumunu yönet - TEK KAYNAK"""
-    
+
     def __init__(self, scene_renderer):
         self.r = scene_renderer
         self.selected: set[int] = set()
         self.cmd_mgr = CommandManager(max_history=100)
+        self.on_selection_changed = None
 
-        self.on_selection_changed = None   # callable veya None
-    
     def _update(self):
-        """Renkleri güncelle + callback çağır."""
         if self.r:
             self.r.update_sel()
-
         if self.on_selection_changed:
-            try:
-                self.on_selection_changed(list(self.get_selected()))
-            except Exception as e:
-                logger.error(
-                    f"selection_changed callback hatası: {e}"
-                )
-        
-    def _update_geometry_renderers(self, scene):
-        """Geometriyi güncelle (eleman ekleme/silme/değiştirme için)"""
-        #pass("[SelectionManager] _update_geometry_renderers called")
-        if self.r:
-            #pass(f"  Calling scene_renderer.update_geo()")
-            self.r.update_geo(scene)
-        else:
-            logger.debug("  No scene_renderer available!")
-    
-    def _clear_all(self):
-        """Tüm seçimleri temizle"""
-        if not self.r.scene: return
-        for e in self.r.scene.all_elements.values():
-            if e.unique_id in self.selected:
-                e.is_selected = False
-        self.selected.clear()
-    
-    def select(self, element, additive=False):
-        """Tek eleman seç - Kısmi renk güncellemesiyle optimize edilmiş."""
-        if not self.r or not self.r.scene:
-            return
+            self.on_selection_changed(list(self.get_selected()))
 
-        changed_elements = [element]
+    def _update_geometry_renderers(self, scene):
+        if self.r:
+            self.r.update_geo(scene)
+
+    def _deselect_all(self):
+        for e in self.get_selected():
+            e.is_selected = False
+        self.selected.clear()
+
+    def select(self, element, additive=False):
+        if not element:
+            return
+        eid = getattr(element, "unique_id", id(element))
 
         if not additive:
-            # Eskiden seçili olanları düşür
-            old_selected = list(self.get_selected())
-            for e in old_selected:
-                if e.unique_id != element.unique_id:
+            for e in self.get_selected():
+                if getattr(e, "unique_id", id(e)) != eid:
                     e.is_selected = False
-                    self.selected.discard(e.unique_id)
-                    changed_elements.append(e)
-            
-            if element.unique_id in self.selected:
-                if additive: # additive değilse zaten temizlendi
-                    pass
-            else:
-                self.selected.add(element.unique_id)
-                element.is_selected = True
+            self.selected.clear()
+            self.selected.add(eid)
+            element.is_selected = True
         else:
-            if element.unique_id in self.selected:
-                self.selected.remove(element.unique_id)
+            if eid in self.selected:
+                self.selected.remove(eid)
                 element.is_selected = False
             else:
-                self.selected.add(element.unique_id)
+                self.selected.add(eid)
                 element.is_selected = True
+        self._update()
 
-        # Sadece değişen elemanların renklerini GPU'da kısmi güncelle!
-        self._update_partial(changed_elements)
-
-        if self.on_selection_changed:
-            try:
-                self.on_selection_changed(self.get_selected())
-            except Exception:
-                logger.exception("selection_changed callback hatası")
-
-    def _update_partial(self, elements):
-        """Tüm sahneyi yenilemek yerine sadece listedeki elemanların renklerini günceller."""
-        if not self.r or not hasattr(self.r, 'update_element_color'):
-            # Eğer renderer henüz partial update desteklemiyorsa güvenli fallback:
-            if self.r:
-                self.r.update_sel()
-            return
-
-        for el in elements:
-            self.r.update_element_color(el)
-
-                
     def select_multiple(self, elements: list, mode=SelectionMode.REPLACE):
-        """Çoklu eleman seç"""
         if mode == SelectionMode.REPLACE:
-            self._clear_all()
+            self._deselect_all()
             for e in elements:
-                self.selected.add(e.unique_id)
+                self.selected.add(getattr(e, "unique_id", id(e)))
                 e.is_selected = True
-        
         elif mode == SelectionMode.ADD:
             for e in elements:
-                if e.unique_id not in self.selected:
-                    self.selected.add(e.unique_id)
+                eid = getattr(e, "unique_id", id(e))
+                if eid not in self.selected:
+                    self.selected.add(eid)
                     e.is_selected = True
-        
         elif mode == SelectionMode.TOGGLE:
             for e in elements:
-                if e.unique_id in self.selected:
-                    self.selected.remove(e.unique_id)
+                eid = getattr(e, "unique_id", id(e))
+                if eid in self.selected:
+                    self.selected.discard(eid)
                     e.is_selected = False
                 else:
-                    self.selected.add(e.unique_id)
+                    self.selected.add(eid)
                     e.is_selected = True
-        
         self._update()
 
     def select_only(self, element):
-        """Tek elemanı seç, diğerlerini bırak."""
         if element is None:
             self.clear()
             return
         self.select(element, additive=False)
-        
+
     def clear(self):
-        """Tüm seçimleri temizle"""
         for e in self.get_selected():
             e.is_selected = False
         self.selected.clear()
         if self.on_selection_changed:
             self.on_selection_changed([])
-        self._update()
-    
-    def get_selected(self):
-        """Seçili elemanları döndür"""
-        if not self.r.scene: return []
-        return [e for e in self.r.scene.all_elements.values() 
-                if e.unique_id in self.selected]
-    
-    def count(self): return len(self.selected)
-    def is_selected(self, e): return e.unique_id in self.selected
+        if self.r:
+            self.r.update_sel()
 
-    def delete_selected(self) -> tuple:
-        """
-        Seçili elemanları sil (Command pattern).
-        Returns: (silinen_sayı, reddedilen_sayı)
-        """
+    def get_selected(self):
+        out = []
+        if self.r and self.r.scene:
+            out.extend(
+                e for e in self.r.scene.all_elements.values()
+                if e.unique_id in self.selected
+            )
+            project = getattr(self.r.scene, "project", None)
+            if project:
+                out.extend(
+                    p for p in getattr(project, "polygons", {}).values()
+                    if p.unique_id in self.selected
+                )
+                out.extend(
+                    ln for ln in getattr(project, "lines", {}).values()
+                    if ln.unique_id in self.selected
+                )
+        return out
+
+    def find_element_by_id(self, unique_id: int):
+        if not self.r or not self.r.scene:
+            return None
+        if unique_id in self.r.scene.all_elements:
+            return self.r.scene.all_elements[unique_id]
+        project = getattr(self.r.scene, "project", None)
+        if project:
+            polys = getattr(project, "polygons", {})
+            if unique_id in polys:
+                return polys[unique_id]
+            lines = getattr(project, "lines", {})
+            if unique_id in lines:
+                return lines[unique_id]
+        return None
+
+    def count(self):
+        return len(self.selected)
+
+    def is_selected(self, e):
+        return getattr(e, "unique_id", id(e)) in self.selected
+
+    def delete_selected(self):
         if not self.r or not self.r.scene:
             return 0, 0
-        
         selected = list(self.get_selected())
         if not selected:
             return 0, 0
-        
-        # Komut oluştur ve çalıştır
         cmd = DeleteElementsCommand(self.r.scene, selected)
-        ok = self.cmd_mgr.execute(cmd)
-        
-        if not ok:
+        if not self.cmd_mgr.execute(cmd):
             return 0, 0
-        
-        # Silinen ve reddedilen elemanları seçimden çıkar
         self.selected.clear()
-        
-        # Geometry'yi güncelle (buffer'lar yeniden üretilir)
         self._update_geometry_renderers(self.r.scene)
-        
         return len(cmd.deleted), len(cmd.rejected)
-    
-    def undo(self) -> bool:
-        """Son komutu geri al."""
+
+    def undo(self):
         if not self.cmd_mgr.can_undo():
             return False
-        
-        ok = self.cmd_mgr.undo()
-        if ok:
-            self.selected.clear()
-            self._update_geometry_renderers(self.r.scene)
-        return ok
-    
-    def redo(self) -> bool:
-        """Son geri alınanı yeniden yap."""
+        if not self.cmd_mgr.undo():
+            return False
+        self.selected.clear()
+        self._update_geometry_renderers(self.r.scene)
+        return True
+
+    def redo(self):
         if not self.cmd_mgr.can_redo():
             return False
-        
-        ok = self.cmd_mgr.redo()
-        if ok:
-            self.selected.clear()
-            self._update_geometry_renderers(self.r.scene)
-        return ok
+        if not self.cmd_mgr.redo():
+            return False
+        self.selected.clear()
+        self._update_geometry_renderers(self.r.scene)
+        return True

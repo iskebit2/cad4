@@ -214,9 +214,9 @@ if __name__ == "__main__":
     reader = AnalyticalCD4Reader(path, tol=1.0)
     
     surfaces = reader.get_surface_polygons()
-    print("Surface Poligonlar:")
-    print(json.dumps(surfaces, indent=4))
-    print("-" * 50)
+    #print("Surface Poligonlar:")
+    #print(json.dumps(surfaces, indent=4))
+    #print("-" * 50)
 
     # Örn: Seçili veya ismi bilinen polygon üzerine Dead ve Live yük atama
     # my_polygon.add_uniform_to_frame_load(pattern_name="DEAD", value=2.5, dist_type=DistType.ONE_WAY)
@@ -225,6 +225,6 @@ if __name__ == "__main__":
     # for surf in surfaces:
     #     label = surf["label"]
     #     frames_dict = reader.get_frames_dict_on_polygon(label)
-    #     print(f"Surface '{label}' Düzlemindeki Frame'ler:")
-    #     print(json.dumps(frames_dict, indent=4))
-    #     print("-" * 50)
+    #     #print(f"Surface '{label}' Düzlemindeki Frame'ler:")
+    #     #print(json.dumps(frames_dict, indent=4))
+    #     #print("-" * 50)
