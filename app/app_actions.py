@@ -20,6 +20,9 @@ from ui.file_dialog import ImGuiFileDialog
 
 logger = CadLogger.get(__name__)
 
+def _copy_load(load_set):
+    from copy import deepcopy
+    return deepcopy(load_set)
 
 class AppActions:
 
@@ -85,7 +88,7 @@ class AppActions:
 
     def on_s2k_import_complete(self, project: Project) -> None:
         self.app.set_project(project)
-        self.app._model_text = f"MODEL: S2K import ({len(project.scene.frames)} çubuk)"
+        self.app._model_text = f"MODEL: S2K import ({len(project.math_model.frames)} çubuk)"
 
     def import_s2k_direct(self) -> None:
         candidates = [
@@ -97,7 +100,7 @@ class AppActions:
             return
         project = S2KLoader(path).load(Project())
         self.app.set_project(project)
-        self.app._model_text = f"MODEL: eski_.s2k ({len(project.scene.frames)} çubuk)"
+        self.app._model_text = f"MODEL: eski_.s2k ({len(project.math_model.frames)} çubuk)"
 
     # ------------------------------------------------------------------
     # PANEL / SELECTION
@@ -132,15 +135,24 @@ class AppActions:
     def _context_resolvers(self) -> dict:
         app = self.app
         eng = app.engine
-        scn = eng.scene if eng else app.current_project.scene
+        project = app.current_project
+        scene = eng.scene if eng else project.scene if project else None
+        math_model = (
+            eng.math_model if eng
+            else project.math_model if project else None
+        )
         renderer = eng.renderer if eng else None
         camera = eng.cam if eng else None
-        selection = list(scn.get_selected()) if scn else []
-        project = app.current_project
+        selection = (
+            list(eng.sel_mgr.get_selected()) if eng and eng.sel_mgr
+            else list(math_model.get_selected()) if math_model else []
+        )
         catalog = app._catalog
 
         return {
-            "scene": lambda: scn,
+            "engine": lambda: eng,
+            "scene": lambda: scene,
+            "math_model": lambda: math_model,
             "project": lambda: project,
             "catalog": lambda: catalog,
             "selection": lambda: selection,
@@ -153,6 +165,7 @@ class AppActions:
             "sections": lambda: list(getattr(project, "sections", {}).keys()),
             "materials": lambda: list(getattr(project, "materials", {}).keys()),
             "renderer": lambda: renderer,
+            "math_model_renderer": lambda: renderer.math_model_renderer if renderer else None,
             "camera": lambda: camera,
             "wind_analysis_ref": lambda: self.wind_state(),
         }
@@ -282,11 +295,11 @@ class AppActions:
     def _start_wind_analysis(self, direction_key: str, direction) -> None:
         project = self.app.current_project
         eng = self.app.engine
-        scene = eng.scene if eng else project.scene
+        scene = eng.math_model if eng else project.math_model
         if scene is None:
             return
 
-        points, polygons, wind_config = WindSceneAdapter.build_inputs(scene, project)
+        points, polygons, wind_config = WindSceneAdapter.build_inputs(project)
 
         self._wind_generation += 1
         generation = self._wind_generation
@@ -322,7 +335,7 @@ class AppActions:
             if project is not self.app.current_project:
                 continue
             eng = self.app.engine
-            if eng and eng.scene is not scene:
+            if eng and eng.math_model is not scene:
                 continue
 
             if status == "error":
@@ -341,6 +354,8 @@ class AppActions:
             record.w_dir = direction
             WindSceneAdapter.update_direction_result(record, zones, engine_data)
             WindSceneAdapter.store_zones(project, key, zones, engine_data, direction)
+            if eng is not None:
+                eng.update_geo(project)
             self._wind_status = f"{len(zones)} rüzgar bölgesi hesaplandı."
             panel = self.app.panels.get("wind", {}).get("instance")
             if panel is not None and hasattr(panel, "_invalidate_zones_cache"):
@@ -360,13 +375,164 @@ class AppActions:
         if eng and eng.grid and project.grid:
             eng.grid.set_grid(project.grid)
             eng.grid.mark_dirty()
-        if eng and eng.scene and eng.renderer:
-            eng.scene.mark_dirty()
-            eng.renderer.update_geo(eng.scene)
+        if eng and eng.math_model and eng.renderer:
+            eng.math_model.mark_dirty()
+            eng.renderer.update_geo(eng.math_model)
         if eng and eng.scene:
             eng.scene.refresh_bounds()
+        if eng and eng.math_model:
+            eng.math_model.refresh_bounds()
             eng.fit_view()
 
         panel = self.app.panels.get("grid", {}).get("instance")
         if panel is not None and hasattr(panel, "on_unit_changed"):
             panel.on_unit_changed()
+
+    def on_plane_selected(self, plane) -> None:
+        project = self.app.current_project
+        if project is None:
+            return
+        if plane is None:
+            project.deactivate_plane()
+        else:
+            project.activate_plane(plane)
+        eng = self.app.engine
+        if eng is None:
+            return
+        
+        if eng.interaction_renderer:
+            eng.interaction_renderer.preview_plane = None
+        if eng.renderer is not None and eng.math_model is not None:
+            eng.renderer.update_geo(eng.math_model)
+        if eng.sel_mgr:
+            eng.sel_mgr.clear()
+
+    def toggle_draw(self, sender=None):
+        eng = self.app.engine
+        if not eng or not eng.draw_mgr:
+            return
+        mgr = eng.draw_mgr
+        if mgr.is_active:
+            mgr.cancel()
+            return
+        if sender:
+            panel_name = "polygon_properties" if sender == "poly" else "line_properties"
+            mode = "sequential" if sender == "poly" else "line"
+            panel = self.app.panels.get(panel_name, {}).get("instance")
+            if panel is not None and not getattr(panel, "visible", False):
+                self.prepare_panel(panel_name, panel)
+                panel.open()
+            mgr.start(mode=mode)
+
+    def toggle_plane(self):
+        pdm = getattr(self.app.engine, "plane_draw_mgr", None)
+        if pdm is None:
+            return
+        if pdm.is_active:
+            pdm.cancel()
+            return
+        # for entry in self.app.panels.values():
+        #     p = entry["instance"]
+        #     if getattr(p, "visible", False):
+        #         p.close()
+        pdm.start_3pt()
+
+    def toggle_local_axes(self):
+        eng = self.app.engine
+        if eng and eng.scene:
+            eng.scene.show_local_axes = not eng.scene.show_local_axes
+
+    def toggle_loads(self):
+        self.set_loads_visible(not self.get_loads_visible())
+
+    def get_loads_visible(self) -> bool:
+        panel = getattr(self.app, "load_display_panel", None)
+        if panel is not None:
+            return bool(panel.show_loads)
+        pres = self.app.engine.presentation_renderer if self.app.engine else None
+        if pres and pres.loads:
+            return bool(pres.loads.enabled)
+        return False
+
+    def set_loads_visible(self, enabled: bool):
+        panel = getattr(self.app, "load_display_panel", None)
+        pres = self.app.engine.presentation_renderer if self.app.engine else None
+        math_model = self.app.engine.math_model if self.app.engine else None
+
+        if panel is not None:
+            panel.set_loads_visible(
+                enabled,
+                renderer=self.app.engine.renderer if self.app.engine else None,
+                math_model=math_model,
+            )
+            return
+
+        if pres and pres.loads:
+            pres.loads.enabled = bool(enabled)
+            if enabled and math_model:
+                pres.update_loads(math_model, camera_scale=1.0, scene_size=1.0)
+
+    def toggle_show_only(self):
+        eng = self.app.engine
+        if not eng or not eng.math_model:
+            return
+        scn = eng.math_model
+        if self.app._show_only_ids is None:
+            selected = scn.get_selected()
+            if not selected:
+                return
+            self.app._show_only_ids = {e.unique_id for e in selected}
+        else:
+            self.app._show_only_ids = None
+        scn._render_filter = self.app._show_only_ids
+        if self.app._show_only_ids is not None:
+            eng.renderer.update_geo(scn)
+        else:
+            eng.set_scene(self.app.current_project)
+
+    def apply_frame_load(self, frames, load_set):
+        if not frames or not load_set.segments:
+            return
+        pattern = load_set.pattern_name
+        for frame in frames:
+            frame.dist_load_sets[pattern] = _copy_load(load_set)
+            frame.mark_dirty()
+        self.set_loads_visible(True)
+        eng = self.app.engine
+        if eng and eng.math_model and eng.renderer:
+            eng.renderer.update_geo(eng.math_model)
+            eng.math_model.clear_dirty()
+
+    def on_area_transfer_complete(self, frames):
+        if not frames:
+            return
+        self.set_loads_visible(True)
+        eng = self.app.engine
+        if eng and eng.math_model and eng.renderer:
+            eng.renderer.update_geo(eng.math_model)
+            eng.math_model.clear_dirty()
+
+    def convert_frames_to_links(self, link_prop_name="DefaultLink",
+                                delete_original=True):
+        from tools import frame_to_link
+        eng = self.app.engine
+        if not eng or not eng.math_model:
+            return
+        scn = eng.math_model
+        frames = [e for e in scn.get_selected() if e.__class__.__name__ == "Frame"]
+        if not frames:
+            return
+        report = frame_to_link.convert_frames_to_links(
+            scene=scn,
+            project=self.app.current_project,
+            frames=frames,
+            link_prop_name=link_prop_name,
+            delete_original=delete_original,
+        )
+        if self.app._show_only_ids is not None:
+            removed = {f.unique_id for f in frames}
+            self.app._show_only_ids -= removed
+            self.app._show_only_ids.update(l.unique_id for l in report["new_links"])
+            scn._render_filter = self.app._show_only_ids
+        if eng.sel_mgr:
+            eng.sel_mgr.clear()

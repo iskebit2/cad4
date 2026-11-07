@@ -1,238 +1,146 @@
-# domain/scene.py
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 
-from data.enums import ObjType
-from domain.element import Area, Element, Frame, Link, Node
-
-
-@dataclass
-class Bounds3D:
-    min: np.ndarray
-    max: np.ndarray
-
-    @property
-    def center(self): return 0.5 * (self.min + self.max)
-
-    @property
-    def size(self): return float(np.linalg.norm(self.max - self.min))
-
-    @property
-    def half_size(self): return 0.5 * (self.max - self.min)
+from domain.grid import Grid
+from domain.bounds import Bounds3D
+from domain.lighting import Light, LightingSettings
+from domain.line import Line
+from domain.polygon import Polygon
 
 
 class Scene:
-    def __init__(self, project: Any = None):
-        self.nodes: dict[int, Node] = {}
-        self.frames: dict[int, Frame] = {}
-        self.areas: dict[int, Area] = {}
-        self.links: dict[int, Link] = {}
+    """Persistent presentation data, independent of the structural MathModel."""
+
+    def __init__(self):
+        self.grid = Grid()
+        self.polygons: dict[int, Polygon] = {}
+        self.lines: dict[int, Line] = {}
+        self.lighting = LightingSettings()
         self._bounds: Bounds3D | None = None
-        self.project = project
         self.show_local_axes = False
         self.show_local_axes_for_selected = True
         self.show_local_axes_scale = 1.0
         self.units = "N, mm, C"
         self._is_dirty = True
-        self._plane_associations_dirty = True
-        self._render_filter: set | None = None
+
+    @property
+    def lights(self) -> list[Light]:
+        return self.lighting.lights
 
     def compute_bounds(self) -> Bounds3D | None:
-        coords = [(n.x, n.y, n.z) for n in self.nodes.values() if getattr(n, "is_visible", True)]
-        if not coords: return None
-        arr = np.array(coords, dtype=float)
+        coords = []
+        grid_coords = (
+            self.grid.x_coords,
+            self.grid.y_coords,
+            self.grid.z_coords,
+        )
+        if any(grid_coords):
+            coords.extend(
+                (x, y, z)
+                for x in (self.grid.x_coords or [0.0])
+                for y in (self.grid.y_coords or [0.0])
+                for z in (self.grid.z_coords or [0.0])
+            )
+
+        for polygon in self.polygons.values():
+            if getattr(polygon, "is_visible", True):
+                coords.extend(
+                    (node.x, node.y, node.z) for node in polygon.nodes
+                )
+                for zones in polygon.zone_children_by_direction.values():
+                    for zone in zones:
+                        zone_coords = (
+                            zone.get("coords", ())
+                            if isinstance(zone, dict)
+                            else getattr(zone, "coords", ())
+                        )
+                        coords.extend(
+                            tuple(float(value) for value in point[:3])
+                            for point in zone_coords
+                            if len(point) >= 3
+                        )
+        for line in self.lines.values():
+            if getattr(line, "visible", True):
+                coords.extend((vertex.x, vertex.y, vertex.z) for vertex in line.vertices)
+
+        if not coords:
+            return None
+        arr = np.asarray(coords, dtype=float)
         return Bounds3D(min=arr.min(axis=0), max=arr.max(axis=0))
 
     @property
-    def bounds(self):
-        if self._bounds is None:
-            self._bounds = self.compute_bounds()
-        return self._bounds
-
-    def refresh_bounds(self):
+    def bounds(self) -> Bounds3D | None:
         self._bounds = self.compute_bounds()
         return self._bounds
 
-    def clear_bounds(self):
+    def refresh_bounds(self) -> Bounds3D | None:
+        self._bounds = self.compute_bounds()
+        return self._bounds
+
+    def clear_bounds(self) -> None:
         self._bounds = None
 
-    def mark_dirty(self):
+    def mark_dirty(self) -> None:
         self._is_dirty = True
-        self.invalidate_plane_associations()
+        self.clear_bounds()
 
-    def invalidate_plane_associations(self):
-        self._plane_associations_dirty = True
-
-    def mark_plane_associations_current(self):
-        self._plane_associations_dirty = False
-
-    def refresh_plane_associations(self, force=False) -> bool:
-        if not force and not self._plane_associations_dirty:
-            return False
-        if self.project is None:
-            self.mark_plane_associations_current()
-            return False
-        for plane in self.project.all_planes().values():
-            plane.refresh_assoc(self)
-        self.mark_plane_associations_current()
-        return True
-
-    def is_dirty(self):
+    def is_dirty(self) -> bool:
         return self._is_dirty
 
-    def clear_dirty(self):
+    def clear_dirty(self) -> None:
         self._is_dirty = False
 
-    def add_node(self, node: Node):
-        self.nodes[node.unique_id] = node
+    def add_polygon(self, polygon: Polygon) -> None:
+        self.polygons[polygon.unique_id] = polygon
         self.mark_dirty()
 
-    def add_frame(self, frame: Frame):
-        self.frames[frame.unique_id] = frame
-        if frame.node_i: frame.node_i.add_connection(frame)
-        if frame.node_j: frame.node_j.add_connection(frame)
-        self.mark_dirty()
-
-    def add_area(self, area: Area):
-        self.areas[area.unique_id] = area
-        for node in area.nodes:
-            node.add_connection(area)
-        self.mark_dirty()
-
-    def add_link(self, link: Link):
-        self.links[link.unique_id] = link
-        if link.node_i: link.node_i.add_connection(link)
-        if link.node_j: link.node_j.add_connection(link)
-        self.mark_dirty()
-
-    def can_remove(self, element: Element) -> tuple[bool, str]:
-        if isinstance(element, Node) and element.connected:
-            return False, f"Node'a bağlı {len(element.connected)} eleman"
-        return True, ""
-
-    def remove_element(self, element: Element) -> bool:
-        ok, _ = self.can_remove(element)
-        if not ok: return False
-        bucket = self._bucket(element)
-        if bucket is None or element.unique_id not in bucket: return False
-        if isinstance(element, (Frame, Link)):
-            for n in (element.node_i, element.node_j):
-                if n:
-                    n.connected = [(t, eid) for t, eid in n.connected if eid != element.unique_id]
-        elif isinstance(element, Area):
-            for n in element.nodes:
-                n.connected = [(t, eid) for t, eid in n.connected if eid != element.unique_id]
-        del bucket[element.unique_id]
+    def remove_polygon(self, polygon_id: int) -> bool:
+        if self.polygons.pop(polygon_id, None) is None:
+            return False
         self.mark_dirty()
         return True
 
-    def restore_element(self, element: Element):
-        bucket = self._bucket(element)
-        if bucket is None: return
-        bucket[element.unique_id] = element
-        t = ObjType.FRAME if isinstance(element, Frame) else (ObjType.LINK if isinstance(element, Link) else ObjType.AREA)
-        nodes = ([element.node_i, element.node_j] if isinstance(element, (Frame, Link))
-                 else element.nodes if isinstance(element, Area) else [])
-        for n in nodes:
-            if n and (t, element.unique_id) not in n.connected:
-                n.connected.append((t, element.unique_id))
+    def add_line(self, line: Line) -> None:
+        self.lines[line.unique_id] = line
         self.mark_dirty()
 
-    def mark_dirty_from_node(self, node):
-        if node is None:
-            return
-        for t, eid in node.connected:
-            name = {ObjType.FRAME: "frames", ObjType.AREA: "areas",
-                    ObjType.LINK: "links"}.get(t)
-            if name is None:
-                continue
-            bucket = getattr(self, name, None)
-            if bucket and int(eid) in bucket:
-                bucket[int(eid)].mark_dirty()
+    def remove_line(self, line_id: int) -> bool:
+        if self.lines.pop(line_id, None) is None:
+            return False
         self.mark_dirty()
-
-    def get_element_by_label(self, label: str):
-        for e in self.all_elements.values():
-            if str(e.label) == str(label): return e
-        return None
-
-    def get_element_by_id(self, unique_id):
-        for e in self.all_elements.values():
-            if str(e.unique_id) == str(unique_id): return e
-        return None
-
-    def get_element_by_unique_id(self, unique_id: int):
-        for b in (self.frames, self.nodes, self.areas, self.links):
-            if unique_id in b: return b[unique_id]
-        return None
+        return True
 
     @property
-    def all_elements(self):
-        out = {}
-        out.update(self.nodes)
-        out.update(self.frames)
-        out.update(self.areas)
-        out.update(self.links)
-        return out
+    def all_elements(self) -> dict[int, Any]:
+        return {**self.polygons, **self.lines}
 
-    def get_selected(self):
-        return [e for e in self.all_elements.values() if e.is_selected]
+    def get_selected(self) -> list[Any]:
+        return [
+            element for element in self.all_elements.values()
+            if getattr(element, "is_selected", False)
+        ]
 
     def clear_selections(self) -> int:
-        count = 0
-        for e in self.all_elements.values():
-            if e.is_selected:
-                e.is_selected = False
-                count += 1
-        return count
+        selected = self.get_selected()
+        for element in selected:
+            element.is_selected = False
+        return len(selected)
 
-    def get_bounds(self):
-        pts = [n.coords for n in self.nodes.values()]
-        for f in self.frames.values():
-            if f.node_i and f.node_j:
-                pts.extend([f.node_i.coords, f.node_j.coords])
-        if not pts: return np.array([0.0, 0.0, 0.0]), 1.0
-        a = np.array(pts)
-        mn, mx = a.min(axis=0), a.max(axis=0)
-        return (mn + mx) * 0.5, float(np.linalg.norm(mx - mn))
+    def get_element_by_unique_id(self, unique_id: int):
+        return self.all_elements.get(unique_id)
 
-    def _bucket(self, element: Element):
-        if isinstance(element, Node): return self.nodes
-        if isinstance(element, Frame): return self.frames
-        if isinstance(element, Area): return self.areas
-        if isinstance(element, Link): return self.links
-        return None
-
-    def is_element_added(self, element: Element) -> bool:
-        b = self._bucket(element)
-        return b is not None and element.unique_id in b
-
-    def add_element(self, element: Element) -> bool:
-        if self.is_element_added(element): return False
-        fn = {Node: self.add_node, Frame: self.add_frame,
-              Area: self.add_area, Link: self.add_link}.get(type(element))
-        if fn is None: return False
-        fn(element)
-        return True
-
-    def __repr__(self):
-        return (f"<Scene nodes={len(self.nodes)} frames={len(self.frames)} "
-                f"areas={len(self.areas)} links={len(self.links)}>")
+    def __repr__(self) -> str:
+        return (
+            f"<Scene polygons={len(self.polygons)} lines={len(self.lines)}>"
+        )
 
     def summary(self) -> str:
-        n_mass = sum(1 for n in self.nodes.values() if n.has_mass())
-        n_con = sum(1 for n in self.nodes.values() if n.constraint_name)
-        n_spring = sum(
-            1 for n in self.nodes.values()
-            if any(abs(getattr(n, f"spring_{d}", 0.0)) > 1e-12
-                   for d in ("u1", "u2", "u3", "r1", "r2", "r3"))
+        return (
+            "Scene:\n"
+            f"  Grid axes: {len(self.grid.axes)}\n"
+            f"  Polygons: {len(self.polygons)}\n"
+            f"  Lines: {len(self.lines)}"
         )
-        return (f"Scene:\n"
-                f"  Nodes: {len(self.nodes)}  (mass: {n_mass}, constraint: {n_con}, spring: {n_spring})\n"
-                f"  Frames: {len(self.frames)}\n"
-                f"  Areas: {len(self.areas)}\n"
-                f"  Links: {len(self.links)}")

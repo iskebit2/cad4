@@ -37,7 +37,7 @@ class EditController:
 
     @property
     def scene(self):
-        return self.engine.scene
+        return self.engine.math_model
 
     # ========================================================
     # CREATE
@@ -359,11 +359,11 @@ class EditController:
             return False
 
     def _refresh(self):
-        scene = self.engine.scene
-        if scene is not None:
-            scene.mark_dirty()
+        math_model = self.engine.math_model
+        if math_model is not None:
+            math_model.mark_dirty()
         try:
-            self.engine.renderer.update_geo(scene)
+            self.engine.renderer.update_geo(math_model)
         except Exception:
             logger.exception("renderer.update_geo hatası")
 

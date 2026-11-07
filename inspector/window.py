@@ -23,6 +23,7 @@ class InspectorWindow:
 
     def __init__(self, scene=None, catalog=None, standalone=False):
         self.scene = scene
+        self.math_model = scene
         self.catalog = catalog
         self.controller = InspectorController(scene=scene, catalog=catalog)
 
@@ -43,6 +44,7 @@ class InspectorWindow:
     def set_context(self, ctx: dict):
         for k, v in ctx.items():
             setattr(self, k, v)
+        self.controller.scene = getattr(self, "math_model", None)
 
     def open(self):
         self.visible = True
@@ -56,7 +58,18 @@ class InspectorWindow:
 
     def set_scene(self, scene):
         self.scene = scene
+        self.math_model = scene
         self.controller.scene = scene
+        self._tree_filter = ""
+        self._tree_open_groups.clear()
+        self._scroll_to_id = None
+        self.set_selection([])
+        self.refresh()
+
+    def set_project(self, project):
+        self.scene = project.scene
+        self.math_model = project.math_model
+        self.controller.scene = project.math_model
         self._tree_filter = ""
         self._tree_open_groups.clear()
         self._scroll_to_id = None
@@ -174,7 +187,9 @@ class InspectorWindow:
 
     def _select_first_match(self, flt: str):
         type_hint, id_hint, text_hint = _parse_filter(flt)
-        for type_name, elements in _scene_groups(self.scene):
+        for type_name, elements in _scene_groups(
+            self.scene, self.math_model,
+        ):
             if type_hint and type_name.lower() != type_hint:
                 continue
             for el in elements:
@@ -185,7 +200,9 @@ class InspectorWindow:
     def _draw_filtered_groups(self, flt: str, force_open: bool):
         type_hint, id_hint, text_hint = _parse_filter(flt)
 
-        for type_name, elements in _scene_groups(self.scene):
+        for type_name, elements in _scene_groups(
+            self.scene, self.math_model,
+        ):
             if type_hint and type_name.lower() != type_hint:
                 continue
             if not elements:

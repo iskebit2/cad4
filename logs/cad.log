@@ -1,18 +1,22 @@
-2026-11-06 02:39:44 [INFO    ] cad.main: ================================================================
-2026-11-06 02:39:44 [INFO    ] cad.main: CAD4 başlatılıyor
-2026-11-06 02:39:44 [INFO    ] cad.main: Python   : 3.12.10
-2026-11-06 02:39:44 [INFO    ] cad.main: Dizin    : D:\Program\cad4
-2026-11-06 02:39:44 [INFO    ] cad.main: Log dos. : D:\Program\cad4\logs\cad.log
-2026-11-06 02:39:44 [INFO    ] cad.main: ================================================================
-2026-11-06 02:39:44 [INFO    ] cad.main: [1/3] CadWindow oluşturuluyor...
-2026-11-06 02:39:48 [INFO    ] cad.app.cad_window: [CadWindow] ImGui hazır
-2026-11-06 02:39:48 [INFO    ] cad.app.cad_window: Pencere hazır: 1280x800
-2026-11-06 02:39:48 [INFO    ] cad.main: [2/3] CadApp oluşturuluyor...
-2026-11-06 02:39:48 [INFO    ] cad.main: [3/3] Ana döngü başlıyor
-2026-11-06 02:39:48 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
-2026-11-06 02:39:48 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=2, u_mvp=0)
-2026-11-06 02:39:48 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
-2026-11-06 02:41:44 [INFO    ] cad.ui.wind_analysis_panel: [Wind] Yön 01: 4 zone
-2026-11-06 02:42:12 [INFO    ] cad.ui.render_settings_panel: [RenderSettings] set_context keys=['renderer', 'scene'] renderer=<render.scenerenderer.SceneRenderer object at 0x00000298F11B8350>
-2026-11-06 02:44:24 [INFO    ] cad.main: [3/3] Ana döngü bitti
-2026-11-06 02:44:24 [INFO    ] cad.main: Çıkış kodu: 0
+2026-11-08 02:01:56 [INFO    ] cad.main: ================================================================
+2026-11-08 02:01:56 [INFO    ] cad.main: CAD4 başlatılıyor
+2026-11-08 02:01:56 [INFO    ] cad.main: Python   : 3.12.10
+2026-11-08 02:01:56 [INFO    ] cad.main: Log dos. : D:\Program\cad4\logs\cad.log
+2026-11-08 02:01:56 [INFO    ] cad.main: ================================================================
+2026-11-08 02:02:00 [INFO    ] cad.app.cad_window: [CadWindow] ImGui hazır
+2026-11-08 02:02:00 [INFO    ] cad.app.cad_window: Pencere hazır: 1280x800
+2026-11-08 02:02:00 [INFO    ] cad.main: [Boot] CadWindow: 3.76s
+2026-11-08 02:02:01 [INFO    ] cad.main: [Boot] CadApp: 1.27s
+2026-11-08 02:02:01 [INFO    ] cad.main: [Boot] Ana döngü başlıyor
+2026-11-08 02:02:01 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-11-08 02:02:01 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=2, u_mvp=0)
+2026-11-08 02:02:01 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-11-08 02:02:21 [INFO    ] cad.ui.report_panel: [ReportPanel] Projede analiz edilecek düğüm veya poligon bulunamadı.
+2026-11-08 02:03:06 [INFO    ] cad.tools.s2k.loader: CurrUnits: N, mm, C
+2026-11-08 02:03:06 [INFO    ] cad.tools.s2k.loader: [Parser] 67 tablo parse edildi
+2026-11-08 02:03:08 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = N, mm, C
+2026-11-08 02:03:10 [INFO    ] cad.tools.s2k.loader: [Scene] 3031 düğüm, 1653 çubuk, 1755 alan, 983 bağ
+2026-11-08 02:03:10 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = N, mm, C
+2026-11-08 02:13:56 [INFO    ] cad.core.analysis.material_takeoff: [Takeoff] 2674 eleman, toplam 130.081 kg (0.1301 ton)
+2026-11-08 02:19:36 [INFO    ] cad.main: [Boot] Ana döngü bitti: 1054.80s
+2026-11-08 02:19:36 [INFO    ] cad.main: Çıkış kodu: 0

@@ -67,28 +67,28 @@ class AreaBuilder:
             v3 = down[i]    # alt i
             
             # Yüzey normali (dışa bakan)
-            face_normal = normalize(np.cross(v1 - v0, v2 - v0))
+            face_normal = normalize(np.cross(v2 - v0, v1 - v0))
             
             base = len(verts) // 6
             for p in [v0, v1, v2, v3]:
                 verts.extend([p[0], p[1], p[2], face_normal[0], face_normal[1], face_normal[2]])
             
             # İki üçgen
-            idxs.extend([base, base+1, base+2, base, base+2, base+3])
+            idxs.extend([base, base+2, base+1, base, base+3, base+2])
         
         # ===== ÜST KAPAK =====
         base = len(verts) // 6
         for p in up:
             verts.extend([p[0], p[1], p[2], normal[0], normal[1], normal[2]])
         for i in range(0, len(tri), 3):
-            idxs.extend([base + tri[i], base + tri[i+2], base + tri[i+1]])
+            idxs.extend([base + tri[i], base + tri[i+1], base + tri[i+2]])
         
         # ===== ALT KAPAK =====
         base = len(verts) // 6
         for p in down:
             verts.extend([p[0], p[1], p[2], -normal[0], -normal[1], -normal[2]])
         for i in range(0, len(tri), 3):
-            idxs.extend([base + tri[i], base + tri[i+1], base + tri[i+2]])
+            idxs.extend([base + tri[i], base + tri[i+2], base + tri[i+1]])
         
         # Renkler
         color = np.array(

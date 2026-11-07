@@ -261,11 +261,10 @@ class ProjectBuilder:
         Scene'i project'e bağla, mass_source_map, load'ları kontrol et.
         `convert_project_units` ÇAĞIRMAZ — çağıran karar verir.
         """
-        scene = self._scene_builder.scene
-        scene.units = self.project.unit_system.value
-        if hasattr(scene, "mark_dirty"):
-            scene.mark_dirty()
-        self.project.scene = scene
+        math_model = self._scene_builder.math_model
+        math_model.units = self.project.unit_system.value
+        math_model.mark_dirty()
+        self.project.math_model = math_model
 
         # Mass source
         if self.mass_source_map:
@@ -274,7 +273,7 @@ class ProjectBuilder:
         logger.info(
             "[ProjectBuilder] finalize: %d material, %d section, %d node, %d frame",
             len(self.materials), len(self.sections),
-            len(scene.nodes), len(scene.frames),
+            len(math_model.nodes), len(math_model.frames),
         )
         return self.project
 
@@ -292,11 +291,11 @@ class ProjectBuilder:
                 )
 
         # Grid config
-        if self.project.grid:
+        if self.project.scene.grid:
             for attr in ("x_coords", "y_coords", "z_coords"):
-                coords = getattr(self.project.grid, attr, None)
+                coords = getattr(self.project.scene.grid, attr, None)
                 if coords:
-                    setattr(self.project.grid, attr, [
+                    setattr(self.project.scene.grid, attr, [
                         convert_value(Dimension.LENGTH, v, from_sys, target)
                         for v in coords
                     ])

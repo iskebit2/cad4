@@ -114,7 +114,7 @@ class NodeRenderer(BaseRenderer[Node]):
     # ==================================================================
     # SIMPLE RENDER
     # ==================================================================
-    def render_simple(self, mvp, shader, color=None, alpha=0.5):
+    def render_simple(self, mvp, shader, color=None, alpha=0.5, point_size=None):
         if not self.simple_vao or self.simple_vcount == 0:
             return
         sh = shader or self.shader
@@ -122,7 +122,7 @@ class NodeRenderer(BaseRenderer[Node]):
 
         loc = sh.get_loc("pointSize")
         if loc != -1:
-            glUniform1f(loc, self.point_size)
+            glUniform1f(loc, float(point_size if point_size is not None else self.point_size))
 
         loc = sh.get_loc("mvp")
         if loc != -1:

@@ -10,7 +10,7 @@ import pandas as pd
 
 from core.units import G_M_S2, KG_PER_TON
 from domain.element import Area, Frame
-from domain.scene import Scene
+from domain.math_model import MathModel
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -151,7 +151,7 @@ def _area_weight(area: Area) -> ElementWeight | None:
     )
 
 
-def compute_takeoff(scene: Scene) -> TakeoffResult:
+def compute_takeoff(scene: MathModel) -> TakeoffResult:
     result = TakeoffResult()
 
     for f in scene.frames.values():

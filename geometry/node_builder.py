@@ -31,9 +31,13 @@ class NodeBuilder:
     """Node mesh'i (küp veya restraint sembolleri) üretir."""
 
     SEGMENTS = 16   # daire sembolü için segment sayısı
+    SHADED_SCALE = 10.0
+    SIMPLE_SCALE = 500.0
 
     def __init__(self):
         self.size: float = 1.0
+        self.simple_restraint_size: float = self.SIMPLE_SCALE
+        self.shaded_restraint_size: float = self.SHADED_SCALE
         self.shapes: dict[str, np.ndarray] = {}
         self._rot_cache: dict[tuple[float, float, float], np.ndarray] = {}
         self._rebuild_shapes()
@@ -42,7 +46,6 @@ class NodeBuilder:
     # PUBLIC
     # ==================================================================
     def set_size(self, size: float) -> bool:
-        """Sembol boyutunu ayarla. True dönerse gerçekten değişti."""
         size = float(size)
         if size <= 0 or abs(self.size - size) < 1e-6:
             return False
@@ -50,26 +53,21 @@ class NodeBuilder:
         self._rebuild_shapes()
         return True
 
+    def set_restraint_size(self, size: float) -> bool:
+        size = float(size)
+        if size <= 0 or abs(self.shaded_restraint_size - size) < 1e-6 or abs(self.simple_restraint_size - size) < 1e-6:
+            return False
+        self.simple_restraint_size = self.SIMPLE_SCALE * size
+        self.shaded_restraint_size = self.SHADED_SCALE * size
+        self._rebuild_shapes()
+        return True
+
     def build(self, node: Node) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Shaded mesh. Returns (verts, colors, indices).
-
-        Free node  → küçük küp
-        Restraint  → semboller (küp yok)
-
-        Boş dönerse NodeRenderer bu node'u atlar.
-        """
         center = np.array([node.x, node.y, node.z], dtype=np.float32)
 
         vlist: list = []
         ilist: list = []
 
-        if node.restraint is None or node.restraint.is_free():
-            self._add_cube(center, vlist, ilist)
-        else:
-            self._add_restraint_symbols(node.restraint, center, vlist, ilist)
-        
-        
         if node.restraint is None or node.restraint.is_free():
             self._add_cube(center, vlist, ilist)
         else:
@@ -103,8 +101,13 @@ class NodeBuilder:
     # SHAPES
     # ==================================================================
     def _rebuild_shapes(self):
-        radius = self.size / 2.0
-        self.shapes = {
+        self.shapes = self._build_shapes_for(self.size)
+        self.shapes_restraint = self._build_shapes_for(self.shaded_restraint_size)
+
+    def _build_shapes_for(self, size):
+        radius = size / 2.0
+        
+        return {
             "triangle": np.array([
                 [0.0,      radius,  0.0],
                 [radius,  -radius,  0.0],
@@ -129,19 +132,64 @@ class NodeBuilder:
     # ==================================================================
     # RESTRAINT SEMBOLLERI
     # ==================================================================
+    def build_simple_restraint_lines(self, node: Node) -> np.ndarray:
+        if node.restraint is None or node.restraint.is_free():
+            return np.array([], dtype=np.float32)
+
+        # restraint_size değerini doğrudan baz alalım (fazla küçük kalmaması için ölçekleyelim)
+        s = self.simple_restraint_size * 0.5
+        s_z = self.simple_restraint_size * 0.25
+        cx, cy, cz = node.x, node.y, node.z
+
+        lines: list = []   # her eleman 6 float (2 vertex × 3)
+
+        def add_seg(a, b):
+            lines.extend([
+                a[0], a[1], a[2], 0.0, 0.0, 0.0,
+                b[0], b[1], b[2], 0.0, 0.0, 0.0,
+            ])
+
+        r = node.restraint
+
+        # Z ekseninde sembol
+        if r.uz:
+            if r.rx and r.ry and r.rz:
+                # FIXED: Ters T
+                add_seg((cx - s, cy, cz - s_z), (cx + s, cy, cz - s_z))
+                add_seg((cx, cy, cz - s_z), (cx, cy, cz))
+                add_seg((cx - s * 0.3, cy, cz - s_z * 0.5), (cx + s * 0.3, cy, cz - s_z * 0.5))
+            elif not r.rx and not r.ry and not r.rz:
+                # PINNED: Üçgen
+                add_seg((cx - s, cy, cz - s_z), (cx + s, cy, cz - s_z))
+                add_seg((cx - s, cy, cz - s_z), (cx, cy, cz))
+                add_seg((cx + s, cy, cz - s_z), (cx, cy, cz))
+            else:
+                # ROLLER: Daire
+                add_seg((cx - s, cy, cz - s_z), (cx + s, cy, cz - s_z))
+                n = 16
+                prev = None
+                for i in range(n + 1):
+                    a = 2.0 * math.pi * i / n
+                    p = (cx + s * math.cos(a), cy, cz - s_z + s_z * math.sin(a))
+                    if prev is not None:
+                        add_seg(prev, p)
+                    prev = p
+
+        return np.array(lines, dtype=np.float32)
+    
     def _add_restraint_symbols(self, restraint, center, vlist, ilist):
         symbols = self.determine_support_symbols(restraint)
-        half = self.size * 0.5
-
+        r_xy = self.shaded_restraint_size * 0.5
+        r_z = self.shaded_restraint_size * 0.25
         if symbols["x"]:
             m = self._rot(90, 0, 0)
-            self._add_symbol(symbols["x"], m, [0, 0, -half], center, vlist, ilist)
+            self._add_symbol(symbols["x"], m, [0, 0, -r_z], center, vlist, ilist)
         if symbols["y"]:
             m = self._rot(90, 0, 90)
-            self._add_symbol(symbols["y"], m, [0, 0, -half], center, vlist, ilist)
+            self._add_symbol(symbols["y"], m, [0, 0, -r_z], center, vlist, ilist)
         if symbols["z"]:
             m = self._rot(0, 0, 0)
-            self._add_symbol(symbols["z"], m, [0, 0, -self.size], center, vlist, ilist)
+            self._add_symbol(symbols["z"], m, [0, 0, -r_z * 2], center, vlist, ilist)
 
     def determine_support_symbols(self, restraint) -> dict[str, str | None]:
         """Restraint → her eksende kullanılacak şekil."""
@@ -164,18 +212,25 @@ class NodeBuilder:
         }
 
     def _add_symbol(self, shape_name, rot, offset, center, vlist, ilist):
-        shape = self.shapes[shape_name]
+        shape = self.shapes_restraint[shape_name]
         rotated = shape @ rot.T
         offset_np = np.asarray(offset, dtype=np.float32)
         local = rotated + offset_np
 
         base = len(vlist) // _STRIDE
         n = len(local)
+        if shape_name == "circle":
+            normal = rot @ np.array([0.0, 0.0, 1.0], dtype=np.float32)
+        else:
+            normal = np.cross(rotated[1] - rotated[0], rotated[2] - rotated[0])
+            normal_length = np.linalg.norm(normal)
+            if normal_length > 1e-10:
+                normal /= normal_length
 
         for p in local:
             vlist.extend((
                 float(p[0]), float(p[1]), float(p[2]),
-                0.0, 0.0, 1.0,
+                float(normal[0]), float(normal[1]), float(normal[2]),
                 float(center[0]), float(center[1]), float(center[2]),
             ))
 
@@ -253,58 +308,3 @@ class NodeBuilder:
         result = (Rz @ Ry @ Rx).astype(np.float32)
         self._rot_cache[key] = result
         return result
-
-    def build_simple_restraint_lines(self, node: Node) -> np.ndarray:
-        """
-        Restraint'li node için çizgi tabanlı sembol.
-        Returns 6-float vertex array (pos3 + pad3) — global koordinat.
-        Free node → boş array.
-        """
-        if node.restraint is None or node.restraint.is_free():
-            return np.array([], dtype=np.float32)
-
-        # Sembol boyutu — NodeBuilder.size'ın bir kısmı
-        s = self.size * 10
-        cx, cy, cz = node.x, node.y, node.z
-
-        lines: list = []   # her eleman 6 float (2 vertex × 3)
-
-        def add_seg(a, b):
-            lines.extend([
-                a[0], a[1], a[2], 0.0, 0.0, 0.0,
-                b[0], b[1], b[2], 0.0, 0.0, 0.0,
-            ])
-
-        r = node.restraint
-
-        # Z ekseninde sembol
-        if r.uz:
-            if r.rx and r.ry and r.rz:
-                # --- FIXED: Ters T ---
-                # Yatay zemin (X ekseninde, altında)
-                add_seg((cx - s, cy, cz - s), (cx + s, cy, cz - s))
-                # Dikey çubuk (node'a kadar)
-                add_seg((cx, cy, cz - s), (cx, cy, cz))
-                # Küçük yatay tarama (T'nin ortası)
-                add_seg((cx - s * 0.3, cy, cz - s * 0.5), (cx + s * 0.3, cy, cz - s * 0.5))
-            elif not r.rx and not r.ry and not r.rz:
-                # --- PINNED: İçi boş üçgen ---
-                # Taban (yatay)
-                add_seg((cx - s, cy, cz - s), (cx + s, cy, cz - s))
-                # Sol kenar
-                add_seg((cx - s, cy, cz - s), (cx, cy, cz))
-                # Sağ kenar
-                add_seg((cx + s, cy, cz - s), (cx, cy, cz))
-            else:
-                # --- ROLLER: İçi boş daire ---
-                add_seg((cx - s, cy, cz - s), (cx + s, cy, cz - s))  # zemin
-                n = 16
-                prev = None
-                for i in range(n + 1):
-                    a = 2.0 * math.pi * i / n
-                    p = (cx + s * math.cos(a), cy, cz - s + s * math.sin(a))
-                    if prev is not None:
-                        add_seg(prev, p)
-                    prev = p
-
-        return np.array(lines, dtype=np.float32)

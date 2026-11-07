@@ -28,15 +28,7 @@ class Polygon:
     unique_id: int = field(default_factory=IDManager.generate_id)
     pick_id: int = 0
     show_axes_override: bool | None = None
-    windplane: dict = field(default_factory=dict)
     is_temporary: bool = False
-    uniform_to_frame_loads: list = field(default_factory=list)
-    associated_frame_ids: list[int] = field(default_factory=list)
-    assigned_loads: list = field(default_factory=list)
-    load_pattern: str = ""
-    transfer_target: str = "frames"
-    transfer_dist_type: str = "one_way"
-    is_load_area: bool = False
     zone_children_by_direction: dict = field(default_factory=dict)
     show_zones_direction: str | None = None
     needs_update: bool = True
@@ -49,9 +41,6 @@ class Polygon:
 
     def mark_dirty(self):
         self.needs_update = True
-
-    def collect_loads(self) -> list:
-        return list(self.assigned_loads)
 
     def is_valid(self) -> bool:
         return len(self.nodes) >= 3
@@ -136,18 +125,6 @@ class Polygon:
         if world[best_w] >= cos_threshold:
             return best_w, vec
         return "UNKNOWN", vec
-
-    def add_uniform_to_frame_load(self, pattern_name, value, direction=None, dist_type=None):
-        from domain.definition import AreaUniformToFrameLoad, DistType
-        load = AreaUniformToFrameLoad(
-            pattern_name=pattern_name.strip(),
-            direction=direction if direction is not None else E.LoadDirection.GRAVITY,
-            value=value,
-            dist_type=dist_type if dist_type is not None else DistType.ONE_WAY,
-            coordinate_system="GLOBAL",
-        )
-        self.uniform_to_frame_loads.append(load)
-        self.mark_dirty()
 
     def to_vertices(self) -> list[Vertex]:
         return [v if isinstance(v, Vertex) else Vertex(*_coords(v), label=getattr(v, "label", ""))

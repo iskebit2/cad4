@@ -70,10 +70,11 @@ void main() {
 
     if (isConstantSize) {
         // Ekran boyutu sabit — kamera uzayındaki mesafeye göre ölçek
-        vec4 viewCenter = view * vec4(aCenter, 1.0);
+        vec3 worldCenter = (model * vec4(aCenter, 1.0)).xyz;
+        vec4 viewCenter = view * vec4(worldCenter, 1.0);
         float factor    = abs(viewCenter.z) * pointScale;
 
-        worldPos    = aCenter + aPos * factor;
+        worldPos    = worldCenter + mat3(model) * (aPos * factor);
         gl_Position = projection * view * vec4(worldPos, 1.0);
     } else {
         // Normal 3D dönüşüm

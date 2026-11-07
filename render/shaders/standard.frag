@@ -9,7 +9,7 @@
 
 // ---- Vertex'ten gelen ----
 in vec3      FragPos;
-in vec3      Normal;
+flat in vec3 Normal;
 in vec3      VertexColor;
 flat in uint vID;
 flat in float PlaneOpacity;

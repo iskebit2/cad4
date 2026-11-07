@@ -324,19 +324,19 @@ def _draw_link_prop(obj, key, value, catalog) -> bool:
         return True
     return False
 
-def _scene_groups(scene):
-    out = [("Node", _collect(scene, "Node"))]
-    out.append(("Frame", _collect(scene, "Frame")))
-    out.append(("Area", _collect(scene, "Area")))
-    out.append(("Link", _collect(scene, "Link")))
-
-    project = getattr(scene, "project", None)
-    if project:
-        out.append(("Polygon", list(getattr(project, "polygons", {}).values())))
-        out.append(("Line", list(getattr(project, "lines", {}).values())))
-    else:
-        out.append(("Polygon", []))
-        out.append(("Line", []))
+def _scene_groups(scene, math_model=None):
+    out = [("Node", _collect(math_model, "Node"))]
+    out.append(("Frame", _collect(math_model, "Frame")))
+    out.append(("Area", _collect(math_model, "Area")))
+    out.append(("Link", _collect(math_model, "Link")))
+    out.append((
+        "Polygon",
+        list(getattr(scene, "polygons", {}).values()) if scene else [],
+    ))
+    out.append((
+        "Line",
+        list(getattr(scene, "lines", {}).values()) if scene else [],
+    ))
     return out
 
 def _collect(scene, type_name):

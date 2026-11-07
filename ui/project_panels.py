@@ -64,7 +64,7 @@ class AnalysisManagerPanel(BasePanel):
 
     def _scene(self):
         if self.app is not None and getattr(self.app, "engine", None):
-            return self.app.engine.scene
+            return self.app.engine.math_model
         return None
 
     def _refresh_spectrum_list(self):

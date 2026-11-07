@@ -23,11 +23,11 @@ class SelectionPolicy:
     def get_mode(self) -> SelectionMode:
         """Mevcut modifier tuşlara göre seçim modunu belirle"""
         
-        if self.input.is_ctrl_pressed():
+        if self.input.is_ctrl():
             # Ctrl = Toggle (ekle/çıkar)
             return SelectionMode.TOGGLE
         
-        elif self.input.is_shift_pressed():
+        elif self.input.is_shift():
             # Shift = Add (varolanlara ekle)
             return SelectionMode.ADD
         
@@ -38,11 +38,11 @@ class SelectionPolicy:
     def should_clear_on_empty_click(self) -> bool:
         """Boşluğa tıklandığında seçim temizlensin mi?"""
         # Ctrl yoksa temizle, Ctrl varsa temizleme (toggle için)
-        return not self.input.is_ctrl_pressed()
+        return not self.input.is_ctrl()
     
     def get_marquee_mode(self) -> SelectionMode:
         """Marquee seçimi için mod (Shift = Toggle)"""
-        if self.input.is_shift_pressed():
+        if self.input.is_shift():
             return SelectionMode.TOGGLE
         else:
             return SelectionMode.REPLACE

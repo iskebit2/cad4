@@ -18,7 +18,7 @@ import math
 import numpy as np
 from imgui_bundle import imgui
 
-from domain.plane import ChangeOp, Plane
+from plane.plane import ChangeOp, Plane
 from ui.widgets.plane_2d_loads import LoadOverlay
 from ui.widgets.plane_2d_tools import PlaceDistLoadTool, ToolContext, ToolKind
 
@@ -67,6 +67,7 @@ class Plane2DView:
     def __init__(self):
         self.plane: Plane | None = None
         self.scene = None
+        self.project = None
 
         # View
         self.zoom = 1.0
@@ -174,9 +175,10 @@ class Plane2DView:
     # ------------------------------------------------------------------
     #  Yükleme
     # ------------------------------------------------------------------
-    def load_plane(self, plane: Plane, scene):
+    def load_plane(self, plane: Plane, scene, project=None):
         self.plane = plane
         self.scene = scene
+        self.project = project
         self._bounds = self._compute_bounds()
         if self._first_load and self._bounds:
             self.fit_to_content()
@@ -467,8 +469,8 @@ class Plane2DView:
         if kind == ToolKind.PLACE_DIST_LOAD:
             tool = PlaceDistLoadTool()
             # pattern'ları projeden al
-            if self.scene and hasattr(self.scene, "project") and self.scene.project:
-                tool.set_patterns(list(self.scene.project.load_patterns.keys()))
+            if self.project:
+                tool.set_patterns(list(self.project.load_patterns.keys()))
             self.active_tool_obj = tool
         else:
             self.active_tool_obj = None

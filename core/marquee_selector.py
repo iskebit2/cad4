@@ -130,14 +130,97 @@ class MarqueeSelector:
         cam = self.engine.cam
         mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
 
-        flt = getattr(self.engine.scene, "_render_filter", None)
+        math_model = self.engine.math_model
+        scene = self.engine.scene
+        flt = getattr(math_model, "_render_filter", None)
         selected = []
-        for element in self.engine.scene.all_elements.values():
-            if flt is not None and element.unique_id not in flt:
-                continue
-            if self._in_rect(element, (x1, y1), (x2, y2), mvp, win_w, win_h, cross):
-                selected.append(element)
+        
+        # 1. Sahne elemanları (Node, Frame, Area, Link)
+        if math_model:
+            for element in math_model.all_elements.values():
+                if flt is not None and element.unique_id not in flt:
+                    continue
+                if self._in_rect(element, (x1, y1), (x2, y2), mvp, win_w, win_h, cross):
+                    selected.append(element)
+
+        if scene:
+            for line in scene.lines.values():
+                if self._project_line_in(line, x1, y1, x2, y2, mvp, win_w, win_h, cross):
+                    selected.append(line)
+
+            for poly in scene.polygons.values():
+                if self._polygon_in(poly, x1, y1, x2, y2, mvp, win_w, win_h, cross):
+                    selected.append(poly)
+
         return selected
+
+    def _project_line_in(self, line, x1, y1, x2, y2, mvp, win_w, win_h, cross):
+        p1 = self._project(line.v1.x, line.v1.y, line.v1.z, mvp, win_w, win_h)
+        p2 = self._project(line.v2.x, line.v2.y, line.v2.z, mvp, win_w, win_h)
+        if p1 is None or p2 is None:
+            return False
+
+        in1 = (x1 <= p1[0] <= x2 and y1 <= p1[1] <= y2)
+        in2 = (x1 <= p2[0] <= x2 and y1 <= p2[1] <= y2)
+
+        if not cross:
+            return in1 and in2
+
+        return in1 or in2 or self._line_rect(p1, p2, x1, y1, x2, y2)
+
+    def _polygon_in(self, poly, x1, y1, x2, y2, mvp, win_w, win_h, cross):
+        # Poligonun köşe noktalarını farklı olası özniteliklerden güvenle alalım
+        raw_pts = []
+        if hasattr(poly, "nodes") and poly.nodes:
+            raw_pts = [(n.x, n.y, n.z) for n in poly.nodes]
+        elif hasattr(poly, "vertices") and poly.vertices:
+            raw_pts = [(pt.x, pt.y, pt.z) if hasattr(pt, 'x') else pt for pt in poly.vertices]
+        elif hasattr(poly, "points") and poly.points:
+            raw_pts = [(pt.x, pt.y, pt.z) if hasattr(pt, 'x') else pt for pt in poly.points]
+        elif hasattr(poly, "coords") and poly.coords:
+            raw_pts = poly.coords
+        elif hasattr(poly, "get_vertices"):
+            raw_pts = poly.get_vertices()
+
+        if not raw_pts:
+            return False
+
+        points = []
+        for pt in raw_pts:
+            if pt is not None and len(pt) >= 3:
+                p = self._project(pt[0], pt[1], pt[2], mvp, win_w, win_h)
+                if p is not None:
+                    points.append(p)
+
+        if not points:
+            return False
+
+        # Window selection: Alanın bütün köşeleri kutu içinde olmalı
+        if not cross:
+            return all(
+                x1 <= p[0] <= x2 and y1 <= p[1] <= y2
+                for p in points
+            )
+
+        # Crossing selection: En az bir köşe içerideyse veya kenar kesişiyorsa
+        if any(
+            x1 <= p[0] <= x2 and y1 <= p[1] <= y2
+            for p in points
+        ):
+            return True
+
+        n = len(points)
+        return any(
+            self._line_rect(
+                points[i],
+                points[(i + 1) % n],
+                x1,
+                y1,
+                x2,
+                y2,
+            )
+            for i in range(n)
+        )
 
     # ------------------------------------------------------------------
     # ELEMENT TYPE
@@ -451,3 +534,18 @@ class MarqueeSelector:
                     u2 = min(u2, t)
         
         return True
+
+    def handle_click(self, x, y, button) -> bool:
+        return False
+
+    def handle_release(self, x, y, button) -> bool:
+        return False
+
+    def handle_move(self, x, y, dx, dy) -> bool:
+        return False
+
+    def handle_key(self, key, mods) -> bool:
+        return False
+
+    def handle_scroll(self, delta) -> bool:
+        return False

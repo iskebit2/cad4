@@ -176,7 +176,7 @@ class S2KPanel(BasePanel):
             f"{meta.program_name} {meta.version} | "
             f"CurrUnits: {meta.curr_units_raw} → {meta.unit_system.value}"
         )
-        scn = new_project.scene
+        scn = new_project.math_model
         self._log_info(f"✓ {len(scn.frames)} çubuk, {len(scn.nodes)} düğüm")
 
         if not callable(self.on_import_complete):

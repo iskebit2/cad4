@@ -4,7 +4,7 @@ Inspector — bağımsız sahne element editörü.
 Kullanım (CadApp içinden):
     from inspector import InspectorWindow
 
-    self.inspector = InspectorWindow(scene=project.scene)
+    self.inspector = InspectorWindow(scene=project.math_model)
 
     # her frame:
     self.inspector.draw()

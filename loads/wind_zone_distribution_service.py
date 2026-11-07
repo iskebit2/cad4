@@ -20,7 +20,7 @@ import numpy as np
 from typing import Optional, List, Dict, Any
 
 from data.enums import PolygonType, UnitSystem
-from domain.plane import Plane
+from plane.plane import Plane
 from domain.definition import FrameDistributedLoad, LoadSegment
 from logging_config import CadLogger
 
@@ -67,9 +67,8 @@ class WindZoneDistributionService:
     @classmethod
     def distribute(
         cls,
-        scene,
+        project,
         *,
-        project=None,
         kind: str = "CPE10",
         cpi_positive: float = 0.2,
         cpi_negative: float = -0.3,
@@ -81,38 +80,42 @@ class WindZoneDistributionService:
 
         Returns: atanan toplam segment sayısı
         """
-        if scene is None:
-            logger.warning("[WindZone] Sahne yok.")
+        if project is None or project.scene is None or project.math_model is None:
+            logger.warning("[WindZone] Project, Scene veya MathModel yok.")
             return 0
+        scene = project.scene
+        math_model = project.math_model
 
         if kind not in (cls.KIND_CPE10, cls.KIND_CPE1):
             raise ValueError(f"Geçersiz kind: {kind!r}. "
                              f"Beklenen: {cls.KIND_CPE10} veya {cls.KIND_CPE1}")
 
-        zones = cls._collect_zones(scene)
+        zones = cls._collect_zones(scene, math_model)
         if not zones:
             logger.info("[WindZone] Zone poligonu yok.")
             return 0
 
-        logger.info(f"[WindZone] {len(zones)} zone, {len(scene.frames)} frame, KIND={kind}")
+        logger.info(
+            f"[WindZone] {len(zones)} zone, "
+            f"{len(math_model.frames)} frame, KIND={kind}"
+        )
 
         # Tüm frame'lerde dist_load_sets dict olduğundan emin ol
-        for frame in scene.frames.values():
+        for frame in math_model.frames.values():
             if not hasattr(frame, "dist_load_sets") or frame.dist_load_sets is None:
                 frame.dist_load_sets = {}
 
         if clear_existing:
-            cls._clear_wind_patterns(scene)
+            cls._clear_wind_patterns(math_model)
 
         total = 0
         for zone in zones:
             n = cls._distribute_one_zone(
-                scene, zone,
+                project, scene, math_model, zone,
                 kind=kind,
                 cpi_pos=cpi_positive,
                 cpi_neg=cpi_negative,
                 tributary_width=tributary_width,
-                project=project,
             )
             total += n
 
@@ -149,7 +152,7 @@ class WindZoneDistributionService:
             sid = int(surface_ref)
         except (ValueError, TypeError):
             # unique_id fallback
-            for poly in project.polygons.values():
+            for poly in scene.polygons.values():
                 if str(getattr(poly, "unique_id", "")) == str(surface_ref):
                     pt = getattr(poly, "poly_type", None)
                     if pt in (PolygonType.SURFACE_ONEWAY,
@@ -157,7 +160,7 @@ class WindZoneDistributionService:
                         return poly
             return None
 
-        for poly in project.polygons.values():
+        for poly in scene.polygons.values():
             if poly.unique_id == sid:
                 pt = getattr(poly, "poly_type", None)
                 if pt in (PolygonType.SURFACE_ONEWAY,
@@ -176,17 +179,23 @@ class WindZoneDistributionService:
     # ==================================================================
     @classmethod
     def _distribute_one_zone(
-        cls, scene, zone, *,
+        cls, project, scene, math_model, zone, *,
         kind: str,
         cpi_pos: float,
         cpi_neg: float,
         tributary_width: float,
-        project,
     ) -> int:
         zone_id = getattr(zone, "unique_id", "?")
 
+        zone_data = math_model.polygon_analysis.get(zone.unique_id)
+        if zone_data is None:
+            logger.warning(
+                f"[WindZone] zone={zone_id} PolygonAnalysisData yok"
+            )
+            return 0
+
         # --- 1) Zone windplane verisi ---
-        wp = getattr(zone, "windplane", {}) or {}
+        wp = zone_data.windplane or {}
         if not wp:
             logger.warning(f"[WindZone] zone={zone_id} windplane boş")
             return 0
@@ -231,7 +240,11 @@ class WindZoneDistributionService:
             return 0
 
         surface_id = getattr(surface_poly, "unique_id", "?")
-        associated_ids = list(getattr(surface_poly, "associated_frame_ids", []))
+        surface_data = math_model.polygon_analysis.get(surface_poly.unique_id)
+        associated_ids = (
+            list(surface_data.associated_frame_ids)
+            if surface_data is not None else []
+        )
         if not associated_ids:
             logger.warning(f"[WindZone] zone={zone_id} surface={surface_id} "
                            f"associated_frame_ids boş — önce alignment çalıştırın")
@@ -269,10 +282,10 @@ class WindZoneDistributionService:
 
         # --- 6) Hedef frame'ler ---
         associated_set = set(associated_ids)
-        target_frames = [f for f in scene.frames.values()
+        target_frames = [f for f in math_model.frames.values()
                          if f.unique_id in associated_set]
 
-        tol = cls._plane_tolerance(project or scene)
+        tol = cls._plane_tolerance(project)
 
         # --- 7) Her frame için zone sınırları içindeki kesişim aralığı ---
         frame_intervals: List[tuple] = []
@@ -450,8 +463,8 @@ class WindZoneDistributionService:
             logger.warning(f"[WindZone] LoadPattern kaydedilemedi: {e}")
 
     @classmethod
-    def _clear_wind_patterns(cls, scene) -> None:
-        for frame in scene.frames.values():
+    def _clear_wind_patterns(cls, math_model) -> None:
+        for frame in math_model.frames.values():
             sets = getattr(frame, "dist_load_sets", {})
             if sets:
                 for k in list(sets.keys()):
@@ -464,11 +477,12 @@ class WindZoneDistributionService:
     # ZONE TOPLAMA
     # ==================================================================
     @classmethod
-    def _collect_zones(cls, scene) -> List[Any]:
+    def _collect_zones(cls, scene, math_model) -> List[Any]:
         """Sahnedeki ZONE poligonlarını döndürür."""
         zones = []
-        for poly in project.polygons.values():
+        for poly in scene.polygons.values():
             pt = getattr(poly, "poly_type", None)
+            analysis_data = math_model.polygon_analysis.get(poly.unique_id)
 
             is_zone = False
             if pt == PolygonType.ZONE:
@@ -480,7 +494,10 @@ class WindZoneDistributionService:
 
             if not is_zone:
                 # windplane dolu olanları da zone say
-                wp = getattr(poly, "windplane", None)
+                wp = (
+                    analysis_data.windplane
+                    if analysis_data is not None else None
+                )
                 if wp and isinstance(wp, dict) and wp.get("surface") is not None:
                     is_zone = True
 

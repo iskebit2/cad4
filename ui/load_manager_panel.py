@@ -234,25 +234,26 @@ class _PatternSubPanel:
         if self.project is None:
             return 0
 
-        scene = getattr(self.project, "scene", None)
-        if scene is None:
+        math_model = getattr(self.project, "math_model", None)
+        if math_model is None:
             return 0
 
         count = 0
-        for frame in scene.frames.values():
+        for frame in math_model.frames.values():
             load_sets = getattr(frame, "dist_load_sets", None) or {}
             if pattern in load_sets:
                 count += 1
 
-        for node in scene.nodes.values():
+        for node in math_model.nodes.values():
             for pl in getattr(node, "loads", None) or []:
                 if getattr(pl, "pattern_name", None) == pattern:
                     count += 1
                     break
 
         # Polygon yükleri
-        for poly in project.polygons.values():
-            for load in getattr(poly, "assigned_loads", None) or []:
+        for poly in self.project.scene.polygons.values():
+            analysis_data = self.project.polygon_analysis_data(poly, create=False)
+            for load in getattr(analysis_data, "assigned_loads", None) or []:
                 if getattr(load, "pattern_name", None) == pattern:
                     count += 1
                     break

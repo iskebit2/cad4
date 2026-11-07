@@ -24,7 +24,7 @@ logger = CadLogger.get(__name__)
 class SceneBuilder:
     def __init__(self, project: Project):
         self.project = project
-        self.scene = project.scene
+        self.math_model = project.math_model
         self._node_cache: dict[str, Node] = {}
 
     # ------------------------------------------------------------------
@@ -77,7 +77,7 @@ class SceneBuilder:
     ) -> Node:
         restraint_obj = Restraint(**restraint) if isinstance(restraint, dict) else restraint
         node = Node(x, y, z, label, restraint_obj)
-        self.scene.add_node(node)
+        self.math_model.add_node(node)
         if label:
             self._node_cache[label] = node
         return node
@@ -102,7 +102,7 @@ class SceneBuilder:
             node_i=node_i, node_j=node_j, section=section,
             rotation_deg=rotation_deg, label=label,
         )
-        self.scene.add_frame(frame)
+        self.math_model.add_frame(frame)
         return frame
 
     # ------------------------------------------------------------------
@@ -116,7 +116,7 @@ class SceneBuilder:
             for n in nodes
         ]
         area = Area(area_nodes, thickness, label)
-        self.scene.add_area(area)
+        self.math_model.add_area(area)
         return area
 
     # ------------------------------------------------------------------
@@ -132,5 +132,5 @@ class SceneBuilder:
             node_j = self._node_cache[node_j]
 
         link = Link(node_i, node_j, prop_name, label)
-        self.scene.add_link(link)
+        self.math_model.add_link(link)
         return link

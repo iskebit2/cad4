@@ -16,7 +16,8 @@ from domain.definition import (
 )
 from domain.grid import Grid
 from domain.line import Line
-from domain.plane import Plane
+from domain.math_model import MathModel, PolygonAnalysisData
+from plane.plane import Plane
 from domain.polygon import Polygon
 from domain.scene import Scene
 
@@ -27,15 +28,13 @@ class Project:
     general_info: GeneralProjectInfo = field(default_factory=GeneralProjectInfo)
     site_info: SiteInformation = field(default_factory=SiteInformation)
     config: ProjectConfig = field(default_factory=ProjectConfig)
+    math_model: MathModel = field(default_factory=MathModel)
     scene: Scene = field(default_factory=Scene)
-    polygons: dict[int, Polygon] = field(default_factory=dict)
-    lines: dict[int, Line] = field(default_factory=dict)   # ← ekle
     loads: LoadManager = field(default_factory=LoadManager)
     analysis: AnalysisManager = field(default_factory=AnalysisManager)
     report: ReportManager = field(default_factory=ReportManager)
     unit_system: UnitSystem = UnitSystem.N_MM
 
-    grid: Grid = field(default_factory=Grid)
     custom_planes: dict[str, Plane] = field(default_factory=dict)
 
     _active_plane_id: str | None = field(
@@ -66,15 +65,54 @@ class Project:
     frame_auto_mesh: dict[str, dict] = field(default_factory=dict)
     catalog_sections: dict[str, Section] = field(default_factory=dict)
 
-    def __post_init__(self):
-        self.scene.project = self
+    @property
+    def grid(self) -> Grid:
+        return self.scene.grid
+
+    @grid.setter
+    def grid(self, value: Grid) -> None:
+        self.scene.grid = value
+        self.scene.mark_dirty()
+
+    @property
+    def polygons(self) -> dict[int, Polygon]:
+        return self.scene.polygons
+
+    @polygons.setter
+    def polygons(self, value: dict[int, Polygon]) -> None:
+        self.scene.polygons = value
+        self.scene.mark_dirty()
+
+    @property
+    def lines(self) -> dict[int, Line]:
+        return self.scene.lines
+
+    @lines.setter
+    def lines(self, value: dict[int, Line]) -> None:
+        self.scene.lines = value
+        self.scene.mark_dirty()
 
     # ------------------------------------------------------------------
     def add_polygon(self, polygon: Polygon) -> None:
-        self.polygons[polygon.unique_id] = polygon
+        self.scene.add_polygon(polygon)
 
-    def remove_polygon(self, polygon_id: int) -> None:
-        self.polygons.pop(polygon_id, None)
+    def remove_polygon(self, polygon_id: int) -> bool:
+        if not self.scene.remove_polygon(polygon_id):
+            return False
+        if self.math_model.polygon_analysis.pop(polygon_id, None) is not None:
+            self.math_model.mark_dirty()
+        return True
+
+    def polygon_analysis_data(
+        self, polygon: Polygon | int, *, create: bool = True,
+    ) -> PolygonAnalysisData | None:
+        polygon_id = polygon if isinstance(polygon, int) else polygon.unique_id
+        data = self.math_model.polygon_analysis.get(polygon_id)
+        if data is None and create:
+            data = PolygonAnalysisData()
+            self.math_model.polygon_analysis[polygon_id] = data
+            self.math_model.mark_dirty()
+        return data
 
     # ------------------------------------------------------------------
     def _add(self, registry: dict, obj, key: str = "name") -> None:
@@ -103,14 +141,24 @@ class Project:
     def grid_planes(self) -> list[Plane]:
         if not self._grid_planes_cache:
             self._grid_planes_cache = {}
-            for z in sorted(set(self.grid.z_coords)):
+            xs = sorted(set(self.grid.x_coords)) or [0.0]
+            ys = sorted(set(self.grid.y_coords)) or [0.0]
+            zs = sorted(set(self.grid.z_coords)) or [0.0]
+
+            for z in zs:
                 p = Plane.from_axis_offset("z", z, name=f"XY_Z{z:g}")
+                p.u_min, p.u_max = xs[0], xs[-1]
+                p.v_min, p.v_max = ys[0], ys[-1]
                 self._grid_planes_cache[p.name] = p
-            for y in sorted(set(self.grid.y_coords)):
+            for y in ys:
                 p = Plane.from_axis_offset("y", y, name=f"XZ_Y{y:g}")
+                p.u_min, p.u_max = xs[0], xs[-1]
+                p.v_min, p.v_max = zs[0], zs[-1]
                 self._grid_planes_cache[p.name] = p
-            for x in sorted(set(self.grid.x_coords)):
+            for x in xs:
                 p = Plane.from_axis_offset("x", x, name=f"YZ_X{x:g}")
+                p.u_min, p.u_max = ys[0], ys[-1]
+                p.v_min, p.v_max = zs[0], zs[-1]
                 self._grid_planes_cache[p.name] = p
         return list(self._grid_planes_cache.values())
 
@@ -136,6 +184,7 @@ class Project:
 
     def add_plane(self, plane: Plane) -> Plane:
         self.custom_planes[plane.name] = plane
+        self.math_model.invalidate_plane_associations()
         return plane
 
     def remove_plane(self, name: str) -> bool:
@@ -257,10 +306,11 @@ class Project:
                 ys.append(v)
             elif "Z" in direction:
                 zs.append(v)
-        self.grid = Grid(
+        self.scene.grid = Grid(
             x_coords=sorted(set(xs)), y_coords=sorted(set(ys)),
             z_coords=sorted(set(zs)),
         )
+        self.scene.mark_dirty()
         self.invalidate_grid_planes()
 
     # ------------------------------------------------------------------
@@ -282,5 +332,6 @@ class Project:
             f"  LoadPatterns: {len(self.load_patterns)}\n"
             f"  LoadCases: {len(self.load_cases)}\n"
             f"  Combinations: {len(self.combinations)}\n"
+            f"{self.math_model.summary()}\n"
             f"{self.scene.summary()}"
         )

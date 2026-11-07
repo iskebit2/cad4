@@ -255,36 +255,94 @@ class Restraint:
 
 @dataclass
 class WindConfig:
-    vb0: float = 28.0
-    terrain_category: str = "III"
+    v_b0: float = 28.0
+    terrain: str = "Kategori III"
+    rho: float = 1.25
+    ct: float = 1.0
+    kI: float = 1.0
     z0: float = 0.0
     z1: float = 5.27
     z2: float = 6.92
     cpi_positive: float = 0.2
     cpi_negative: float = -0.3
 
-    __unit_schema__ = {"vb0": Dimension.ACCEL, "z0": Dimension.LENGTH, "z1": Dimension.LENGTH, "z2": Dimension.LENGTH}
+    @property
+    def vb0(self) -> float: return self.v_b0
+    @vb0.setter
+    def vb0(self, val: float): self.v_b0 = val
+
+    @property
+    def terrain_category(self) -> str: return self.terrain
+    @terrain_category.setter
+    def terrain_category(self, val: str): self.terrain = val
+
+    __unit_schema__ = {
+        "v_b0": Dimension.ACCEL, "vb0": Dimension.ACCEL,
+        "z0": Dimension.LENGTH, "z1": Dimension.LENGTH, "z2": Dimension.LENGTH
+    }
 
 
 @dataclass
 class SnowConfig:
+    slope: float = 15.0
+    snow_region: int = 2
+    altitude: float = 50.0
     sk: float = 0.75
-    exposure_coefficient: float = 1.0
-    thermal_coefficient: float = 1.0
+    Ce: float = 1.0
+    Ct: float = 1.0
     shape_coefficient: float = 0.8
+
+    @property
+    def exposure_coefficient(self) -> float: return self.Ce
+    @exposure_coefficient.setter
+    def exposure_coefficient(self, val: float): self.Ce = val
+
+    @property
+    def thermal_coefficient(self) -> float: return self.Ct
+    @thermal_coefficient.setter
+    def thermal_coefficient(self, val: float): self.Ct = val
 
     __unit_schema__ = {"sk": Dimension.AREA_LOAD}
 
 
 @dataclass
 class SeismicConfig:
-    ss: float = 0.0
-    s1: float = 0.0
-    soil_class: str = "ZD"
-    importance_factor: float = 1.0
-    building_height_class: str = ""
-    behavior_factor: float = 8.0
-    overstrength_factor: float = 3.0
+    R: float = 2.5
+    D: float = 2.5
+    I: float = 1.2
+    kappa: float = 0.5
+    Hn: float = 10.1
+    gamma_E: float = 0.9
+    n: float = 0.30
+    e: str = "±0.05"
+    ee: str = "Dbi= (η_bi/1.2)², Ek dış merkezlik= %5 + Dbi"
+    zemin_sinifi: str = "ZC"
+    limit_raw: float = 0.008
+    load_cases: list[str] = field(default_factory=lambda: ["EQX", "EQY", "QUAKEX", "QUAKEY"])
+    drift_combo_names: list[str] = field(default_factory=lambda: ["EXP", "EXM", "EYP", "EYM"])
+    has_irregularity: bool = True
+    dd2: dict[str, float] = field(default_factory=lambda: {
+        "Ss": 0.329, "S1": 0.128, "PGA": 0.143, "PGV": 10.653,
+        "Fs": 1.300, "F1": 1.500, "Sds": 0.428, "Sd1": 0.192,
+    })
+    dd3: dict[str, float] = field(default_factory=lambda: {
+        "Ss": 0.130, "S1": 0.054, "PGA": 0.058, "PGV": 4.540,
+        "Fs": 1.300, "F1": 1.500, "Sds": 0.169, "Sd1": 0.081,
+    })
+    
+    # Geriye dönük uyumluluk property'leri
+    @property
+    def ss(self) -> float: return self.dd2.get("Ss", 0.0)
+    @property
+    def s1(self) -> float: return self.dd2.get("S1", 0.0)
+    @property
+    def soil_class(self) -> str: return self.zemin_sinifi
+    @property
+    def importance_factor(self) -> float: return self.I
+    @property
+    def behavior_factor(self) -> float: return self.R
+    @property
+    def overstrength_factor(self) -> float: return self.D
 
 
 @dataclass
@@ -348,12 +406,21 @@ class LoadManager:
     area_frame_transfers: list[dict] = field(default_factory=list)
     area_frame_base_loads: list[dict] = field(default_factory=list)
 
-    def add_area_load_transfer(self, polygon, load: "AreaUniformLoad", *,
-                               transfer_target="frames", dist_type=DistType.ONE_WAY_U1) -> dict:
+    def add_area_load_transfer(
+        self,
+        polygon,
+        load: "AreaUniformLoad",
+        *,
+        analysis_data: Any | None = None,
+        transfer_target: str = "frames",
+        dist_type: DistType = DistType.ONE_WAY_U1,
+    ) -> dict:
         if polygon is None or not hasattr(polygon, "unique_id"):
             raise TypeError("polygon gerekli")
         if not isinstance(load, AreaUniformLoad):
             raise TypeError("AreaUniformLoad gerekli")
+        if analysis_data is None:
+            raise ValueError("PolygonAnalysisData gerekli")
         if transfer_target not in ("frames", "areas"):
             raise ValueError("transfer_target geçersiz")
 
@@ -363,11 +430,10 @@ class LoadManager:
             value=float(load.value), coordinate_system=load.coordinate_system,
             source_name=load.source_name,
         )
-        polygon.assigned_loads.append(stored)
-        polygon.transfer_target = transfer_target
-        polygon.transfer_dist_type = dist.value
-        polygon.is_load_area = True
-        polygon.mark_dirty()
+        analysis_data.assigned_loads.append(stored)
+        analysis_data.transfer_target = transfer_target
+        analysis_data.transfer_dist_type = dist.value
+        analysis_data.is_load_area = True
 
         record = {
             "polygon_id": int(polygon.unique_id), "source_type": "uniform",
@@ -383,7 +449,16 @@ class LoadManager:
 
 
 @dataclass
-class ReportManager: pass
+class ReportManager:
+    reports: list[Any] = field(default_factory=list)
+
+    def add_report(self, report) -> None:
+        """Aynı rapor nesnesi listede yoksa güvenli bir şekilde ekler."""
+        if not any(r is report for r in self.reports):
+            self.reports.append(report)
+
+    def clear(self) -> None:
+        self.reports.clear()
 
 
 @dataclass

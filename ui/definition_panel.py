@@ -855,8 +855,8 @@ class DefinitionPanel(BasePanel):
         if old_obj is not None and old_obj is not self._draft:
             self._relink_scene_refs(type(self._draft), new_name, self._draft, old_obj)
 
-        if project.scene:
-            project.scene.mark_dirty()
+        if project.math_model:
+            project.math_model.mark_dirty()
 
         if callable(self.on_changed):
             try:
@@ -878,8 +878,8 @@ class DefinitionPanel(BasePanel):
                 container.pop(self._confirm_delete_name, None)
                 self._confirm_delete_name = None
                 self._clear_draft()
-                if project.scene:
-                    project.scene.mark_dirty()
+                if project.math_model:
+                    project.math_model.mark_dirty()
                 if callable(self.on_changed):
                     try:
                         self.on_changed(DEFINITIONS[self._current_idx][1])
@@ -1101,9 +1101,9 @@ class DefinitionPanel(BasePanel):
             target: "frames" | "areas"
         """
         project = getattr(self.app, "current_project", None)
-        if project is None or project.scene is None:
+        if project is None or project.math_model is None:
             return
-        scn = project.scene
+        scn = project.math_model
         scn.clear_selections()
 
         count = 0
@@ -1130,10 +1130,10 @@ class DefinitionPanel(BasePanel):
     def _select_by_definition(self, cls, name: str, container_attr: str):
         """Bir tanımı kullanan tüm sahne elemanlarını seç."""
         project = getattr(self.app, "current_project", None)
-        if project is None or project.scene is None:
+        if project is None or project.math_model is None:
             return
         
-        scn = project.scene
+        scn = project.math_model
         scn.clear_selections()
         
         n_frames = n_areas = n_links = n_nodes = 0

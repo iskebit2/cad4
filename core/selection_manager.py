@@ -87,36 +87,25 @@ class SelectionManager:
 
     def get_selected(self):
         out = []
-        if self.r and self.r.scene:
+        if self.r and self.r.math_model:
             out.extend(
-                e for e in self.r.scene.all_elements.values()
+                e for e in self.r.math_model.all_elements.values()
                 if e.unique_id in self.selected
             )
-            project = getattr(self.r.scene, "project", None)
-            if project:
-                out.extend(
-                    p for p in getattr(project, "polygons", {}).values()
-                    if p.unique_id in self.selected
-                )
-                out.extend(
-                    ln for ln in getattr(project, "lines", {}).values()
-                    if ln.unique_id in self.selected
-                )
+        if self.r and self.r.scene:
+            out.extend(
+                element for element in self.r.scene.all_elements.values()
+                if element.unique_id in self.selected
+            )
         return out
 
     def find_element_by_id(self, unique_id: int):
-        if not self.r or not self.r.scene:
+        if not self.r:
             return None
-        if unique_id in self.r.scene.all_elements:
+        if self.r.math_model and unique_id in self.r.math_model.all_elements:
+            return self.r.math_model.all_elements[unique_id]
+        if self.r.scene and unique_id in self.r.scene.all_elements:
             return self.r.scene.all_elements[unique_id]
-        project = getattr(self.r.scene, "project", None)
-        if project:
-            polys = getattr(project, "polygons", {})
-            if unique_id in polys:
-                return polys[unique_id]
-            lines = getattr(project, "lines", {})
-            if unique_id in lines:
-                return lines[unique_id]
         return None
 
     def count(self):
@@ -126,17 +115,41 @@ class SelectionManager:
         return getattr(e, "unique_id", id(e)) in self.selected
 
     def delete_selected(self):
-        if not self.r or not self.r.scene:
+        if not self.r or not self.r.math_model or not self.r.scene:
             return 0, 0
         selected = list(self.get_selected())
         if not selected:
             return 0, 0
-        cmd = DeleteElementsCommand(self.r.scene, selected)
-        if not self.cmd_mgr.execute(cmd):
-            return 0, 0
+        math_elements = [
+            element for element in selected
+            if self.r.math_model.is_element_added(element)
+        ]
+        visual_elements = [
+            element for element in selected if element not in math_elements
+        ]
+        cmd = DeleteElementsCommand(self.r.math_model, math_elements)
+        if math_elements and not self.cmd_mgr.execute(cmd):
+            return 0, len(math_elements) + len(visual_elements)
+        deleted_visual = 0
+        for element in visual_elements:
+            if element.unique_id in self.r.scene.polygons:
+                project = getattr(self.r, "engine", None)
+                project = getattr(project, "project", None)
+                if project is not None:
+                    deleted_visual += project.remove_polygon(element.unique_id)
+                else:
+                    deleted_visual += self.r.scene.remove_polygon(
+                        element.unique_id,
+                    )
+                    if self.r.math_model.polygon_analysis.pop(
+                        element.unique_id, None,
+                    ) is not None:
+                        self.r.math_model.mark_dirty()
+            elif element.unique_id in self.r.scene.lines:
+                deleted_visual += self.r.scene.remove_line(element.unique_id)
         self.selected.clear()
-        self._update_geometry_renderers(self.r.scene)
-        return len(cmd.deleted), len(cmd.rejected)
+        self.r.update_geo(self.r.math_model, self.r.scene)
+        return len(cmd.deleted) + deleted_visual, len(cmd.rejected)
 
     def undo(self):
         if not self.cmd_mgr.can_undo():

@@ -17,7 +17,7 @@ def _make_demo_scene():
     try:
         from domain.project import Project
         project = Project()
-        return project.scene
+        return project.math_model
     except Exception as e:
         #print(f"[demo] domain yüklenemedi, boş sahne: {e}")
         return None

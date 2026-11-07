@@ -226,7 +226,8 @@ class LoadAssignPanel(BasePanel):
             return
         imgui.text("Seçili polygon yükleri")
         for polygon in self.selection_polygons:
-            loads = getattr(polygon, "assigned_loads", ())
+            analysis_data = self.project.polygon_analysis_data(polygon)
+            loads = analysis_data.assigned_loads
             name = polygon.label or f"Polygon {polygon.unique_id}"
             if not loads:
                 imgui.text(f"{name}: atanmış alan yükü yok")
@@ -317,9 +318,11 @@ class LoadAssignPanel(BasePanel):
                 self.project.loads.add_area_load_transfer(
                     polygon,
                     load,
+                    analysis_data=self.project.polygon_analysis_data(polygon),
                     transfer_target="frames",
                     dist_type=distribution,
                 )
+                self.project.math_model.mark_dirty()
 
         count = len(assignments) * len(self.selection_polygons)
         self._selected_presets.clear()

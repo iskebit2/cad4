@@ -5,7 +5,7 @@ from imgui_bundle import imgui
 
 from data.enums import PolygonType
 from domain.polygon import Polygon
-from domain.plane import Plane
+from plane.plane import Plane
 from ui.base_panel import BasePanel
 from ui.widgets.color_picker import color_edit3
 
@@ -152,13 +152,17 @@ class PolygonPropertiesPanel(BasePanel):
         self._combo("Tip", "##ptype", self.TYPES,
                     self._type_name(p), lambda i: self._set_type(p, i))
         self._color(p, on_change=lambda c: self._set_color(p, c))
-        imgui.text(f"Köşe: {len(p.nodes)}   Assoc: {len(p.associated_frame_ids)}")
+        analysis_data = self.project.polygon_analysis_data(p)
+        imgui.text(
+            f"Köşe: {len(p.nodes)}   Assoc: "
+            f"{len(analysis_data.associated_frame_ids)}"
+        )
         self._combo("Dağıtım", "##dist", self.DIST_LABELS,
                     self._dist_index(p), lambda i: self._set_dist(p, i))
-        if p.assigned_loads:
+        if analysis_data.assigned_loads:
             imgui.separator()
             imgui.text_colored(imgui.ImVec4(0.85, 0.9, 0.95, 1.0), "Yükler")
-            for load in p.assigned_loads:
+            for load in analysis_data.assigned_loads:
                 imgui.bullet_text(f"{load.pattern_name}: {load.value:.2f}")
 
     def _properties_multi(self, items: list[Polygon]):
@@ -189,7 +193,10 @@ class PolygonPropertiesPanel(BasePanel):
 
         imgui.spacing()
         total_nodes = sum(len(p.nodes) for p in items)
-        total_assoc = sum(len(p.associated_frame_ids) for p in items)
+        total_assoc = sum(
+            len(self.project.polygon_analysis_data(p).associated_frame_ids)
+            for p in items
+        )
         imgui.text(f"Köşe: {total_nodes}   Assoc: {total_assoc}")
 
     def _apply_batch(self, items: list[Polygon]):
@@ -198,9 +205,10 @@ class PolygonPropertiesPanel(BasePanel):
         color = [*self._batch_color, 1.0]
         for p in items:
             p.poly_type = poly_type
-            p.transfer_dist_type = dist
+            self.project.polygon_analysis_data(p).transfer_dist_type = dist
             p.color = color
             p.mark_dirty()
+        self.project.math_model.mark_dirty()
         self._refresh_polygons()
 
     # ------------------------------------------------------------------
@@ -240,12 +248,17 @@ class PolygonPropertiesPanel(BasePanel):
         self._refresh_polygons()
 
     def _dist_index(self, p) -> int:
-        return self.DIST_TYPES.index(p.transfer_dist_type) \
-            if p.transfer_dist_type in self.DIST_TYPES else 0
+        distribution = self.project.polygon_analysis_data(
+            p,
+        ).transfer_dist_type
+        return self.DIST_TYPES.index(distribution) \
+            if distribution in self.DIST_TYPES else 0
 
     def _set_dist(self, p, idx):
-        p.transfer_dist_type = self.DIST_TYPES[idx]
-        p.mark_dirty()
+        self.project.polygon_analysis_data(
+            p,
+        ).transfer_dist_type = self.DIST_TYPES[idx]
+        self.project.math_model.mark_dirty()
 
     # ------------------------------------------------------------------
     def _manager(self):
@@ -268,11 +281,12 @@ class PolygonPropertiesPanel(BasePanel):
         if self.project is None:
             return
         plane = Plane.from_polygon(p)
-        p.associated_frame_ids = [
-            int(f.unique_id) for f in self.project.scene.frames.values()
+        analysis_data = self.project.polygon_analysis_data(p)
+        analysis_data.associated_frame_ids = [
+            int(f.unique_id) for f in self.project.math_model.frames.values()
             if plane.classify_element(f, "frame") != "OUTSIDE"
         ]
-        p.mark_dirty()
+        self.project.math_model.mark_dirty()
 
     def _to_plane(self, p: Polygon):
         plane = Plane.from_polygon(p)

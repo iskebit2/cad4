@@ -86,5 +86,5 @@ class JointLoadPanel(BasePanel):
         if not app or not app.engine: return
         r = app.engine.renderer
         if r and getattr(r, "load_renderer", None):
-            r.load_renderer.update(app.engine.scene,
+            r.load_renderer.update(app.engine.math_model,
                                    camera_scale=r._compute_cam_scale())

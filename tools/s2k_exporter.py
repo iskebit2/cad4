@@ -45,7 +45,7 @@ class S2KExporter:
     # ==================================================================
     @classmethod
     def export(cls, project, selected_elements: list | None = None) -> str:
-        scene = project.scene
+        scene = project.math_model
         if scene is None:
             return 'TABLE:  "PROGRAM CONTROL"\nEND TABLE DATA\n'
         used = cls._collect_used(scene, project, selected_elements)

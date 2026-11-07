@@ -306,7 +306,7 @@ class LinePropertiesPanel(BasePanel):
             v2=Vertex(x, y, z_top),
             is_column=True,
         )
-        self.project.lines[ln.unique_id] = ln
+        self.project.scene.add_line(ln)
         self._refresh()
 
     def _to_frame(self, ln: Line):
@@ -316,13 +316,13 @@ class LinePropertiesPanel(BasePanel):
         from domain.element import Frame, Node
         ni = Node(ln.v1.x, ln.v1.y, ln.v1.z, label="")
         nj = Node(ln.v2.x, ln.v2.y, ln.v2.z, label="")
-        self.project.scene.add_node(ni)
-        self.project.scene.add_node(nj)
+        self.project.math_model.add_node(ni)
+        self.project.math_model.add_node(nj)
         sec = next(iter(self.project.sections.values()), None)
         if sec is None:
             return
         frame = Frame(ni, nj, sec)
-        self.project.scene.add_frame(frame)
+        self.project.math_model.add_frame(frame)
         self._delete(ln)
         eng.update_geo(self.project)
 
@@ -333,17 +333,17 @@ class LinePropertiesPanel(BasePanel):
         from domain.element import Link, Node
         ni = Node(ln.v1.x, ln.v1.y, ln.v1.z, label="")
         nj = Node(ln.v2.x, ln.v2.y, ln.v2.z, label="")
-        self.project.scene.add_node(ni)
-        self.project.scene.add_node(nj)
+        self.project.math_model.add_node(ni)
+        self.project.math_model.add_node(nj)
         link = Link(ni, nj)
-        self.project.scene.add_link(link)
+        self.project.math_model.add_link(link)
         self._delete(ln)
         eng.update_geo(self.project)
 
     def _delete(self, ln: Line):
         if self.project is None:
             return
-        lines = getattr(self.project, "lines", {})
+        lines = self.project.scene.lines
         lines.pop(ln.unique_id, None)
         self._selected_ids.discard(ln.unique_id)
         self._refresh()

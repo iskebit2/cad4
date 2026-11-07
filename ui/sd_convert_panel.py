@@ -129,9 +129,9 @@ class SDConvertPanel(BasePanel):
     # SEÇİLİ FRAME
     # -----------------------------------------------------------------
     def _get_target_frame(self) -> Frame | None:
-        if not self.app or not self.app.engine or not self.app.engine.scene:
+        if not self.app or not self.app.engine or not self.app.engine.math_model:
             return None
-        scn = self.app.engine.scene
+        scn = self.app.engine.math_model
         for e in scn.get_selected():
             if isinstance(e, Frame) and self._is_sd_frame(e):
                 return e
@@ -505,12 +505,12 @@ class SDConvertPanel(BasePanel):
             logger.debug("[SDPanel] Dönüşüm için frame veya seçili kenar yok")
             return
 
-        if not self.app or not self.app.engine or not self.app.engine.scene:
+        if not self.app or not self.app.engine or not self.app.engine.math_model:
             logger.debug("[SDPanel] engine veya scene yok")
             return
 
         frame = self._preview_frame
-        scn = self.app.engine.scene
+        scn = self.app.engine.math_model
         section = frame.section
 
         sd = getattr(section, 'sd_section', None)
@@ -699,12 +699,12 @@ class SDConvertPanel(BasePanel):
     # MODELE AKTARMA
     # -----------------------------------------------------------------
     def _commit_to_scene(self):
-        if not self.app or not self.app.engine or not self.app.engine.scene:
+        if not self.app or not self.app.engine or not self.app.engine.math_model:
             return
         if not self._preview_areas:
             return
 
-        scn = self.app.engine.scene
+        scn = self.app.engine.math_model
 
         # 1) Node'ları ekle (paylaşılan Node nesneleri)
         for nd in self._preview_nodes:

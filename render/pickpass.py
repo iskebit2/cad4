@@ -39,14 +39,13 @@ class PickPass:
         self.pick_start_time = 0
         self.pick_timeout = 0.5  # 500ms timeout
 
-        self.pick_size = 7
+        self.pick_size = 3
         self.pick_half = self.pick_size // 2
         self.pick_bytes = self.pick_size * self.pick_size * 4
         
-        # --- OPTİMİZASYON: 7x7 alan için dx, dy ve kare mesafeleri önceden hesapla ---
         rows, cols = np.indices((self.pick_size, self.pick_size))
         self._dx = (cols - self.pick_half).flatten()
-        self._dy = (rows - self.pick_half).flatten()
+        self._dy = ((self.pick_size - 1 - rows) - self.pick_half).flatten()
         self._dist2 = self._dx**2 + self._dy**2
         
         # 1x1 FBO oluştur (yedek, asıl picking MRT'den)

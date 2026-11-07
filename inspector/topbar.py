@@ -76,15 +76,15 @@ class TopBar:
 
     def _on_draw_line(self):
         if self.app:
-            self.app.input.toggle_draw("line")
+            self.app.actions.toggle_draw("line")
 
     def _on_draw_poly(self):
         if self.app:
-            self.app.input.toggle_draw("poly")
+            self.app.actions.toggle_draw("poly")
 
     def _on_to_frame(self):
         if self.app:
-            self.app.input.convert_frames_to_links("DefaultLink")
+            self.app.actions.convert_frames_to_links("DefaultLink")
 
     def _on_to_link(self):
         pass

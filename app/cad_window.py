@@ -1,14 +1,4 @@
 # app/cad_window.py
-"""
-Sorumluluk:
-    - GLFW penceresi & OpenGL context
-    - ImGui context (TEK) + GlfwRenderer (TEK)
-    - Font atlas (GlfwRenderer'dan ÖNCE)
-    - Dark tema
-    - Main loop (poll → new_frame → frame_callback → render → swap)
-    - Input event'lerini dışarıya iletmek (CadApp bağlar)
-
-"""
 from __future__ import annotations
 
 import os
@@ -25,11 +15,7 @@ from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
 
-# ======================================================================
-# FONT + TEMA (eski ui/theme.py ve ui/imgui_backend.py'den birleştirildi)
-# ======================================================================
-def _load_fonts(font_size: int = 16) -> object | None:
-    """Windows sistem fontlarını yükler. Font atlası GlfwRenderer kurar."""
+def _load_fonts(font_size: int = 16):
     io = imgui.get_io()
     win_fonts = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
     text_font = os.path.join(win_fonts, "segoeui.ttf")
@@ -41,7 +27,6 @@ def _load_fonts(font_size: int = 16) -> object | None:
 
     font_obj = io.fonts.add_font_from_file_ttf(text_font, font_size)
 
-    # Sembol fontu (merge mode) — → ← ≤ ≥ ✓ ✗ gibi glifler için
     if os.path.isfile(symbol_font):
         cfg = imgui.ImFontConfig()
         cfg.merge_mode = True
@@ -51,7 +36,6 @@ def _load_fonts(font_size: int = 16) -> object | None:
 
 
 def _apply_dark_theme() -> None:
-    """Koyu mavi CAD teması — imgui_bundle API."""
     s = imgui.get_style()
 
     s.window_rounding = 6.0
@@ -67,7 +51,6 @@ def _apply_dark_theme() -> None:
     s.item_inner_spacing = imgui.ImVec2(6, 4)
     s.indent_spacing = 18
     s.scrollbar_size = 12
-
     s.frame_border_size = 1.0
     s.window_border_size = 0.0
 
@@ -110,11 +93,7 @@ def _apply_dark_theme() -> None:
     C(imgui.Col_.text_selected_bg, 0.30, 0.50, 0.80, 0.60)
 
 
-# ======================================================================
-# CadWindow
-# ======================================================================
 class CadWindow:
-    """GLFW penceresi + ImGui backend. TEK context, TEK renderer."""
 
     def __init__(self, width: int = 1280, height: int = 800, title: str = "CAD4"):
         self.width = width
@@ -128,27 +107,21 @@ class CadWindow:
         self.fb_height = height
         self.dpi_scale = 1.0
 
-        # --- Dış callback'ler (CadApp bağlar) ---
         self.on_resize: Callable[[int, int], None] | None = None
-        self.on_key_down: Callable[[int, int, int], None] | None = None
-        self.on_key_up: Callable[[int, int], None] | None = None
+        self.on_key: Callable[[int, int, int, int], None] | None = None
         self.on_mouse_button: Callable[[int, int, int], None] | None = None
         self.on_mouse_move: Callable[[float, float], None] | None = None
         self.on_scroll: Callable[[float, float], None] | None = None
         self.on_char: Callable[[int], None] | None = None
         self.on_focus: Callable[[bool], None] | None = None
 
-        self._last_mouse = (0.0, 0.0)
         self._time_last = time.time()
 
-    # ------------------------------------------------------------------
-    # CREATE
     # ------------------------------------------------------------------
     def create(self) -> None:
         self._init_glfw()
         self._init_imgui()
 
-        # Pencere aktif olana kadar kısa poll
         for _ in range(10):
             glfw.poll_events()
             time.sleep(0.01)
@@ -182,25 +155,13 @@ class CadWindow:
         glfw.focus_window(self.window)
 
     def _init_imgui(self) -> None:
-        """Sıra kritik: context → fontlar → GlfwRenderer → tema → callbacks."""
         imgui.create_context()
-
-        # 1) Fontlar — atlas GlfwRenderer tarafından GPU'ya yüklenecek
         _load_fonts(font_size=16)
-
-        # Renderer callback'lerini kapat; GLFW callback'lerimiz hem ImGui'ye
-        # hem de uygulamanın input handler'larına olayları iletir.
         self.imgui_backend = GlfwRenderer(self.window, attach_callbacks=False)
         self._wire_callbacks()
-
-        # 3) Tema
         _apply_dark_theme()
-
-
         logger.info("[CadWindow] ImGui hazır")
 
-    # ------------------------------------------------------------------
-    # GLFW CALLBACK'LERİ (GlfwRenderer'dan SONRA)
     # ------------------------------------------------------------------
     def _wire_callbacks(self) -> None:
         w = self.window
@@ -221,10 +182,8 @@ class CadWindow:
     def _cb_key(self, win, key: int, scancode: int, action: int, mods: int) -> None:
         if self.imgui_backend:
             self.imgui_backend.keyboard_callback(win, key, scancode, action, mods)
-        if action == glfw.PRESS and callable(self.on_key_down):
-            self.on_key_down(key, scancode, mods)
-        elif action == glfw.RELEASE and callable(self.on_key_up):
-            self.on_key_up(key, scancode)
+        if callable(self.on_key):
+            self.on_key(key, scancode, action, mods)
 
     def _cb_mouse_button(self, win, button: int, action: int, mods: int) -> None:
         if self.imgui_backend:
@@ -233,7 +192,6 @@ class CadWindow:
             self.on_mouse_button(button, action, mods)
 
     def _cb_mouse_move(self, win, x: float, y: float) -> None:
-        self._last_mouse = (x, y)
         if self.imgui_backend:
             self.imgui_backend.mouse_callback(win, x, y)
         if callable(self.on_mouse_move):
@@ -256,17 +214,7 @@ class CadWindow:
             self.on_focus(bool(focused))
 
     # ------------------------------------------------------------------
-    # MAIN LOOP
-    # ------------------------------------------------------------------
     def run(self, frame_callback: Callable[[float], None], target_fps: int = 60) -> None:
-        """
-        Ana döngü:
-            1. GLFW poll + ImGui input
-            2. imgui.new_frame()
-            3. frame_callback (CadApp.frame — paneller, toolbar, engine)
-            4. imgui.render() + backend.render()
-            5. swap_buffers
-        """
         target_dt = 1.0 / target_fps
         self._time_last = time.time()
 
@@ -275,46 +223,22 @@ class CadWindow:
             dt = now - self._time_last
             self._time_last = now
 
-            # 1) Input
             glfw.poll_events()
             self.imgui_backend.process_inputs()
 
-            # 2) ImGui frame başlangıcı
             imgui.new_frame()
+            frame_callback(dt)
+            imgui.render()
 
-            # 3) Uygulama mantığı (GL clear + render + paneller burada)
-            try:
-                frame_callback(dt)
-            except Exception:
-                logger.exception("[CadWindow] frame_callback hatası")
-
-            # 4) ImGui render
-            try:
-                imgui.render()
-            except RuntimeError as e:
-                ctx = imgui.get_current_context()
-                try:
-                    window_name = ctx.current_window_name
-                except Exception:
-                    window_name = "(okunamadı)"
-                    #print("\n!!!! MISSING END !!!!")
-                    #print(f"Pencere: {window_name!r}")
-                    #print(f"Hata: {e}")
-                raise
             w, h = glfw.get_framebuffer_size(self.window)
             glViewport(0, 0, w, h)
             self.imgui_backend.render(imgui.get_draw_data())
-
-            # 5) Swap
             glfw.swap_buffers(self.window)
 
-            # FPS limiti
             elapsed = time.time() - now
             if elapsed < target_dt:
                 time.sleep(target_dt - elapsed)
 
-    # ------------------------------------------------------------------
-    # YARDIMCI
     # ------------------------------------------------------------------
     def get_mouse_pos(self) -> tuple[float, float]:
         return glfw.get_cursor_pos(self.window)
@@ -326,14 +250,9 @@ class CadWindow:
         return glfw.window_should_close(self.window)
 
     # ------------------------------------------------------------------
-    # SHUTDOWN
-    # ------------------------------------------------------------------
     def shutdown(self) -> None:
         if self.imgui_backend:
-            try:
-                self.imgui_backend.shutdown()
-            except Exception:
-                logger.exception("[CadWindow] imgui_backend.shutdown hatası")
+            self.imgui_backend.shutdown()
             self.imgui_backend = None
 
         if self.window:

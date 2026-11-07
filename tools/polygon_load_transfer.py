@@ -64,31 +64,33 @@ def _point_segment_param(pt, a, b) -> tuple[float, float]:
     return t, math.hypot(px - cx, py - cy)
 
 def build_polygon_frame_loads(
-    scene, polygon, loads=None, *,
+    math_model, polygon, loads=None, *, analysis_data=None,
     dist_type=None,
     step: float = 200.0,
     n_bins: int = 12,
 ) -> dict[int, dict[str, FrameDistributedLoad]]:
     """Build frame load sets from only the frame IDs explicitly associated to a polygon."""
-    if scene is None or polygon is None:
-        raise ValueError("Sahne ve polygon gereklidir.")
+    if math_model is None or polygon is None:
+        raise ValueError("MathModel ve polygon gereklidir.")
     if len(getattr(polygon, "nodes", ())) < 3:
         raise ValueError("Yük aktarımı için polygon en az üç node içermelidir.")
+    if analysis_data is None:
+        raise ValueError("PolygonAnalysisData gerekli.")
 
     selected_loads = list(
-        loads if loads is not None else getattr(polygon, "assigned_loads", ())
+        loads if loads is not None else analysis_data.assigned_loads
     )
     if not selected_loads:
         raise ValueError("Polygon üzerinde aktarılacak alan yükü yok.")
 
     associated_ids = {
         int(frame_id)
-        for frame_id in getattr(polygon, "associated_frame_ids", ())
+        for frame_id in analysis_data.associated_frame_ids
     }
     if not associated_ids:
         raise ValueError("Önce polygon için aktarım hedefi frame'leri seçin.")
     frames = [
-        frame for frame in scene.frames.values()
+        frame for frame in math_model.frames.values()
         if int(frame.unique_id) in associated_ids
     ]
     if len(frames) != len(associated_ids):
@@ -113,7 +115,7 @@ def build_polygon_frame_loads(
 
     distribution = DistType.from_input(
         dist_type if dist_type is not None
-        else getattr(polygon, "transfer_dist_type", None)
+        else analysis_data.transfer_dist_type
     )
     # ★ Grid sampling profili (TWO_WAY için)
     q_profiles: dict[int, list[tuple[float, float, float, float]]] | None = None
@@ -588,30 +590,26 @@ def _frame_load_direction(direction):
 
 
 def transfer_polygon_loads_to_frames(
-    scene, polygon, *, pattern: str | None = None,
+    math_model, polygon, *, analysis_data, pattern: str | None = None,
 ) -> dict[int, dict[str, FrameDistributedLoad]]:
     """Build and apply this polygon's area loads, replacing its prior contribution."""
     
 
-    loads = list(getattr(polygon, "assigned_loads", ()))
+    loads = list(analysis_data.assigned_loads)
     if pattern is not None:
         loads = [load for load in loads if load.pattern_name == pattern]
 
     
-    generated = build_polygon_frame_loads(scene, polygon, loads)
+    generated = build_polygon_frame_loads(
+        math_model, polygon, loads, analysis_data=analysis_data,
+    )
 
-    manager = getattr(getattr(scene, "project", None), "loads", None)
-    if manager is not None and hasattr(manager, "replace_polygon_frame_transfers"):
-        manager.replace_polygon_frame_transfers(
-            scene, int(polygon.unique_id), generated,
+    for frame_id, pattern_loads in generated.items():
+        frame = next(
+            item for item in math_model.frames.values()
+            if int(item.unique_id) == frame_id
         )
-    else:
-        for frame_id, pattern_loads in generated.items():
-            frame = next(
-                item for item in scene.frames.values()
-                if int(item.unique_id) == frame_id
-            )
-            for pattern_name, load_set in pattern_loads.items():
-                frame.dist_load_sets[pattern_name] = deepcopy(load_set)
-                frame.mark_dirty()
+        for pattern_name, load_set in pattern_loads.items():
+            frame.dist_load_sets[pattern_name] = deepcopy(load_set)
+            frame.mark_dirty()
     return generated

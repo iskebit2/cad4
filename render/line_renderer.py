@@ -71,6 +71,17 @@ class LineRenderer:
         glBindVertexArray(0)
         glEnable(GL_DEPTH_TEST)
 
+    def render_pick(self, mvp, pick_shader):
+        if not self.vcount or not pick_shader:
+            return
+        pick_shader.use()
+        loc = pick_shader.get_loc("mvp")
+        if loc != -1:
+            glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
+        glBindVertexArray(self.vao)
+        glDrawArrays(GL_LINES, 0, self.vcount)
+        glBindVertexArray(0)
+
     def _cleanup(self):
         if self.vbo:
             glDeleteBuffers(1, [self.vbo])

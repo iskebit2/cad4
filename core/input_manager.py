@@ -1,277 +1,171 @@
 # core/input_manager.py
 
+from __future__ import annotations
+
+import time
 from dataclasses import dataclass, field
 
+import glfw
 from pyglm import glm
-import numpy as np
-
-# ============================================================================
-# SABİTLER
-# ============================================================================
-MOUSE_BUTTON_LEFT   = "left"
-MOUSE_BUTTON_RIGHT  = "right"
-MOUSE_BUTTON_MIDDLE = "middle"
-
-_SHIFT = "shift"
-_CTRL  = "ctrl"
-_ALT   = "alt"
 
 
-# ============================================================================
-# INPUT MANAGER
-# ============================================================================
+LEFT = 0
+RIGHT = 1
+MIDDLE = 2
+
+
 @dataclass
-class InputManager:
-    """
-    Anlık girdi durumu + küçük karar mantığı. Backend bağımsız.
-
-    - "Ne oldu?" sorusunu yanıtlar (buton basılı, drag eşiği aşıldı,
-      middle double-click oldu).
-    - "Ne yapacağım?" sorusunu **yanıtlamaz** — o cad_app'in işi
-      (kamerayı çevir, marquee bitir, panel aç).
-    """
-
-    # --- Fare ---
-    mouse_pos:        glm.vec2 = field(default_factory=lambda: glm.vec2(0, 0))
-    mouse_delta:      glm.vec2 = field(default_factory=lambda: glm.vec2(0, 0))
-    mouse_wheel:      float    = 0.0
-    mouse_world_pos:  glm.vec3 = field(default_factory=lambda: glm.vec3(0, 0, 0))
-    mouse_world_valid: bool    = False
-    mouse_plane_pos: glm.vec3 = field(default_factory=lambda: glm.vec3(0, 0, 0))
-    mouse_plane_coords: glm.vec2 = field(default_factory=lambda: glm.vec2(0, 0))
-    mouse_plane_valid: bool = False
-    working_plane_grid_coordinates: (
-        tuple[tuple[float, ...], tuple[float, ...]] | None
-    ) = None
-    working_plane_orthogonal_origin: tuple[float, float] | None = None
-
-    # --- Drag (marquee) ---
-    is_dragging:    bool = False
-    drag_start:     tuple[float, float] | None = None
-    drag_current:   tuple[float, float] | None = None
+class InputState:
+    mouse_pos: glm.vec2 = field(default_factory=lambda: glm.vec2(0, 0))
+    mouse_delta: glm.vec2 = field(default_factory=lambda: glm.vec2(0, 0))
+    mouse_world_pos: glm.vec3 = field(default_factory=lambda: glm.vec3(0, 0, 0))
+    mouse_world_valid: bool = False
+    drag_start: tuple[float, float] | None = None
+    drag_current: tuple[float, float] | None = None
+    is_dragging: bool = False
     drag_threshold: float = 5.0
+    buttons: dict[int, bool] = field(default_factory=dict)
+    keys: dict[int, bool] = field(default_factory=dict)
+    modifiers: int = 0
 
-    # --- Buton ve tuş durumları ---
-    buttons: dict[str, bool]    = field(default_factory=dict)
-    keys:    dict[object, bool] = field(default_factory=dict)
 
-    # --- Modifier durumları (sol/sağ birleşik) ---
-    modifiers: dict[str, bool] = field(default_factory=lambda: {
-        _SHIFT: False, _CTRL: False, _ALT: False,
-    })
+class InputManager:
 
-    # --- Pick ---
-    pick_request: bool = False
+    def __init__(self):
+        self.state = InputState()
+        self._handlers: list = []
+        self._fallback = None
+        self._bindings: dict[tuple[int, int], callable] = {}
+        self._last_click = {LEFT: 0.0, MIDDLE: 0.0}
+        self._last_pos = {LEFT: (0.0, 0.0), MIDDLE: (0.0, 0.0)}
+        self._captures_mouse = lambda: False
+        self._captures_keyboard = lambda: False
+        self._global_escape = None
 
-    # ------------------------------------------------------------------
-    # Middle-click politika sabitleri (public — cad_app override edebilir)
-    # ------------------------------------------------------------------
-    middle_double_click_interval: float = 0.25
-    middle_double_click_max_drag: float = 4.0
+    def set_global_escape(self, fn) -> None:
+        self._global_escape = fn
+        
+    def set_capture_callbacks(self, mouse_fn, keyboard_fn) -> None:
+        self._captures_mouse = mouse_fn
+        self._captures_keyboard = keyboard_fn
 
-    # ------------------------------------------------------------------
-    # İç durumlar (dataclass init'te yok, __post_init__'te kurulur)
-    # ------------------------------------------------------------------
-    _last_x: float = field(default=0.0, init=False, repr=False)
-    _last_y: float = field(default=0.0, init=False, repr=False)
+    def register(self, handler) -> None:
+        if handler not in self._handlers:
+            self._handlers.append(handler)
 
-    _middle_click_time: float = field(default=0.0, init=False, repr=False)
-    _middle_press_pos:  tuple[float, float] = field(
-        default=(0.0, 0.0), init=False, repr=False,
-    )
-    _middle_dragged:    bool = field(default=False, init=False, repr=False)
+    def set_fallback(self, handler) -> None:
+        self._fallback = handler
 
-    _last_left_click_time: float = field(default=0.0, init=False, repr=False)
-    _last_left_click_pos: tuple[float, float] = field(
-        default=(0.0, 0.0), init=False, repr=False,
-    )
-    _double_click_interval: float = 0.30
-    _double_click_max_drag: float = 5.0
+    def bind(self, key: int, mods: int, action) -> None:
+        self._bindings[(key, mods)] = action
 
-    # ==================================================================
-    # FARE KONUMU
-    # ==================================================================
-    def update_mouse_position(self, x: float, y: float):
-        self.mouse_delta.x = x - self._last_x
-        self.mouse_delta.y = y - self._last_y
-        self.mouse_pos.x = x
-        self.mouse_pos.y = y
-        self._last_x = x
-        self._last_y = y
+    def is_shift(self) -> bool:
+        return bool(self.state.modifiers & glfw.MOD_SHIFT)
 
-        if self.drag_start is not None:
-            self.drag_current = (x, y)
-            if not self.is_dragging:
-                d = np.linalg.norm(
-                    np.array(self.drag_start) - np.array(self.drag_current)
-                )
-                if d > self.drag_threshold:
-                    self.is_dragging = True
+    def is_ctrl(self) -> bool:
+        return bool(self.state.modifiers & glfw.MOD_CONTROL)
 
-    # ==================================================================
-    # MODIFIER'LAR
-    # ==================================================================
-    def update_modifiers(self, mods: dict):
-        """
-        Tek format: dict.
-        mods = {'shift': bool, 'ctrl': bool, 'alt': bool}
-        Eksik anahtarlar False → yapışma imkânsız.
-        """
-        self.modifiers[_SHIFT] = bool(mods.get("shift", False))
-        self.modifiers[_CTRL]  = bool(mods.get("ctrl",  False))
-        self.modifiers[_ALT]   = bool(mods.get("alt",   False))
+    def is_alt(self) -> bool:
+        return bool(self.state.modifiers & glfw.MOD_ALT)
 
-    def clear_modifiers(self):
-        self.modifiers[_SHIFT] = False
-        self.modifiers[_CTRL]  = False
-        self.modifiers[_ALT]   = False
-
-    def is_shift_pressed(self) -> bool:
-        return self.modifiers.get(_SHIFT, False)
-
-    def is_ctrl_pressed(self) -> bool:
-        return self.modifiers.get(_CTRL, False)
-
-    def is_alt_pressed(self) -> bool:
-        return self.modifiers.get(_ALT, False)
-
-    # ==================================================================
-    # KLAVYE
-    # ==================================================================
-    def handle_key_down(self, key):
-        self.keys[key] = True
-
-    def handle_key_up(self, key):
-        self.keys[key] = False
-
-    def is_key_pressed(self, key) -> bool:
-        return self.keys.get(key, False)
-
-    # ==================================================================
-    # FARE BUTONLARI
-    # ==================================================================
-    def set_button_state(self, button: str, state: bool):
-        self.buttons[button] = state
-
-        if button != MOUSE_BUTTON_LEFT:
+    def on_mouse_button(self, button: int, action: int, mods: int) -> None:
+        if self._captures_mouse():
             return
-        if state:
-            self.drag_start = (self.mouse_pos.x, self.mouse_pos.y)
-            self.drag_current = (self.mouse_pos.x, self.mouse_pos.y)
-            self.is_dragging = False
+        self.state.modifiers = mods
+        x, y = self.state.mouse_pos.x, self.state.mouse_pos.y
+
+        if action == glfw.PRESS:
+            self.state.buttons[button] = True
+            if button in (LEFT, MIDDLE):
+                self.state.drag_start = (x, y)
+                self.state.drag_current = (x, y)
+                self.state.is_dragging = False
+            if self._double_click(button, x, y):
+                return
+            if self._dispatch("handle_click", x, y, button):
+                return
+            if self._fallback:
+                self._fallback.handle_click(x, y, button)
         else:
-            self.drag_start = None
-            self.drag_current = None
-            self.is_dragging = False
+            self.state.buttons[button] = False
+            if button in (LEFT, MIDDLE):
+                self.state.drag_start = None
+                self.state.drag_current = None
+                self.state.is_dragging = False
+            if self._dispatch("handle_release", x, y, button):
+                return
+            if self._fallback:
+                self._fallback.handle_release(x, y, button)
 
-    def is_button_pressed(self, button: str) -> bool:
-        return self.buttons.get(button, False)
+    def on_mouse_move(self, x: float, y: float) -> None:
+        if self._captures_mouse():
+            return
+        dx = x - self.state.mouse_pos.x
+        dy = y - self.state.mouse_pos.y
+        self.state.mouse_delta = glm.vec2(dx, dy)
+        self.state.mouse_pos = glm.vec2(x, y)
 
-    # ==================================================================
-    # WHEEL
-    # ==================================================================
-    def add_wheel(self, delta: float):
-        self.mouse_wheel += delta
+        if self.state.drag_start is not None:
+            self.state.drag_current = (x, y)
+            if not self.state.is_dragging:
+                ddx = x - self.state.drag_start[0]
+                ddy = y - self.state.drag_start[1]
+                if (ddx * ddx + ddy * ddy) ** 0.5 > self.state.drag_threshold:
+                    self.state.is_dragging = True
 
-    def consume_wheel(self) -> float:
-        d = self.mouse_wheel
-        self.mouse_wheel = 0.0
-        return d
+        if self._dispatch("handle_move", x, y, dx, dy):
+            return
+        if self._fallback:
+            self._fallback.handle_move(x, y, dx, dy)
 
-    # ==================================================================
-    # DRAG / MARQUEE
-    # ==================================================================
-    def get_drag_rect(self) -> tuple[float, float, float, float] | None:
-        if (not self.is_dragging
-                or self.drag_start is None
-                or self.drag_current is None):
-            return None
-        x1, y1 = self.drag_start
-        x2, y2 = self.drag_current
-        return (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
+    def on_key(self, key: int, action: int, mods: int) -> None:
+        if action == glfw.PRESS and key == glfw.KEY_ESCAPE:
+            if self._global_escape is not None:
+                self._global_escape()
+                return
+            
+        if action == glfw.PRESS:
+            if self._captures_keyboard():
+                return
+            self.state.modifiers = mods
+            self.state.keys[key] = True
+            if self._dispatch("handle_key", key, mods):
+                return
+            bound = self._bindings.get((key, mods))
+            if bound is not None:
+                bound()
+                return
+            if self._fallback:
+                self._fallback.handle_key(key, mods)
+        else:
+            self.state.keys[key] = False
 
-    def is_crossing_mode(self) -> bool:
-        if self.drag_start is None or self.drag_current is None:
-            return False
-        return self.drag_current[0] < self.drag_start[0]
+    def on_scroll(self, delta: float) -> None:
+        if self._captures_keyboard():
+            return
+        if self._dispatch("handle_scroll", delta):
+            return
+        if self._fallback:
+            self._fallback.handle_scroll(delta)
 
-    # ==================================================================
-    # PICK
-    # ==================================================================
-    def request_pick(self):
-        self.pick_request = True
-
-    def consume_pick_request(self) -> bool:
-        v = self.pick_request
-        self.pick_request = False
-        return v
-
-    # ==================================================================
-    # MIDDLE-CLICK STATE MACHINE
-    # ==================================================================
-    def begin_middle_click(self, x: float, y: float, now: float) -> bool:
-        """
-        Middle butona basıldığında çağrılır.
-
-        Dönüş:
-            True  → bu bir DOUBLE CLICK; çağıran `fit_view()` gibi
-                    bir eylem yapar. Press state güncellenmez.
-            False → normal press; press pos ve drag bayrağı kurulur.
-        """
-        if now - self._middle_click_time < self.middle_double_click_interval:
-            self._middle_click_time = 0.0
-            return True
-
-        self._middle_click_time = now
-        self._middle_press_pos = (x, y)
-        self._middle_dragged = False
+    def _dispatch(self, method: str, *args) -> bool:
+        for h in self._handlers:
+            if not getattr(h, "is_active", False):
+                continue
+            fn = getattr(h, method, None)
+            if fn is not None and fn(*args):
+                return True
         return False
 
-    def begin_left_click(self, x: float, y: float, now: float) -> bool:
-        """
-        Sol butona basıldığında çağrılır.
-        Dönüş: True → bu bir DOUBLE CLICK; çağıran eylem yapar.
-        """
-        # Konum ve zaman kontrolü
-        dt = now - self._last_left_click_time
-        dx = x - self._last_left_click_pos[0]
-        dy = y - self._last_left_click_pos[1]
-        dist = (dx * dx + dy * dy) ** 0.5
-
-        is_double = (
-            dt < self._double_click_interval
-            and dist < self._double_click_max_drag
-        )
-
-        self._last_left_click_time = now if not is_double else 0.0
-        self._last_left_click_pos = (x, y)
-        return is_double
-
-    def update_middle_drag(self, x: float, y: float) -> bool:
-        """
-        Middle basılıyken her harekette çağrılır.
-
-        Dönüş:
-            True  → drag eşiği bu adımda aşıldı; double click iptal edildi.
-            False → drag eşiği aşılmadı (veya zaten aşılmıştı).
-        """
-        if self._middle_dragged:
+    def _double_click(self, button: int, x: float, y: float) -> bool:
+        if button not in (LEFT, MIDDLE):
             return False
-
-        px, py = self._middle_press_pos
+        now = time.monotonic()
+        interval = 0.3 if button == LEFT else 0.25
+        dt = now - self._last_click[button]
+        px, py = self._last_pos[button]
         dist = ((x - px) ** 2 + (y - py) ** 2) ** 0.5
-        if dist > self.middle_double_click_max_drag:
-            self._middle_dragged = True
-            self._middle_click_time = 0.0
-            return True
-        return False
-
-    def is_middle_dragged(self) -> bool:
-        """Debug/UI için: middle drag aktif mi?"""
-        return self._middle_dragged
-
-    def reset_middle_click(self):
-        """Panel/preview iptali gibi durumlarda state'i temizle."""
-        self._middle_click_time = 0.0
-        self._middle_press_pos = (0.0, 0.0)
-        self._middle_dragged = False
+        is_double = dt < interval and dist < 5.0
+        self._last_click[button] = 0.0 if is_double else now
+        self._last_pos[button] = (x, y)
+        return is_double

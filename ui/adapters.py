@@ -278,47 +278,66 @@ def values_to_link(link, v: dict) -> None:
 # ============================================================================
 # POLYGON
 # ============================================================================
-def polygon_to_values(poly) -> dict:
+def polygon_to_values(poly, analysis_data=None) -> dict:
     pt = getattr(poly, "poly_type", None)
-    loads = getattr(poly, "uniform_to_frame_loads", [])
-    assigned = getattr(poly, "assigned_loads", [])
-    return {
+    values = {
         "label": poly.label,
         "is_visible": poly.is_visible,
         "is_temporary": getattr(poly, "is_temporary", False),
         "color": list(poly.color[:3]) if poly.color else None,
         "poly_type": pt.name if hasattr(pt, "name") else str(pt),
-        "windplane": dict(getattr(poly, "windplane", {}) or {}),
         "show_zones_direction": poly.show_zones_direction or "",
         "zone_count": sum(len(v) for v in poly.zone_children_by_direction.values()),
         "vertex_count": len(poly.nodes),
-        "assoc_count": len(poly.associated_frame_ids),
-        "associated_frame_ids": list(getattr(poly, "associated_frame_ids", [])),
-        "transfer_target": str(getattr(poly, "transfer_target", "frames")),
-        "transfer_dist_type": str(getattr(poly, "transfer_dist_type", "one_way")),
-        "is_load_area": bool(getattr(poly, "is_load_area", False)),
-        "assigned_loads_summary": [
-            (f"{load.source_name or load.pattern_name} | "
-             f"{load.pattern_name} | {float(load.value):g} "
-             f"({load.direction.value})")
-            for load in assigned
-        ],
-        "uniform_to_frame_loads": [
-            {
-                "pattern_name": l.pattern_name,
-                "value": float(l.value),
-                "direction": l.direction.value if hasattr(l.direction, "value") else str(l.direction),
-                "dist_type": l.dist_type.value if hasattr(l.dist_type, "value") else str(l.dist_type),
-                "coordinate_system": getattr(l, "coordinate_system", "GLOBAL"),
-            }
-            for l in loads
-        ],
     }
+    if analysis_data is not None:
+        loads = analysis_data.uniform_to_frame_loads
+        associated_ids = analysis_data.associated_frame_ids
+        values.update({
+            "windplane": dict(analysis_data.windplane or {}),
+            "assoc_count": len(associated_ids),
+            "associated_frame_ids": list(associated_ids),
+            "transfer_target": str(analysis_data.transfer_target),
+            "transfer_dist_type": str(analysis_data.transfer_dist_type),
+            "is_load_area": bool(analysis_data.is_load_area),
+            "assigned_loads_summary": [
+                (f"{load.source_name or load.pattern_name} | "
+                 f"{load.pattern_name} | {float(load.value):g} "
+                 f"({load.direction.value})")
+                for load in analysis_data.assigned_loads
+            ],
+            "uniform_to_frame_loads": [
+                {
+                    "pattern_name": load.pattern_name,
+                    "value": float(load.value),
+                    "direction": (
+                        load.direction.value
+                        if hasattr(load.direction, "value")
+                        else str(load.direction)
+                    ),
+                    "dist_type": (
+                        load.dist_type.value
+                        if hasattr(load.dist_type, "value")
+                        else str(load.dist_type)
+                    ),
+                    "coordinate_system": getattr(
+                        load, "coordinate_system", "GLOBAL",
+                    ),
+                }
+                for load in loads
+            ],
+        })
+    return values
 
 
-def values_to_polygon(poly, v: dict) -> None:
+def values_to_polygon(poly, v: dict, analysis_data=None) -> None:
     
-
+    analysis_fields = {
+        "associated_frame_ids", "windplane", "transfer_target",
+        "transfer_dist_type", "is_load_area", "uniform_to_frame_loads",
+    }
+    if analysis_data is None and analysis_fields.intersection(v):
+        raise ValueError("PolygonAnalysisData gerekli.")
     poly.label = v.get("label", poly.label)
     poly.color = list(v["color"]) if v.get("color") and poly.color else poly.color
     poly.is_visible = bool(v.get("is_visible", poly.is_visible))
@@ -326,7 +345,7 @@ def values_to_polygon(poly, v: dict) -> None:
 
     ids = v.get("associated_frame_ids")
     if isinstance(ids, list):
-        poly.associated_frame_ids = list(ids)
+        analysis_data.associated_frame_ids = list(ids)
 
     pt = v.get("poly_type")
     if pt:
@@ -336,13 +355,13 @@ def values_to_polygon(poly, v: dict) -> None:
             pass
 
     if isinstance(v.get("windplane"), dict):
-        poly.windplane = v["windplane"]
+        analysis_data.windplane = v["windplane"]
     if "transfer_target" in v:
-        poly.transfer_target = str(v["transfer_target"])
+        analysis_data.transfer_target = str(v["transfer_target"])
     if "transfer_dist_type" in v:
-        poly.transfer_dist_type = str(v["transfer_dist_type"])
+        analysis_data.transfer_dist_type = str(v["transfer_dist_type"])
     if "is_load_area" in v:
-        poly.is_load_area = bool(v["is_load_area"])
+        analysis_data.is_load_area = bool(v["is_load_area"])
     if "show_zones_direction" in v:
         s = str(v["show_zones_direction"]) or None
         poly.show_zones_direction = s
@@ -365,7 +384,7 @@ def values_to_polygon(poly, v: dict) -> None:
                 dist_type=DistType.from_input(d.get("dist_type", "One way")),
                 coordinate_system=str(d.get("coordinate_system", "GLOBAL")),
             ))
-        poly.uniform_to_frame_loads = new_loads
+        analysis_data.uniform_to_frame_loads = new_loads
 
     poly.mark_dirty()
 
@@ -429,31 +448,39 @@ _ADAPTERS = {
 _DEFAULT = (node_to_values, values_to_node)
 
 
-def element_to_values(obj) -> dict:
+def element_to_values(obj, *, analysis_data=None) -> dict:
     name = type(obj).__name__
     pair = _ADAPTERS.get(name)
     if pair is None:
         return {}
+    if name == "Polygon":
+        return pair[0](obj, analysis_data)
     return pair[0](obj)
 
-def _apply_extras(obj, values, known_fn):
-    from ui.adapters import _KNOWN_KEYS_BY_TYPE
-    known = _KNOWN_KEYS_BY_TYPE.get(type(obj).__name__, set())
+def _apply_extras(obj, values):
+    known = set(vars(obj)) if hasattr(obj, "__dict__") else set()
+    known.update({
+        "windplane", "uniform_to_frame_loads", "associated_frame_ids",
+        "assigned_loads", "transfer_target", "transfer_dist_type",
+        "is_load_area", "assoc_count", "assigned_loads_summary",
+        "vertex_count", "zone_count",
+    })
     for k, v in values.items():
         if k in known or k.startswith("_"):
             continue
-        try:
+        if hasattr(obj, "__dict__"):
             setattr(obj, k, v)
-        except Exception:
-            pass
 
-def values_to_element(obj, values: dict) -> None:
+def values_to_element(obj, values: dict, *, analysis_data=None) -> None:
     name = type(obj).__name__
     pair = _ADAPTERS.get(name)
     if pair is None:
         return
-    pair[1](obj, values)
-    _apply_extras(obj, values, pair[1])
+    if name == "Polygon":
+        pair[1](obj, values, analysis_data)
+    else:
+        pair[1](obj, values)
+    _apply_extras(obj, values)
 
 
 

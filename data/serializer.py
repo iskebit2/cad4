@@ -22,12 +22,14 @@ from domain.definition import (
     QuadDefinition, ReportManager, ResponseSpectrumCase,
     ResponseSpectrumLoadAssignment, Restraint, Section, SectionCut,
     SeismicConfig, SiteInformation, SnowConfig, SpectrumFunction,
-    StaticLoadAssignment, WindConfig, WindResult, ConstraintDefinition,
+    StaticLoadAssignment, WindConfig, WindDirectionResult, WindResult, ConstraintDefinition,
     MassAssembly, MassContribution, SDPolygonPoint, SDShape, SDSection,
 )
 from domain.element import Area, Frame, Link, Node
+from domain.lighting import Light, LightingSettings
+from domain.math_model import MathModel, PolygonAnalysisData
 from domain.polygon import Polygon
-from domain.plane import ASSOC_KINDS, ASSOC_STATUSES, PendingChange, Plane
+from plane.plane import ASSOC_KINDS, ASSOC_STATUSES, PendingChange, Plane
 from domain.scene import Scene
 from domain.vertex import Vertex
 from domain.line import Line
@@ -39,7 +41,8 @@ logger = CadLogger.get(__name__)
 
 DATACLASS_REGISTRY: dict[str, type] = {
     cls.__name__: cls for cls in (
-        Grid, ObliqueAxis, Axis,Vertex, Line,
+        Grid, ObliqueAxis, Axis, Vertex, Line, Polygon, Light, LightingSettings,
+        PolygonAnalysisData,
         ProjectInfo, GeneralProjectInfo, SiteInformation, ProjectConfig,
         WindConfig, SnowConfig, SeismicConfig, LoadPattern,
         StaticLoadAssignment, LoadCase, ModalCase, ComboItem,
@@ -52,13 +55,18 @@ DATACLASS_REGISTRY: dict[str, type] = {
         AreaSection, LinkProp, LinkPropLinear, Restraint, AnalysisManager,
         LoadManager, WindResult, ReportManager, SectionCut, QuadDefinition,
         ConstraintDefinition, LoadSegment, MassAssembly, MassContribution,
-        SDPolygonPoint, SDShape, SDSection,
+        SDPolygonPoint, SDShape, SDSection, WindDirectionResult,
     )
 }
 
 CLASS_REGISTRY: dict[str, type] = {
     "Node": Node, "Frame": Frame, "Area": Area, "Link": Link, "Polygon": Polygon,
 }
+POLYGON_ANALYSIS_FIELDS = (
+    "windplane", "uniform_to_frame_loads", "associated_frame_ids",
+    "assigned_loads", "transfer_target", "transfer_dist_type",
+    "is_load_area",
+)
 
 
 def _encode_plane(p: Plane) -> dict:
@@ -187,7 +195,11 @@ def _decode(obj: Any) -> Any:
             if k in ("__object__", "is_selected"):
                 continue
             if k == "poly_type":
-                decoded[k] = PolygonType(v) if cls is Polygon else v
+                decoded_value = _decode(v)
+                decoded[k] = (
+                    decoded_value if isinstance(decoded_value, PolygonType)
+                    else PolygonType(decoded_value)
+                ) if cls is Polygon else decoded_value
             else:
                 decoded[k] = _decode(v)
         instance.__dict__.update(decoded)
@@ -210,29 +222,40 @@ class DomainJSONEncoder(json.JSONEncoder):
 
 def save_project_file(project, path: Path) -> None:
     scene = project.scene
+    math_model = project.math_model
     scene_payload = {
+        "grid": _encode(scene.grid),
+        "lighting": _encode(scene.lighting),
+        "polygons": {str(k): _encode(v) for k, v in scene.polygons.items()},
+        "lines": {str(k): _encode(v) for k, v in scene.lines.items()},
         "show_local_axes": scene.show_local_axes,
         "show_local_axes_for_selected": scene.show_local_axes_for_selected,
         "show_local_axes_scale": scene.show_local_axes_scale,
-        "units": scene.units,
-        "nodes": [_encode(n) for n in scene.nodes.values()],
-        "frames": [_encode(f) for f in scene.frames.values()],
-        "areas": [_encode(a) for a in scene.areas.values()],
-        "links": [_encode(l) for l in scene.links.values()],
+    }
+    math_model_payload = {
+        "units": math_model.units,
+        "nodes": [_encode(n) for n in math_model.nodes.values()],
+        "frames": [_encode(f) for f in math_model.frames.values()],
+        "areas": [_encode(a) for a in math_model.areas.values()],
+        "links": [_encode(l) for l in math_model.links.values()],
+        "polygon_analysis": {
+            str(k): _encode(v)
+            for k, v in math_model.polygon_analysis.items()
+        },
     }
     u_sys = project.unit_system
     payload = {
-        "version": 5,
+        "version": 6,
         "info": _encode(project.info),
         "general_info": _encode(project.general_info),
         "site_info": _encode(project.site_info),
         "config": _encode(project.config),
         "scene": scene_payload,
+        "math_model": math_model_payload,
         "loads": _encode(project.loads),
         "analysis": _encode(project.analysis),
         "report": _encode(project.report),
         "unit_system": u_sys.value if isinstance(u_sys, Enum) else u_sys,
-        "grid": _encode(project.grid),
         "materials": {k: _encode(v) for k, v in project.materials.items()},
         "sections": {k: _encode(v) for k, v in project.sections.items()},
         "area_sections": {k: _encode(v) for k, v in project.area_sections.items()},
@@ -274,10 +297,36 @@ def load_project_file(path: Path):
     proj.loads = _decode(payload.get("loads", {}))
     proj.analysis = _decode(payload.get("analysis", {}))
     proj.report = _decode(payload.get("report", {}))
-
-    decoded_grid = _decode(payload.get("grid", {}))
+    scene_data = payload.get("scene", {})
+    decoded_grid = _decode(
+        scene_data.get("grid", payload.get("grid", {}))
+        if isinstance(scene_data, dict) else payload.get("grid", {})
+    )
     if decoded_grid:
-        proj.grid = decoded_grid
+        proj.scene.grid = decoded_grid
+    decoded_lighting = _decode(
+        scene_data.get("lighting", {})
+        if isinstance(scene_data, dict) else {}
+    )
+    if isinstance(decoded_lighting, LightingSettings):
+        proj.scene.lighting = decoded_lighting
+
+    encoded_polygons = (
+        scene_data.get("polygons", payload.get("polygons", {}))
+        if isinstance(scene_data, dict) else payload.get("polygons", {})
+    )
+    encoded_lines = (
+        scene_data.get("lines", payload.get("lines", {}))
+        if isinstance(scene_data, dict) else payload.get("lines", {})
+    )
+    proj.scene.polygons = {
+        int(k) if k.isdigit() else k: _decode(v)
+        for k, v in encoded_polygons.items()
+    }
+    proj.scene.lines = {
+        int(k) if k.isdigit() else k: _decode(v)
+        for k, v in encoded_lines.items()
+    }
 
     raw_unit = payload.get("unit_system", UnitSystem.N_MM)
     if isinstance(raw_unit, UnitSystem):
@@ -305,20 +354,46 @@ def load_project_file(path: Path):
     proj.frame_design_procs = payload.get("frame_design_procs", {})
     proj.frame_auto_mesh = payload.get("frame_auto_mesh", {})
 
-    scene = Scene(proj)
-    scene_data = payload.get("scene", {})
+    math_model = MathModel()
+    math_model_data = payload.get("math_model")
+    if not isinstance(math_model_data, dict):
+        math_model_data = scene_data if isinstance(scene_data, dict) else {}
+    math_model.units = math_model_data.get("units", "N, mm, C")
+    for key, value in math_model_data.get("polygon_analysis", {}).items():
+        decoded = _decode(value)
+        if isinstance(decoded, PolygonAnalysisData):
+            math_model.polygon_analysis[int(key)] = decoded
+    for key, raw_polygon in encoded_polygons.items():
+        polygon_id = int(key) if key.isdigit() else key
+        if polygon_id in math_model.polygon_analysis:
+            continue
+        legacy = {
+            name: _decode(raw_polygon[name])
+            for name in POLYGON_ANALYSIS_FIELDS if name in raw_polygon
+        }
+        if legacy:
+            math_model.polygon_analysis[int(polygon_id)] = PolygonAnalysisData(
+                **legacy,
+            )
+    for polygon in proj.scene.polygons.values():
+        if isinstance(polygon, Polygon):
+            for name in POLYGON_ANALYSIS_FIELDS:
+                polygon.__dict__.pop(name, None)
     if isinstance(scene_data, dict):
-        scene.show_local_axes = bool(scene_data.get("show_local_axes", False))
-        scene.show_local_axes_for_selected = bool(scene_data.get("show_local_axes_for_selected", True))
-        scene.show_local_axes_scale = float(scene_data.get("show_local_axes_scale", 1.0))
-        scene.units = scene_data.get("units", "N, mm, C")
+        proj.scene.show_local_axes = bool(scene_data.get("show_local_axes", False))
+        proj.scene.show_local_axes_for_selected = bool(
+            scene_data.get("show_local_axes_for_selected", True)
+        )
+        proj.scene.show_local_axes_scale = float(
+            scene_data.get("show_local_axes_scale", 1.0)
+        )
 
         node_map: dict[int, Node] = {}
-        for n_data in scene_data.get("nodes", []):
+        for n_data in math_model_data.get("nodes", []):
             node = _decode(n_data)
             if isinstance(node, Node) and node.unique_id not in node_map:
                 node.connected = []
-                scene.add_node(node)
+                math_model.add_node(node)
                 node_map[node.unique_id] = node
 
         def _resolve(ref):
@@ -327,7 +402,7 @@ def load_project_file(path: Path):
             uid = ref.get("unique_id") if isinstance(ref, dict) else ref
             return node_map.get(int(uid)) if uid is not None else None
 
-        for f_data in scene_data.get("frames", []):
+        for f_data in math_model_data.get("frames", []):
             frame = _decode(f_data)
             if isinstance(frame, Frame):
                 frame.node_i = _resolve(frame.node_i) or frame.node_i
@@ -335,26 +410,26 @@ def load_project_file(path: Path):
                 if isinstance(frame.section, str):
                     frame.section = proj.get_section_by_name(frame.section)
                 if frame.node_i and frame.node_j:
-                    scene.add_frame(frame)
+                    math_model.add_frame(frame)
 
-        for a_data in scene_data.get("areas", []):
+        for a_data in math_model_data.get("areas", []):
             area = _decode(a_data)
             if isinstance(area, Area):
                 area.nodes = [n for n in (_resolve(x) for x in area.nodes) if n]
                 if area.nodes:
-                    scene.add_area(area)
+                    math_model.add_area(area)
 
-        for l_data in scene_data.get("links", []):
+        for l_data in math_model_data.get("links", []):
             link = _decode(l_data)
             if isinstance(link, Link):
                 link.node_i = _resolve(link.node_i) or link.node_i
                 link.node_j = _resolve(link.node_j) or link.node_j
                 if link.node_i and link.node_j:
-                    scene.add_link(link)
+                    math_model.add_link(link)
 
     proj.custom_planes = {
         k: _decode_plane(v) for k, v in payload.get("custom_planes", {}).items()
     }
-    proj.scene = scene
-    proj.scene.project = proj
+    proj.math_model = math_model
+    proj.scene.mark_dirty()
     return proj

@@ -739,7 +739,7 @@ class FrameLoadPanel(BasePanel):
         app = getattr(self, "app", None)
         if not app or not getattr(app, "engine", None):
             return
-        scn = app.engine.scene
+        scn = app.engine.math_model
         if scn is None:
             return
         sel = scn.get_selected()

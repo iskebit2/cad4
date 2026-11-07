@@ -39,15 +39,20 @@ class LinkBuilder:
         thickness = 15.0  # Daha kalın
         
         # 4 köşe noktası
-        p1 = start + right * thickness + up * thickness
-        p2 = start - right * thickness + up * thickness
-        p3 = end - right * thickness - up * thickness
-        p4 = end + right * thickness - up * thickness
-        
-        # Vertex'ler: pos3 + norm3 (norm = dir)
+        p1 = start + right * thickness
+        p2 = start - right * thickness
+        p3 = end - right * thickness
+        p4 = end + right * thickness
+
+        face_normal = normalize(np.cross(p2 - p1, p3 - p1))
+
+        # Vertex'ler: pos3 + norm3
         verts = []
         for p in [p1, p2, p3, p4]:
-            verts.extend([p[0], p[1], p[2], dir[0], dir[1], dir[2]])
+            verts.extend([
+                p[0], p[1], p[2],
+                face_normal[0], face_normal[1], face_normal[2],
+            ])
         
         # İndeksler (2 üçgen)
         idxs = [0, 1, 2, 0, 2, 3]

@@ -29,7 +29,7 @@ class LoadDisplayPanel(BasePanel):
             pos_first_use=(480, 60),
             closable=True,
         )
-        self.scene = None
+        self.math_model = None
         self.renderer = None
 
         # Callbacks
@@ -65,20 +65,20 @@ class LoadDisplayPanel(BasePanel):
 
     # ------------------------------------------------------------------
         
-    def open(self, scene=None, renderer=None):
-        if scene is not None:
-            self.scene = scene
+    def open(self, math_model=None, renderer=None):
+        if math_model is not None:
+            self.math_model = math_model
         if renderer is not None:
             self.renderer = renderer
         self._refresh_patterns()
         super().open()
 
-    def set_loads_visible(self, enabled: bool, renderer=None, scene=None):
+    def set_loads_visible(self, enabled: bool, renderer=None, math_model=None):
         """Set the canonical load-visibility state and synchronize rendering."""
         if renderer is not None:
             self.renderer = renderer
-        if scene is not None:
-            self.scene = scene
+        if math_model is not None:
+            self.math_model = math_model
         self.show_loads = bool(enabled)
         self._apply()
 
@@ -86,7 +86,7 @@ class LoadDisplayPanel(BasePanel):
     # DRAW
     # ------------------------------------------------------------------
     def draw_content(self):
-        if not self.scene:
+        if not self.math_model:
             imgui.text_colored(imgui.ImVec4(0.7, 0.5, 0.5, 1.0), 'Sahne bağlı değil.')
             return
 
@@ -353,12 +353,12 @@ class LoadDisplayPanel(BasePanel):
     # ------------------------------------------------------------------
     def _refresh_patterns(self):
         """Sahnedeki pattern'ları yeniden topla."""
-        if not self.scene:
+        if not self.math_model:
             self.available_patterns = []
             return
 
         pats: set[str] = set()
-        for f in self.scene.frames.values():
+        for f in self.math_model.frames.values():
             sets = getattr(f, "dist_load_sets", None)
             if sets:
                 pats.update(sets.keys())
@@ -368,7 +368,7 @@ class LoadDisplayPanel(BasePanel):
                 if p:
                     pats.add(p)
 
-        for n in self.scene.nodes.values():
+        for n in self.math_model.nodes.values():
             for pl in getattr(n, "loads", None) or []:
                 p = getattr(pl, "pattern_name", None)
                 if p:
@@ -387,13 +387,13 @@ class LoadDisplayPanel(BasePanel):
             self.clear_pattern_combo_idx = 0
 
     def _count_pattern_usage(self, pattern: str) -> int:
-        if not self.scene or not pattern:
+        if not self.math_model or not pattern:
             return 0
         count = 0
-        for f in self.scene.frames.values():
+        for f in self.math_model.frames.values():
             if pattern in (getattr(f, "dist_load_sets", {}) or {}):
                 count += 1
-        for n in self.scene.nodes.values():                     # ← YENİ
+        for n in self.math_model.nodes.values():
             for pl in getattr(n, "loads", None) or []:
                 if getattr(pl, "pattern_name", None) == pattern:
                     count += 1
@@ -425,8 +425,8 @@ class LoadDisplayPanel(BasePanel):
                     lr.show_fill = self.show_fill
 
         # Sahneyi kirli işaretle → yeniden çizilecek
-        if self.scene:
-            self.scene.mark_dirty()
+        if self.math_model:
+            self.math_model.mark_dirty()
             if self.renderer and hasattr(self.renderer, "load_renderer"):
                 cam_scale = (
                     self.renderer._compute_cam_scale()
@@ -435,7 +435,7 @@ class LoadDisplayPanel(BasePanel):
                 )
                 scene_size = getattr(self.renderer, "size", 1.0)
                 self.renderer.load_renderer.update(
-                    self.scene,
+                    self.math_model,
                     camera_scale=cam_scale,
                     scene_size=scene_size,
                 )
@@ -445,7 +445,7 @@ class LoadDisplayPanel(BasePanel):
             self.on_change()
 
     def set_context(self, ctx):
-        self.scene = ctx.get("scene")
+        self.math_model = ctx.get("math_model")
         self.renderer = ctx.get("renderer")
         lr = getattr(self.renderer, "load_renderer", None) if self.renderer else None
         if lr:

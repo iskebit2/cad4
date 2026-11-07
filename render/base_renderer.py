@@ -569,10 +569,10 @@ class BaseRenderer(ABC, Generic[T]):
 
         rim_intensity_loc = self.shader.get_loc("rimIntensity")
         if rim_intensity_loc != -1:
-            glUniform1f(rim_intensity_loc, 0.80)   # 1.2 → 0.20
+            glUniform1f(rim_intensity_loc, 0.08)
         rim_power_loc = self.shader.get_loc("rimPower")
         if rim_power_loc != -1:
-            glUniform1f(rim_power_loc, 3.0)   # 2.5 → 4.0 (daha ince rim)
+            glUniform1f(rim_power_loc, 3.0)
 
         if cam_pos is not None:
             loc = self.shader.get_loc("lights.viewPos")
