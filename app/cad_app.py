@@ -1,5 +1,7 @@
 # app/cad_app.py
+
 from __future__ import annotations
+import time
 
 from pathlib import Path
 
@@ -22,9 +24,9 @@ from core.gl_engine import Engine
 from domain.project import Project
 from inspector import InspectorWindow
 from inspector.catalog_project import ProjectCatalog
-from logging_config import CadLogger
 from app.debug_panel import DebugPanel
 
+from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
 
@@ -146,6 +148,7 @@ class CadApp:
 
     # ------------------------------------------------------------------
     def frame(self, dt: float) -> None:
+        t_start = time.perf_counter()
         self._ensure_engine()
         if not self.initialized:
             return
@@ -161,6 +164,7 @@ class CadApp:
         self.actions.process_wind_queue()
         self._update_scene_if_dirty()
         self._render_scene(dt)
+        t_render = time.perf_counter()
         self._draw_panels()
         self.debug_panel.draw()
 
@@ -168,6 +172,9 @@ class CadApp:
 
         if self.engine and self.engine.pending_pick_check:
             self.engine.check_pick_result()
+
+        if time.perf_counter() - t_start > 0.033:
+            logger.debug("[CadApp.frame] SLOW: %.1f ms (render: %.1f)", (time.perf_counter() - t_start) * 1000, (t_render - t_start) * 1000)
 
     def _ensure_engine(self) -> None:
         if self.initialized:
@@ -345,5 +352,27 @@ class CadApp:
         if pm is not None:
             pm.reset()
 
+    def _toggle_2d(self) -> None:
+        eng = self.engine
+        if not eng or not eng.renderer:
+            return
+        if eng.plane_draw_mgr.is_active:
+            eng.plane_draw_mgr.cancel()
+
+        if eng.renderer.projection == "plane_2d":
+            eng.exit_plane_2d()
+            return
+
+        project = self.current_project
+        plane = project.active_plane if project else None
+        if plane is None:
+            plane = eng.default_xy_plane()
+            if plane is not None and project is not None:
+                project.activate_plane(plane)
+
+        if plane is None:
+            return
+        eng.enter_plane_2d(plane)
+        
     def shutdown(self) -> None:
         pass

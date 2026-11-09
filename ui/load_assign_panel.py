@@ -330,5 +330,5 @@ class LoadAssignPanel(BasePanel):
             f"{len(assignments)} yük, {len(self.selection_polygons)} "
             f"polygon'a atandı ({count} atama)."
         )
-        logger.info("[LoadAssign] %s", self._status)
+        logger.debug("[LoadAssign] %s", self._status)
         return count

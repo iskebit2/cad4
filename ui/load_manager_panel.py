@@ -219,7 +219,7 @@ class _PatternSubPanel:
                 )
             )
             self._status = f"'{name}' eklendi ({self.PATTERN_TYPES[type_idx]})."
-            logger.info(
+            logger.debug(
                 "[LoadManager] Pattern eklendi: %s (%s)",
                 name, self.PATTERN_TYPES[type_idx],
             )
@@ -418,5 +418,5 @@ class LoadManagerPanel(BasePanel):
                                      "Quake", "Other"][self._new_pattern_type],
                     )
                 )
-                logger.info("[LoadManager] Pattern eklendi: %s", name)
+                logger.debug("[LoadManager] Pattern eklendi: %s", name)
             self._new_pattern_name = ""

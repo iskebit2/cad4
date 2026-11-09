@@ -46,7 +46,7 @@ class ReportPanel(BasePanel):
     def _generate_default_reports(self, project) -> None:
         """Mevcut proje geometrisi ve rüzgar verilerinden WindSceneAdapter kullanarak güvenli şekilde rapor üretir."""
         if not project:
-            logger.warning("[ReportPanel] Proje eksik olduğu için otomatik rapor oluşturulamadı.")
+            logger.debug("[ReportPanel] Proje eksik olduğu için otomatik rapor oluşturulamadı.")
             return
         # --- 1. RÜZGAR RAPORLARI ---
         try: 
@@ -54,7 +54,7 @@ class ReportPanel(BasePanel):
             points, polygons, wind_config = WindSceneAdapter.build_inputs(project)
 
             if not points or not polygons:
-                logger.info("[ReportPanel] Projede analiz edilecek düğüm veya poligon bulunamadı.")
+                logger.debug("[ReportPanel] Projede analiz edilecek düğüm veya poligon bulunamadı.")
                 return
 
             engine = WindEngine(points=points, polygons=polygons)
@@ -81,7 +81,7 @@ class ReportPanel(BasePanel):
                     force_rep.custom_title = f"Tasarım Rüzgar Yükleri - {w_key}"
                     project.report.add_report(force_rep)
 
-            logger.info("[ReportPanel] Varsayılan proje raporları başarıyla derlendi.")
+            logger.debug("[ReportPanel] Varsayılan proje raporları başarıyla derlendi.")
         except Exception as e:
             logger.exception(f"[ReportPanel] Rüzgar Raporları oluşturulurken hata oluştu: {e}")
 
@@ -143,7 +143,7 @@ class ReportPanel(BasePanel):
         except Exception:
             logger.exception("Deprem raporu oluşturulamadı")
 
-        logger.info("[ReportPanel] Domain nesnelerinden proje raporları başarıyla derlendi.")
+        logger.debug("[ReportPanel] Domain nesnelerinden proje raporları başarıyla derlendi.")
     
 
     def draw_content(self):

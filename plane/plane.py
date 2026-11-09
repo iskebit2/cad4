@@ -1,6 +1,7 @@
 # plane/plane.py
 
 from __future__ import annotations
+import time
 
 import uuid
 from dataclasses import dataclass
@@ -9,7 +10,10 @@ import mapbox_earcut as earcut
 import numpy as np
 
 from core.units import Dimension, UnitSystem, convert_value
+from plane.plane_policy import PlaneFilterPolicy, SectionFilterMode
 
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 class ChangeOp:
     ADD = "add"
@@ -58,7 +62,8 @@ class Plane:
     def __init__(self, origin, normal, u=None, v=None, *,
                  plane_id=None, name="",
                  u_min=None, u_max=None, v_min=None, v_max=None,
-                 depth_minus=0.0, depth_plus=0.0):
+                 depth_minus=0.0, depth_plus=0.0,
+                 filter_mode: SectionFilterMode = SectionFilterMode.INTERSECT):
         origin = _as_vec3(origin, "origin")
         normal = _as_vec3(normal, "normal")
         n_len = np.linalg.norm(normal)
@@ -107,6 +112,9 @@ class Plane:
         self.name = name or f"Plane_{self.plane_id[:6]}"
         self.depth_minus = float(depth_minus)
         self.depth_plus = float(depth_plus)
+        self.filter_mode = filter_mode
+        self._policy = PlaneFilterPolicy(self.filter_mode)
+
         self.auto_assoc = True
         self.auto_assoc_ignore_bounds = False
         self.associated = {k: set() for k in ASSOC_KINDS}
@@ -233,6 +241,27 @@ class Plane:
     def default_grid_plane_depth(unit_system=None) -> float:
         return float(convert_value(Dimension.LENGTH, 500.0, UnitSystem.N_MM, unit_system or UnitSystem.N_MM))
 
+    def set_filter_mode(self, mode: SectionFilterMode):
+        """Düzlem kesit modunu dinamik olarak değiştirir."""
+        self.filter_mode = mode
+        self._policy.mode = mode
+        self._association_revision += 1
+
+    def element_passes_filter(self, points: list) -> bool:
+        """Verilen eleman noktalarının mevcut politika moduna göre düzlemden geçip geçmediğini saptar."""
+        if not points:
+            return False
+        if len(points) == 1:
+            return self._policy.passes_point(self, points[0])
+        elif len(points) == 2:
+            return self._policy.passes_segment(self, points[0], points[1])
+        else:
+            return self._policy.passes_polygon(self, points)
+
+    def clip_line_segment(self, p1, p2):
+        """Görsel şölen (CLIP) modu için çizgiyi plane sınırlarına göre keser."""
+        return self._policy.clip_segment(self, p1, p2)
+
     # ---------------- GEOMETRİ ----------------
 
     def distance(self, pt) -> float:
@@ -332,6 +361,7 @@ class Plane:
         return counts
 
     def refresh_assoc(self, math_model, scene=None):
+        t_start = time.perf_counter()
         if not self.auto_assoc:
             return
         for k in ASSOC_KINDS:
@@ -343,11 +373,16 @@ class Plane:
             else:
                 source = getattr(math_model, cname, {}) if math_model else {}
             for uid, el in source.items():
+                t = time.perf_counter()
                 status = self.classify_element(el, kind)
+                dt = (time.perf_counter() - t) * 1000
+                if dt > 0.5:
+                    logger.debug("[Plane.refresh_assoc] classify(%s,%s): %.1f ms", kind, uid, dt)
                 self.association_status[kind][int(uid)] = status
                 if status != OUTSIDE and not self.is_excluded(kind, uid):
                     self.associated[kind].add(int(uid))
         self._association_revision += 1
+        logger.debug("[Plane.refresh_assoc] %s TOTAL: %.1f ms", self.name, (time.perf_counter() - t_start) * 1000)
 
     def classify_element(self, el, kind):
         if kind not in ASSOC_KINDS: raise ValueError(f"bilinmeyen kind: {kind}")

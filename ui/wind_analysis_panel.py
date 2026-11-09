@@ -150,7 +150,7 @@ class WindAnalysisPanel(BasePanel):
         eng = self._get_engine()
         if eng:
             eng.update_geo(self.project)
-        logger.info("[Wind] Rüzgar analizi resetlendi.")
+        logger.debug("[Wind] Rüzgar analizi resetlendi.")
 
     def _draw_surface_selection(self):
         imgui.text_colored(
@@ -264,7 +264,7 @@ class WindAnalysisPanel(BasePanel):
         eng = self._get_engine()
         if eng:
             eng.update_geo(self.project)
-        logger.info("[Wind] Yön kaldırıldı: %s", key)
+        logger.debug("[Wind] Yön kaldırıldı: %s", key)
 
     def _wind_state(self) -> dict:
         analysis = self.project.analysis
@@ -290,7 +290,7 @@ class WindAnalysisPanel(BasePanel):
         ]
         vec = presets[(n - 1) % len(presets)]
         dirs[f"{n:02d}"] = WindDirectionResult(w_dir=vec)
-        logger.info("[Wind] Yön eklendi: %02d = %s", n, vec)
+        logger.debug("[Wind] Yön eklendi: %02d = %s", n, vec)
 
     def _run_analysis_all(self):
         surfaces = [
@@ -298,13 +298,13 @@ class WindAnalysisPanel(BasePanel):
             if getattr(p, "_wind_selected", False)
         ]
         if not surfaces:
-            logger.warning("[Wind] Surface seçilmedi.")
+            logger.debug("[Wind] Surface seçilmedi.")
             return
 
         wind = self._wind_state()
         directions = wind.get("directions", {})
         if not directions:
-            logger.warning("[Wind] Yön yok.")
+            logger.debug("[Wind] Yön yok.")
             return
 
         for dir_key, rec in directions.items():
@@ -332,7 +332,7 @@ class WindAnalysisPanel(BasePanel):
             self._assign_zones_to_polygons(zones, surfaces, dir_key)
             WindSceneAdapter.store_zones(self.project, dir_key, zones, engine_data, vec)
             rec.engine = type("EngineMock", (), engine_data)()
-            logger.info("[Wind] Yön %s: %d zone üretildi.", dir_key, len(zones))
+            logger.debug("[Wind] Yön %s: %d zone üretildi.", dir_key, len(zones))
 
         if directions:
             if not self.selected_dir_key or self.selected_dir_key not in directions:
@@ -542,7 +542,7 @@ class WindAnalysisPanel(BasePanel):
                     zones_list.append(ZoneAdapter(z, p))
 
             if not zones_list:
-                logger.warning("[WindPanel] Rapor oluşturulacak aktif zone bulunamadı.")
+                logger.debug("[WindPanel] Rapor oluşturulacak aktif zone bulunamadı.")
                 return
 
             engine = getattr(dir_rec, "engine", None)
@@ -561,12 +561,12 @@ class WindAnalysisPanel(BasePanel):
                 )
 
             report_df = create_cpe_summary_df(zones_list, engine)
-            logger.info("[WindPanel] Rapor tablosu başarıyla oluşturuldu.")
+            logger.debug("[WindPanel] Rapor tablosu başarıyla oluşturuldu.")
 
             if self.app and hasattr(self.app, "show_popup_report"):
                 self.app.show_popup_report(report_df)
             else:
-                logger.info(f"[WindPanel] Rapor Başlığı: {report_df.custom_title}, Satır Sayısı: {len(report_df)}")
+                logger.debug(f"[WindPanel] Rapor Başlığı: {report_df.custom_title}, Satır Sayısı: {len(report_df)}")
 
         except Exception:
             logger.exception("[WindPanel] Rapor tablosu oluşturulurken hata oluştu")

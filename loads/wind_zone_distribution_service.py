@@ -81,7 +81,7 @@ class WindZoneDistributionService:
         Returns: atanan toplam segment sayısı
         """
         if project is None or project.scene is None or project.math_model is None:
-            logger.warning("[WindZone] Project, Scene veya MathModel yok.")
+            logger.debug("[WindZone] Project, Scene veya MathModel yok.")
             return 0
         scene = project.scene
         math_model = project.math_model
@@ -92,10 +92,10 @@ class WindZoneDistributionService:
 
         zones = cls._collect_zones(scene, math_model)
         if not zones:
-            logger.info("[WindZone] Zone poligonu yok.")
+            logger.debug("[WindZone] Zone poligonu yok.")
             return 0
 
-        logger.info(
+        logger.debug(
             f"[WindZone] {len(zones)} zone, "
             f"{len(math_model.frames)} frame, KIND={kind}"
         )
@@ -119,7 +119,7 @@ class WindZoneDistributionService:
             )
             total += n
 
-        logger.info(f"[WindZone] Toplam {total} segment atandı.")
+        logger.debug(f"[WindZone] Toplam {total} segment atandı.")
         return total
 
     # ==================================================================
@@ -166,7 +166,7 @@ class WindZoneDistributionService:
                 if pt in (PolygonType.SURFACE_ONEWAY,
                           PolygonType.SURFACE_TWOWAY):
                     return poly
-                logger.warning(
+                logger.debug(
                     f"[WindZone] surface_ref={surface_ref} bulundu ama tip "
                     f"SURFACE değil: {pt}"
                 )
@@ -189,7 +189,7 @@ class WindZoneDistributionService:
 
         zone_data = math_model.polygon_analysis.get(zone.unique_id)
         if zone_data is None:
-            logger.warning(
+            logger.debug(
                 f"[WindZone] zone={zone_id} PolygonAnalysisData yok"
             )
             return 0
@@ -197,7 +197,7 @@ class WindZoneDistributionService:
         # --- 1) Zone windplane verisi ---
         wp = zone_data.windplane or {}
         if not wp:
-            logger.warning(f"[WindZone] zone={zone_id} windplane boş")
+            logger.debug(f"[WindZone] zone={zone_id} windplane boş")
             return 0
 
         dir_idx = int(wp.get("dir_idx", 1))
@@ -224,18 +224,18 @@ class WindZoneDistributionService:
             combinations.append((cls.CPE_MAX, cls.CPI_NEG, cpe_max, cpi_neg))
 
         if not combinations:
-            logger.info(f"[WindZone] zone={zone_id} cpe kombinasyonu yok")
+            logger.debug(f"[WindZone] zone={zone_id} cpe kombinasyonu yok")
             return 0
 
         # --- 3) Surface'ı bul ---
         surface_ref = wp.get("surface")
         if surface_ref is None:
-            logger.warning(f"[WindZone] zone={zone_id} windplane'de 'surface' yok")
+            logger.debug(f"[WindZone] zone={zone_id} windplane'de 'surface' yok")
             return 0
 
         surface_poly = cls._find_surface(scene, surface_ref)
         if surface_poly is None:
-            logger.warning(f"[WindZone] zone={zone_id} surface='{surface_ref}' "
+            logger.debug(f"[WindZone] zone={zone_id} surface='{surface_ref}' "
                            f"bulunamadı")
             return 0
 
@@ -246,19 +246,19 @@ class WindZoneDistributionService:
             if surface_data is not None else []
         )
         if not associated_ids:
-            logger.warning(f"[WindZone] zone={zone_id} surface={surface_id} "
+            logger.debug(f"[WindZone] zone={zone_id} surface={surface_id} "
                            f"associated_frame_ids boş — önce alignment çalıştırın")
             return 0
 
         # --- 4) Zone'un düzlemi ve 2D sınırları ---
         if len(zone.nodes) < 3:
-            logger.warning(f"[WindZone] zone={zone_id} < 3 node")
+            logger.debug(f"[WindZone] zone={zone_id} < 3 node")
             return 0
 
         try:
             zone_plane = Plane.from_polygon(zone)
         except ValueError as e:
-            logger.warning(f"[WindZone] zone={zone_id} plane hatası: {e}")
+            logger.debug(f"[WindZone] zone={zone_id} plane hatası: {e}")
             return 0
 
         zone_2d = zone_plane.polygon_to_2d(zone)
@@ -271,7 +271,7 @@ class WindZoneDistributionService:
         wind_vec = cls.WIND_DIRS.get(dir_idx, np.array([1.0, 0.0, 0.0]))
         flip_sign = float(np.dot(zone_normal_np, wind_vec)) > 0.0
 
-        logger.info(
+        logger.debug(
             f"[WindZone] zone={zone_id} surface={surface_id} "
             f"dir={dir_idx} q_p={q_p:.3f} "
             f"cpe=[{cpe_min:.3f},{cpe_max:.3f}] "
@@ -322,7 +322,7 @@ class WindZoneDistributionService:
                 frame_intervals.append((frame, intervals))
 
         if not frame_intervals:
-            logger.info(f"[WindZone] zone={zone_id} için frame kesişimi yok")
+            logger.debug(f"[WindZone] zone={zone_id} için frame kesişimi yok")
             return 0
 
         # --- 8) Yük atama ---
@@ -460,7 +460,7 @@ class WindZoneDistributionService:
                     self_wt_mult=0.0,
                 )
         except Exception as e:
-            logger.warning(f"[WindZone] LoadPattern kaydedilemedi: {e}")
+            logger.debug(f"[WindZone] LoadPattern kaydedilemedi: {e}")
 
     @classmethod
     def _clear_wind_patterns(cls, math_model) -> None:

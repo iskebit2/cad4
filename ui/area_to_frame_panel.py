@@ -161,7 +161,7 @@ class AreaToFramePanel(BasePanel):
                 self._transfer(selected)
             except (TypeError, ValueError) as error:
                 self._status = str(error)
-                logger.warning("[AreaToFrame] %s", error)
+                logger.debug("[AreaToFrame] %s", error)
             except Exception:
                 self._status = "Alan yükü aktarımı başarısız oldu; log'a bakın."
                 logger.exception("[AreaToFrame] Aktarım başarısız.")
@@ -281,7 +281,7 @@ class AreaToFramePanel(BasePanel):
             self._status = (
                 f"{len(analysis_data.associated_frame_ids)} frame polygona atandı."
             )
-            logger.info(
+            logger.debug(
                 "[AreaToFrame] %s: %d frame assoc",
                 polygon.label, len(analysis_data.associated_frame_ids),
             )
@@ -376,7 +376,7 @@ class AreaToFramePanel(BasePanel):
                 )
             except (TypeError, ValueError, KeyError) as error:
                 self._status = str(error)
-                logger.warning("[AreaToFrame] Wind zone aktarımı: %s", error)
+                logger.debug("[AreaToFrame] Wind zone aktarımı: %s", error)
             except Exception:
                 self._status = (
                     "Rüzgar bölgesi aktarımı başarısız oldu; log'a bakın."
@@ -534,7 +534,7 @@ class AreaToFramePanel(BasePanel):
         self._status = (
             f"{zone.label}: {segment_count} rüzgar yük segmenti aktarıldı."
         )
-        logger.info("[AreaToFrame] %s", self._status)
+        logger.debug("[AreaToFrame] %s", self._status)
         return segment_count
 
     def _transfer(self, polygon: Polygon) -> int:
@@ -573,7 +573,7 @@ class AreaToFramePanel(BasePanel):
             f"{segment_count} yayılı yük segmenti "
             f"{len(generated)} frame'e aktarıldı."
         )
-        logger.info("[AreaToFrame] %s", self._status)
+        logger.debug("[AreaToFrame] %s", self._status)
         return segment_count
 
     def _apply_frame_transfers(self, generated) -> None:

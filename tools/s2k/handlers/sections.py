@@ -147,7 +147,7 @@ def _map_sap_to_local(row, sd_section=None) -> tuple[SectionType, dict[str, floa
             **analysis,
         }
 
-    logger.info("[SectionMap] Bilinmeyen Shape=%r, RECT fallback", shape)
+    logger.debug("[SectionMap] Bilinmeyen Shape=%r, RECT fallback", shape)
     return SectionType.RECT, {
         "h": _safe_float(row, "t3", 200),
         "b": _safe_float(row, "t2", 100),
@@ -194,7 +194,7 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
         mat = _resolve_material(ctx, row.get("Material", ""))
         raw_color = str(row.get("Color", ""))
         parsed = color_from_string(raw_color)
-        logger.info("[ColorImport] sec=%s raw=%r parsed=%s", sect_name, raw_color, parsed)
+        logger.debug("[ColorImport] sec=%s raw=%r parsed=%s", sect_name, raw_color, parsed)
 
         section = Section(
             name=sect_name,
@@ -213,7 +213,7 @@ def handle_frame_props(ctx: LoadContext, df: pd.DataFrame) -> None:
 
         try:
             for msg in check_section(section, strict=False):
-                logger.info("[SectionCheck] %s", msg)
+                logger.debug("[SectionCheck] %s", msg)
                 ctx.warnings.append(msg)
         except Exception as e:
             logger.error("[SectionCheck] atlandı: %s", e)

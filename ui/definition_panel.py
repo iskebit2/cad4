@@ -864,7 +864,7 @@ class DefinitionPanel(BasePanel):
             except Exception:
                 logger.exception("on_changed callback hata")
 
-        logger.info(f"[DefinitionPanel] Kaydedildi: "
+        logger.debug(f"[DefinitionPanel] Kaydedildi: "
                     f"{DEFINITIONS[self._current_idx][1]}/{new_name}")
 
     def _draw_delete_confirm(self, container, project):
@@ -1121,7 +1121,7 @@ class DefinitionPanel(BasePanel):
                     count += 1
 
         self._notify_selection_changed(scn)
-        logger.info(
+        logger.debug(
             f"[Filter] Section '{section_name}' → "
             f"{count} {target} seçildi"
         )
@@ -1210,7 +1210,7 @@ class DefinitionPanel(BasePanel):
                     n_nodes += 1
         
         self._notify_selection_changed(scn)
-        logger.info(
+        logger.debug(
             "[Filter] %s '%s' → %d frame, %d area, %d link, %d node",
             cls.__name__, name, n_frames, n_areas, n_links, n_nodes,
         )
@@ -1249,7 +1249,7 @@ class DefinitionPanel(BasePanel):
         if n_dirty:
             eng.renderer.update_dirty()
 
-        logger.info("[DefPanel] '%s' → %d frame güncellendi", target_name, n_dirty)
+        logger.debug("[DefPanel] '%s' → %d frame güncellendi", target_name, n_dirty)
 
     def _relink_scene_refs(self, cls, name, new_obj, old_obj):
         """Kaydedilen nesneyi scene'deki elementlere yeniden bağla."""
@@ -1282,7 +1282,7 @@ class DefinitionPanel(BasePanel):
         if eng.renderer and (n_frames or n_areas):
             eng.renderer.update_dirty()
 
-        logger.info("[DefPanel] Referanslar güncellendi: %d frame, %d area",
+        logger.debug("[DefPanel] Referanslar güncellendi: %d frame, %d area",
                     n_frames, n_areas)
 
     # ---------------------------------------------------------------------------
@@ -1555,7 +1555,7 @@ class DefinitionPanel(BasePanel):
                 rings = np.array([n], dtype=np.uint32)
                 tri_idx = earcut.triangulate_float32(coords, rings).tolist()
             except Exception as e:
-                logger.warning("[SD preview] earcut hatası: %s", e)
+                logger.debug("[SD preview] earcut hatası: %s", e)
 
             r, g, b = sh.fill_color[:3] if sh.fill_color else (0.7, 0.7, 0.7)
             fill_col = imgui.get_color_u32(imgui.ImVec4(r, g, b, 0.35))

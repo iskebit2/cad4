@@ -10,6 +10,7 @@ import numpy as np
 from core.units import Dimension
 
 
+
 @dataclass
 class Axis:
     name: str = ""
@@ -96,9 +97,9 @@ class Grid:
         self.y_labels = ["Y1", "Y2", "Y3"]
         self.z_labels = ["Z1", "Z2"]
 
-    # ------------------------------------------------------------------
     @property
     def axes(self) -> list[Axis]:
+        """Grid sadece tüm ham akslarını üretir. Filtreleme işine karışmaz."""
         if not self.x_coords or not self.y_coords:
             return []
 
@@ -116,7 +117,8 @@ class Grid:
         axes += self._z_axes(xs, ys, zs, cz, half_z)
         axes += self._oblique_axes(zs, first_z)
         axes += self._boundary_axes(zs, cz, half_z)
-        return axes
+        
+        return [a for a in axes if a.visible]
 
     def _ortho_axes(self, prim, sec, zs, first_z, color, kind, prefix, labels, range_fn, swap=False):
         out = []

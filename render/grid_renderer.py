@@ -74,16 +74,30 @@ class GridRenderer:
     def __init__(self, shader):
         self.shader = shader
         self.grid = None
+        self._custom_axes = None  # Dışarıdan gelen filtrelenmiş akslar için
         self._buf = None
         self._count = 0
         self._dirty = True
 
     def set_grid(self, grid):
         self.grid = grid
+        self._custom_axes = None
+        self._dirty = True
+
+    def set_axes(self, axes):
+        """Proje seviyesinden gelen filtrelenmiş aksları doğrudan set eder."""
+        self._custom_axes = axes
         self._dirty = True
 
     def mark_dirty(self):
         self._dirty = True
+
+    def _get_axes(self):
+        if self._custom_axes is not None:
+            return self._custom_axes
+        if self.grid is not None:
+            return list(self.grid.visible_axes())
+        return []
 
     def draw(self, mvp):
         if self._dirty:
@@ -104,11 +118,12 @@ class GridRenderer:
 
     def _rebuild(self):
         self._dirty = False
-        if self.grid is None:
+        axes = self._get_axes()
+        if not axes:
             self._count = 0
             return
         verts: list[float] = []
-        for axis in self.grid.visible_axes():
+        for axis in axes:
             d = axis.normalized_direction()
             o = np.asarray(axis.origin, float)
             h = axis.length
@@ -135,10 +150,8 @@ class GridRenderer:
         return p / n if n > 1e-9 else np.array([1.0, 0.0, 0.0])
 
     def get_label_anchors(self):
-        if self.grid is None:
-            return []
         out = []
-        for a in self.grid.visible_axes():
+        for a in self._get_axes():
             if a.skip_bubble:
                 continue
             d = a.normalized_direction()
@@ -162,7 +175,7 @@ class GridRenderer:
             return np.array([1.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0])
         if a.kind == "boundary":
             perp = np.array([-d[1], d[0], 0.0])
-            if self.grid.boundary_coords:
+            if self.grid and self.grid.boundary_coords:
                 c = np.mean(self.grid.boundary_coords, axis=0)
                 if np.dot(perp[:2], np.asarray(a.origin)[:2] - c[:2]) < 0:
                     perp = -perp

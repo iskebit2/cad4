@@ -27,7 +27,7 @@ def ensure_default_link_prop(project) -> LinkPropLinear:
     prop.Ce = {"U1": 0.0, "U2": 0.0, "U3": 0.0,
                "R1": 0.0, "R2": 0.0, "R3": 0.0}
     project.add_link_prop(prop)
-    logger.info(f"[LinkProp] '{DEFAULT_LINK_PROP_NAME}' oluşturuldu")
+    logger.debug(f"[LinkProp] '{DEFAULT_LINK_PROP_NAME}' oluşturuldu")
     return prop
 
 
@@ -95,7 +95,7 @@ def convert_frames_to_links(
         report["converted"] += 1
 
     scene.mark_dirty()
-    logger.info(
+    logger.debug(
         f"[Frame→Link] converted={report['converted']}, "
         f"failed={report['failed']}"
     )

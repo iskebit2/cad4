@@ -186,7 +186,7 @@ def compute_takeoff(scene: MathModel) -> TakeoffResult:
         t["mass_kg"] += e.mass_kg
         t["weight_N"] += e.weight_N
 
-    logger.info(
+    logger.debug(
         f"[Takeoff] {len(result.elements)} eleman, "
         f"toplam {result.total_mass_kg:.3f} kg "
         f"({result.total_mass_ton:.4f} ton)"

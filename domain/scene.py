@@ -16,6 +16,8 @@ class Scene:
 
     def __init__(self):
         self.grid = Grid()
+        self.grid.scene = self
+        
         self.polygons: dict[int, Polygon] = {}
         self.lines: dict[int, Line] = {}
         self.lighting = LightingSettings()

@@ -65,12 +65,35 @@ class Project:
     frame_auto_mesh: dict[str, dict] = field(default_factory=dict)
     catalog_sections: dict[str, Section] = field(default_factory=dict)
 
+    def __post_init__(self):
+        self.scene.project = self
+        if self.scene.grid:
+            self.scene.grid.scene = self.scene
+        self._ensure_default_active_plane()
+
+    def _ensure_default_active_plane(self):
+        if self.active_plane is not None:
+            return
+        xy = None
+        for p in self.grid_planes():
+            if p.name == "XY_Z0":
+                xy = p
+                break
+        if xy is None:
+            for p in self.grid_planes():
+                if p.name.startswith("XY_Z"):
+                    xy = p
+                    break
+        if xy is not None:
+            self._active_plane_id = xy.plane_id
+            
     @property
     def grid(self) -> Grid:
         return self.scene.grid
 
     @grid.setter
     def grid(self, value: Grid) -> None:
+        value.scene = self.scene
         self.scene.grid = value
         self.scene.mark_dirty()
 
@@ -137,26 +160,49 @@ class Project:
     def get_material_by_name(self, name): return self.materials.get(name)
     def get_link_prop_by_name(self, name): return self.link_props.get(name)
 
-    # ------------------------------------------------------------------
+    _filtered_axes_cache: tuple | None = field(default=None, init=False, repr=False, compare=False)
+    _filtered_axes_cache_key: tuple | None = field(default=None, init=False, repr=False, compare=False)
+
+    def filtered_grid_axes(self) -> list:
+        """Return grid axes prepared by the geometry processing layer."""
+        from geometry.geometry_processor import GeometryProcessor
+
+        return GeometryProcessor.process_grid_axes(self.grid, self.active_plane)
+
+    def invalidate_grid_planes(self):
+        self._grid_planes_cache.clear()
+        self._filtered_axes_cache = None  # Cache'i sıfırla
+    
     def grid_planes(self) -> list[Plane]:
         if not self._grid_planes_cache:
             self._grid_planes_cache = {}
             xs = sorted(set(self.grid.x_coords)) or [0.0]
             ys = sorted(set(self.grid.y_coords)) or [0.0]
-            zs = sorted(set(self.grid.z_coords)) or [0.0]
+            zs = sorted(set(self.grid.z_coords)) or [0.0]  # <-- Burası self.grid.z_coords olacak
+
+            default_depth = Plane.default_grid_plane_depth(self.unit_system)
 
             for z in zs:
-                p = Plane.from_axis_offset("z", z, name=f"XY_Z{z:g}")
+                p = Plane.from_axis_offset(
+                    "z", z, name=f"XY_Z{z:g}",
+                    depth_minus=default_depth, depth_plus=default_depth
+                )
                 p.u_min, p.u_max = xs[0], xs[-1]
                 p.v_min, p.v_max = ys[0], ys[-1]
                 self._grid_planes_cache[p.name] = p
             for y in ys:
-                p = Plane.from_axis_offset("y", y, name=f"XZ_Y{y:g}")
+                p = Plane.from_axis_offset(
+                    "y", y, name=f"XZ_Y{y:g}",
+                    depth_minus=default_depth, depth_plus=default_depth
+                )
                 p.u_min, p.u_max = xs[0], xs[-1]
                 p.v_min, p.v_max = zs[0], zs[-1]
                 self._grid_planes_cache[p.name] = p
             for x in xs:
-                p = Plane.from_axis_offset("x", x, name=f"YZ_X{x:g}")
+                p = Plane.from_axis_offset(
+                    "x", x, name=f"YZ_X{x:g}",
+                    depth_minus=default_depth, depth_plus=default_depth
+                )
                 p.u_min, p.u_max = ys[0], ys[-1]
                 p.v_min, p.v_max = zs[0], zs[-1]
                 self._grid_planes_cache[p.name] = p

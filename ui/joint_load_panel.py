@@ -73,7 +73,7 @@ class JointLoadPanel(BasePanel):
                 mx=self.mx, my=self.my, mz=self.mz,
             ))
         self._refresh_renderer()
-        logger.info("[JointLoad] %d node'a uygulandı", len(self.selected_nodes))
+        logger.debug("[JointLoad] %d node'a uygulandı", len(self.selected_nodes))
 
     def _clear(self):
         for n in self.selected_nodes:

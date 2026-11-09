@@ -98,14 +98,14 @@ class CadLogger:
     @classmethod
     def _console_level(cls) -> int:
         """Konsol için minimum seviye. Varsayılan: WARNING."""
-        name = cls._env("CAD_LOG_CONSOLE_LEVEL", "WARNING").upper()
-        return getattr(logging, name, logging.WARNING)
+        name = cls._env("CAD_LOG_CONSOLE_LEVEL", "INFO").upper()
+        return getattr(logging, name, logging.INFO)
 
     @classmethod
     def _file_level(cls) -> int:
         """Dosya için minimum seviye. Varsayılan: INFO."""
-        name = cls._env("CAD_LOG_FILE_LEVEL", "INFO").upper()
-        return getattr(logging, name, logging.INFO)
+        name = cls._env("CAD_LOG_FILE_LEVEL", "DEBUG").upper()
+        return getattr(logging, name, logging.DEBUG)
 
     @classmethod
     def _root_level(cls) -> int:

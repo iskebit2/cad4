@@ -1,5 +1,7 @@
 # render/presentationrenderer.py
+
 from __future__ import annotations
+import time
 
 import math
 
@@ -13,10 +15,11 @@ from render.grid_renderer import GridRenderer, BubbleRenderer
 from render.label_batch import LabelBatch
 from render.line_renderer import LineRenderer
 from render.load_renderer import LoadRenderer
-from render.mathmodelrenderer import MathModelRenderer
 from render.polygonrenderer import PolygonRenderer
 from tools.font_atlas import FontAtlas
 
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 class SceneRenderer:
 
@@ -30,6 +33,8 @@ class SceneRenderer:
         self.overlay_shader = overlay_shader
         self.simple_shader = simple_shader
         self._projection = "3d"
+        self._scene_polygons = []
+        self._scene_lines = []
 
         self.global_axis = GlobalAxisRenderer(axes_shader)
         self.global_axis.init_gl()
@@ -119,28 +124,56 @@ class SceneRenderer:
 
     def update_geo(
         self, math_model, scene=None, progress_cb=None, polygons=None, lines=None,
+        grid_axes=None, frames=None, nodes=None, areas=None, links=None,
     ):
         self.math_model = math_model
         if self.math_model_renderer:
-            self.math_model_renderer.update_geo(math_model, progress_cb)
+            self.math_model_renderer.update_geo(
+                math_model,
+                progress_cb,
+                frames=frames,
+                nodes=nodes,
+                areas=areas,
+                links=links,
+            )
         if scene is not None:
-            self.set_scene_data(scene, polygons=polygons, lines=lines)
+            self.set_scene_data(
+                scene, polygons=polygons, lines=lines, grid_axes=grid_axes,
+            )
 
-    def set_scene_data(self, scene, polygons=None, lines=None):
+    def set_scene_data(self, scene, polygons=None, lines=None, grid_axes=None):
+        t_start = time.perf_counter()
         self.scene = scene
         if self.math_model_renderer:
             self.math_model_renderer.set_lighting(scene.lighting)
         polygons = list(scene.polygons.values()) if polygons is None else polygons
         lines = list(scene.lines.values()) if lines is None else lines
+        self._scene_polygons = list(polygons)
+        self._scene_lines = list(lines)
+        grid = getattr(scene, "grid", None)
+        if self.grid.grid is not grid:
+            self.grid.set_grid(grid)
+        if grid_axes is not None:
+            self.grid.set_axes(grid_axes)
+
+        t = time.perf_counter()
         self.update_polygons(polygons)
+        logger.debug("[SceneRender.set_scene_data] update_polygons: %.1f ms", (time.perf_counter() - t) * 1000)
+
+        t = time.perf_counter()
         self.update_lines(lines)
+        logger.debug("[SceneRender.set_scene_data] update_lines: %.1f ms", (time.perf_counter() - t) * 1000)
+        logger.debug("[SceneRender.set_scene_data] TOTAL: %.1f ms", (time.perf_counter() - t_start) * 1000)
+
         if self.pick_pass:
             for polygon in polygons:
                 polygon.pick_id = polygon.unique_id
-                self.pick_pass.register(polygon.pick_id, polygon, self.polygon)
+                source = getattr(polygon, "_geometry_source", polygon)
+                self.pick_pass.register(polygon.pick_id, source, self.polygon)
             for line in lines:
                 line.pick_id = line.unique_id
-                self.pick_pass.register(line.pick_id, line, self.lines)
+                source = getattr(line, "_geometry_source", line)
+                self.pick_pass.register(line.pick_id, source, self.lines)
 
     def render_math_model(self, camera, target_fbo=0):
         if self.math_model_renderer:
@@ -150,16 +183,20 @@ class SceneRenderer:
         self, camera, model, scene, math_model, width, height, show,
         active_wind_vector=None,
     ):
+        t_start = time.perf_counter()
         self._bind_grid(scene)
         mvp = camera.get_projection_matrix() * camera.get_view_matrix() * model
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         if show.get("grid", True) and self.grid.grid:
+            t = time.perf_counter()
             glDepthMask(GL_FALSE)
             self.grid.draw(mvp)
             glDepthMask(GL_TRUE)
+            logger.debug("[SceneRender] grid: %.2f ms", (time.perf_counter() - t) * 1000)
         if show.get("polygon", True):
+            t = time.perf_counter()
             glDepthMask(GL_FALSE)
             self.polygon.render_simple(
                 mvp, self.simple_shader or self.standard_shader, alpha=0.5,
@@ -168,22 +205,35 @@ class SceneRenderer:
                 mvp, self.simple_shader or self.standard_shader,
             )
             glDepthMask(GL_TRUE)
+            logger.debug("[SceneRender] polygon: %.2f ms", (time.perf_counter() - t) * 1000)
         if show.get("lines", True):
+            t = time.perf_counter()
             self.lines.draw(mvp)
+            logger.debug("[SceneRender] lines: %.2f ms", (time.perf_counter() - t) * 1000)
         if show.get("zones", True):
+            t = time.perf_counter()
             self._draw_zones(mvp)
+            logger.debug("[SceneRender] zones: %.2f ms", (time.perf_counter() - t) * 1000)
         if show.get("loads", True) and self.loads.enabled:
+            t = time.perf_counter()
             glDisable(GL_DEPTH_TEST)
             self.loads.render(mvp)
             glEnable(GL_DEPTH_TEST)
         if show.get("local_axes", False):
+            t = time.perf_counter()
             self._draw_local_axes(camera, scene, math_model)
         if show.get("global_axis", True):
+            t = time.perf_counter()
             self._draw_global_axis(camera, width, height)
         if show.get("labels", True):
+            t = time.perf_counter()
             self._draw_labels(camera, scene, math_model, height)
+            logger.debug("[SceneRender] labels: %.2f ms", (time.perf_counter() - t) * 1000)
         if active_wind_vector is not None:
             self._draw_wind_vector(mvp, active_wind_vector, scene)
+
+        if time.perf_counter() - t_start > 0.016:
+            logger.debug("[SceneRender] SLOW TOTAL: %.1f ms", (time.perf_counter() - t_start) * 1000)
 
     def render(self, camera, target_fbo=0):
         self.render_math_model(camera, target_fbo)
@@ -191,8 +241,13 @@ class SceneRenderer:
     def update_sel(self):
         if self.math_model_renderer:
             self.math_model_renderer.update_sel()
+        for element in (*self._scene_polygons, *self._scene_lines):
+            source = getattr(element, "_geometry_source", element)
+            if source is not element:
+                element.is_selected = getattr(source, "is_selected", False)
         if self.scene:
-            self.update_polygons(list(self.scene.polygons.values()))
+            self.update_polygons(self._scene_polygons)
+            self.update_lines(self._scene_lines)
 
     def update_dirty(self):
         if self.math_model_renderer:
@@ -221,6 +276,7 @@ class SceneRenderer:
         self._update_zones(polygons)
 
     def _update_zones(self, polygons):
+        t_start = time.perf_counter()
         # 1. GEÇİŞ: tüm zone cpe değerlerini topla (global min/max için)
         all_cpe = []
         for pg in polygons:
@@ -283,6 +339,8 @@ class SceneRenderer:
             self._upload_zone_outline(np.array(outline, np.float32))
         else:
             self._cleanup_zone_outline()
+
+        logger.debug("[SceneRender._update_zones] TOTAL: %.1f ms (%d verts)", (time.perf_counter() - t_start) * 1000, len(verts) // 6 if verts else 0)
 
     def _zone_scalar(self, zone):
         """Zone'un temsili Cpe değeri (override öncelikli)."""

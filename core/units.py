@@ -272,7 +272,7 @@ def convert_project_units(
     project.ui_dirty = True
 
     unit_change_event.emit(from_sys, target, reason)
-    logger.info(
+    logger.debug(
         "[Units] %s → %s (reason=%s, %d alan)",
         from_sys.value, target.value, reason, n,
     )

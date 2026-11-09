@@ -270,7 +270,7 @@ class ProjectBuilder:
         if self.mass_source_map:
             self.project.mass_source_map = dict(self.mass_source_map)
 
-        logger.info(
+        logger.debug(
             "[ProjectBuilder] finalize: %d material, %d section, %d node, %d frame",
             len(self.materials), len(self.sections),
             len(math_model.nodes), len(math_model.frames),
@@ -311,7 +311,7 @@ class ProjectBuilder:
                     for pt in sc.quad.points
                 ]
 
-        logger.info("[ProjectBuilder] %d alan dönüştürüldü (%s → %s)",
+        logger.debug("[ProjectBuilder] %d alan dönüştürüldü (%s → %s)",
                     n, from_sys.value, target.value)
         return self.project
 

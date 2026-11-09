@@ -19,6 +19,7 @@ from core.selection_manager import SelectionManager
 from core.selection_policy import SelectionPolicy
 from domain.scene import Scene
 from domain.math_model import MathModel
+from geometry.geometry_processor import GeometryProcessor
 from logging_config import CadLogger
 from render.interactionrenderer import InteractionRenderer
 from render.mathmodelrenderer import MathModelRenderer
@@ -102,7 +103,7 @@ class Engine:
         
     # ------------------------------------------------------------------
     def init_gl(self):
-        logger.info("GL_VERSION: %s", glGetString(GL_VERSION))
+        logger.debug("GL_VERSION: %s", glGetString(GL_VERSION))
         self._init_shaders()
         self._init_camera()
         self.mrt = MRTFramebuffer(self.w, self.h)
@@ -227,11 +228,15 @@ class Engine:
         if self.pick_pass:
             self.pick_pass.set_viewport(self.w, self.h)
             self.pick_pass.set_main_fbo(self.mrt.fbo)
-
+        
     # ------------------------------------------------------------------
     def update_geo(self, project=None):
+        t_start = time.perf_counter()
+        plane_name= "full"
         if project is not None:
             self.project = project
+        else:
+            project = self.project
         scene = project.scene if project else self.scene
         math_model = project.math_model if project else self.math_model
         if scene is None or math_model is None:
@@ -240,57 +245,55 @@ class Engine:
         self.math_model = math_model
 
         plane = project.active_plane if project else None
-        if plane is not None:
-            self.cam.set_section_filter(
-                normal=plane.normal,
-                origin=plane.origin,
-                min_s=-plane.depth_minus,
-                max_s=+plane.depth_plus,
-            )
-        else:
-            self.cam.clear_section_filter()
 
-        # Assoc güncelle (dirty ise)
-        if self.math_model and project is not None:
-            self.math_model.refresh_plane_associations(
-                project.all_planes(), scene=self.scene,
-            )
-            
+        # # Assoc
+        # if self.math_model and project is not None:
+        #     t = time.perf_counter()
+        #     self.math_model.refresh_plane_associations(
+        #         project.all_planes(), scene=self.scene,
+        #     )
+        #     logger.debug("[update_geo] assoc: %.1f ms", (time.perf_counter() - t) * 1000)
+
         if not self.presentation_renderer:
             return
 
-        pr = self.presentation_renderer
-        polygons = list(scene.polygons.values())
-        lines = list(scene.lines.values())
+        t = time.perf_counter()
+        geometry = GeometryProcessor.process(scene, plane, math_model)
+        logger.debug("[update_geo] GeometryProcessor: %.1f ms", (time.perf_counter() - t) * 1000)
 
         if plane is not None:
-            polygons = [p for p in polygons if self._polygon_passes_section(p)]
-            lines = [ln for ln in lines if self._line_passes_section(ln)]
+            plane_name = plane.name
 
-        if self.renderer:
-            self.renderer.update_geo(
-                math_model, scene, polygons=polygons, lines=lines,
-            )
+        t = time.perf_counter()
+        self.renderer.update_geo(
+            math_model,
+            scene,
+            polygons=geometry.polygons,
+            lines=geometry.lines,
+            grid_axes=geometry.grid_axes,
+            frames=geometry.frames,
+            nodes=geometry.nodes,
+            areas=geometry.areas,
+            links=geometry.links,
+        )
 
-        cam_scale = self.renderer._compute_cam_scale() if hasattr(self.renderer, "_compute_cam_scale") else 1.0
+        logger.debug("[update_geo] renderer.update_geo: %.1f ms", (time.perf_counter() - t) * 1000)
+
+        t = time.perf_counter()
+        cam_scale = (
+            self.renderer._compute_cam_scale()
+            if hasattr(self.renderer, "_compute_cam_scale") else 1.0
+        )
         scene_size = getattr(self.renderer, "size", 1.0)
-        pr.update_loads(math_model, camera_scale=cam_scale, scene_size=scene_size)
+        self.presentation_renderer.update_loads(
+            math_model, camera_scale=cam_scale, scene_size=scene_size,
+        )
 
-    def _polygon_passes_section(self, poly):
-        if not self.cam.section_active:
-            return True
-        for nd in getattr(poly, "nodes", []):
-            if self.cam.is_element_visible_by_section((nd.x, nd.y, nd.z)):
-                return True
-        return False
+        logger.debug("Update geo: %s", plane_name)
 
-    def _line_passes_section(self, ln):
-        if not self.cam.section_active:
-            return True
-        for pt in (ln.v1, ln.v2):
-            if self.cam.is_element_visible_by_section((pt.x, pt.y, pt.z)):
-                return True
-        return False
+        logger.debug("[update_geo] loads: %.1f ms", (time.perf_counter() - t) * 1000)
+
+        logger.debug("[update_geo] TOTAL: %.1f ms", (time.perf_counter() - t_start) * 1000)
 
     def _register_picks(self, polygons, lines):
         if not self.pick_pass:
@@ -551,6 +554,50 @@ class Engine:
                 cam, model, self.pick_s,
             )
 
+    def default_xy_plane(self):
+        if self.project is None:
+            return None
+        for p in self.project.grid_planes():
+            if p.name == "XY_Z0":
+                return p
+        for p in self.project.grid_planes():
+            if p.name.startswith("XY_Z"):
+                return p
+        return None
+
+    def enter_plane_2d(self, plane):
+        if plane is None or self.cam is None:
+            return
+        self.cam.save_view()
+        uc = 0.5 * ((plane.u_min or 0.0) + (plane.u_max or 0.0))
+        vc = 0.5 * ((plane.v_min or 0.0) + (plane.v_max or 0.0))
+        center = plane.to_3d((uc, vc))
+        half_u = 0.5 * abs((plane.u_max or 0.0) - (plane.u_min or 0.0))
+        half_v = 0.5 * abs((plane.v_max or 0.0) - (plane.v_min or 0.0))
+        fit_radius = max(half_u, half_v) * 1.4
+        if fit_radius < 1e-6:
+            b = self._combined_bounds()
+            fit_radius = b.size if b else 1000.0
+        self.cam.look_at_plane(
+            origin=center,
+            u=plane.u, v=plane.v, n=plane.normal,
+            fit_radius=fit_radius,
+        )
+        self.cam.set_section_filter(
+            normal=plane.normal, origin=plane.origin,
+            min_s=-plane.depth_minus, max_s=+plane.depth_plus,
+        )
+        self.renderer.projection = "plane_2d"
+        if self.renderer.math_model_renderer:
+            self.renderer.math_model_renderer.projection = "plane_2d"
+
+    def exit_plane_2d(self):
+        self.cam.restore_view()
+        self.cam.clear_section_filter()
+        self.renderer.projection = "3d"
+        if self.renderer.math_model_renderer:
+            self.renderer.math_model_renderer.projection = "3d"
+            
     def _on_global_escape(self) -> None:
         changed = False
 
@@ -578,13 +625,13 @@ class Engine:
                 pm._preview_plane = None
                 pm._form_open = False
                 pm._editing_plane = None
-                pm._clear_preview()
+                # pm._clear_preview()
                 pm._preview_off()
 
-        if self.project is not None and self.project.active_plane is not None:
-            self.project.deactivate_plane()
-            self.cam.clear_section_filter()
-            changed = True
+        # if self.project is not None and self.project.active_plane is not None:
+        #     self.project.deactivate_plane()
+        #     self.cam.clear_section_filter()
+        #     changed = True
 
-        if changed and self.project is not None:
-            self.update_geo(self.project)
+        # if changed and self.project is not None:
+        #     self.update_geo(self.project)

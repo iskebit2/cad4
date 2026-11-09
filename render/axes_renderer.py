@@ -112,7 +112,7 @@ class LocalAxesRenderer:
                 logger.debug("[LocalAxes] shader'da 'u_mvp' uniform'u bulunamadı")
 
             self._initialized = True
-            logger.info(f"[LocalAxes] Hazır — {self._VERTEX_COUNT} vertex, "
+            logger.debug(f"[LocalAxes] Hazır — {self._VERTEX_COUNT} vertex, "
                         f"u_mvp_loc={self._u_mvp_loc}")
             return True
 

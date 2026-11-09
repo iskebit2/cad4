@@ -1,4 +1,5 @@
 # render/scenerenderer.py
+import time
 import math
 from dataclasses import dataclass
 
@@ -6,7 +7,6 @@ from pyglm import glm
 import numpy as np
 from OpenGL.GL import *
 
-from logging_config import CadLogger
 from render.base_renderer import (
     AreaRenderer,
     FrameRenderer,
@@ -20,6 +20,7 @@ from render.pickpass import PickPass
 from render.gl_utils import mat4_data
 
 
+from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
 @dataclass
@@ -43,6 +44,9 @@ class MathModelRenderer:
 
         self.math_model = None
         self.camera = self.engine = None
+        self._render_elements = {
+            "frames": [], "nodes": [], "areas": [], "links": [],
+        }
         self.render_mode = 'simple'
 
         # Projeksiyon (3D ↔ 2D görünüm)
@@ -114,39 +118,54 @@ class MathModelRenderer:
         if self.pick_pass:
             self.pick_pass.set_viewport(w, h)
 
-    def update_geo(self, scene=None, progress_cb=None):
+    def update_geo(
+        self, scene=None, progress_cb=None, *, frames=None, nodes=None,
+        areas=None, links=None,
+    ):
+        t_start = time.perf_counter()
+
         if scene is None:
             scene = self.math_model
 
         flt = getattr(scene, '_render_filter', None)
         use_section = self.camera is not None and self.camera.section_active
 
-        def _f(d):
-            if flt is None and not use_section:
-                return list(d.values())
+        def _f(d, prepared):
+            elements = list(d.values()) if prepared is None else list(prepared)
+            filter_section = use_section and prepared is None
+            if flt is None and not filter_section:
+                return elements
             result = []
-            for e in d.values():
+            for e in elements:
                 if flt is not None and e.unique_id not in flt:
                     continue
-                if use_section and not self._element_in_section(e):
+                if filter_section and not self._element_in_section(e):
                     continue
                 result.append(e)
             return result
 
-        frames = _f(scene.frames)
-        nodes = _f(scene.nodes)
-        areas = _f(scene.areas)
-        links = _f(scene.links)
+        t = time.perf_counter()
+        frames = _f(scene.frames, frames)
+        nodes = _f(scene.nodes, nodes)
+        areas = _f(scene.areas, areas)
+        links = _f(scene.links, links)
+
+        logger.debug("[MathModel.update_geo] _f: %.1f ms (frames=%d nodes=%d areas=%d links=%d)",
+                (time.perf_counter() - t) * 1000, len(frames), len(nodes), len(areas), len(links))
+        
+        self._render_elements = {
+            "frames": frames, "nodes": nodes, "areas": areas, "links": links,
+        }
 
         if self.pick_pass and hasattr(self.pick_pass, 'clear_registry'):
             self.pick_pass.clear_registry()
 
-        def _progress(value, msg=""):
-            if progress_cb:
-                try: progress_cb(value, msg)
-                except Exception: pass
+        # def _progress(value, msg=""):
+        #     if progress_cb:
+        #         try: progress_cb(value, msg)
+        #         except Exception: pass
 
-        _progress(0.00, "Geometri güncelleniyor...")
+        # _progress(0.00, "Geometri güncelleniyor...")
         self.math_model = scene
 
         for frame in frames: frame.pick_id = frame.unique_id
@@ -154,19 +173,47 @@ class MathModelRenderer:
         for area in areas:   area.pick_id = area.unique_id
         for link in links:   link.pick_id = link.unique_id
 
+        t = time.perf_counter()
         self.frame_r.update(frames)
+        logger.debug("[MathModel.update_geo] frame_r.update: %.1f ms", (time.perf_counter() - t) * 1000)
+        t = time.perf_counter()
         self.node_r.update(nodes)
+        logger.debug("[MathModel.update_geo] node_r.update: %.1f ms", (time.perf_counter() - t) * 1000)
+        t = time.perf_counter()
         self.area_r.update(areas)
+        logger.debug("[MathModel.update_geo] area_r.update: %.1f ms", (time.perf_counter() - t) * 1000)
+        t = time.perf_counter()
         self.link_r.update(links)
+        logger.debug("[MathModel.update_geo] link_r.update: %.1f ms", (time.perf_counter() - t) * 1000)
 
-        for frame in frames: self.pick_pass.register(frame.pick_id, frame, self.frame_r)
-        for node in nodes:   self.pick_pass.register(node.pick_id, node, self.node_r)
-        for area in areas:   self.pick_pass.register(area.pick_id, area, self.area_r)
-        for link in links:   self.pick_pass.register(link.pick_id, link, self.link_r)
+        t = time.perf_counter()
+        for frame in frames:
+            self.pick_pass.register(
+                frame.pick_id, getattr(frame, "_geometry_source", frame),
+                self.frame_r,
+            )
+        for node in nodes:
+            self.pick_pass.register(node.pick_id, node, self.node_r)
+        for area in areas:
+            self.pick_pass.register(
+                area.pick_id, getattr(area, "_geometry_source", area),
+                self.area_r,
+            )
+        for link in links:
+            self.pick_pass.register(
+                link.pick_id, getattr(link, "_geometry_source", link),
+                self.link_r,
+            )
+        logger.debug("[MathModel.update_geo] pick_register: %.1f ms", (time.perf_counter() - t) * 1000)
 
+        t = time.perf_counter()
         self._update_bounds()
         self.update_sel()
-        _progress(1.00, "Tamamlandı")
+        logger.debug("[MathModel.update_geo] bounds+sel: %.1f ms", (time.perf_counter() - t) * 1000)
+
+        logger.debug("[MathModel.update_geo] TOTAL: %.1f ms", (time.perf_counter() - t_start) * 1000)
+
+        # _progress(1.00, "Tamamlandı")
 
     def update_element_color(self, element):
         if not element: return
@@ -185,11 +232,16 @@ class MathModelRenderer:
     def update_sel(self):
         if not self.math_model: return
         renderers_and_elements = (
-            (self.frame_r, self.math_model.frames.values()),
-            (self.node_r, self.math_model.nodes.values()),
-            (self.area_r, self.math_model.areas.values()),
-            (self.link_r, self.math_model.links.values()),
+            (self.frame_r, self._render_elements["frames"]),
+            (self.node_r, self._render_elements["nodes"]),
+            (self.area_r, self._render_elements["areas"]),
+            (self.link_r, self._render_elements["links"]),
         )
+        for _, elements in renderers_and_elements:
+            for element in elements:
+                source = getattr(element, "_geometry_source", element)
+                if source is not element:
+                    element.is_selected = getattr(source, "is_selected", False)
         get_color = self._get_final_color
         for renderer, elements in renderers_and_elements:
             if not renderer or renderer.icount <= 0: continue
@@ -200,20 +252,6 @@ class MathModelRenderer:
     def _get_final_color(self, element):
         return _final_color_for(element) 
 
-    def toggle_projection(self) -> bool:
-        if self.camera is None: return False
-        if self.projection == "plane_2d":
-            self.camera.restore_view()
-            self.render_mode = self._saved_render_mode
-            self.projection = "3d"
-            return True
-
-        self._saved_render_mode = self.render_mode
-        self.camera.save_view()
-        self.camera.set_top_view()
-        self.render_mode = "simple"
-        self.projection = "plane_2d"
-        return True
     
     def toggle_render_mode(self):
         modes = ['shaded', 'line', 'simple', 'normal']
@@ -224,6 +262,8 @@ class MathModelRenderer:
     def render(self, cam, target_fbo=0):
         if not cam:
             return
+
+        t_start = time.perf_counter()
 
         v = cam.get_view_matrix()
         p = cam.get_projection_matrix()
@@ -243,16 +283,29 @@ class MathModelRenderer:
                 r.render_mode = mode
 
         glDrawBuffer(GL_COLOR_ATTACHMENT0)
+
+        t_color = time.perf_counter()
         if self.render_mode in ("shaded", "normal"):
             self._render_shaded(mvp, cpos, v, p)
         elif self.render_mode == "line":
             self._render_line(mvp)
         elif self.render_mode == "simple":
             self._render_simple(mvp)
+        logger.debug("[MathModel.render] color_pass: %.2f ms",
+                    (time.perf_counter() - t_color) * 1000)
 
-        self._render_id_pass(mvp)
+        if self.engine and self.engine.pending_pick_check:
+            t_id = time.perf_counter()
+            self._render_id_pass(mvp)
+            logger.debug("[MathModel.render] id_pass: %.2f ms",
+                        (time.perf_counter() - t_id) * 1000)
+
         glDrawBuffer(GL_COLOR_ATTACHMENT0)
 
+        dt = (time.perf_counter() - t_start) * 1000
+        if dt > 16.0:
+            logger.debug("[MathModel.render] SLOW TOTAL: %.2f ms", dt)
+    
     # ------------------------------------------------------------------
     def _render_shaded(self, mvp, cpos, v, p):
         if self.show["area"] and self.area_r:

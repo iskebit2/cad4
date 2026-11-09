@@ -81,7 +81,7 @@ class S2KParser:
         m = re.search(r'CurrUnits\s*=\s*"([^"]+)"', content)
         if m:
             self.curr_units = m.group(1)
-            logger.info("CurrUnits: %s", self.curr_units)
+            logger.debug("CurrUnits: %s", self.curr_units)
 
         # Multi-line kayıtları birleştir
         content = self.LINE_JOIN.sub(' ', content)
@@ -135,7 +135,7 @@ class S2KParser:
             else:
                 self.tables[name] = new_df
 
-        logger.info("[Parser] %d tablo parse edildi", len(self.tables))
+        logger.debug("[Parser] %d tablo parse edildi", len(self.tables))
 
     def _parse_rows(self, lines) -> list:
         rows = []
@@ -208,7 +208,7 @@ class S2KLoader:
 
         s2k_sys = UnitSystem.from_sap(ctx.units_source_string)
         self.units = s2k_sys
-        logger.info("[Loader] S2K CurrUnits = %s", s2k_sys.value)
+        logger.debug("[Loader] S2K CurrUnits = %s", s2k_sys.value)
 
         # Project birimini S2K'nın birimine ayarla — DEĞER DEĞİŞMEZ
         project.unit_system = s2k_sys
@@ -219,7 +219,7 @@ class S2KLoader:
 
         # finalize_and_convert / _migrate_materials ÇAĞRILMAZ
 
-        logger.info("[Loader] Bitti — unit_system = %s", project.unit_system.value)
+        logger.debug("[Loader] Bitti — unit_system = %s", project.unit_system.value)
         return project
 
     def _build_metadata(self, ctx: LoadContext) -> S2KMetadata:
@@ -273,7 +273,7 @@ class S2KLoader:
     def _safe_call(self, handler, ctx: LoadContext, df, table_name: str, prefix: str = ""):
         try:
             handler(ctx, df)
-            logger.info("[Loader] %s%s (%d satır)", prefix, table_name, len(df))
+            logger.debug("[Loader] %s%s (%d satır)", prefix, table_name, len(df))
         except Exception as e:
             logger.error("[Loader] HATA %s'%s': %s", prefix, table_name, e, exc_info=True)
 
@@ -433,7 +433,7 @@ class S2KLoader:
         assign_loads(ctx, node_map, frame_map, area_map)
         assign_joint_loads(ctx, node_map)
 
-        logger.info(
+        logger.debug(
             "[Scene] %d düğüm, %d çubuk, %d alan, %d bağ",
             len(node_map), n_frames, n_areas, n_links,
         )

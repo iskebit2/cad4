@@ -212,7 +212,7 @@ class SDConvertPanel(BasePanel):
                 self._preview_frame = frame
                 self._polygon_points = [(p.x, p.y) for p in poly.points]
                 self._edge_selected.clear()
-                logger.info(f"[SDPanel] {len(self._polygon_points)} kenar hazır")
+                logger.debug(f"[SDPanel] {len(self._polygon_points)} kenar hazır")
             return
 
         # --- Kenar seçim arayüzü ---
@@ -271,7 +271,7 @@ class SDConvertPanel(BasePanel):
 
         if frame.unique_id != self._last_frame_id:
             self._last_frame_id = frame.unique_id
-            logger.info(f"[SDPanel] hedef frame: {frame.label}")
+            logger.debug(f"[SDPanel] hedef frame: {frame.label}")
 
         poly = self._get_polygon(frame)
         if poly is None:
@@ -612,7 +612,7 @@ class SDConvertPanel(BasePanel):
         # 5) Sahneyi yenile
         scn.mark_dirty()
 
-        logger.info(
+        logger.debug(
             f"[SDPanel] '{frame.label}' → {len(new_areas)} area, "
             f"{len(shared_nodes)} node eklendi "
             f"(kenarlar: {sorted(self._edge_selected)}, kalınlık={self.thickness:.1f} mm)"
@@ -677,7 +677,7 @@ class SDConvertPanel(BasePanel):
         self._preview_selected.clear()
         self._last_error = ""
 
-        logger.info(
+        logger.debug(
             f"[SDPanel] '{frame.label}' → önizleme: {len(areas)} area, "
             f"{len(shared_nodes)} paylaşılan node"
         )
@@ -734,7 +734,7 @@ class SDConvertPanel(BasePanel):
         # 5) Sahneyi yenile
         scn.mark_dirty()
 
-        logger.info(
+        logger.debug(
             f"[SDPanel] Modele aktarıldı: {len(self._preview_areas)} area, "
             f"{len(self._preview_nodes)} node "
             f"(frame={self._preview_frame.label if self._preview_frame else '?'})"

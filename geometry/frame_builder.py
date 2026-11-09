@@ -1,6 +1,6 @@
 # geometry/frame_builder.py
 
-
+import time
 import mapbox_earcut as earcut
 import numpy as np
 
@@ -151,9 +151,9 @@ class FrameBuilder:
         self,
         frame: Frame
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-
+        t_start = time.perf_counter()
         profile, start_ring, end_ring = self._prepare_geometry(frame)
-
+        t1 = time.perf_counter()
         if len(start_ring) == 0:
             return (
                 np.array([], dtype=np.float32),
@@ -222,6 +222,8 @@ class FrameBuilder:
                 profile_2d,
                 rings
             ).tolist()
+            t2 = time.perf_counter()
+            logger.debug("[FrameBuilder.build] prepare: %.2f ms earcut: %.2f ms (id=%s)", (t1 - t_start) * 1000, (t2 - t1) * 1000, getattr(frame, "unique_id", "?"))
 
             # -----------------------------------------------------
             # START CAP

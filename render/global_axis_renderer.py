@@ -137,7 +137,7 @@ class GlobalAxisRenderer:
             self._u_alpha_loc = self.shader.get_loc("alpha")
 
             self._initialized = True
-            logger.info("[GlobalAxis] Hazır (vao=%d, u_mvp=%d)",
+            logger.debug("[GlobalAxis] Hazır (vao=%d, u_mvp=%d)",
                         self.vao, self._u_mvp_loc)
             return True
         except Exception:
@@ -318,7 +318,7 @@ class GlobalAxisRenderer:
             return False
         try:
             camera.set_view_preset(preset)
-            logger.info("[GlobalAxis] View preset: %s", preset)
+            logger.debug("[GlobalAxis] View preset: %s", preset)
             return True
         except Exception:
             logger.exception("[GlobalAxis] apply_view hatası: %s", axis)

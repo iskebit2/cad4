@@ -1,5 +1,5 @@
 # render/base_renderer.py
-
+import time
 import ctypes
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
@@ -259,6 +259,9 @@ class BaseRenderer(ABC, Generic[T]):
                 else:
                     glBufferData(GL_ARRAY_BUFFER, new_colors.nbytes, new_colors, GL_DYNAMIC_DRAW)
                 glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+        for e in self.elements:
+            e.needs_update = False
     # =============================================================
     # BOUNDS
     # =============================================================
@@ -271,16 +274,18 @@ class BaseRenderer(ABC, Generic[T]):
     # =============================================================
 
     def update(self, raw: list[T]):
-        """
-        Elementleri işle, GPU buffer'larını güncelle.
-        Ana geometri + line geometri + simple geometri tek geçişte hazırlanır.
-        """
-        
-        #pass("FrameRenderer.update: %d element geldi", len(raw))
-        
-        self.elements = [e for e in raw if e.is_visible]
-        #pass(f"    → {len(self.elements)} görünür element")
-        #pass("→ %d görünür element",len(self.elements))
+        t_start = time.perf_counter()
+        t = time.perf_counter()
+
+        new_elements = [e for e in raw if e.is_visible]
+        if (
+            len(new_elements) == len(self.elements)
+            and all(a is b for a, b in zip(self.elements, new_elements))
+            and not any(getattr(e, "needs_update", False) for e in new_elements)
+        ):
+            return  # cache hit
+        self.elements = new_elements
+        logger.debug("[%s.update] visible_filter: %.1f ms", self.__class__.__name__, (time.perf_counter() - t) * 1000)
 
         self.elem_to_idx.clear()
         self.elem_to_vcount.clear()
@@ -311,10 +316,15 @@ class BaseRenderer(ABC, Generic[T]):
 
         # --- Her element için -----------------------------------------
         for inst_idx, e in enumerate(self.elements):
+            t = time.perf_counter()
 
             # ---------- Ana geometri ----------
             v, c, i = self.build(e)
 
+            dt = (time.perf_counter() - t) * 1000
+            if dt > 1.0:
+                logger.debug("[%s.update] build(%s): %.1f ms", self.__class__.__name__, getattr(e, "unique_id", "?"), dt)
+                
             if len(v) > 0 and (len(v) % stride_floats) == 0:
                 vc = len(v) // stride_floats
                 ic = len(i)
@@ -379,6 +389,7 @@ class BaseRenderer(ABC, Generic[T]):
         self.inst_count = len(self.elements)
 
         # --- Ana buffer upload ----------------------------------------
+        t = time.perf_counter()
         if self.icount > 0 and verts:
             vertex_data = np.concatenate(verts)
             color_data = np.concatenate(cols)
@@ -397,7 +408,9 @@ class BaseRenderer(ABC, Generic[T]):
                 index_data,
                 line_index_data,
             )
+        logger.debug("[%s.update] upload_main: %.1f ms", self.__class__.__name__, (time.perf_counter() - t) * 1000)
 
+        logger.debug("[%s.update] TOTAL: %.1f ms (%d elements)", self.__class__.__name__, (time.perf_counter() - t_start) * 1000, len(self.elements))
         # --- Simple buffer upload -------------------------------------
         if simple_verts:
             sv_all = np.concatenate(simple_verts).astype(np.float32)
@@ -405,15 +418,11 @@ class BaseRenderer(ABC, Generic[T]):
             sid_all = np.concatenate(simple_ids)
 
             self._upload_simple(sv_all, sc_all, sid_all)
-
-            # pass(
-            #     "%s: simple_vcount=%s, draw_mode=%s",
-            #     self.__class__.__name__,
-            #     self.simple_vcount,
-            #     self.simple_draw_mode,
-            # )
         else:
             self._cleanup_simple()
+
+        for e in self.elements:
+            e.needs_update = False
 
     # =============================================================
     # UPLOAD (main)

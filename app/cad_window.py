@@ -127,7 +127,7 @@ class CadWindow:
             time.sleep(0.01)
 
         self.fb_width, self.fb_height = glfw.get_framebuffer_size(self.window)
-        logger.info("Pencere hazır: %dx%d", self.fb_width, self.fb_height)
+        logger.debug("Pencere hazır: %dx%d", self.fb_width, self.fb_height)
 
     def _init_glfw(self) -> None:
         if not glfw.init():
@@ -160,7 +160,7 @@ class CadWindow:
         self.imgui_backend = GlfwRenderer(self.window, attach_callbacks=False)
         self._wire_callbacks()
         _apply_dark_theme()
-        logger.info("[CadWindow] ImGui hazır")
+        logger.debug("[CadWindow] ImGui hazır")
 
     # ------------------------------------------------------------------
     def _wire_callbacks(self) -> None:

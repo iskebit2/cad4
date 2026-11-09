@@ -15,11 +15,11 @@ logger = CadLogger.get("cad.main")
 def _bootstrap() -> None:
     CadLogger._configure_root_once()
     CadLogger.print_summary()
-    logger.info("=" * 64)
-    logger.info("CAD4 başlatılıyor")
-    logger.info("Python   : %s", sys.version.split()[0])
-    logger.info("Log dos. : %s", CadLogger.log_file_path())
-    logger.info("=" * 64)
+    logger.debug("=" * 64)
+    logger.debug("CAD4 başlatılıyor")
+    logger.debug("Python   : %s", sys.version.split()[0])
+    logger.debug("Log dos. : %s", CadLogger.log_file_path())
+    logger.debug("=" * 64)
 
 
 def _install_excepthook() -> None:
@@ -50,20 +50,20 @@ def main() -> int:
         glClearColor(0.08, 0.10, 0.16, 1.0)
         glClear(GL_COLOR_BUFFER_BIT)
         glfw.swap_buffers(window.window)
-        logger.info("[Boot] CadWindow: %.2fs", time.time() - t0)
+        logger.debug("[Boot] CadWindow: %.2fs", time.time() - t0)
 
         t1 = time.time()
         from app.cad_app import CadApp
         app = CadApp(window)
-        logger.info("[Boot] CadApp: %.2fs", time.time() - t1)
+        logger.debug("[Boot] CadApp: %.2fs", time.time() - t1)
 
         t2 = time.time()
-        logger.info("[Boot] Ana döngü başlıyor")
+        logger.debug("[Boot] Ana döngü başlıyor")
         window.run(app.frame, target_fps=60)
-        logger.info("[Boot] Ana döngü bitti: %.2fs", time.time() - t2)
+        logger.debug("[Boot] Ana döngü bitti: %.2fs", time.time() - t2)
 
     except KeyboardInterrupt:
-        logger.info("Kullanıcı durdurdu (Ctrl+C)")
+        logger.debug("Kullanıcı durdurdu (Ctrl+C)")
         exit_code = 130
     except Exception:
         logger.exception("Uygulama beklenmedik şekilde sonlandı")
@@ -81,7 +81,7 @@ def main() -> int:
             except Exception:
                 logger.exception("CadWindow.shutdown() hatası")
                 exit_code = exit_code or 1
-        logger.info("Çıkış kodu: %s", exit_code)
+        logger.debug("Çıkış kodu: %s", exit_code)
 
     return exit_code
 

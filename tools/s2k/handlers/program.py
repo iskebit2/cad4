@@ -17,7 +17,7 @@ def handle_program_control(ctx, df):
             ctx.units_source_string = raw
             return
     ctx.units_source_string = "N, mm, C"
-    logger.info("[Units] CurrUnits yok, varsayılan N_MM")
+    logger.debug("[Units] CurrUnits yok, varsayılan N_MM")
 
 
 def handle_project_information(ctx: LoadContext, df: pd.DataFrame) -> None:

@@ -18,8 +18,13 @@ class SelectionManager:
             self.on_selection_changed(list(self.get_selected()))
 
     def _update_geometry_renderers(self, scene):
-        if self.r:
-            self.r.update_geo(scene)
+        if not self.r:
+            return
+        engine = getattr(self.r, "engine", None)
+        if engine:
+            engine.update_geo()
+        else:
+            self.r.update_geo(self.r.math_model, scene)
 
     def _deselect_all(self):
         for e in self.get_selected():
@@ -148,7 +153,7 @@ class SelectionManager:
             elif element.unique_id in self.r.scene.lines:
                 deleted_visual += self.r.scene.remove_line(element.unique_id)
         self.selected.clear()
-        self.r.update_geo(self.r.math_model, self.r.scene)
+        self._update_geometry_renderers(self.r.scene)
         return len(cmd.deleted) + deleted_visual, len(cmd.rejected)
 
     def undo(self):
