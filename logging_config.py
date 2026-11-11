@@ -8,17 +8,29 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from collections import deque
+from threading import Lock
+from time import monotonic
 
 # ============================================================================
 # FILTERS
 # ============================================================================
-class DuplicateMessageFilter(logging.Filter):
-    """Art arda aynı (logger, level, mesaj) üçlüsünü bastırır."""
 
-    def __init__(self, max_tracked: int = 1024):
+class DuplicateMessageFilter(logging.Filter):
+    """Son 10 kayıt ve 2 saniyelik zaman penceresinde tekrarları bastırır."""
+
+    def __init__(
+        self,
+        max_recent: int = 10,
+        window_seconds: float = 2.0,
+        max_tracked: int = 1024,
+    ):
         super().__init__()
-        self._last: dict[tuple, str] = {}
+        self._recent: dict[tuple, deque] = {}
+        self._max_recent = max_recent
+        self._window = window_seconds
         self._max_tracked = max_tracked
+        self._lock = Lock()
 
     def filter(self, record: logging.LogRecord) -> bool:
         # Traceback'leri asla bastırma
@@ -34,14 +46,33 @@ class DuplicateMessageFilter(logging.Filter):
             return False
 
         key = (record.name, record.levelno)
-        if self._last.get(key) == message:
-            return False
+        now = monotonic()
 
-        self._last[key] = message
-        if len(self._last) > self._max_tracked:
-            for k in list(self._last.keys())[: self._max_tracked // 2]:
-                self._last.pop(k, None)
-        return True
+        with self._lock:
+            recent = self._recent.setdefault(
+                key, deque(maxlen=self._max_recent)
+            )
+
+            # Zaman penceresi dışındaki kayıtları temizle
+            while recent and now - recent[0][1] >= self._window:
+                recent.popleft()
+
+            # Son kayıtlar içinde aynı mesaj var mı?
+            duplicate = any(
+                old_message == message
+                for old_message, _ in recent
+            )
+
+            # Bastırılsa bile geçmişe ekle
+            recent.append((message, now))
+
+            # Bellek kullanımını sınırla
+            if len(self._recent) > self._max_tracked:
+                for k in list(self._recent)[: self._max_tracked // 2]:
+                    self._recent.pop(k, None)
+
+            return not duplicate
+
 
 
 # ============================================================================

@@ -159,7 +159,7 @@ class WindAnalysisPanel(BasePanel):
         )
         imgui.text_colored(
             imgui.ImVec4(0.6, 0.6, 0.6, 1.0),
-            "(LOAD_AREA / SURFACE_* — rüzgar analizine girecek)",
+            "(LOAD_AREA / SURFACE — yük analizine girecek)",
         )
 
         candidates = [
@@ -167,8 +167,7 @@ class WindAnalysisPanel(BasePanel):
             if not getattr(p, "is_temporary", False)
             and p.poly_type in (
                 PolygonType.LOAD_AREA,
-                PolygonType.SURFACE_ONEWAY,
-                PolygonType.SURFACE_TWOWAY,
+                PolygonType.SURFACE,
             )
         ]
 

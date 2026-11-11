@@ -55,6 +55,7 @@ class Engine:
         self.grid_s = None
         self.axes_s = None
 
+        self.viewport_manager = None
         self.plane_draw_mgr = None
         self.draw_mgr = None
 
@@ -81,6 +82,8 @@ class Engine:
         self.hover_enabled = True
         self.last_hover_x = -1
         self.last_hover_y = -1
+        self.last_hover_viewport = None
+        self.viewport_pointer = None
         self.last_hover_time = 0.0
         self.hover_throttle = 0.05
         self.pending_pick_check = False
@@ -101,6 +104,10 @@ class Engine:
         self.working_plane_provider: Callable[[], Plane | None] | None = None
         self.on_hover_changed_callback = None
         
+    @property
+    def math_model_renderer(self):
+        return getattr(self.renderer, "math_model_renderer", None) if self.renderer else None
+
     # ------------------------------------------------------------------
     def init_gl(self):
         logger.debug("GL_VERSION: %s", glGetString(GL_VERSION))
@@ -168,7 +175,7 @@ class Engine:
         self.renderer.set_cam(self.cam)
         self.renderer.set_snap(self.snap)
 
-        self.presentation_renderer = self.renderer
+        self.presentation_renderer = self.renderer.presentation_renderer
         self.grid = self.presentation_renderer.grid
 
         self.interaction_renderer = InteractionRenderer(overlay_shader=self.overlay_s)
@@ -244,25 +251,12 @@ class Engine:
         self.scene = scene
         self.math_model = math_model
 
-        plane = project.active_plane if project else None
-
-        # # Assoc
-        # if self.math_model and project is not None:
-        #     t = time.perf_counter()
-        #     self.math_model.refresh_plane_associations(
-        #         project.all_planes(), scene=self.scene,
-        #     )
-        #     logger.debug("[update_geo] assoc: %.1f ms", (time.perf_counter() - t) * 1000)
-
         if not self.presentation_renderer:
             return
 
         t = time.perf_counter()
-        geometry = GeometryProcessor.process(scene, plane, math_model)
+        geometry = GeometryProcessor.process(scene, None, math_model)
         logger.debug("[update_geo] GeometryProcessor: %.1f ms", (time.perf_counter() - t) * 1000)
-
-        if plane is not None:
-            plane_name = plane.name
 
         t = time.perf_counter()
         self.renderer.update_geo(
@@ -295,57 +289,73 @@ class Engine:
 
         logger.debug("[update_geo] TOTAL: %.1f ms", (time.perf_counter() - t_start) * 1000)
 
-    def _register_picks(self, polygons, lines):
-        if not self.pick_pass:
-            return
-        pr = self.presentation_renderer
-        for p in polygons:
-            p.pick_id = p.unique_id
-            self.pick_pass.register(p.pick_id, p, pr.polygon)
-        for ln in lines:
-            ln.pick_id = ln.unique_id
-            self.pick_pass.register(ln.pick_id, ln, pr.lines)
-
     # ------------------------------------------------------------------
-    def render(self, cam, target_fbo: int = 0):
+    def render(self, cam, target_fbo: int = 0, draw_interaction: bool = True,
+           target_size: tuple[int, int] | None = None,
+           viewport_name: str | None = None, viewport_plane=None):
         if not (cam and self.renderer and self.mrt):
             return
 
         self.mrt.bind()
         self.mrt.clear()
 
-        # 1. Grid + görsel öğeler (polygon, line, zones, loads, labels)
+        if target_size is not None:
+            tw, th = target_size
+            scale = min(1.0, self.mrt.w / tw, self.mrt.h / th)
+            render_w = max(1, int(tw * scale))
+            render_h = max(1, int(th * scale))
+        else:
+            tw = th = None
+            render_w, render_h = self.mrt.w, self.mrt.h
+        glViewport(0, 0, render_w, render_h)
+        
         glDrawBuffer(GL_COLOR_ATTACHMENT0)
-        if self.show.get("presentation_any", True) and self.presentation_renderer and self.scene:
-            self._render_scene_visuals(cam)
+        self.renderer.render(
+                cam, target_fbo, force_id_pass=target_size is not None,
+                viewport_name=viewport_name, plane=viewport_plane,
+            )
 
-        # 2. Math model (frame, area, link, node) — EN ÖNDE
-        if self.show.get("scene", True):
-            self.renderer.render(cam, target_fbo)
-
-        # 3. Sunum pick
-        if self.pick_s and self.presentation_renderer:
-            self._render_scene_pick(cam)
-
-        self.mrt.blit_to(target_fbo)
-
-        if self.show.get("interaction", True) and self.interaction_renderer:
-            self.interaction_renderer.render(self, self.w, self.h)
-
-    def _render_scene_visuals(self, cam):
-        self.renderer.render_scene_visuals(
-            cam, self.renderer.model_mat, self.scene, self.math_model,
-            self.w, self.h, self.show, self.active_wind_vector,
+        self.mrt.blit_to(
+            target_fbo,
+            target_w=tw,
+            target_h=th,
+            copy_id=target_size is not None,
+            source_w=render_w,
+            source_h=render_h,
         )
 
-    def _render_scene_pick(self, cam):
-        self.mrt.bind()
-        glDrawBuffer(GL_COLOR_ATTACHMENT1)
-        self.presentation_renderer.render_presentation_pick(
-            cam, self.renderer.model_mat, self.pick_s,
-        )
-        glDrawBuffer(GL_COLOR_ATTACHMENT0)
+        if draw_interaction and self.show.get("interaction", True) and self.interaction_renderer:
+            glViewport(0, 0, tw or self.w, th or self.h)
+            glDrawBuffer(GL_COLOR_ATTACHMENT0)
+            viewport_pointer = self.viewport_pointer
+            pointer = (
+                viewport_pointer[1:]
+                if viewport_name is not None
+                and viewport_pointer is not None
+                and viewport_pointer[0] == viewport_name
+                else None
+            )
+            interaction_w, interaction_h = target_size or (self.w, self.h)
+            self.interaction_renderer.render(
+                self, interaction_w, interaction_h,
+                camera=cam, viewport_name=viewport_name,
+                mouse_pos=pointer,
+            )
 
+        if target_size is not None:
+            glBindFramebuffer(GL_FRAMEBUFFER, 0)
+            glViewport(0, 0, self.w, self.h)
+
+    def render_viewport(self, vp):
+        if vp is None or vp.camera is None:
+            return
+        vp.camera.set_aspect(vp.width, vp.height)
+        self.render(
+            vp.camera, target_fbo=vp.fbo.fbo,
+            target_size=(vp.width, vp.height),
+            viewport_name=vp.name,
+            viewport_plane=getattr(vp, "plane", None),
+        )
     # ------------------------------------------------------------------
     def set_scene(self, project):
         if self.interaction_renderer:
@@ -361,11 +371,11 @@ class Engine:
         self.scene = Scene()
         self.math_model = MathModel()
         self.update_geo()
-        for r in (self.renderer.frame_r, self.renderer.node_r,
-                  self.renderer.area_r, self.renderer.link_r):
-            r.elements = []
-        if self.presentation_renderer:
-            self.presentation_renderer.polygon.elements = []
+        if self.renderer:
+            self.renderer.update_geo(
+                self.math_model, self.scene,
+                polygons=[], lines=[], frames=[], nodes=[], areas=[], links=[],
+            )
 
     def fit_view(self):
         bounds = self._combined_bounds()
@@ -426,6 +436,31 @@ class Engine:
             self.last_hover_time = now
             self.pending_pick_check = True
 
+    def start_viewport_hover_pick(self, viewport, x, y):
+        self.set_viewport_pointer(viewport, x, y)
+        pick_pass = self.renderer.pick_pass if self.renderer else None
+        if pick_pass is None:
+            return
+        now = time.time()
+        position = (viewport.name, int(x), int(y))
+        if (now - self.last_hover_time) < self.hover_throttle:
+            return
+        if position == (
+            self.last_hover_viewport, self.last_hover_x, self.last_hover_y,
+        ):
+            return
+        if pick_pass.pick_async(
+            int(x), int(y),
+            source_fbo=viewport.fbo.fbo,
+            viewport_size=(viewport.width, viewport.height),
+        ):
+            self.last_hover_viewport, self.last_hover_x, self.last_hover_y = position
+            self.last_hover_time = now
+            self.pending_pick_check = True
+
+    def set_viewport_pointer(self, viewport, x, y):
+        self.viewport_pointer = (viewport.name, int(x), int(y))
+
     def check_pick_result(self):
         if not self.pending_pick_check:
             return False
@@ -474,11 +509,6 @@ class Engine:
         el = self.renderer.get_element_from_id(pick_id)
         if el is not None:
             return el
-        if self.scene:
-            if pick_id in self.scene.polygons:
-                return self.scene.polygons[pick_id]
-            if pick_id in self.scene.lines:
-                return self.scene.lines[pick_id]
         return None
 
     def clear_hover(self):
@@ -543,17 +573,6 @@ class Engine:
         self.input.mouse_world_valid = False
 
     # ------------------------------------------------------------------
-    def render_pick_pass(self, cam, target_fbo):
-        if not (cam and self.renderer):
-            return
-        if hasattr(self.renderer, "render_pick"):
-            self.renderer.render_pick(cam, target_fbo)
-        if self.presentation_renderer and self.pick_s:
-            model = getattr(self.renderer, "model_mat", glm.mat4(1.0))
-            self.presentation_renderer.render_presentation_pick(
-                cam, model, self.pick_s,
-            )
-
     def default_xy_plane(self):
         if self.project is None:
             return None

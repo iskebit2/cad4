@@ -64,6 +64,8 @@ class Project:
     frame_design_procs: dict[str, str] = field(default_factory=dict)
     frame_auto_mesh: dict[str, dict] = field(default_factory=dict)
     catalog_sections: dict[str, Section] = field(default_factory=dict)
+    transfer_grid_step: float = 0.0    # 0 → tools default (200 mm)
+    transfer_grid_bins: int = 12
 
     def __post_init__(self):
         self.scene.project = self
@@ -72,20 +74,7 @@ class Project:
         self._ensure_default_active_plane()
 
     def _ensure_default_active_plane(self):
-        if self.active_plane is not None:
-            return
-        xy = None
-        for p in self.grid_planes():
-            if p.name == "XY_Z0":
-                xy = p
-                break
-        if xy is None:
-            for p in self.grid_planes():
-                if p.name.startswith("XY_Z"):
-                    xy = p
-                    break
-        if xy is not None:
-            self._active_plane_id = xy.plane_id
+        self._active_plane_id = None
             
     @property
     def grid(self) -> Grid:
@@ -99,31 +88,42 @@ class Project:
 
     @property
     def polygons(self) -> dict[int, Polygon]:
-        return self.scene.polygons
+        return self.math_model.polygons
 
     @polygons.setter
     def polygons(self, value: dict[int, Polygon]) -> None:
-        self.scene.polygons = value
-        self.scene.mark_dirty()
+        self.math_model.polygons = value
+        self.math_model.mark_dirty()
 
     @property
     def lines(self) -> dict[int, Line]:
-        return self.scene.lines
+        return self.math_model.lines
 
     @lines.setter
     def lines(self, value: dict[int, Line]) -> None:
-        self.scene.lines = value
-        self.scene.mark_dirty()
+        self.math_model.lines = value
+        self.math_model.mark_dirty()
 
     # ------------------------------------------------------------------
     def add_polygon(self, polygon: Polygon) -> None:
-        self.scene.add_polygon(polygon)
+        self.math_model.add_polygon(polygon)
 
     def remove_polygon(self, polygon_id: int) -> bool:
-        if not self.scene.remove_polygon(polygon_id):
+        polygon = self.math_model.polygons.pop(polygon_id, None)
+        if polygon is None:
             return False
+        self.math_model.mark_dirty()
         if self.math_model.polygon_analysis.pop(polygon_id, None) is not None:
             self.math_model.mark_dirty()
+        return True
+
+    def add_line(self, line: Line) -> None:
+        self.math_model.add_line(line)
+
+    def remove_line(self, line_id: int) -> bool:
+        if self.math_model.lines.pop(line_id, None) is None:
+            return False
+        self.math_model.mark_dirty()
         return True
 
     def polygon_analysis_data(
@@ -135,6 +135,11 @@ class Project:
             data = PolygonAnalysisData()
             self.math_model.polygon_analysis[polygon_id] = data
             self.math_model.mark_dirty()
+
+        # --- Polygon.dist_type tek doğruluk kaynağı ---
+        if data is not None and not isinstance(polygon, int):
+            data.transfer_dist_type = polygon.dist_type.value
+
         return data
 
     # ------------------------------------------------------------------

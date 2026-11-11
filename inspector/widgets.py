@@ -331,18 +331,18 @@ def _scene_groups(scene, math_model=None):
     out.append(("Link", _collect(math_model, "Link")))
     out.append((
         "Polygon",
-        list(getattr(scene, "polygons", {}).values()) if scene else [],
+        _collect(math_model, "Polygon"),
     ))
     out.append((
         "Line",
-        list(getattr(scene, "lines", {}).values()) if scene else [],
+        _collect(math_model, "Line"),
     ))
     return out
 
 def _collect(scene, type_name):
     attr_map = {
         "Node": "nodes", "Frame": "frames",
-        "Area": "areas", "Polygon": "polygons",
+        "Area": "areas", "Polygon": "polygons", "Line": "lines",
     }
     attr = attr_map.get(type_name)
     if attr and hasattr(scene, attr):

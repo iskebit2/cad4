@@ -7,6 +7,7 @@ from imgui_bundle import imgui
 from plane.plane import Plane
 from logging_config import CadLogger
 from ui.base_panel import BasePanel
+from ui.viewport_panel import ViewportPanel
 
 logger = CadLogger.get(__name__)
 
@@ -158,15 +159,14 @@ class PlaneManagerPanel(BasePanel):
             if pdm:
                 pdm.start_2pt_z()
 
-        # Arkhe / Sıfırlama (Tüm Model / Filtresiz Gösterim)
         imgui.same_line()
-        if imgui.button("Tüm Model"):
-            if proj:
-                proj.deactivate_plane()
-                self._selected_name = None
-                self._preview_off()
-                self._edit_loaded_for = None
-                self._sync_render()
+        has_selection = self._selected_plane() is not None
+        if not has_selection:
+            imgui.begin_disabled()
+        if imgui.button("Yeni Viewport", imgui.ImVec2(120, 0)) and has_selection:
+            self._open_plane_viewport(self._selected_plane())
+        if not has_selection:
+            imgui.end_disabled()
 
         is_custom = self._selected_is_custom()
 
@@ -214,19 +214,13 @@ class PlaneManagerPanel(BasePanel):
         if not proj:
             return
 
-        active = proj.active_plane
-        imgui.text_colored(imgui.ImVec4(0.6, 0.6, 0.6, 1.0),
-                           f"aktif: {active.name if active else '— (Tüm Model)'}")
-
         grid_planes = proj.grid_planes()
         if grid_planes:
             imgui.set_next_item_open(True, imgui.Cond_.once)
             if imgui.tree_node(f"Grid ({len(grid_planes)})##pm_grid"):
                 for gp in grid_planes:
                     is_sel = (self._selected_name == gp.name)
-                    is_active = (active is not None and active.plane_id == gp.plane_id)
-                    prefix = "● " if is_active else "  "
-                    if imgui.selectable(f"{prefix}{gp.name}##pmg", is_sel)[1]:
+                    if imgui.selectable(f"  {gp.name}##pmg", is_sel)[1]:
                         if self._selected_name != gp.name:
                             self._selected_name = gp.name
                             self._preview_plane = gp
@@ -244,9 +238,7 @@ class PlaneManagerPanel(BasePanel):
             for name in sorted(proj.custom_planes.keys()):
                 p = proj.custom_planes[name]
                 is_sel = (name == self._selected_name)
-                is_active = (active is p)
-                prefix = "● " if is_active else "  "
-                if imgui.selectable(f"{prefix}{name}##pm", is_sel)[1]:
+                if imgui.selectable(f"  {name}##pm", is_sel)[1]:
                     if self._selected_name != name:
                         self._selected_name = name
                         self._preview_plane = p
@@ -264,21 +256,9 @@ class PlaneManagerPanel(BasePanel):
 
         proj = self._project()
         is_custom = self._selected_is_custom()
-        is_active = (proj.active_plane is sel)
 
         if self._edit_loaded_for != sel.name:
             self._load_edit(sel, force=True)
-
-        if is_active:
-            imgui.text_colored(imgui.ImVec4(0.4, 0.9, 0.65, 1.0),
-                               "Aktif plane")
-            if imgui.button("Deaktif et"):
-                proj.deactivate_plane()
-                self._sync_render()
-        else:
-            if imgui.button("Aktif et"):
-                proj.activate_plane(sel)
-                self._sync_render()
 
         imgui.separator()
 
@@ -454,6 +434,48 @@ class PlaneManagerPanel(BasePanel):
 
         self._sync_render()
         logger.debug("[PlaneMgr] Apply: %s", plane.name)
+
+    def _open_plane_viewport(self, plane: Plane | None):
+        """Seçili plane için yeni viewport açar (bağımsız kamera + section filter)."""
+        if plane is None:
+            return
+        app = self.app
+        if app is None or getattr(app, "viewport_manager", None) is None:
+            logger.debug("[PlaneMgr] viewport_manager yok")
+            return
+
+        
+
+        base_name = f"Plane: {plane.name}"
+        name = app.viewport_manager.next_name(base_name)
+
+        vp = app.viewport_manager.create_viewport(
+            name=name, width=800, height=600,
+        )
+
+        # Kamera: plane'e dik bakış (orthographic)
+        uc = 0.5 * ((plane.u_min or 0.0) + (plane.u_max or 0.0))
+        vc = 0.5 * ((plane.v_min or 0.0) + (plane.v_max or 0.0))
+        center = plane.to_3d((uc, vc))
+        half_u = 0.5 * abs((plane.u_max or 0.0) - (plane.u_min or 0.0))
+        half_v = 0.5 * abs((plane.v_max or 0.0) - (plane.v_min or 0.0))
+        fit_radius = max(half_u, half_v) * 1.4
+        if fit_radius < 1e-6:
+            eng = self._engine()
+            bounds = eng._combined_bounds() if eng else None
+            fit_radius = float(bounds.size) if bounds else 1000.0
+
+        vp.camera.look_at_plane(
+            origin=center,
+            u=plane.u, v=plane.v, n=plane.normal,
+            fit_radius=fit_radius,
+        )
+        vp.plane = plane
+
+        panel = ViewportPanel(app, name, app.viewport_manager, preset=None)
+        
+        app._viewport_panels.append(panel)
+        logger.debug("[PlaneMgr] viewport açıldı: %s", name)
 
     # ------------------------------------------------------------------
     def _do_delete(self, name: str):

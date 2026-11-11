@@ -233,7 +233,10 @@ class Camera:
             "bottom": {"pitch": -90, "yaw": -90,  "view_mode": "ORTHO", "up": (0,1,0)},
             "left":   {"pitch": 0,   "yaw": 180,  "view_mode": "ORTHO", "up": (0,0,1)},
             "right":  {"pitch": 0,   "yaw": 0,    "view_mode": "ORTHO", "up": (0,0,1)},
-            "iso":    {"pitch": 30,  "yaw": -45,  "view_mode": "PERSPECTIVE", "up": (0,0,1)},
+            "iso_sw": {"pitch": 30, "yaw": 45,   "view_mode": "PERSPECTIVE", "up": (0,0,1)},
+            "iso_se": {"pitch": 30, "yaw": 135,  "view_mode": "PERSPECTIVE", "up": (0,0,1)},
+            "iso_ne": {"pitch": 30, "yaw": -135, "view_mode": "PERSPECTIVE", "up": (0,0,1)},
+            "iso_nw": {"pitch": 30, "yaw": -45,  "view_mode": "PERSPECTIVE", "up": (0,0,1)},
         }
         if preset not in presets:
             return

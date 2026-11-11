@@ -33,50 +33,56 @@ class GeometryProcessor:
         current_step = 0
 
         current_step += 1
-        logger.info("[%d/%d] Izgara eksenleri işleniyor...", current_step, total_steps)
+        
         t = time.perf_counter()
         grid_axes = cls.process_grid_axes(scene.grid, plane)
         logger.debug("[GP] grid_axes: %.1f ms", (time.perf_counter() - t) * 1000)
 
         current_step += 1
-        logger.info("[%d/%d] Çizgiler süzülüyor...", current_step, total_steps)
+        
         t = time.perf_counter()
-        lines = cls.process_lines(list(scene.lines.values()), plane)
+        lines = cls.process_lines(
+            list(math_model.lines.values()) if math_model is not None else [],
+            plane,
+        )
         logger.debug("[GP] lines: %.1f ms", (time.perf_counter() - t) * 1000)
 
         current_step += 1
-        logger.info("[%d/%d] Görünmez iplerle çevrili bu boşluk, matematiğin soğuk kılıcıyla parçalanmaya hazırlanıyor... Poligonlar işleniyor.", current_step, total_steps)
+        
         t = time.perf_counter()
-        polygons = cls.process_polygons(list(scene.polygons.values()), plane)
+        polygons = cls.process_polygons(
+            list(math_model.polygons.values()) if math_model is not None else [],
+            plane,
+        )
         logger.debug("[GP] polygons: %.1f ms", (time.perf_counter() - t) * 1000)
 
         frames, nodes, areas, links = [], [], [], []
         if math_model is not None:
             current_step += 1
-            logger.info("[%d/%d] Çelik iskeletler ve moment kolları yerçekimine karşı saf tutuyor... (Çerçeveler işleniyor)", current_step, total_steps)
+        
             t = time.perf_counter()
             frames = cls.process_lines(list(math_model.frames.values()), plane)
             logger.debug("[GP] frames: %.1f ms", (time.perf_counter() - t) * 1000)
 
             current_step += 1
-            logger.info("[%d/%d] Uzayda kaybolan milyonlarca nokta ve eksen, hakikat eksenine oturuyor... (Düğümler işleniyor)", current_step, total_steps)
+        
             t = time.perf_counter()
             nodes = cls.process_nodes(list(math_model.nodes.values()), plane)
             logger.debug("[GP] nodes: %.1f ms", (time.perf_counter() - t) * 1000)
 
             current_step += 1
-            logger.info("[%d/%d] Earcut zindanın kapılarını aralar; yüzlerce köşe tek bir hakikate, kusursuz üçgenlere teslim oluyor... (Alanlar işleniyor)", current_step, total_steps)
+        
             t = time.perf_counter()
             areas = cls.process_polygons(list(math_model.areas.values()), plane)
             logger.debug("[GP] areas: %.1f ms", (time.perf_counter() - t) * 1000)
 
             current_step += 1
-            logger.info("[%d/%d] Kaosun ortasından doğan düzlemler, yerçekimine meydan okuyan birer anıt gibi saniyeler içinde yükseliyor... (Bağlantılar işleniyor)", current_step, total_steps)
+        
             t = time.perf_counter()
             links = cls.process_lines(list(math_model.links.values()), plane)
             logger.debug("[GP] links: %.1f ms", (time.perf_counter() - t) * 1000)
 
-        logger.info("Tüm geometri süreçleri tamamlandı. Toplam süre: %.1f ms", (time.perf_counter() - t_start) * 1000)
+        
         return ProcessedGeometry(
             grid_axes=grid_axes, lines=lines, polygons=polygons,
             frames=frames, nodes=nodes, areas=areas, links=links,

@@ -369,7 +369,9 @@ class Plane:
             self.association_status[k] = {}
         for kind, cname in _KIND_COLLECTION.items():
             if kind == "poly":
-                source = getattr(scene, "polygons", {}) if scene else {}
+                source = (
+                    getattr(math_model, "polygons", {}) if math_model else {}
+                )
             else:
                 source = getattr(math_model, cname, {}) if math_model else {}
             for uid, el in source.items():
@@ -594,7 +596,8 @@ class Plane:
         for ch in by_op[ChangeOp.DELETE]:
             uid = int(ch.id)
             if ch.kind == "poly":
-                if scene is not None and scene.remove_polygon(uid):
+                element = math_model.polygons.get(uid)
+                if element is not None and math_model.remove_element(element):
                     report["deleted"] += 1
             else:
                 el = getattr(math_model, _KIND_COLLECTION[ch.kind], {}).get(uid)
@@ -606,7 +609,7 @@ class Plane:
         for ch in by_op[ChangeOp.MODIFY]:
             uid = int(ch.id)
             if ch.kind == "poly":
-                el = scene.polygons.get(uid) if scene else None
+                el = math_model.polygons.get(uid)
             else:
                 el = getattr(math_model, _KIND_COLLECTION[ch.kind], {}).get(uid)
             if el is None:
@@ -624,7 +627,7 @@ class Plane:
                 report["errors"].append(f"add {ch.kind}#{ch.id}")
                 continue
             if ch.kind == "poly":
-                if scene is None or not scene.add_polygon(new_el):
+                if not math_model.add_element(new_el):
                     report["errors"].append(f"add poly#{ch.id}")
                     continue
             else:

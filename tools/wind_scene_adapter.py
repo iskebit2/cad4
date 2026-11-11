@@ -34,10 +34,9 @@ class WindSceneAdapter:
         polygons: dict[str, list[str]] = {}
 
         explicit_surfaces = {
-            PolygonType.SURFACE_ONEWAY,
-            PolygonType.SURFACE_TWOWAY,
-            PolygonType.LOAD_AREA,
-        }
+                PolygonType.SURFACE,
+                PolygonType.LOAD_AREA,
+            }
 
         target_polygons = [
             p for p in project.polygons.values()
@@ -172,7 +171,7 @@ class WindSceneAdapter:
         zones_by_surface: dict[str, list[dict[str, Any]]] = {}
         for item in visual_zone_data:
             zones_by_surface.setdefault(str(item["surface"]), []).append(item)
-        for polygon in project.scene.polygons.values():
+        for polygon in project.math_model.polygons.values():
             polygon_name = polygon.label
             polygon_zones = zones_by_surface.get(polygon_name) if polygon_name else None
             if polygon_zones is None:
@@ -187,7 +186,7 @@ class WindSceneAdapter:
                 polygon.zone_children_by_direction[direction_key] = polygon_zones
                 polygon.show_zones_direction = direction_key
                 polygon.mark_dirty()
-        project.scene.mark_dirty()
+        project.math_model.mark_dirty()
 
         project.loads.wind_results[direction_key] = WindResult(
             direction=tuple(direction or (0.0, 0.0, 0.0)),

@@ -9,9 +9,9 @@ import glfw
 from imgui_bundle import imgui
 from OpenGL.GL import (
     GL_ARRAY_BUFFER, GL_BLEND, GL_COLOR_BUFFER_BIT, GL_CULL_FACE,
-    GL_DEPTH_BUFFER_BIT, GL_DEPTH_TEST, GL_ELEMENT_ARRAY_BUFFER,
+    GL_DEPTH_BUFFER_BIT, GL_DEPTH_TEST, GL_ELEMENT_ARRAY_BUFFER, GL_FRAMEBUFFER,
     GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA,
-    glBindBuffer, glBindVertexArray, glBlendFunc, glClear, glClearColor,
+    glBindBuffer, glBindFramebuffer, glBindVertexArray, glBlendFunc, glClear, glClearColor,
     glDisable, glEnable, glUseProgram, glViewport,
 )
 
@@ -25,6 +25,8 @@ from domain.project import Project
 from inspector import InspectorWindow
 from inspector.catalog_project import ProjectCatalog
 from app.debug_panel import DebugPanel
+from core.viewport_manager import ViewportManager
+from ui.viewport_panel import ViewportPanel
 
 from logging_config import CadLogger
 logger = CadLogger.get(__name__)
@@ -44,6 +46,7 @@ class CadApp:
         self._model_text = "MODEL: NEW SCENE"
         self._catalog = ProjectCatalog(self.current_project)
         self.hover_visual_enabled = True
+        
         self._show_only_ids: set[int] | None = None
         self.inspector: InspectorWindow | None = None
         self._io = None
@@ -51,8 +54,12 @@ class CadApp:
         self.panels: dict[str, dict] = {}
         self._panels_by_category: dict[str, list[str]] = {}
 
-        self.actions = AppActions(self)
+        # Viewport sistemi (engine oluşturulunca doldurulur)
+        self.viewport_manager = None
+        self._viewport_panels: list = []
+        self._last_active_viewport_name: str | None = None
 
+        self.actions = AppActions(self)
         self._init_registry()
 
         self.toolbar = Toolbar(
@@ -148,12 +155,15 @@ class CadApp:
 
     # ------------------------------------------------------------------
     def frame(self, dt: float) -> None:
-        t_start = time.perf_counter()
+        # t_start = time.perf_counter()
         self._ensure_engine()
         if not self.initialized:
             return
         if self._io is None:
             self._io = imgui.get_io()
+
+        # ★ DockSpace (her frame, diğer pencerelerden önce)
+        self._draw_dock_space()
 
         self.toolbar.draw(
             model_text=self._model_text,
@@ -163,9 +173,10 @@ class CadApp:
         self.actions.draw_dialog()
         self.actions.process_wind_queue()
         self._update_scene_if_dirty()
-        self._render_scene(dt)
-        t_render = time.perf_counter()
-        self._draw_panels()
+        self._render_scene(dt)               # viewport'ları render et (FBO)
+        # t_render = time.perf_counter()
+        self._draw_panels()                  # ImGui panelleri (viewport pencereleri dahil)
+        self._forward_active_viewport_events()
         self.debug_panel.draw()
 
         self._consume_plane_completion()
@@ -173,8 +184,8 @@ class CadApp:
         if self.engine and self.engine.pending_pick_check:
             self.engine.check_pick_result()
 
-        if time.perf_counter() - t_start > 0.033:
-            logger.debug("[CadApp.frame] SLOW: %.1f ms (render: %.1f)", (time.perf_counter() - t_start) * 1000, (t_render - t_start) * 1000)
+        # if time.perf_counter() - t_start > 0.033:
+        #     logger.debug("[CadApp.frame] SLOW: %.1f ms (render: %.1f)", (time.perf_counter() - t_start) * 1000, (t_render - t_start) * 1000)
 
     def _ensure_engine(self) -> None:
         if self.initialized:
@@ -188,10 +199,10 @@ class CadApp:
         self.engine.set_working_plane_provider(self._active_working_plane)
         self.engine.on_hover_changed_callback = self.actions.on_hover_changed
         self.engine.sel_mgr.on_selection_changed = self.actions.on_selection_changed
+        
         self.engine.set_app(self)
 
-        
-
+        # Tek ve doğru binding yüklemesi
         from app.input_bindings import build_bindings
         bindings = build_bindings(self)
         
@@ -202,18 +213,26 @@ class CadApp:
             else:
                 self.engine.input.bind(key, 0, action)
 
-        
-        
-
-        
-        for key, action in build_bindings(self).items():
-            if isinstance(key, tuple):
-                k, m = key
-                self.engine.input.bind(k, m, action)
-            else:
-                self.engine.input.bind(key, 0, action)
+        # --- DİNAMİK KISAYOL KÖPRÜSÜ (OTOMATİK) ---
+        # input_bindings.py'ye eklenen her şey otomatik olarak buradan doğrulanır.
+        self.window.is_shortcut_registered = lambda k, m: self.engine and any(
+            b_key == k and (b_mods & (glfw.MOD_SHIFT | glfw.MOD_CONTROL | glfw.MOD_ALT | glfw.MOD_SUPER)) == m
+            for (b_key, b_mods) in self.engine.input._bindings.keys()
+        )
 
         self.initialized = True
+
+        # ★ Viewport sistemi
+        self.viewport_manager = ViewportManager(self.engine)
+        self.engine.viewport_manager = self.viewport_manager
+        vp = self.viewport_manager.create_viewport(
+            name="iso", width=1200, height=800, preset="iso",
+        )
+        viewport_panel = ViewportPanel(self,
+            "iso", self.viewport_manager, preset="iso",
+        )
+        
+        self._viewport_panels.append(viewport_panel)
         if self.current_project:
             self.set_project(self.current_project)
 
@@ -223,11 +242,141 @@ class CadApp:
             self.engine.renderer.update_geo(model)
             model.clear_dirty()
 
+    def _forward_active_viewport_events(self) -> None:
+        """Hovered (veya drag devam eden) viewport panelinin ImGui event'lerini
+        CameraController'a iletir. Paneller saf çizim; event routing burada."""
+        eng = self.engine
+        vm = self.viewport_manager
+        if eng is None or vm is None or not self._viewport_panels:
+            return
+
+        io = imgui.get_io()
+        any_drag = bool(io.mouse_down[0] or io.mouse_down[1] or io.mouse_down[2])
+
+        hovered = next(
+            (p for p in self._viewport_panels if p._is_hovered),
+            None,
+        )
+        target = hovered
+        if target is None and any_drag and self._last_active_viewport_name:
+            target = next(
+                (p for p in self._viewport_panels
+                if p.viewport_name == self._last_active_viewport_name),
+                None,
+            )
+        if target is None:
+            return
+
+        vm.set_active(target.viewport_name)
+        self._last_active_viewport_name = target.viewport_name
+        self._forward_imgui_events(target)
+
+
+    def _forward_imgui_events(self, panel) -> None:
+        eng = self.engine
+        if eng is None:
+            return
+        vp = self.viewport_manager.get(panel.viewport_name)
+        if vp is None:
+            return
+        controller = getattr(eng.input, "_fallback", None)
+        if controller is None:
+            return
+
+        io = imgui.get_io()
+        item_min = panel._item_min
+        mouse = imgui.get_mouse_pos()
+        x_px = int(mouse.x - item_min.x)
+        y_px = int(mouse.y - item_min.y)
+
+        self._sync_input_state(eng, io, panel._is_hovered)
+        if panel._is_hovered:
+            eng.set_viewport_pointer(vp, x_px, y_px)
+
+        dx = float(io.mouse_delta.x)
+        dy = float(io.mouse_delta.y)
+        if dx or dy or panel._is_hovered:
+            controller.handle_move(x_px, y_px, dx, dy)
+
+        if panel._is_hovered:
+            for button, imgui_btn in (
+                (0, imgui.MouseButton_.left),
+                (2, imgui.MouseButton_.middle),
+                (1, imgui.MouseButton_.right),
+            ):
+                if imgui.is_mouse_clicked(imgui_btn):
+                    controller.handle_click(x_px, y_px, button)
+
+        is_marquee = eng.marquee is not None and eng.marquee.is_active
+        for button, imgui_btn in (
+            (0, imgui.MouseButton_.left),
+            (2, imgui.MouseButton_.middle),
+            (1, imgui.MouseButton_.right),
+        ):
+            if not imgui.is_mouse_released(imgui_btn):
+                continue
+            if button == 0 and not (panel._is_hovered or is_marquee):
+                continue
+            controller.handle_release(x_px, y_px, button)
+
+        wheel = float(io.mouse_wheel)
+        if wheel != 0.0:
+            controller.handle_scroll(wheel)
+            io.mouse_wheel = 0.0
+        
+    @staticmethod
+    def _sync_input_state(eng, io, item_hovered: bool) -> None:
+        """ImGui state → InputManager.state. GLFW event'leri viewport üzerindeyken
+        `_captures_mouse` yüzünden atlanıyor; burada senkronize ediyoruz."""
+        state = eng.input.state
+
+        if item_hovered:
+            state.buttons[0] = bool(imgui.is_mouse_down(imgui.MouseButton_.left))
+            state.buttons[2] = bool(imgui.is_mouse_down(imgui.MouseButton_.middle))
+            state.buttons[1] = bool(imgui.is_mouse_down(imgui.MouseButton_.right))
+            state.mouse_pos.x = float(io.mouse_pos.x)
+            state.mouse_pos.y = float(io.mouse_pos.y)
+
+        mods = 0
+        if io.key_ctrl: mods |= glfw.MOD_CONTROL
+        if io.key_shift: mods |= glfw.MOD_SHIFT
+        if io.key_alt: mods |= glfw.MOD_ALT
+        state.modifiers = mods
+        
     def _draw_panels(self) -> None:
+        # ★ Viewport pencereleri
+        for vp_panel in self._viewport_panels:
+            vp_panel.draw()
+        # Mevcut paneller
         for entry in self.panels.values():
             panel = entry["instance"]
             if getattr(panel, "visible", False):
                 panel.draw()
+
+    def _draw_dock_space(self) -> None:
+        viewport = imgui.get_main_viewport()
+        # print("main_viewport:",viewport.work_pos, viewport.work_size)
+        imgui.set_next_window_pos(viewport.work_pos)
+        imgui.set_next_window_size(viewport.work_size)
+        # imgui.set_next_window_viewport(viewport.id)   # ← KALDIRILDI
+        imgui.push_style_var(imgui.StyleVar_.window_rounding, 0.0)
+        imgui.push_style_var(imgui.StyleVar_.window_border_size, 0.0)
+        imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(0, 0))
+
+        flags = (
+            imgui.WindowFlags_.no_title_bar
+            | imgui.WindowFlags_.no_collapse
+            | imgui.WindowFlags_.no_resize
+            | imgui.WindowFlags_.no_move
+            | imgui.WindowFlags_.no_bring_to_front_on_focus
+            | imgui.WindowFlags_.no_nav_focus
+            | imgui.WindowFlags_.no_docking
+            | imgui.WindowFlags_.no_background
+        )
+        imgui.begin("##DockSpace", None, flags)
+        imgui.pop_style_var(3)
+        imgui.dock_space(imgui.get_id("DockSpace"))
+        imgui.end()
 
     def _consume_plane_completion(self):
         pdm = self.engine.plane_draw_mgr if self.engine else None
@@ -247,15 +396,28 @@ class CadApp:
     # ------------------------------------------------------------------
     def _render_scene(self, dt: float) -> None:
         w, h = self.window.fb_width, self.window.fb_height
+
+        # ★ Tüm viewport'ları kendi FBO'larına render et
+        if self.viewport_manager is not None:
+            # for name, vp in self.viewport_manager.viewports.items():
+            #     cam = vp.camera
+            #     print(f"[VP] {name}: fbo={vp.fbo.w}x{vp.fbo.h} "
+            #         f"pos=({cam.position.x:.1f},{cam.position.y:.1f},{cam.position.z:.1f}) "
+            #         f"target=({cam.target.x:.1f},{cam.target.y:.1f},{cam.target.z:.1f}) "
+            #         f"dist={cam.distance:.1f} "
+            #         f"aspect={cam.aspect_ratio:.2f}")
+            # print(f"[VP] model: frames={len(self.engine.math_model.frames)} "
+            #     f"nodes={len(self.engine.math_model.nodes)} "
+            #     f"areas={len(self.engine.math_model.areas)}")
+            self.viewport_manager.render_all()
+
+        # Ana GLFW framebuffer'ı temizle — ImGui docking arka planı
         glViewport(0, 0, w, h)
-        glEnable(GL_DEPTH_TEST)
-        glClearColor(0.08, 0.10, 0.16, 1.0)
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        glClearColor(0.06, 0.07, 0.10, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        if self.engine:
-            self.engine.render(self.engine.cam)
-
-        glViewport(0, 0, w, h)
+        # GL state reset (ImGui için)
         glUseProgram(0)
         glBindVertexArray(0)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
@@ -304,6 +466,18 @@ class CadApp:
             "convert_to_link": lambda: self.actions.convert_frames_to_links("DefaultLink"),
             "on_unit_change": self.actions.set_unit_system,
             "toggle_view_2d": self._toggle_2d,
+            "vp_top":    lambda: self._open_viewport("top"),
+            "vp_bottom": lambda: self._open_viewport("bottom"),
+            "vp_front":  lambda: self._open_viewport("front"),
+            "vp_back":   lambda: self._open_viewport("back"),
+            "vp_left":   lambda: self._open_viewport("left"),
+            "vp_right":  lambda: self._open_viewport("right"),
+            "vp_iso":    lambda: self._open_viewport("iso"),
+            "vp_iso_sw": lambda: self._open_viewport("iso_sw"),
+            "vp_iso_se": lambda: self._open_viewport("iso_se"),
+            "vp_iso_ne": lambda: self._open_viewport("iso_ne"),
+            "vp_iso_nw": lambda: self._open_viewport("iso_nw"),
+            "vp_close_all": self._close_all_viewports,
         }
         for name in self.panels:
             cmds[name] = (lambda n=name: self.actions.toggle_panel(n))
@@ -352,6 +526,12 @@ class CadApp:
         if pm is not None:
             pm.reset()
 
+        bounds = self.engine._combined_bounds()
+        if bounds is not None and self.viewport_manager is not None:
+            for vp in self.viewport_manager.viewports.values():
+                vp.camera.update_bounds(bounds.center, bounds.size)
+                vp.camera.focus_on_model()
+
     def _toggle_2d(self) -> None:
         eng = self.engine
         if not eng or not eng.renderer:
@@ -373,6 +553,28 @@ class CadApp:
         if plane is None:
             return
         eng.enter_plane_2d(plane)
+        
+    def _open_viewport(self, preset: str):
+        """Toolbar'dan çağrılır. Yeni viewport açar."""
+        if self.viewport_manager is None:
+            return
+        base_name = preset
+        name = self.viewport_manager.next_name(base_name)
+        vp = self.viewport_manager.create_viewport(
+            name=name, width=800, height=600, preset=preset,
+        )
+        panel = ViewportPanel(self, name, self.viewport_manager, preset=preset)
+        
+        self._viewport_panels.append(panel)
+        # Model varsa kamera odaklı gelsin (create_viewport zaten yapıyor)
+        return vp
+
+    def _close_all_viewports(self):
+        if self.viewport_manager is None:
+            return
+        for name in list(self.viewport_manager.viewports.keys()):
+            self.viewport_manager.remove_viewport(name)
+        self._viewport_panels.clear()
         
     def shutdown(self) -> None:
         pass

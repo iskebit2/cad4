@@ -306,7 +306,7 @@ class LinePropertiesPanel(BasePanel):
             v2=Vertex(x, y, z_top),
             is_column=True,
         )
-        self.project.scene.add_line(ln)
+        self.project.add_line(ln)
         self._refresh()
 
     def _to_frame(self, ln: Line):
@@ -343,7 +343,7 @@ class LinePropertiesPanel(BasePanel):
     def _delete(self, ln: Line):
         if self.project is None:
             return
-        lines = self.project.scene.lines
+        lines = self.project.math_model.lines
         lines.pop(ln.unique_id, None)
         self._selected_ids.discard(ln.unique_id)
         self._refresh()

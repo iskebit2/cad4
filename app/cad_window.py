@@ -115,6 +115,8 @@ class CadWindow:
         self.on_char: Callable[[int], None] | None = None
         self.on_focus: Callable[[bool], None] | None = None
 
+        self.is_shortcut_registered: Callable[[int, int], bool] | None = None
+
         self._time_last = time.time()
 
     # ------------------------------------------------------------------
@@ -156,11 +158,14 @@ class CadWindow:
 
     def _init_imgui(self) -> None:
         imgui.create_context()
+        io = imgui.get_io()
+        io.config_flags |= imgui.ConfigFlags_.docking_enable
+        io.config_windows_move_from_title_bar_only = True   # ★ sadece başlıktan sürükle
         _load_fonts(font_size=16)
         self.imgui_backend = GlfwRenderer(self.window, attach_callbacks=False)
         self._wire_callbacks()
         _apply_dark_theme()
-        logger.debug("[CadWindow] ImGui hazır")
+        logger.debug("[CadWindow] ImGui hazır (docking enabled, title-bar move only)")
 
     # ------------------------------------------------------------------
     def _wire_callbacks(self) -> None:
@@ -182,6 +187,22 @@ class CadWindow:
     def _cb_key(self, win, key: int, scancode: int, action: int, mods: int) -> None:
         if self.imgui_backend:
             self.imgui_backend.keyboard_callback(win, key, scancode, action, mods)
+
+        io = imgui.get_io()
+        
+        # CapsLock, NumLock gibi yan bitleri temizleyip sadece gerçek modifikatörleri alıyoruz
+        clean_mods = mods & (glfw.MOD_SHIFT | glfw.MOD_CONTROL | glfw.MOD_ALT | glfw.MOD_SUPER)
+        
+        # Motorun binding listesinde bu tuş var mı dinamik olarak soruyoruz
+        is_shortcut = False
+        if callable(self.is_shortcut_registered):
+            is_shortcut = self.is_shortcut_registered(key, clean_mods)
+
+        # Eğer ImGui klavyeyi yakalamışSA VE bu tuş bizim input_bindings'de 
+        # tanımladığımız bir kısayol DEĞİLSE yut; kısayolsa motora gönder!
+        if io.want_capture_keyboard and not is_shortcut:
+            return
+
         if callable(self.on_key):
             self.on_key(key, scancode, action, mods)
 

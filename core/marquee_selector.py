@@ -1,4 +1,6 @@
 # core/marquee_selector.py
+import numpy as np
+
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -6,6 +8,8 @@ logger = CadLogger.get(__name__)
 from pyglm import glm
 
 from domain.element import Area, Frame, Link, Node
+from domain.line import Line
+from domain.polygon import Polygon
 
 
 class MarqueeSelector:
@@ -23,21 +27,29 @@ class MarqueeSelector:
         # Kivy widget koordinat sistemi
         self.win_w = 0
         self.win_h = 0
+        self._selection_camera = None
+        self._selection_size = None
+        self.viewport_name = None
 
     # ------------------------------------------------------------------
     # MARQUEE STATE
     # ------------------------------------------------------------------
 
-    def start_selection(self, x, y):
+    def start_selection(
+        self, x, y, camera=None, viewport_size=None, viewport_name=None,
+    ):
         self.start = (float(x), float(y))
         self.end = (float(x), float(y))
+        self._selection_camera = camera
+        self._selection_size = viewport_size
+        self.viewport_name = viewport_name
         self.is_active = True
 
     def update_selection(self, x, y):
         if self.is_active:
             self.end = (float(x), float(y))
 
-    def end_selection(self):
+    def end_selection(self, camera=None, viewport_size=None, mode=None):
         if not self.is_active or self.start is None or self.end is None:
             self._reset()
             return []
@@ -45,11 +57,14 @@ class MarqueeSelector:
         selected = []
 
         if self._is_drag_valid():
-            selected = self._get_elements()
+            selected = self._get_elements(
+                camera=camera or self._selection_camera,
+                viewport_size=viewport_size or self._selection_size,
+            )
 
             if selected:
-                mode = self.policy.get_marquee_mode()
-                self.sel.select_multiple(selected, mode=mode)
+                selection_mode = mode or self.policy.get_marquee_mode()
+                self.sel.select_multiple(selected, mode=selection_mode)
 
         self._reset()
         return selected
@@ -67,6 +82,9 @@ class MarqueeSelector:
         self.is_active = False
         self.start = None
         self.end = None
+        self._selection_camera = None
+        self._selection_size = None
+        self.viewport_name = None
 
     # ------------------------------------------------------------------
     # GEOMETRY
@@ -85,7 +103,7 @@ class MarqueeSelector:
     # RECTANGLE
     # ------------------------------------------------------------------
 
-    def _get_rect(self):
+    def _get_rect(self, viewport_size=None):
         """
         Mouse ve projection aynı Kivy widget koordinat sistemindedir.
 
@@ -99,8 +117,12 @@ class MarqueeSelector:
             return None
 
         # Widget boyutunu güncel tut
-        self.win_w = float(self.engine.w)
-        self.win_h = float(self.engine.h)
+        size = viewport_size or self._selection_size
+        if size is None:
+            self.win_w = float(self.engine.w)
+            self.win_h = float(self.engine.h)
+        else:
+            self.win_w, self.win_h = map(float, size)
 
         x1, y1 = self.start
         x2, y2 = self.end
@@ -122,35 +144,23 @@ class MarqueeSelector:
     # ELEMENT SELECTION
     # ------------------------------------------------------------------
 
-    def _get_elements(self):
-        rect = self._get_rect()
+    def _get_elements(self, camera=None, viewport_size=None):
+        rect = self._get_rect(viewport_size)
         if rect is None:
             return []
         x1, y1, x2, y2, cross, win_w, win_h = rect
-        cam = self.engine.cam
+        cam = camera or self.engine.cam
         mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
 
         math_model = self.engine.math_model
-        scene = self.engine.scene
-        flt = getattr(math_model, "_render_filter", None)
         selected = []
         
-        # 1. Sahne elemanları (Node, Frame, Area, Link)
         if math_model:
             for element in math_model.all_elements.values():
-                if flt is not None and element.unique_id not in flt:
+                if not self._is_element_visible_and_in_plane(element): # <-- BU KONTROLÜ EKLE
                     continue
                 if self._in_rect(element, (x1, y1), (x2, y2), mvp, win_w, win_h, cross):
                     selected.append(element)
-
-        if scene:
-            for line in scene.lines.values():
-                if self._project_line_in(line, x1, y1, x2, y2, mvp, win_w, win_h, cross):
-                    selected.append(line)
-
-            for poly in scene.polygons.values():
-                if self._polygon_in(poly, x1, y1, x2, y2, mvp, win_w, win_h, cross):
-                    selected.append(poly)
 
         return selected
 
@@ -268,6 +278,16 @@ class MarqueeSelector:
                 win_w,
                 win_h,
                 cross,
+            )
+
+        if isinstance(element, Line):
+            return self._project_line_in(
+                element, *minp, *maxp, mvp, win_w, win_h, cross,
+            )
+
+        if isinstance(element, Polygon):
+            return self._polygon_in(
+                element, *minp, *maxp, mvp, win_w, win_h, cross,
             )
 
         return False
@@ -549,3 +569,33 @@ class MarqueeSelector:
 
     def handle_scroll(self, delta) -> bool:
         return False
+
+    def _is_element_visible_and_in_plane(self, element) -> bool:
+        math_model = self.engine.math_model
+        if math_model:
+            flt = getattr(math_model, "_render_filter", None)
+            if flt is not None and getattr(element, "unique_id", None) not in flt:
+                return False
+
+        is_vis = getattr(element, "is_visible", None)
+        if is_vis is None:
+            is_vis = getattr(element, "visible", True)
+        if not is_vis:
+            return False
+
+        # ★ Viewport plane (varsa) — aktif plane değil
+        plane = None
+        vp = None
+        vm = getattr(self.engine, "viewport_manager", None)
+        if vm is not None and self.viewport_name is not None:
+            vp = vm.get(self.viewport_name)
+            if vp is not None:
+                plane = getattr(vp, "plane", None)
+
+        if plane is not None:
+            math_renderer = getattr(self.engine, "math_model_renderer", None)
+            if math_renderer is not None:
+                cam = self._selection_camera or self.engine.cam
+                return math_renderer._element_in_section(element, cam, plane)
+
+        return True

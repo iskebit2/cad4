@@ -1,5 +1,4 @@
 # core/camera_controller.py
-
 import glfw
 
 from core.input_manager import LEFT, RIGHT, MIDDLE
@@ -13,7 +12,23 @@ class CameraController:
         self.is_active = True
         self._middle_mode = None
 
+    # --------------------------------------------------------------
+    def _active_camera(self):
+        vm = getattr(self.engine, "viewport_manager", None)
+        if vm is not None:
+            vp = vm.active
+            if vp is not None:
+                return vp.camera
+        return self.engine.cam
+
+    def _active_viewport(self):
+        vm = getattr(self.engine, "viewport_manager", None)
+        return vm.active if vm is not None else None
+
+    # --------------------------------------------------------------
     def handle_click(self, x, y, button) -> bool:
+        if not self.is_active:
+            return False
         eng = self.engine
         if button == MIDDLE:
             self._middle_mode = "orbit" if eng.input.is_shift() else "pan"
@@ -24,14 +39,22 @@ class CameraController:
                 return True
             return False
         if button == LEFT:
+            vp = self._active_viewport()
             if eng.marquee:
-                eng.marquee.start_selection(x, y)
+                eng.marquee.start_selection(
+                    x, y,
+                    camera=vp.camera if vp is not None else None,
+                    viewport_size=(vp.width, vp.height) if vp is not None else None,
+                    viewport_name=vp.name if vp is not None else None,
+                )
                 eng.update_world_pos(x, y)
                 eng.start_hover_pick(int(x), int(y))
                 return True
         return False
 
     def handle_release(self, x, y, button) -> bool:
+        if not self.is_active:
+            return False
         eng = self.engine
         if button == MIDDLE:
             self._middle_mode = None
@@ -40,41 +63,75 @@ class CameraController:
             if eng.marquee and eng.marquee.is_active:
                 was_drag = eng.marquee.end_selection()
                 if not was_drag:
-                    eng.handle_pick_from_hover(eng.input.is_ctrl())
+                    vp = self._active_viewport()
+                    if vp is not None:
+                        self._pick_at_viewport(vp, x, y)
+                    else:
+                        eng.handle_pick_from_hover(eng.input.is_ctrl())
                 return True
         return False
 
     def handle_move(self, x, y, dx, dy) -> bool:
+        if not self.is_active:
+            return False
         eng = self.engine
+        cam = self._active_camera()
         if self._middle_mode == "orbit":
-            eng.cam.orbit(dx, dy)
+            cam.orbit(dx, dy)
             eng.clear_hover()
             return True
         if self._middle_mode == "pan":
-            eng.cam.pan(dx, dy)
+            cam.pan(dx, dy)
             eng.clear_hover()
             return True
         if eng.input.state.buttons.get(LEFT) and eng.input.is_shift():
-            eng.cam.orbit(dx, dy)
+            cam.orbit(dx, dy)
             eng.clear_hover()
             return True
         if eng.marquee and eng.marquee.is_active:
             eng.marquee.update_selection(x, y)
             return True
         eng.update_world_pos(x, y)
-        eng.start_hover_pick(int(x), int(y))
+        vp = self._active_viewport()
+        if vp is not None:
+            eng.start_viewport_hover_pick(vp, int(x), int(y))
+        else:
+            eng.start_hover_pick(int(x), int(y))
         return False
 
     def handle_key(self, key, mods) -> bool:
+        if not self.is_active:
+            return False
         if key == glfw.KEY_ESCAPE:
             self._on_escape()
             return True
         return False
 
     def handle_scroll(self, delta) -> bool:
-        self.engine.cam.zoom(delta)
+        if not self.is_active:
+            return False
+        self._active_camera().zoom(delta)
         return True
 
+    def _pick_at_viewport(self, vp, x_px, y_px):
+        eng = self.engine
+        pick_pass = getattr(eng, "pick_pass", None)
+        if pick_pass is None:
+            return
+        element = vp.pick_at(pick_pass, int(x_px), int(y_px))
+        if element is None:
+            if not eng.input.is_ctrl():
+                eng.sel_mgr.clear()
+            return
+
+        # Plane/section filtresi son doğrulama
+        math_renderer = getattr(eng, "math_model_renderer", None)
+        if math_renderer is not None:
+            vp_plane = getattr(vp, "plane", None)
+            if not math_renderer._element_in_section(element, vp.camera, vp_plane):
+                return
+
+        eng.sel_mgr.select(element, additive=eng.input.is_ctrl())
     def _on_escape(self):
         eng = self.engine
         if eng.marquee and eng.marquee.is_active:

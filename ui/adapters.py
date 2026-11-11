@@ -293,11 +293,16 @@ def polygon_to_values(poly, analysis_data=None) -> dict:
     if analysis_data is not None:
         loads = analysis_data.uniform_to_frame_loads
         associated_ids = analysis_data.associated_frame_ids
+        dist_type_value = (
+            poly.dist_type.value
+            if hasattr(poly, "dist_type") else str(analysis_data.transfer_dist_type)
+        )
         values.update({
             "windplane": dict(analysis_data.windplane or {}),
             "assoc_count": len(associated_ids),
             "associated_frame_ids": list(associated_ids),
             "transfer_target": str(analysis_data.transfer_target),
+            "dist_type": dist_type_value,
             "transfer_dist_type": str(analysis_data.transfer_dist_type),
             "is_load_area": bool(analysis_data.is_load_area),
             "assigned_loads_summary": [
@@ -358,8 +363,12 @@ def values_to_polygon(poly, v: dict, analysis_data=None) -> None:
         analysis_data.windplane = v["windplane"]
     if "transfer_target" in v:
         analysis_data.transfer_target = str(v["transfer_target"])
+    if "dist_type" in v and hasattr(poly, "set_dist_type"):
+        poly.set_dist_type(v["dist_type"])
     if "transfer_dist_type" in v:
         analysis_data.transfer_dist_type = str(v["transfer_dist_type"])
+        if hasattr(poly, "set_dist_type"):
+            poly.set_dist_type(v["transfer_dist_type"])
     if "is_load_area" in v:
         analysis_data.is_load_area = bool(v["is_load_area"])
     if "show_zones_direction" in v:
@@ -462,6 +471,7 @@ def _apply_extras(obj, values):
     known.update({
         "windplane", "uniform_to_frame_loads", "associated_frame_ids",
         "assigned_loads", "transfer_target", "transfer_dist_type",
+        "dist_type",
         "is_load_area", "assoc_count", "assigned_loads_summary",
         "vertex_count", "zone_count",
     })

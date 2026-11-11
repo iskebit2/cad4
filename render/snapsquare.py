@@ -218,13 +218,13 @@ class SnapSquareRenderer:
         glEnable(GL_DEPTH_TEST)
 
     def _find_polygon(self, engine, x, y):
-        scene = engine.scene
+        math_model = engine.math_model
         cam = engine.cam
-        if not scene or not cam:
+        if not math_model or not cam:
             return None
         mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
         best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
-        for poly in scene.polygons.values():
+        for poly in math_model.polygons.values():
             if not getattr(poly, "is_visible", True):
                 continue
             cx, cy, cz = poly.centroid()

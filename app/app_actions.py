@@ -218,9 +218,7 @@ class AppActions:
         project = self.app.current_project
         if not (eng and eng.presentation_renderer and project):
             return
-        pr = eng.presentation_renderer
-        pr.update_polygons(list(getattr(project, "polygons", {}).values()))
-        pr.update_lines(list(getattr(project, "lines", {}).values()))
+        
 
     # ------------------------------------------------------------------
     # WIND
@@ -399,11 +397,10 @@ class AppActions:
         eng = self.app.engine
         if eng is None:
             return
-        
         if eng.interaction_renderer:
             eng.interaction_renderer.preview_plane = None
         if eng.renderer is not None and eng.math_model is not None:
-            eng.renderer.update_geo(eng.math_model)
+            eng.update_geo(project)   # ★ kalıyor — active_plane geometri filtresi
         if eng.sel_mgr:
             eng.sel_mgr.clear()
 
@@ -477,18 +474,56 @@ class AppActions:
         if not eng or not eng.math_model:
             return
         scn = eng.math_model
-        if self.app._show_only_ids is None:
+        
+        if getattr(self.app, "_show_only_ids", None) is None:
             selected = scn.get_selected()
             if not selected:
                 return
             self.app._show_only_ids = {e.unique_id for e in selected}
         else:
             self.app._show_only_ids = None
+            
         scn._render_filter = self.app._show_only_ids
-        if self.app._show_only_ids is not None:
-            eng.renderer.update_geo(scn)
-        else:
-            eng.set_scene(self.app.current_project)
+        
+        project = self.app.current_project
+        if project:
+            eng.update_geo(project)
+
+    def toggle_hide_selected(self):
+        eng = self.app.engine
+        if not eng or not eng.math_model:
+            return
+        
+        # Gizli ID'ler havuzunu başlat (eğer yoksa)
+        if not hasattr(self.app, "_hidden_ids") or self.app._hidden_ids is None:
+            self.app._hidden_ids = set()
+
+        selected = eng.math_model.get_selected()
+            
+        if not selected:
+            return
+        
+        # Seçilenlerin ID'lerini mevcut gizli havuzuna ekle (biriktir)
+        new_hidden_ids = {getattr(e, "unique_id", id(e)) for e in selected}
+        self.app._hidden_ids.update(new_hidden_ids)
+
+        # Havuzdaki tüm elemanları görünmez yap
+        hidden_set = self.app._hidden_ids
+        for element in eng.math_model.all_elements.values():
+            if element.unique_id not in hidden_set:
+                continue
+            if hasattr(element, "is_visible"):
+                element.is_visible = False
+            elif hasattr(element, "visible"):
+                element.visible = False
+
+        # Seçimi temizle
+        if eng.sel_mgr:
+            eng.sel_mgr.clear()
+
+        # Görünürlüğü güncelle
+        if eng.project:
+            eng.update_geo(eng.project)
 
     def apply_frame_load(self, frames, load_set):
         if not frames or not load_set.segments:
@@ -536,3 +571,31 @@ class AppActions:
             scn._render_filter = self.app._show_only_ids
         if eng.sel_mgr:
             eng.sel_mgr.clear()
+
+    def show_entire_model(self) -> None:
+        project = self.app.current_project
+        eng = self.app.engine
+        if project is not None:
+            project.deactivate_plane()  # Aktif düzlemi kapat, tüm model görünsün
+            
+        if eng is not None:
+            # Render filtrelerini temizle
+            self.app._show_only_ids = None
+            if eng.math_model:
+                eng.math_model._render_filter = None
+                
+            # Görünürlükleri sıfırla (gizlenenleri aç)
+            if hasattr(self.app, "_hidden_ids"):
+                self.app._hidden_ids = None
+                
+            # Model elemanlarını tekrar görünür yap
+            if eng.math_model:
+                for element in eng.math_model.all_elements.values():
+                    if hasattr(element, "is_visible"):
+                        element.is_visible = True
+                    elif hasattr(element, "visible"):
+                        element.visible = True
+                    
+            # Geometriyi ve görünümü güncelle
+            eng.update_geo(project)
+            eng.fit_view()

@@ -1,14 +1,5 @@
 # render/node_renderer.py
-"""NodeRenderer — shaded mesh ve simple noktaları çizer.
 
-Node'un görsel özellikleri (küp, restraint sembolleri) NodeBuilder tarafından
-üretilir. Bu sınıf sadece GPU buffer yönetimi ve render yapar.
-
-Shaded: standard.vert, isConstantSize=1
-    → aCenter + aPos*factor (ekran boyutu sabit, doğru konum)
-Simple: node.vert, GL_POINTS
-    → aPos global (aCenter = aPos olarak doldurulur)
-"""
 from __future__ import annotations
 
 import ctypes
@@ -23,7 +14,6 @@ from render.base_renderer import BaseRenderer, _final_color_for
 
 
 class NodeRenderer(BaseRenderer[Node]):
-    """Node mesh'lerini ve noktalarını çizer."""
 
     # ---- Simple modda nokta boyutu (piksel) ----
     DEFAULT_POINT_SIZE = 4.0
@@ -81,7 +71,7 @@ class NodeRenderer(BaseRenderer[Node]):
     # ==================================================================
     # SHADED RENDER
     # ==================================================================
-    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None, visible_ids=None):
         if not self.vao or self.icount == 0:
             return
         if model is None:
@@ -108,13 +98,13 @@ class NodeRenderer(BaseRenderer[Node]):
         if loc != -1:
             glUniform1f(loc, self.POINT_SCALE)
 
-        # --- Base render (mvp, model, normalMatrix, view, proj, useVertexColor) ---
-        super().render(mvp, model, cam_pos, view, proj)
+        super().render(mvp, model, cam_pos, view, proj, visible_ids=visible_ids)
 
     # ==================================================================
     # SIMPLE RENDER
     # ==================================================================
-    def render_simple(self, mvp, shader, color=None, alpha=0.5, point_size=None):
+    def render_simple(self, mvp, shader, color=None, alpha=0.5, point_size=None,
+                      visible_ids=None):
         if not self.simple_vao or self.simple_vcount == 0:
             return
         sh = shader or self.shader
@@ -130,7 +120,17 @@ class NodeRenderer(BaseRenderer[Node]):
 
         glBindVertexArray(self.simple_vao)
         glEnable(GL_PROGRAM_POINT_SIZE)
-        glDrawArrays(GL_POINTS, 0, self.simple_vcount)
+        if visible_ids is None:
+            glDrawArrays(GL_POINTS, 0, self.simple_vcount)
+        else:
+            offset = 0
+            for element in self.elements:
+                vc_ = self.elem_to_simple_vcount.get(element.unique_id, 0)
+                if vc_ == 0:
+                    continue
+                if element.unique_id in visible_ids:
+                    glDrawArrays(GL_POINTS, offset, vc_)
+                offset += vc_
         glDisable(GL_PROGRAM_POINT_SIZE)
         glBindVertexArray(0)
 
@@ -230,3 +230,4 @@ class NodeRenderer(BaseRenderer[Node]):
     def cleanup(self):
         self._cleanup_rlines()
         super().cleanup()
+

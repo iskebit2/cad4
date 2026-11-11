@@ -368,15 +368,6 @@ SAP_DIR_CODES = {
 }
 
 class DistType(Enum):
-    """
-    SAP2000 uyumlu dağıtım tipi.
-    
-    - SAP2000'den gelen "One way" → ONE_WAY_U1 (varsayılan)
-    - SAP2000'den gelen "Two way" → TWO_WAY
-    - Bizim eklediklerimiz: ONE_WAY_U1, ONE_WAY_U2
-      SAP2000 UI'da "One-Way Distribution" + "Span Direction" kombinasyonuna
-      karşılık gelir. Enum'da birleştirdik.
-    """
     ONE_WAY    = "One way"           # SAP uyumlu geri kalan (U1 gibi davranır)
     TWO_WAY    = "Two way"           # SAP uyumlu
     ONE_WAY_U1 = "One way (U1)"      # yeni — U1 yönünde taşınır
@@ -384,33 +375,14 @@ class DistType(Enum):
 
     @classmethod
     def from_input(cls, value):
-        """Esnek parse: string/enum/int/None hepsini kabul eder."""
-        if value is None:
-            return cls.ONE_WAY_U1
-
-        # Zaten enum ise
-        if isinstance(value, cls):
-            return value
-
-        # Int
-        if isinstance(value, int):
-            return cls.ONE_WAY_U1 if value == 1 else cls.TWO_WAY
-
+        if value is None: return cls.ONE_WAY_U1
+        if isinstance(value, cls): return value
+        if isinstance(value, int): return cls.ONE_WAY_U1 if value == 1 else cls.TWO_WAY
         val_str = str(value).strip().lower()
-
-        # Özel değerler (bizim eklediklerimiz)
-        if "u1" in val_str:
-            return cls.ONE_WAY_U1
-        if "u2" in val_str:
-            return cls.ONE_WAY_U2
-
-        # SAP uyumlu iki ana değer
-        if "two" in val_str or val_str == "2":
-            return cls.TWO_WAY
-        if "one" in val_str or val_str == "1":
-            return cls.ONE_WAY   # SAP'tan "One way" geldiyse orijinal enum
-
-        # Bilinmeyen → varsayılan
+        if "u1" in val_str: return cls.ONE_WAY_U1
+        if "u2" in val_str: return cls.ONE_WAY_U2
+        if "two" in val_str or val_str == "2": return cls.TWO_WAY
+        if "one" in val_str or val_str == "1": return cls.ONE_WAY
         return cls.ONE_WAY_U1
 
     @property
@@ -423,23 +395,22 @@ class DistType(Enum):
 
     @property
     def span_direction(self) -> str:
-        """'U1' | 'U2' | 'BOTH' — hangi yönde yük akıyor."""
-        if self == DistType.ONE_WAY_U2:
-            return "U2"
-        if self == DistType.ONE_WAY_U1:
-            return "U1"
-        if self == DistType.ONE_WAY:
-            # SAP'tan gelen saf "One way" — U1 gibi davranır
-            return "U1"
+        if self == DistType.ONE_WAY_U2: return "U2"
+        if self == DistType.ONE_WAY_U1: return "U1"
+        if self == DistType.ONE_WAY: return "U1"
         return "BOTH"
 
 class PolygonType(Enum):
     GENERIC = auto()
-    SURFACE_ONEWAY = auto()
-    SURFACE_TWOWAY = auto()
+    SURFACE = auto()
     ZONE = auto()
     SECTION_CUT = auto()
     LOAD_AREA = auto()
+
+# Yük aktaran tipler (helper)
+LOAD_TRANSFER_POLYGON_TYPES = frozenset({
+    PolygonType.SURFACE, PolygonType.ZONE, PolygonType.LOAD_AREA,
+})
 
 ENUM_REGISTRY: dict[str, type[Enum]] = {
     "MatType": MatType,
@@ -454,5 +425,5 @@ ENUM_REGISTRY: dict[str, type[Enum]] = {
     "LoadCaseType": LoadCaseType,
     "ComboType": ComboType,
     "DistType": DistType,
-    "PolygonType": PolygonType
+    "PolygonType": PolygonType,
 }

@@ -137,7 +137,7 @@ class DrawManager:
         line = Line(v1=v1, v2=v2)
         project = self._project()
         if project is not None:
-            project.scene.add_line(line)
+            project.add_line(line)
             self.engine.update_geo(project)
         pr = getattr(self.engine, "presentation_renderer", None)
         if pr:
@@ -184,10 +184,10 @@ class DrawManager:
     def _finalize_polygon(self, polygon: Polygon):
         project = self._project()
         if project is not None:
-            project.scene.add_polygon(polygon)
+            project.add_polygon(polygon)
         pr = getattr(self.engine, "presentation_renderer", None)
         if pr:
-            pr.update_polygons(list(project.scene.polygons.values()))
+            pr.update_polygons(list(project.polygons.values()))
             self._refresh_pr()
         if self.engine.sel_mgr:
             self.engine.sel_mgr.select(polygon)
@@ -202,7 +202,7 @@ class DrawManager:
             return
         project = self._project()
         if project is not None:
-            pr.update_polygons(list(project.scene.polygons.values()))
+            pr.update_polygons(list(project.polygons.values()))
 
     # ------------------------------------------------------------------
     def _find_target(self, x, y):

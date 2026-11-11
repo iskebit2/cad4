@@ -76,7 +76,7 @@ class BaseRenderer(ABC, Generic[T]):
     def __init__(self, shader):
 
         self.shader = shader
-        self.render_mode = 1   # 0 = normal debug, 1 = shaded
+        self.render_mode = 0   # 0 = simple, 1 = shaded (Varsayılan: simple)
         # ---------------------------------------------------------
         # Ana OpenGL buffer'ları
         # ---------------------------------------------------------
@@ -538,7 +538,7 @@ class BaseRenderer(ABC, Generic[T]):
     # SHADED RENDER
     # =============================================================
 
-    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None, visible_ids=None):
         if not self.vao or self.icount == 0:
             return
         if model is None:
@@ -590,38 +590,20 @@ class BaseRenderer(ABC, Generic[T]):
 
         glBindVertexArray(self.vao)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo)
-        glDrawElements(self.draw_mode(), self.icount, GL_UNSIGNED_INT, None)
-        glBindVertexArray(0)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
-
-    # =============================================================
-    # LINE RENDER
-    # =============================================================
-
-    def render_line(self, shader):
-        if not self.vao or not self.line_ebo or self.line_icount == 0:
-            return
-        if shader is None:
-            return
-
-        shader.use()
-
-        # alpha ve useVertexColor'ı ayarla
-        a_loc = shader.get_loc("alpha")
-        if a_loc != -1:
-            glUniform1f(a_loc, 1.0)
-
-        vc_loc = shader.get_loc("useVertexColor")
-        if vc_loc != -1:
-            glUniform1i(vc_loc, 0)
-
-        oc_loc = shader.get_loc("objectColor")
-        if oc_loc != -1:
-            glUniform3f(oc_loc, 1.0, 1.0, 1.0)
-
-        glBindVertexArray(self.vao)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.line_ebo)
-        glDrawElements(GL_LINES, self.line_icount, GL_UNSIGNED_INT, None)
+        if visible_ids is None:
+            glDrawElements(self.draw_mode(), self.icount, GL_UNSIGNED_INT, None)
+        else:
+            for element in self.elements:
+                uid = element.unique_id
+                if uid not in visible_ids or uid not in self.elem_to_idx:
+                    continue
+                i_off, i_cnt = self.elem_to_idx[uid]
+                if i_cnt == 0:
+                    continue
+                glDrawElements(
+                    self.draw_mode(), i_cnt, GL_UNSIGNED_INT,
+                    ctypes.c_void_p(i_off * 4),
+                )
         glBindVertexArray(0)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
@@ -629,7 +611,8 @@ class BaseRenderer(ABC, Generic[T]):
     # SIMPLE RENDER
     # =============================================================
 
-    def render_simple(self, mvp, shader, color=None, alpha=0.5):
+    def render_simple(self, mvp, shader, color=None, alpha=0.5,
+                      visible_ids=None):
         if not self.simple_vao or self.simple_vcount == 0:
             return
         shader.use()
@@ -654,7 +637,17 @@ class BaseRenderer(ABC, Generic[T]):
         elif self.simple_draw_mode == GL_POINTS:
             glEnable(GL_PROGRAM_POINT_SIZE)
 
-        glDrawArrays(self.simple_draw_mode, 0, self.simple_vcount)
+        if visible_ids is None:
+            glDrawArrays(self.simple_draw_mode, 0, self.simple_vcount)
+        else:
+            offset = 0
+            for element in self.elements:
+                vc_ = self.elem_to_simple_vcount.get(element.unique_id, 0)
+                if vc_ == 0:
+                    continue
+                if element.unique_id in visible_ids:
+                    glDrawArrays(self.simple_draw_mode, offset, vc_)
+                offset += vc_
 
         if self.simple_draw_mode == GL_TRIANGLES:
             glDisable(GL_POLYGON_OFFSET_FILL)
@@ -811,18 +804,16 @@ class FrameRenderer(BaseRenderer[Frame]):
     def draw_mode(self):
         return GL_TRIANGLES
 
-    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None,
+               visible_ids=None):
         self.shader.use()
-
         loc = self.shader.get_loc("isConstantSize")
         if loc != -1:
             glUniform1i(loc, 0)
-
         a = self.shader.get_loc("alpha")
         if a != -1:
             glUniform1f(a, 0.8)
-
-        super().render(mvp, model, cam_pos, view, proj)
+        super().render(mvp, model, cam_pos, view, proj, visible_ids=visible_ids)
 
 
 # =================================================================
@@ -872,22 +863,19 @@ class AreaRenderer(BaseRenderer[Area]):
     def set_lighting(self, l):
         self.lighting = l
 
-    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None,
+               visible_ids=None):
         self.shader.use()
-
         loc = self.shader.get_loc("isConstantSize")
         if loc != -1:
             glUniform1i(loc, 0)
-
         a = self.shader.get_loc("alpha")
         if a != -1:
             glUniform1f(a, 0.4)
-
         mode_loc = self.shader.get_loc("renderMode")
         if mode_loc != -1:
             glUniform1i(mode_loc, self.render_mode)
-        
-        super().render(mvp, model, cam_pos, view, proj)
+        super().render(mvp, model, cam_pos, view, proj, visible_ids=visible_ids)
 
 
 # =================================================================
@@ -927,11 +915,11 @@ class LinkRenderer(BaseRenderer[Link]):
     def draw_mode(self):
         return GL_TRIANGLES
 
-    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None):
+    def render(self, mvp, model=None, cam_pos=None, view=None, proj=None,
+               visible_ids=None):
         self.shader.use()
-
         loc = self.shader.get_loc("isConstantSize")
         if loc != -1:
             glUniform1i(loc, 0)
+        super().render(mvp, model, cam_pos, view, proj, visible_ids=visible_ids)
 
-        super().render(mvp, model, cam_pos, view, proj)

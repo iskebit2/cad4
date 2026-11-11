@@ -251,7 +251,7 @@ class _PatternSubPanel:
                     break
 
         # Polygon yükleri
-        for poly in self.project.scene.polygons.values():
+        for poly in self.project.math_model.polygons.values():
             analysis_data = self.project.polygon_analysis_data(poly, create=False)
             for load in getattr(analysis_data, "assigned_loads", None) or []:
                 if getattr(load, "pattern_name", None) == pattern:

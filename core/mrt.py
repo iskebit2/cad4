@@ -53,18 +53,42 @@ class MRTFramebuffer:
 
     def clear(self):
         self.bind()
+        glDrawBuffer(GL_COLOR_ATTACHMENT0)
         glClearColor(0.15, 0.15, 0.15, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        zero = np.array([0], dtype=np.uint32)
-        glClearBufferuiv(GL_COLOR, 1, zero)
+        glDrawBuffer(GL_COLOR_ATTACHMENT1)
+        zero = np.array([0, 0, 0, 0], dtype=np.uint32)
+        glClearBufferuiv(GL_COLOR, 0, zero)
+        glDrawBuffer(GL_COLOR_ATTACHMENT0)
 
-    def blit_to(self, target_fbo):
+    def blit_to(
+        self, target_fbo, target_w=None, target_h=None, copy_id=False,
+        source_w=None, source_h=None,
+    ):
+        tw = int(target_w) if target_w else self.w
+        th = int(target_h) if target_h else self.h
+        sw = int(source_w) if source_w else self.w
+        sh = int(source_h) if source_h else self.h
         glBindFramebuffer(GL_READ_FRAMEBUFFER, self.fbo)
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target_fbo)
+
+        # Color
         glReadBuffer(GL_COLOR_ATTACHMENT0)
-        glBlitFramebuffer(0, 0, self.w, self.h,
-                          0, 0, self.w, self.h,
+        glDrawBuffer(GL_COLOR_ATTACHMENT0)
+        glBlitFramebuffer(0, 0, sw, sh,
+                          0, 0, tw, th,
                           GL_COLOR_BUFFER_BIT, GL_NEAREST)
+
+        # ID (opsiyonel)
+        if copy_id:
+            
+            glReadBuffer(GL_COLOR_ATTACHMENT1)
+            glDrawBuffer(GL_COLOR_ATTACHMENT1)
+            glBlitFramebuffer(0, 0, sw, sh,
+                              0, 0, tw, th,
+                              GL_COLOR_BUFFER_BIT, GL_NEAREST)
+            glDrawBuffer(GL_COLOR_ATTACHMENT0)
+
         glBindFramebuffer(GL_FRAMEBUFFER, target_fbo)
 
     def resize(self, w, h):

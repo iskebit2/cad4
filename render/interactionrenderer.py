@@ -30,33 +30,43 @@ class InteractionRenderer:
         self._dyn_vbo = None
         self.preview_plane = None
 
-    def render(self, engine, w, h):
+    def render(self, engine, w, h, camera=None, viewport_name=None,
+               mouse_pos=None):
         """Tüm etkileşim ve anlık preview görsellerini çizer."""
         if not engine:
             return
+        camera = camera or engine.cam
+        if mouse_pos is None and viewport_name is None and engine.input:
+            mouse_pos = (
+                engine.input.state.mouse_pos.x,
+                engine.input.state.mouse_pos.y,
+            )
 
-        # 1. Marquee (Seçim Kutusu) Çizimi
-        if engine.marquee and engine.marquee.is_active:
-            self._draw_marquee(engine.marquee, w, h)
+        # # 1. Marquee (Seçim Kutusu) Çizimi
+        # if (
+        #     engine.marquee and engine.marquee.is_active
+        #     and engine.marquee.viewport_name == viewport_name
+        # ):
+        #     self._draw_marquee(engine.marquee, w, h)
 
         # 2. Snap (Yakalama) Göstergesi
         if engine.snap and getattr(engine, "hover_visual_enabled", True):
-            self._draw_snap(engine, w, h)
+            self._draw_snap(engine, w, h, camera, mouse_pos)
 
         # 3. Çizim Önizlemesi (DrawingPreview)
         if engine.draw_mgr and engine.draw_mgr.is_active:
-            mvp = engine.cam.get_projection_matrix() @ engine.cam.get_view_matrix()
+            mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             engine.draw_mgr.render_preview(mvp, engine.preview_s)
             
         # 4. plane cre
         tool = getattr(engine, "plane_draw_mgr", None)
         if tool is not None and tool.is_active:
-            mvp = engine.cam.get_projection_matrix() @ engine.cam.get_view_matrix()
+            mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             tool.render(mvp)
 
         # 5
-        if self.preview_plane is not None and engine.cam is not None:
-            mvp = engine.cam.get_projection_matrix() @ engine.cam.get_view_matrix()
+        if self.preview_plane is not None and camera is not None:
+            mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             self._draw_plane_preview(self.preview_plane, mvp)
 
     def _draw_marquee(self, marquee, w, h):
@@ -123,23 +133,23 @@ class InteractionRenderer:
             if depth_was_on:
                 glEnable(GL_DEPTH_TEST)
 
-    def _draw_snap(self, engine, w, h):
+    def _draw_snap(self, engine, w, h, camera, mouse_pos):
         snap = engine.snap
         if snap is None or not getattr(engine, "hover_visual_enabled", True):
             return
 
-        if self._draw_tool_snap(engine, snap, w, h):
+        if self._draw_tool_snap(engine, snap, w, h, camera):
             return
-        if self._draw_hover_snap(engine, snap, w, h):
+        if self._draw_hover_snap(engine, snap, w, h, camera, mouse_pos):
             return
 
-    def _draw_tool_snap(self, engine, snap, w, h) -> bool:
+    def _draw_tool_snap(self, engine, snap, w, h, camera) -> bool:
         for tool in (getattr(engine, "plane_draw_mgr", None),
                     getattr(engine, "draw_mgr", None)):
             if tool is None or not tool.is_active or tool.hover_node is None:
                 continue
             node = tool.hover_node
-            screen = self._project(engine, node.x, node.y, node.z, w, h)
+            screen = self._project(camera, node.x, node.y, node.z, w, h)
             if screen is None:
                 continue
             snap_type = getattr(tool, "hover_snap_type", None) or getattr(tool, "hover_type", "node")
@@ -147,18 +157,17 @@ class InteractionRenderer:
             return True
         return False
 
-    def _draw_hover_snap(self, engine, snap, w, h) -> bool:
-        if engine.hover_id <= 0:
+    def _draw_hover_snap(self, engine, snap, w, h, camera, mouse_pos) -> bool:
+        if engine.hover_id <= 0 or mouse_pos is None:
             return False
         element = engine._find_element(engine.hover_id)
         if element is None:
             return False
 
-        mx = engine.input.state.mouse_pos.x
-        my = engine.input.state.mouse_pos.y
+        mx, my = mouse_pos
 
         if isinstance(element, Node):
-            screen = self._project(engine, element.x, element.y, element.z, w, h)
+            screen = self._project(camera, element.x, element.y, element.z, w, h)
             if screen is not None:
                 snap.draw_snap(screen[0], screen[1], w, h, active=True, snap_type="node")
                 return True
@@ -167,8 +176,8 @@ class InteractionRenderer:
         return True
 
     @staticmethod
-    def _project(engine, x, y, z, w, h):
-        mvp = engine.cam.get_projection_matrix() @ engine.cam.get_view_matrix()
+    def _project(camera, x, y, z, w, h):
+        mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
         clip = mvp * glm.vec4(x, y, z, 1.0)
         if clip.w <= 0:
             return None

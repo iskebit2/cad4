@@ -1,19 +1,5 @@
 # loads/wind_zone_distribution_service.py
-"""
-WindZoneDistributionService — Rüzgar zone'larını frame'lere dağıtır.
 
-Mimari:
-    SURFACE_ONEWAY / SURFACE_TWOWAY  →  AlignmentService ile frame'lere bağlanır
-                                            ↓
-                                         surface.associated_frame_ids
-                                            ↓
-    ZONE  →  zone.windplane["surface"] referansı ile surface'ı bulur
-         →  surface'ın bağlı frame'lerine yük atar
-         →  zone.coords kendi sınırı olarak kullanılır
-
-Pattern şeması: WIND_{NN}_{KIND}_{CPE}_{CPI}
-Örnek:          WIND_01_CPE10_MN_P
-"""
 from __future__ import annotations
 
 import numpy as np
@@ -75,22 +61,17 @@ class WindZoneDistributionService:
         tributary_width: float = 1.0,
         clear_existing: bool = True,
     ) -> int:
-        """
-        Sahnedeki tüm ZONE poligonlarını işler ve yükleri frame'lere dağıtır.
-
-        Returns: atanan toplam segment sayısı
-        """
+        
         if project is None or project.scene is None or project.math_model is None:
             logger.debug("[WindZone] Project, Scene veya MathModel yok.")
             return 0
-        scene = project.scene
         math_model = project.math_model
 
         if kind not in (cls.KIND_CPE10, cls.KIND_CPE1):
             raise ValueError(f"Geçersiz kind: {kind!r}. "
                              f"Beklenen: {cls.KIND_CPE10} veya {cls.KIND_CPE1}")
 
-        zones = cls._collect_zones(scene, math_model)
+        zones = cls._collect_zones(math_model)
         if not zones:
             logger.debug("[WindZone] Zone poligonu yok.")
             return 0
@@ -111,7 +92,7 @@ class WindZoneDistributionService:
         total = 0
         for zone in zones:
             n = cls._distribute_one_zone(
-                project, scene, math_model, zone,
+                project, math_model, zone,
                 kind=kind,
                 cpi_pos=cpi_positive,
                 cpi_neg=cpi_negative,
@@ -139,7 +120,7 @@ class WindZoneDistributionService:
     # SURFACE BULMA
     # ==================================================================
     @classmethod
-    def _find_surface(cls, scene, surface_ref) -> Optional[Any]:
+    def _find_surface(cls, math_model, surface_ref) -> Optional[Any]:
         """
         zone.windplane["surface"] → surface Polygon.
         surface_ref: unique_id'nin string veya int hali.
@@ -152,19 +133,17 @@ class WindZoneDistributionService:
             sid = int(surface_ref)
         except (ValueError, TypeError):
             # unique_id fallback
-            for poly in scene.polygons.values():
+            for poly in math_model.polygons.values():
                 if str(getattr(poly, "unique_id", "")) == str(surface_ref):
                     pt = getattr(poly, "poly_type", None)
-                    if pt in (PolygonType.SURFACE_ONEWAY,
-                              PolygonType.SURFACE_TWOWAY):
+                    if pt in (PolygonType.SURFACE):
                         return poly
             return None
 
-        for poly in scene.polygons.values():
+        for poly in math_model.polygons.values():
             if poly.unique_id == sid:
                 pt = getattr(poly, "poly_type", None)
-                if pt in (PolygonType.SURFACE_ONEWAY,
-                          PolygonType.SURFACE_TWOWAY):
+                if pt in (PolygonType.SURFACE):
                     return poly
                 logger.debug(
                     f"[WindZone] surface_ref={surface_ref} bulundu ama tip "
@@ -179,7 +158,7 @@ class WindZoneDistributionService:
     # ==================================================================
     @classmethod
     def _distribute_one_zone(
-        cls, project, scene, math_model, zone, *,
+        cls, project, math_model, zone, *,
         kind: str,
         cpi_pos: float,
         cpi_neg: float,
@@ -233,7 +212,7 @@ class WindZoneDistributionService:
             logger.debug(f"[WindZone] zone={zone_id} windplane'de 'surface' yok")
             return 0
 
-        surface_poly = cls._find_surface(scene, surface_ref)
+        surface_poly = cls._find_surface(math_model, surface_ref)
         if surface_poly is None:
             logger.debug(f"[WindZone] zone={zone_id} surface='{surface_ref}' "
                            f"bulunamadı")
@@ -477,10 +456,10 @@ class WindZoneDistributionService:
     # ZONE TOPLAMA
     # ==================================================================
     @classmethod
-    def _collect_zones(cls, scene, math_model) -> List[Any]:
-        """Sahnedeki ZONE poligonlarını döndürür."""
+    def _collect_zones(cls, math_model) -> List[Any]:
+        """MathModel içindeki ZONE poligonlarını döndürür."""
         zones = []
-        for poly in scene.polygons.values():
+        for poly in math_model.polygons.values():
             pt = getattr(poly, "poly_type", None)
             analysis_data = math_model.polygon_analysis.get(poly.unique_id)
 

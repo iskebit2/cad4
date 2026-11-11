@@ -1,604 +1,417 @@
-"""User-controlled polygon-to-frame area-load transfer panel."""
+# ui/area_to_frame_panel.py
+"""Area to Frame paneli — imgui UI katmanı. İş mantığı tools/area_to_frame.py'de."""
 from __future__ import annotations
-from copy import deepcopy
 
-import numpy as np
 from imgui_bundle import imgui
 
-from core.units import Dimension, UnitSystem, convert_value
-from data.enums import DistType, LoadDirection, PolygonType
-from domain.definition import AreaUniformLoad, LoadPattern
-from domain.element import Frame, Node
-from domain.math_model import PolygonAnalysisData
+from domain.element import Frame
 from domain.polygon import Polygon
-from tools.polygon_load_transfer import  build_polygon_frame_loads
-from logging_config import CadLogger
+from tools.area_to_frame import AreaToFrame, AssocDraft, AssocPreview, TransferResult
 from ui.base_panel import BasePanel
+from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
 
 class AreaToFramePanel(BasePanel):
+
     def __init__(self, on_transfer_complete=None):
         super().__init__(
             title="Area to Frame",
             width=520,
-            height=560,
+            height=620,
             pos_first_use=(420, 140),
         )
         self.project = None
-        self.math_model = None
-        self.selection_polygons: list[Polygon] = []
+        self.service: AreaToFrame | None = None
         self.on_transfer_complete = on_transfer_complete
+
+        # UI state
         self._selected_polygon_id: int | None = None
-        self._status = ""
+        self._draft: AssocDraft | None = None
+        self._status: str = ""
+        self._show_all_frames: bool = False
+        self._step_buffer: float | None = None
+        self._bins_buffer: int | None = None
+
+        # Wind zone UI tercihleri
         self._selected_wind_zone: tuple[str, int] | None = None
         self._wind_cpe_index = 0
         self._cpi_positive = 0.2
         self._cpi_negative = -0.3
 
-        self._step: float = 200.0
-        self._step_initialized: bool = False
-        self._n_bins: int = 12
+        # Renderer preview
+        self._preview_active: bool = False
 
+    # ------------------------------------------------------------------
+    # Yaşam döngüsü — preview'i kapat
+    # ------------------------------------------------------------------
+    def open(self, **kwargs):
+        super().open(**kwargs)
+
+    def close(self):
+        self._clear_preview()
+        super().close()
+
+    # ------------------------------------------------------------------
     def set_context(self, ctx: dict):
         super().set_context(ctx)
-        self.project = ctx.get("project")
-        self.math_model = (
-            self.project.math_model if self.project is not None else None
-        )
+        project = ctx.get("project")
+        self.project = project
+        self.service = AreaToFrame(project) if project is not None else None
 
-        if self.project is not None and not self._step_initialized:
-            self._step = convert_value(
-                Dimension.LENGTH, 200.0, UnitSystem.N_MM,
-                self.project.unit_system,
-            )
-            self._step_initialized = True
-
-        self.selection_polygons = [
-            item for item in (ctx.get("selection_polygons") or [])
-            if isinstance(item, Polygon)
-        ]
-        polygons = self._polygons()
-        available_ids = {int(item.unique_id) for item in polygons}
-        selected_ids = {
-            int(item.unique_id) for item in self.selection_polygons
-        }
+        polygons = self.service.list_polygons() if self.service else []
+        available_ids = {int(p.unique_id) for p in polygons}
         if self._selected_polygon_id not in available_ids:
             self._selected_polygon_id = (
-                next(iter(selected_ids & available_ids), None)
-                or (int(polygons[0].unique_id) if polygons else None)
+                int(polygons[0].unique_id) if polygons else None
             )
+            self._draft = None
+            self._step_buffer = None
+            self._bins_buffer = None
+            self._clear_preview()
 
-    def _polygons(self) -> list[Polygon]:
-        if self.math_model is None:
-            return []
-        return sorted(
-            self.project.scene.polygons.values(),
-            key=lambda polygon: (
-                polygon.label or "", int(polygon.unique_id),
-            ),
-        )
-
-    def _selected_polygon(self) -> Polygon | None:
-        return next(
-            (
-                polygon for polygon in self._polygons()
-                if int(polygon.unique_id) == self._selected_polygon_id
-            ),
-            None,
-        )
-
+    # ------------------------------------------------------------------
     def draw_content(self):
-        if self.project is None or self.math_model is None:
+        if self.service is None:
             imgui.text_colored(
                 imgui.ImVec4(0.95, 0.55, 0.4, 1.0),
-                "Proje veya sahne bağlı değil.",
+                "Proje bağlı değil.",
             )
+            self._clear_preview()
             return
-
-        polygons = self._polygons()
+        polygons = self.service.list_polygons()
         if not polygons:
-            imgui.text("Sahnede aktarım yapılabilecek polygon yok.")
+            imgui.text("Sahnede polygon yok.")
+            self._clear_preview()
             return
 
-        # --- Polygon seçimi ---
-        selected = self._selected_polygon()
+        selected = self._ensure_selected(polygons)
+        if selected is None:
+            self._clear_preview()
+            return
+
+        self._draw_toolbar(selected)
+        imgui.separator()
+
+        self._draw_polygon_selector(polygons, selected)
+        self._draw_summary(selected)
+        imgui.separator()
+
+        self._draw_assoc_list(selected)
+        imgui.separator()
+
+        self._draw_wind_zone_section(selected)
+        imgui.separator()
+
+        self._draw_grid_section()
+        imgui.separator()
+
+        self._draw_transfer_button(selected)
+
+        if self._status:
+            imgui.spacing()
+            imgui.text_wrapped(self._status)
+
+    # ------------------------------------------------------------------
+    def _ensure_selected(self, polygons: list[Polygon]) -> Polygon | None:
+        selected = self.service.get_polygon(self._selected_polygon_id)
         if selected is None:
             selected = polygons[0]
             self._selected_polygon_id = int(selected.unique_id)
+        if self._draft is None or self._draft.polygon_id != int(selected.unique_id):
+            self._draft = self.service.new_draft(selected)
+            self._sync_preview()
+        return selected
 
+    # ------------------------------------------------------------------
+    def _draw_toolbar(self, polygon: Polygon):
+        draft = self._draft
+        has_draft_changes = draft is not None and draft.dirty
+
+        if not has_draft_changes:
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.25, 0.25, 0.25, 1.0),
+            )
+        if imgui.button("Apply##af_apply", imgui.ImVec2(80, 0)) and has_draft_changes:
+            info = self.service.apply(polygon, draft)
+            self._status = (
+                f"{info['associated']} frame assoc uygulandı, "
+                f"{info['excluded']} hariç."
+            )
+            self._sync_preview()
+        if not has_draft_changes:
+            imgui.pop_style_color(1)
+        imgui.same_line()
+
+        if imgui.button("Cancel##af_cancel", imgui.ImVec2(70, 0)):
+            if draft is not None:
+                self.service.cancel(polygon, draft)
+            self._status = "Draft iptal edildi."
+            self._sync_preview()
+        imgui.same_line()
+
+        if imgui.button("Auto Assoc##af_auto", imgui.ImVec2(110, 0)):
+            if draft is not None:
+                info = self.service.auto_assoc(polygon, draft, keep_excluded=True)
+                self._status = (
+                    f"Auto assoc: {info['added']} aday, "
+                    f"{info['excluded']} hariç."
+                )
+                self._sync_preview()
+        imgui.same_line()
+
+        if imgui.button("Clear##af_clear", imgui.ImVec2(60, 0)):
+            if draft is not None:
+                self.service.clear_draft(draft)
+            self._status = "Draft temizlendi."
+            self._sync_preview()
+        imgui.same_line()
+
+        selected_frames = self._selected_frames_from_scene()
+        can_add = bool(selected_frames) and draft is not None
+        if not can_add:
+            imgui.push_style_color(
+                imgui.Col_.button, imgui.ImVec4(0.25, 0.25, 0.25, 1.0),
+            )
+        if imgui.button("Seçilileri Ekle##af_addsel", imgui.ImVec2(120, 0)) and can_add:
+            ids = [int(f.unique_id) for f in selected_frames]
+            info = self.service.add_selected_frames(polygon, draft, ids)
+            self._status = f"{info['added']} seçili frame eklendi."
+            self._sync_preview()
+        if not can_add:
+            imgui.pop_style_color(1)
+
+    # ------------------------------------------------------------------
+    def _draw_polygon_selector(self, polygons: list[Polygon], selected: Polygon):
         current_label = self._polygon_label(selected)
-        if imgui.begin_combo("Polygon", current_label):
-            for polygon in polygons:
-                is_selected = int(polygon.unique_id) == self._selected_polygon_id
-                if imgui.selectable(self._polygon_label(polygon), is_selected)[1]:
-                    self._selected_polygon_id = int(polygon.unique_id)
-                    selected = polygon
+        if imgui.begin_combo("Polygon##af_poly", current_label):
+            for p in polygons:
+                is_sel = int(p.unique_id) == int(selected.unique_id)
+                if imgui.selectable(self._polygon_label(p), is_sel)[1]:
+                    self._selected_polygon_id = int(p.unique_id)
+                    self._draft = None
+                    self._status = ""
             imgui.end_combo()
 
-        # --- Polygon yükleri ---
-        self._draw_polygon_loads(selected)
-        imgui.separator()
-
-        # --- Frame assoc ---
-        self._draw_frame_associations(selected)
-        imgui.separator()
-
-        # --- Tributary dağıtımı ---
-        distribution_labels = ["One way (U1)", "One way (U2)", "Two way"]
-        distribution_values = ["one_way_u1", "one_way_u2", "two_way"]
-        analysis_data = self.project.polygon_analysis_data(selected)
-        current_dist_idx = self._distribution_index(
-            analysis_data.transfer_dist_type,
+        imgui.same_line()
+        imgui.text_colored(
+            imgui.ImVec4(0.6, 0.85, 0.7, 1.0),
+            f"Tip: {selected.poly_type.name}   Yön: {selected.dist_type.value}",
         )
-        changed, new_dist_idx = imgui.combo(
-            "Tributary dağıtımı",
-            current_dist_idx,
-            distribution_labels,
-        )
-        if changed:
-            analysis_data.transfer_dist_type = distribution_values[new_dist_idx]
-            self.project.math_model.mark_dirty()
 
-        # --- Rüzgar zone aktarımı ---
-        self._draw_wind_zone_transfers(selected)
-        imgui.separator()
-
-        # --- Grid ayarları (proje biriminde) ---
-        self._draw_grid_settings()
-        imgui.separator()
-
-        # --- Durum + Aktar ---
-        if self._status:
-            imgui.text_wrapped(self._status)
-
-        if analysis_data.assigned_loads and imgui.button(
-            "Seçili frame'lere aktar##area_to_frame",
-            imgui.ImVec2(-1, 0),
-        ):
-            try:
-                self._transfer(selected)
-            except (TypeError, ValueError) as error:
-                self._status = str(error)
-                logger.debug("[AreaToFrame] %s", error)
-            except Exception:
-                self._status = "Alan yükü aktarımı başarısız oldu; log'a bakın."
-                logger.exception("[AreaToFrame] Aktarım başarısız.")
-
-
-    def _draw_grid_settings(self) -> None:
-        """Grid adımı ve bin sayısı — proje biriminde."""
-        length_unit = self.project.unit_system.length_unit
-
-        # 1 metre'nin proje birimindeki karşılığı
-        one_meter = convert_value(
-            Dimension.LENGTH, 1.0, UnitSystem.N_M,
-            self.project.unit_system,
-        )
-        step_min = 0.05 * one_meter   # 5 cm
-        step_max = 2.00 * one_meter   # 2 m
-
-        # Grid adımı
-        imgui.text(f"Grid adımı ({length_unit})")
-        imgui.same_line(180)
-        imgui.push_item_width(120)
-        _, self._step = imgui.input_float(
-            "##step", self._step,
-            0.01 * one_meter, 0.1 * one_meter,
-        )
-        imgui.pop_item_width()
-        self._step = max(step_min, min(step_max, self._step))
-
-        # Bin sayısı
-        imgui.text("Bin sayısı")
-        imgui.same_line(180)
-        imgui.push_item_width(120)
-        _, self._n_bins = imgui.input_int("##n_bins", self._n_bins)
-        imgui.pop_item_width()
-        self._n_bins = max(3, min(50, self._n_bins))
-
-    def _draw_polygon_loads(self, polygon: Polygon):
-        analysis_data = self.project.polygon_analysis_data(polygon)
-        transfers = self.project.loads.area_load_transfers_for_polygon(
-            int(polygon.unique_id),
-        )
+    def _draw_summary(self, polygon: Polygon):
+        summary = self.service.polygon_loads_summary(polygon)
+        unit = self.service.area_load_unit()
         imgui.text(
-            f"Atanmış alan yükü: {len(analysis_data.assigned_loads)}"
+            f"Atanmış alan yükü: {len(summary['assigned_loads'])}"
         )
-        for load in analysis_data.assigned_loads:
-            unit = self._area_load_unit()   # "kN/m²" veya "N/mm²"
-            imgui.bullet_text(f"{load.pattern_name} | {load.value:.3f} {unit}")
-
-        wind_transfers = [
-            item for item in transfers
-            if item.get("source_type") == "wind_zone"
-        ]
-        for item in wind_transfers:
+        for load in summary["assigned_loads"]:
+            imgui.bullet_text(
+                f"{load.pattern_name} | {load.value:.3f} {unit}"
+            )
+        for item in summary["wind_transfers"]:
             imgui.bullet_text(
                 f"Rüzgar {item.get('direction_key')} / "
                 f"{item.get('zone_label')} / {item.get('cpe_kind')}"
             )
-        if not analysis_data.assigned_loads and not wind_transfers:
+        if (not summary["assigned_loads"]
+                and not summary["wind_transfers"]):
             imgui.text_disabled(
                 "Bu polygon üzerinde Load Manager'a aktarılmış yük yok."
             )
-        if transfers:
-            transferred = sorted({
-                int(frame_id)
-                for item in transfers
-                for frame_id in item.get("transferred_frame_ids", ())
-            })
-            if transferred:
-                imgui.text_disabled(
-                    "Son aktarım frame ID'leri: "
-                    + ", ".join(str(item) for item in transferred)
-                )
+        if summary["transferred_frame_ids"]:
+            imgui.text_disabled(
+                "Son aktarım frame ID'leri: "
+                + ", ".join(str(i) for i in summary["transferred_frame_ids"])
+            )
 
-    def _draw_frame_associations(self, polygon: Polygon):
-        """Seçili frame'leri polygona assoc et."""
-        analysis_data = self.project.polygon_analysis_data(polygon)
-        
-        # Sahnede seçili frame'ler
-        selected_frames = self._selected_frames_from_scene()
-        
+    # ------------------------------------------------------------------
+    def _draw_assoc_list(self, polygon: Polygon):
+        draft = self._draft
+        if draft is None:
+            return
+
         imgui.text_colored(
             imgui.ImVec4(0.85, 0.9, 0.95, 1.0),
-            "Aktarım Hedefi",
+            f"Hedef Frame'ler  (assoc: {len(draft.associated)} | "
+            f"hariç: {len(draft.excluded)})",
         )
-        
-        # Sahnede kaç frame seçili
-        if selected_frames:
-            ids_str = ", ".join(str(f.unique_id) for f in selected_frames[:8])
-            if len(selected_frames) > 8:
-                ids_str += f" ... (+{len(selected_frames) - 8})"
-            imgui.text(f"Sahnede seçili: {len(selected_frames)} frame")
-            imgui.text_colored(
-                imgui.ImVec4(0.6, 0.85, 0.7, 1.0),
-                f"  ID: {ids_str}",
-            )
+        imgui.text_colored(
+            imgui.ImVec4(0.6, 0.7, 0.6, 1.0),
+            "Renk: yeşil=assoc, kırmızı=hariç, gri=ilgisiz, sarı=seçili",
+        )
+
+        frames = self.service.list_frames()
+        if not frames:
+            imgui.text_disabled("Sahnede frame yok.")
+            return
+
+        imgui.checkbox("Tümünü göster##af_all", self._show_all_frames)
+        if self._show_all_frames:
+            visible_ids = sorted(frames.keys())
         else:
-            imgui.text_colored(
-                imgui.ImVec4(0.9, 0.6, 0.5, 1.0),
-                "Sahnede frame seçili değil.",
+            visible_ids = sorted(draft.associated | draft.excluded)
+
+        imgui.begin_child(
+            "##af_assoc_list", imgui.ImVec2(0, 220),
+            imgui.ChildFlags_.borders,
+        )
+        if not visible_ids:
+            imgui.text_disabled(
+                "Liste boş — 'Auto Assoc' veya 'Seçilileri Ekle' kullanın."
             )
-        
-        # Ata butonu
-        can_assign = bool(selected_frames)
-        if not can_assign:
+        for uid in visible_ids:
+            fr = frames.get(uid)
+            if fr is None:
+                continue
+            on = uid in draft.associated
+            label = fr.label or f"Frame {uid}"
+            changed, new_on = imgui.checkbox(
+                f"{label}  (id={uid})##af_{uid}", on,
+            )
+            if changed:
+                self.service.toggle(draft, uid, bool(new_on))
+                self._sync_preview()
+        imgui.end_child()
+
+    # ------------------------------------------------------------------
+    def _draw_wind_zone_section(self, polygon: Polygon):
+        entries = self.service.list_wind_zones(polygon)
+        imgui.text("Rüzgar zone aktarımı")
+        if not entries:
+            imgui.text_disabled("Bu polygon için wind zone yok.")
+            return
+
+        entry_keys = [(k, i) for k, i, _ in entries]
+        if self._selected_wind_zone not in entry_keys:
+            self._selected_wind_zone = entry_keys[0]
+        sel = next(
+            e for e in entries if (e[0], e[1]) == self._selected_wind_zone
+        )
+        direction_key, zone_index, zone = sel
+
+        label = f"{direction_key} | {zone.label} ({zone_index + 1})"
+        if imgui.begin_combo("Wind zone##af_wz", label):
+            for key, idx, item in entries:
+                is_sel = (key, idx) == self._selected_wind_zone
+                text = f"{key} | {item.label} ({idx + 1})"
+                if imgui.selectable(text, is_sel)[1]:
+                    self._selected_wind_zone = (key, idx)
+            imgui.end_combo()
+
+        _, self._wind_cpe_index = imgui.combo(
+            "Cpe türü##af_cpe", self._wind_cpe_index, ["Cpe10", "Cpe1"],
+        )
+        _, self._cpi_positive = imgui.input_float(
+            "Cpi (+)##af_cpip", self._cpi_positive,
+        )
+        _, self._cpi_negative = imgui.input_float(
+            "Cpi (-)##af_cpim", self._cpi_negative,
+        )
+        if imgui.button("Rüzgar zone aktar##af_wind_transfer"):
+            cpe_kind = "cpe10" if self._wind_cpe_index == 0 else "cpe1"
+            result = self.service.transfer_wind_zone(
+                polygon, direction_key, zone_index, zone,
+                cpe_kind=cpe_kind,
+                cpi_pos=self._cpi_positive,
+                cpi_neg=self._cpi_negative,
+            )
+            self._handle_result(result)
+
+    # ------------------------------------------------------------------
+    def _draw_grid_section(self):
+        step, bins = self.service.get_grid_settings()
+        if self._step_buffer is None:
+            self._step_buffer = step
+        if self._bins_buffer is None:
+            self._bins_buffer = bins
+
+        imgui.text(f"Grid adımı ({self.service.length_unit()})")
+        imgui.same_line(180)
+        imgui.push_item_width(120)
+        _, self._step_buffer = imgui.input_float(
+            "##af_step", self._step_buffer, 1.0, 10.0,
+        )
+        imgui.pop_item_width()
+
+        imgui.text("Bin sayısı")
+        imgui.same_line(180)
+        imgui.push_item_width(120)
+        _, self._bins_buffer = imgui.input_int("##af_bins", self._bins_buffer)
+        imgui.pop_item_width()
+
+        if imgui.button("Grid ayarını uygula##af_grid_apply"):
+            self.service.set_grid_settings(self._step_buffer, self._bins_buffer)
+            self._status = "Grid ayarları kaydedildi."
+
+    # ------------------------------------------------------------------
+    def _draw_transfer_button(self, polygon: Polygon):
+        summary = self.service.polygon_loads_summary(polygon)
+        enabled = bool(summary["assigned_loads"])
+        if not enabled:
             imgui.push_style_color(
-                imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1.0),
+                imgui.Col_.button, imgui.ImVec4(0.25, 0.25, 0.25, 1.0),
             )
-        
         if imgui.button(
-            "Seçili frame'leri polygona ata##af_assign",
-            imgui.ImVec2(-1, 0),
-        ) and can_assign:
-            analysis_data.associated_frame_ids = sorted(
-                int(f.unique_id) for f in selected_frames
-            )
-            self.project.math_model.mark_dirty()
-            self._status = (
-                f"{len(analysis_data.associated_frame_ids)} frame polygona atandı."
-            )
-            logger.debug(
-                "[AreaToFrame] %s: %d frame assoc",
-                polygon.label, len(analysis_data.associated_frame_ids),
-            )
-        
-        if not can_assign:
+            "Seçili frame'lere aktar##af_transfer", imgui.ImVec2(-1, 0),
+        ) and enabled:
+            result = self.service.transfer_area_loads(polygon)
+            self._handle_result(result)
+        if not enabled:
             imgui.pop_style_color(1)
-        
-        # Mevcut assoc durum
-        assoc_count = len(analysis_data.associated_frame_ids)
-        imgui.spacing()
-        if assoc_count > 0:
-            imgui.text_colored(
-                imgui.ImVec4(0.55, 0.85, 0.6, 1.0),
-                f"Assoc edilmiş: {assoc_count} frame",
-            )
-            imgui.same_line()
-            if imgui.small_button("Temizle##af_clear"):
-                analysis_data.associated_frame_ids = []
-                self.project.math_model.mark_dirty()
-                self._status = "Assoc temizlendi."
-        else:
-            imgui.text_colored(
-                imgui.ImVec4(0.9, 0.6, 0.5, 1.0),
-                "⚠ Henüz assoc yok — sahne üzerinden frame seçip 'ata' butonuna basın.",
-            )
 
+    # ------------------------------------------------------------------
+    def _handle_result(self, result: TransferResult):
+        self._status = result.status
+        if result.ok and result.touched_frames and callable(self.on_transfer_complete):
+            self.on_transfer_complete(result.touched_frames)
 
+    # ------------------------------------------------------------------
+    # Renderer preview
+    # ------------------------------------------------------------------
+    def _engine(self):
+        return getattr(self.app, "engine", None) if self.app else None
+
+    def _sync_preview(self):
+        eng = self._engine()
+        renderer = getattr(eng, "renderer", None) if eng else None
+        if renderer is None:
+            self._preview_active = False
+            return
+        draft = self._draft
+        if draft is None:
+            renderer.set_assoc_preview(None)
+            self._preview_active = False
+            return
+        preview = AssocPreview(
+            polygon_id=draft.polygon_id,
+            associated=set(draft.associated),
+            excluded=set(draft.excluded),
+            active=True,
+        )
+        renderer.set_assoc_preview(preview)
+        self._preview_active = True
+
+    def _clear_preview(self):
+        eng = self._engine()
+        renderer = getattr(eng, "renderer", None) if eng else None
+        if renderer is not None:
+            renderer.set_assoc_preview(None)
+        self._preview_active = False
+
+    # ------------------------------------------------------------------
     def _selected_frames_from_scene(self) -> list[Frame]:
-        """Sahnede seçili frame'leri döndür."""
-        if self.math_model is None:
+        if self.project is None or self.project.math_model is None:
             return []
         try:
             return [
-                el for el in self.math_model.get_selected()
+                el for el in self.project.math_model.get_selected()
                 if isinstance(el, Frame)
             ]
         except Exception:
             return []
 
-    def _wind_zone_entries(self, polygon: Polygon):
-        source_refs = {
-            f"POLYGON_{int(polygon.unique_id)}",
-            f"AREA_{int(polygon.unique_id)}",
-        }
-        entries = []
-        for direction_key, zones in self.project.loads.wind_zones.items():
-            for index, zone in enumerate(zones):
-                if str(getattr(zone, "surface", "")) in source_refs:
-                    entries.append((str(direction_key), index, zone))
-        return entries
-
-    def _draw_wind_zone_transfers(self, polygon: Polygon):
-        entries = self._wind_zone_entries(polygon)
-        imgui.text("Rüzgar analiz bölgeleri")
-        if not entries:
-            imgui.text_disabled(
-                "Bu polygon için Load Manager'da rüzgar bölgesi yok."
-            )
-            return
-
-        entry_keys = [(key, index) for key, index, _ in entries]
-        if self._selected_wind_zone not in entry_keys:
-            self._selected_wind_zone = entry_keys[0]
-        selected_entry = next(
-            item for item in entries
-            if (item[0], item[1]) == self._selected_wind_zone
-        )
-        direction_key, zone_index, zone = selected_entry
-        label = f"{direction_key} | {zone.label} ({zone_index + 1})"
-        if imgui.begin_combo("Wind zone", label):
-            for key, index, item in entries:
-                is_selected = (key, index) == self._selected_wind_zone
-                item_label = f"{key} | {item.label} ({index + 1})"
-                if imgui.selectable(item_label, is_selected)[1]:
-                    self._selected_wind_zone = (key, index)
-                    direction_key, zone_index, zone = key, index, item
-            imgui.end_combo()
-
-        _, self._wind_cpe_index = imgui.combo(
-            "Cpe türü", self._wind_cpe_index, ["Cpe10", "Cpe1"],
-        )
-        _, self._cpi_positive = imgui.input_float(
-            "Cpi (+)", self._cpi_positive,
-        )
-        _, self._cpi_negative = imgui.input_float(
-            "Cpi (-)", self._cpi_negative,
-        )
-        if imgui.button("Rüzgar bölgesini seçili frame'lere aktar"):
-            try:
-                self._transfer_wind_zone(
-                    polygon, direction_key, zone_index, zone,
-                )
-            except (TypeError, ValueError, KeyError) as error:
-                self._status = str(error)
-                logger.debug("[AreaToFrame] Wind zone aktarımı: %s", error)
-            except Exception:
-                self._status = (
-                    "Rüzgar bölgesi aktarımı başarısız oldu; log'a bakın."
-                )
-                logger.exception("[AreaToFrame] Wind zone aktarımı başarısız.")
-
-    def _transfer_wind_zone(
-        self, surface: Polygon, direction_key: str, zone_index: int, zone,
-    ) -> int:
-        surface_data = self.project.polygon_analysis_data(surface)
-        if not surface_data.associated_frame_ids:
-            raise ValueError("Önce rüzgar polygon'u için frame hedeflerini seçin.")
-        pressure_result = self.project.loads.wind_results.get(direction_key)
-        if pressure_result is None:
-            directions = getattr(
-                getattr(self.project.analysis, "wind", None),
-                "directions",
-                {},
-            )
-            pressure_result = directions.get(direction_key)
-        if pressure_result is None:
-            raise ValueError(
-                f"{direction_key} yönü için rüzgar basınç sonucu bulunamadı."
-            )
-
-        q_p = float(getattr(pressure_result, "q_p", 0.0))
-        if q_p <= 0.0:
-            raise ValueError("Rüzgar tepe basıncı sıfır veya geçersiz.")
-        wind_direction = getattr(
-            pressure_result, "direction",
-            getattr(pressure_result, "w_dir", (0.0, 0.0, 0.0)),
-        )
-        wind_direction = np.asarray(wind_direction, dtype=float)
-        if wind_direction.shape != (3,) or not np.isfinite(wind_direction).all():
-            raise ValueError("Rüzgar yön vektörü geçersiz.")
-
-        length_factor = convert_value(
-            Dimension.LENGTH,
-            1.0,
-            UnitSystem.N_M,
-            self.project.unit_system,
-        )
-        coords = np.asarray(zone.coords, dtype=float)
-        if coords.ndim != 2 or coords.shape[0] < 3 or coords.shape[1] != 3:
-            raise ValueError("Rüzgar zone geometrisi geçersiz.")
-        zone_nodes = [
-            Node(*(coords[index] * length_factor))
-            for index in range(len(coords))
-        ]
-        zone_polygon = Polygon(
-            zone_nodes,
-            label=f"{zone.label} wind zone",
-            poly_type=PolygonType.ZONE,
-        )
-        zone_analysis_data = PolygonAnalysisData(
-            associated_frame_ids=list(surface_data.associated_frame_ids),
-            transfer_dist_type=surface_data.transfer_dist_type,
-        )
-
-        coefficient_kind = "cpe10" if self._wind_cpe_index == 0 else "cpe1"
-        raw_coefficients = getattr(zone, coefficient_kind)
-        if np.isscalar(raw_coefficients):
-            coefficients = (float(raw_coefficients), float(raw_coefficients))
-        else:
-            values = tuple(float(value) for value in raw_coefficients)
-            if not values:
-                raise ValueError("Wind zone Cpe katsayısı boş.")
-            coefficients = (values[0], values[1] if len(values) > 1 else values[0])
-
-        normal = np.asarray(Polygon.calculate_normal(zone_nodes), dtype=float)
-        if float(np.dot(normal, wind_direction)) > 0.0:
-            sign = -1.0
-        else:
-            sign = 1.0
-
-        loads = []
-        kind_label = "CPE10" if self._wind_cpe_index == 0 else "CPE1"
-        for cpe_label, cpe in zip(("MN", "MX"), coefficients):
-            for cpi_label, cpi in (
-                ("P", self._cpi_positive),
-                ("M", self._cpi_negative),
-            ):
-                pattern_name = (
-                    f"WIND_{direction_key}_{kind_label}_{cpe_label}_{cpi_label}"
-                )
-                pressure = sign * q_p * (cpe - cpi)
-                value = convert_value(
-                                        Dimension.AREA_LOAD, pressure, UnitSystem.KN_M,
-                                        self.project.unit_system,
-                                    )
-                loads.append(AreaUniformLoad(
-                    pattern_name=pattern_name,
-                    direction=LoadDirection.LOCAL_2,
-                    value=float(value),
-                    source_name=f"{zone.label} {kind_label} {cpe_label}/{cpi_label}",
-                ))
-                existing = self.project.load_patterns.get(pattern_name)
-                if existing is None:
-                    self.project.add_load_pattern(LoadPattern(
-                        name=pattern_name,
-                        design_type="Wind",
-                        self_wt_mult=0.0,
-                    ))
-                elif str(existing.design_type).lower() != "wind":
-                    raise ValueError(
-                        f"'{pattern_name}' mevcut Load Pattern tipi "
-                        f"{existing.design_type!r}; Wind gerekli."
-                    )
-
-        source_key = f"wind:{direction_key}:{zone_index}"
-        distribution = DistType.from_input(surface_data.transfer_dist_type)
-        generated = build_polygon_frame_loads(
-                                                self.math_model,
-                                                zone_polygon,
-                                                loads,
-                                                analysis_data=zone_analysis_data,
-                                                dist_type=distribution,
-                                                step=self._step,        # ★ ekle
-                                                n_bins=self._n_bins,    # ★ ekle
-                                            )
-        self._apply_frame_transfers(generated)
-        transferred_ids = sorted(generated)
-        self.project.loads.area_load_transfers.append({
-            "polygon_id": int(surface.unique_id),
-            "source_type": "wind_zone",
-            "source_key": source_key,
-            "direction_key": direction_key,
-            "zone_label": str(zone.label),
-            "cpe_kind": kind_label,
-            "dist_type": distribution.value,
-            "loads": loads,
-            "transferred_frame_ids": transferred_ids,
-        })
-        self.project.loads.area_frame_transfers.append({
-            "polygon_id": int(surface.unique_id),
-            "source_key": source_key,
-            "transferred_frame_ids": transferred_ids,
-            "pattern_names": sorted({
-                pattern_name
-                for pattern_loads in generated.values()
-                for pattern_name in pattern_loads
-            }),
-        })
-
-        self.math_model.mark_dirty()
-        frames = self.math_model.frames
-        touched = [frames[frame_id] for frame_id in generated if frame_id in frames]
-        if touched and callable(self.on_transfer_complete):
-            self.on_transfer_complete(touched)
-        segment_count = sum(
-            len(load_set.segments)
-            for pattern_loads in generated.values()
-            for load_set in pattern_loads.values()
-        )
-        self._status = (
-            f"{zone.label}: {segment_count} rüzgar yük segmenti aktarıldı."
-        )
-        logger.debug("[AreaToFrame] %s", self._status)
-        return segment_count
-
-    def _transfer(self, polygon: Polygon) -> int:
-        analysis_data = self.project.polygon_analysis_data(polygon)
-
-        generated = build_polygon_frame_loads(
-            self.math_model, polygon,
-            analysis_data=analysis_data,
-            step=self._step,
-            n_bins=self._n_bins,
-        )
-
-        if not generated:
-            self._status = "Aktarım için segment üretilemedi."
-            return 0
-
-        self._apply_frame_transfers(generated)
-
-        self.math_model.mark_dirty()
-
-        frames = self.math_model.frames
-        touched = [
-            frames[frame_id]
-            for frame_id in generated
-            if frame_id in frames
-        ]
-        if touched and callable(self.on_transfer_complete):
-            self.on_transfer_complete(touched)
-
-        segment_count = sum(
-            len(load_set.segments)
-            for pattern_loads in generated.values()
-            for load_set in pattern_loads.values()
-        )
-        self._status = (
-            f"{segment_count} yayılı yük segmenti "
-            f"{len(generated)} frame'e aktarıldı."
-        )
-        logger.debug("[AreaToFrame] %s", self._status)
-        return segment_count
-
-    def _apply_frame_transfers(self, generated) -> None:
-        frames = self.math_model.frames
-        for frame_id, pattern_loads in generated.items():
-            frame = frames.get(frame_id)
-            if frame is None:
-                continue
-            for pattern_name, load_set in pattern_loads.items():
-                frame.dist_load_sets[pattern_name] = deepcopy(load_set)
-                frame.mark_dirty()
-
     @staticmethod
-    def _polygon_label(polygon: Polygon) -> str:
-        return polygon.label or f"Polygon {polygon.unique_id}"
-
-    def _area_load_unit(self) -> str:
-        unit = self.project.unit_system
-        return f"{unit.force_unit}/{unit.length_unit}²"
-
-    @staticmethod
-    def _distribution_index(value) -> int:
-        text = str(getattr(value, "value", value)).lower()
-        if "two" in text:
-            return 2
-        if "u2" in text:
-            return 1
-        return 0
+    def _polygon_label(p: Polygon) -> str:
+        return p.label or f"Polygon {p.unique_id}"

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from imgui_bundle import imgui
 
-from data.enums import PolygonType
+from data.enums import DistType, PolygonType
 from domain.polygon import Polygon
 from plane.plane import Plane
 from ui.base_panel import BasePanel
@@ -20,10 +20,9 @@ class PolygonPropertiesPanel(BasePanel):
         ("rectangle", "▭", "Dikdörtgen"),
         ("sequential", "✎", "Sıralı"),
     )
-    TYPES = ("GENERIC", "SURFACE_ONEWAY", "SURFACE_TWOWAY",
-             "ZONE", "SECTION_CUT", "LOAD_AREA")
-    DIST_TYPES = ("one_way_u1", "one_way_u2", "two_way")
-    DIST_LABELS = ("U1", "U2", "TWO")
+    TYPES = ("GENERIC", "SURFACE", "ZONE", "SECTION_CUT", "LOAD_AREA")
+    DIST_VALUES = (DistType.TWO_WAY, DistType.ONE_WAY_U1, DistType.ONE_WAY_U2)
+    DIST_LABELS = ("Two way", "One way (U1)", "One way (U2)")
 
     def __init__(self):
         super().__init__(title="Polygon", width=self.W, height=self.H,
@@ -62,10 +61,6 @@ class PolygonPropertiesPanel(BasePanel):
         return [self.project.polygons[i] for i in self._selected_ids
                 if i in self.project.polygons]
 
-    def _one(self) -> Polygon | None:
-        items = self._polygons()
-        return items[0] if len(items) == 1 else None
-
     def _sync_from_selection(self):
         eng = getattr(self.app, "engine", None) if self.app else None
         sel = getattr(eng, "sel_mgr", None) if eng else None
@@ -103,9 +98,12 @@ class PolygonPropertiesPanel(BasePanel):
     # ------------------------------------------------------------------
     def _toolbar(self):
         for mode, icon, tip in self.MODES:
-            active = self._drawing and self._manager() and self._manager().is_active and self._manager().mode == mode
+            active = (self._drawing and self._manager()
+                      and self._manager().is_active
+                      and self._manager().mode == mode)
             if active:
-                imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.2, 0.55, 0.3, 1.0))
+                imgui.push_style_color(imgui.Col_.button,
+                                       imgui.ImVec4(0.2, 0.55, 0.3, 1.0))
             if imgui.button(icon, imgui.ImVec2(26, 24)):
                 self._start_drawing(mode)
             if active:
@@ -121,14 +119,8 @@ class PolygonPropertiesPanel(BasePanel):
         items = self._polygons()
         enabled = bool(items)
         if not enabled:
-            imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1.0))
-
-        if imgui.button("⇄", imgui.ImVec2(26, 24)) and enabled:
-            for p in items:
-                self._auto_assoc(p)
-        if imgui.is_item_hovered():
-            imgui.set_tooltip("Frame assoc")
-        imgui.same_line(0, 2)
+            imgui.push_style_color(imgui.Col_.button,
+                                   imgui.ImVec4(0.3, 0.3, 0.3, 1.0))
 
         if imgui.button("⊞", imgui.ImVec2(26, 24)) and enabled:
             for p in items:
@@ -151,18 +143,24 @@ class PolygonPropertiesPanel(BasePanel):
                            f"{p.label or 'Polygon'} (id={p.unique_id})")
         self._combo("Tip", "##ptype", self.TYPES,
                     self._type_name(p), lambda i: self._set_type(p, i))
-        self._color(p, on_change=lambda c: self._set_color(p, c))
-        analysis_data = self.project.polygon_analysis_data(p)
-        imgui.text(
-            f"Köşe: {len(p.nodes)}   Assoc: "
-            f"{len(analysis_data.associated_frame_ids)}"
-        )
-        self._combo("Dağıtım", "##dist", self.DIST_LABELS,
+        self._combo("Yön", "##pdir", self.DIST_LABELS,
                     self._dist_index(p), lambda i: self._set_dist(p, i))
-        if analysis_data.assigned_loads:
+        self._color(p, on_change=lambda c: self._set_color(p, c))
+
+        imgui.text(
+            f"Köşe: {len(p.nodes)}   Assoc: {len(p.associated)}"
+        )
+        if p.excluded:
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.6, 0.5, 1.0),
+                f"Hariç tutulan: {len(p.excluded)}",
+            )
+
+        ad = self.project.polygon_analysis_data(p)
+        if ad and ad.assigned_loads:
             imgui.separator()
             imgui.text_colored(imgui.ImVec4(0.85, 0.9, 0.95, 1.0), "Yükler")
-            for load in analysis_data.assigned_loads:
+            for load in ad.assigned_loads:
                 imgui.bullet_text(f"{load.pattern_name}: {load.value:.2f}")
 
     def _properties_multi(self, items: list[Polygon]):
@@ -173,7 +171,17 @@ class PolygonPropertiesPanel(BasePanel):
         imgui.text("Tip")
         imgui.same_line(80)
         imgui.push_item_width(-1)
-        _, self._batch_type = imgui.combo("##btype", self._batch_type, self.TYPES)
+        _, self._batch_type = imgui.combo(
+            "##btype", self._batch_type, self.TYPES,
+        )
+        imgui.pop_item_width()
+
+        imgui.text("Yön")
+        imgui.same_line(80)
+        imgui.push_item_width(-1)
+        _, self._batch_dist = imgui.combo(
+            "##bdist", self._batch_dist, self.DIST_LABELS,
+        )
         imgui.pop_item_width()
 
         imgui.text("Renk")
@@ -181,31 +189,22 @@ class PolygonPropertiesPanel(BasePanel):
         _, new_rgb = color_edit3("##bcolor", list(self._batch_color))
         self._batch_color = list(new_rgb)
 
-        imgui.text("Dağıtım")
-        imgui.same_line(80)
-        imgui.push_item_width(-1)
-        _, self._batch_dist = imgui.combo("##bdist", self._batch_dist, self.DIST_LABELS)
-        imgui.pop_item_width()
-
         imgui.spacing()
         if imgui.button("Tümüne Uygula", imgui.ImVec2(-1, 30)):
             self._apply_batch(items)
 
         imgui.spacing()
         total_nodes = sum(len(p.nodes) for p in items)
-        total_assoc = sum(
-            len(self.project.polygon_analysis_data(p).associated_frame_ids)
-            for p in items
-        )
+        total_assoc = sum(len(p.associated) for p in items)
         imgui.text(f"Köşe: {total_nodes}   Assoc: {total_assoc}")
 
     def _apply_batch(self, items: list[Polygon]):
         poly_type = getattr(PolygonType, self.TYPES[self._batch_type])
-        dist = self.DIST_TYPES[self._batch_dist]
+        dist_type = self.DIST_VALUES[self._batch_dist]
         color = [*self._batch_color, 1.0]
         for p in items:
             p.poly_type = poly_type
-            self.project.polygon_analysis_data(p).transfer_dist_type = dist
+            p.set_dist_type(dist_type)
             p.color = color
             p.mark_dirty()
         self.project.math_model.mark_dirty()
@@ -248,16 +247,13 @@ class PolygonPropertiesPanel(BasePanel):
         self._refresh_polygons()
 
     def _dist_index(self, p) -> int:
-        distribution = self.project.polygon_analysis_data(
-            p,
-        ).transfer_dist_type
-        return self.DIST_TYPES.index(distribution) \
-            if distribution in self.DIST_TYPES else 0
+        try:
+            return self.DIST_VALUES.index(p.dist_type)
+        except (ValueError, AttributeError):
+            return 0
 
     def _set_dist(self, p, idx):
-        self.project.polygon_analysis_data(
-            p,
-        ).transfer_dist_type = self.DIST_TYPES[idx]
+        p.set_dist_type(self.DIST_VALUES[idx])
         self.project.math_model.mark_dirty()
 
     # ------------------------------------------------------------------
@@ -276,17 +272,6 @@ class PolygonPropertiesPanel(BasePanel):
         mgr.cancel()
         mgr.start(mode=mode)
         self._drawing = True
-
-    def _auto_assoc(self, p: Polygon):
-        if self.project is None:
-            return
-        plane = Plane.from_polygon(p)
-        analysis_data = self.project.polygon_analysis_data(p)
-        analysis_data.associated_frame_ids = [
-            int(f.unique_id) for f in self.project.math_model.frames.values()
-            if plane.classify_element(f, "frame") != "OUTSIDE"
-        ]
-        self.project.math_model.mark_dirty()
 
     def _to_plane(self, p: Polygon):
         plane = Plane.from_polygon(p)
@@ -319,8 +304,8 @@ class PolygonPropertiesPanel(BasePanel):
         imgui.text_colored(imgui.ImVec4(0.85, 0.9, 0.95, 1.0),
                            f"Rüzgar Zone'ları: {total}")
         dirs = list(p.zone_children_by_direction.keys())
-        cur = dirs.index(p.show_zones_direction) + 1 \
-              if p.show_zones_direction in dirs else 0
+        cur = (dirs.index(p.show_zones_direction) + 1
+               if p.show_zones_direction in dirs else 0)
         labels = ["Kapalı"] + dirs
         imgui.push_item_width(-1)
         changed, idx = imgui.combo("##zone_dir", cur, labels)

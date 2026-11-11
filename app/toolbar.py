@@ -68,17 +68,63 @@ class Toolbar:
         for spec in self.panels:
             buckets.setdefault(spec.category, []).append(spec)
 
+        # Mevcut kategori menüleri
         for category in self.categories:
             items = buckets.get(category, [])
             if not items:
                 continue
-
             opened = imgui.begin_menu(category)
             if opened:
                 for spec in items:
                     self._draw_menu_item(spec)
                 imgui.end_menu()
             imgui.separator()
+
+        # ★ Viewport menüsü (özel)
+        self._draw_viewport_menu()
+
+    def _draw_viewport_menu(self) -> None:
+        opened = imgui.begin_menu("Viewport")
+        if not opened:
+            return
+        try:
+            # Orthographic
+            if imgui.begin_menu("Orthographic"):
+                for key, label in (
+                    ("vp_top",    "Top"),
+                    ("vp_bottom", "Bottom"),
+                    ("vp_front",  "Front"),
+                    ("vp_back",   "Back"),
+                    ("vp_left",   "Left"),
+                    ("vp_right",  "Right"),
+                ):
+                    clicked, _ = imgui.menu_item(label, "", False)
+                    if clicked:
+                        self._fire_deferred(key)
+                imgui.end_menu()
+
+            # Isometric
+            if imgui.begin_menu("Isometric"):
+                for key, label in (
+                    ("vp_iso",    "3D (default)"),
+                    ("vp_iso_sw", "SW Isometric"),
+                    ("vp_iso_se", "SE Isometric"),
+                    ("vp_iso_ne", "NE Isometric"),
+                    ("vp_iso_nw", "NW Isometric"),
+                ):
+                    clicked, _ = imgui.menu_item(label, "", False)
+                    if clicked:
+                        self._fire_deferred(key)
+                imgui.end_menu()
+
+            # Close all
+            imgui.separator()
+            clicked, _ = imgui.menu_item("Close All", "", False)
+            if clicked:
+                self._fire_deferred("vp_close_all")
+
+        finally:
+            imgui.end_menu()
 
     def _draw_menu_item(self, spec: PanelSpec) -> None:
         label = spec.menu_label or spec.name

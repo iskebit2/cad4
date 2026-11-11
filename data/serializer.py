@@ -142,6 +142,8 @@ def _encode(obj: Any) -> Any:
         return {"__enum__": type(obj).__name__, "value": obj.value}
     if isinstance(obj, tuple):
         return {"__tuple__": [_encode(v) for v in obj]}
+    if isinstance(obj, (set, frozenset)):
+        return {"__set__": [_encode(v) for v in obj]}
     if dataclasses.is_dataclass(obj):
         data = {"__dataclass__": type(obj).__name__}
         for f in dataclasses.fields(obj):
@@ -174,6 +176,8 @@ def _decode(obj: Any) -> Any:
         return ENUM_REGISTRY[obj["__enum__"]](obj["value"])
     if "__tuple__" in obj:
         return tuple(_decode(v) for v in obj["__tuple__"])
+    if "__set__" in obj:
+        return set(_decode(v) for v in obj["__set__"])
     if "__list__" in obj:
         return [_decode(v) for v in obj["__list__"]]
     if "__dict__" in obj:
@@ -226,8 +230,6 @@ def save_project_file(project, path: Path) -> None:
     scene_payload = {
         "grid": _encode(scene.grid),
         "lighting": _encode(scene.lighting),
-        "polygons": {str(k): _encode(v) for k, v in scene.polygons.items()},
-        "lines": {str(k): _encode(v) for k, v in scene.lines.items()},
         "show_local_axes": scene.show_local_axes,
         "show_local_axes_for_selected": scene.show_local_axes_for_selected,
         "show_local_axes_scale": scene.show_local_axes_scale,
@@ -238,6 +240,8 @@ def save_project_file(project, path: Path) -> None:
         "frames": [_encode(f) for f in math_model.frames.values()],
         "areas": [_encode(a) for a in math_model.areas.values()],
         "links": [_encode(l) for l in math_model.links.values()],
+        "polygons": {str(k): _encode(v) for k, v in math_model.polygons.items()},
+        "lines": {str(k): _encode(v) for k, v in math_model.lines.items()},
         "polygon_analysis": {
             str(k): _encode(v)
             for k, v in math_model.polygon_analysis.items()
@@ -245,7 +249,7 @@ def save_project_file(project, path: Path) -> None:
     }
     u_sys = project.unit_system
     payload = {
-        "version": 6,
+        "version": 8,
         "info": _encode(project.info),
         "general_info": _encode(project.general_info),
         "site_info": _encode(project.site_info),
@@ -275,6 +279,8 @@ def save_project_file(project, path: Path) -> None:
         "frame_design_procs": project.frame_design_procs,
         "frame_auto_mesh": project.frame_auto_mesh,
         "custom_planes": {k: _encode_plane(p) for k, p in project.custom_planes.items()},
+        "transfer_grid_step": float(getattr(project, "transfer_grid_step", 0.0)),
+        "transfer_grid_bins": int(getattr(project, "transfer_grid_bins", 12)),
     }
     content = json.dumps(payload, cls=DomainJSONEncoder, indent=2, ensure_ascii=False)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -298,6 +304,9 @@ def load_project_file(path: Path):
     proj.analysis = _decode(payload.get("analysis", {}))
     proj.report = _decode(payload.get("report", {}))
     scene_data = payload.get("scene", {})
+    math_model_data = payload.get("math_model")
+    if not isinstance(math_model_data, dict):
+        math_model_data = scene_data if isinstance(scene_data, dict) else {}
     decoded_grid = _decode(
         scene_data.get("grid", payload.get("grid", {}))
         if isinstance(scene_data, dict) else payload.get("grid", {})
@@ -312,21 +321,19 @@ def load_project_file(path: Path):
         proj.scene.lighting = decoded_lighting
 
     encoded_polygons = (
-        scene_data.get("polygons", payload.get("polygons", {}))
+        math_model_data.get(
+            "polygons",
+            scene_data.get("polygons", payload.get("polygons", {})),
+        )
         if isinstance(scene_data, dict) else payload.get("polygons", {})
     )
     encoded_lines = (
-        scene_data.get("lines", payload.get("lines", {}))
+        math_model_data.get(
+            "lines",
+            scene_data.get("lines", payload.get("lines", {})),
+        )
         if isinstance(scene_data, dict) else payload.get("lines", {})
     )
-    proj.scene.polygons = {
-        int(k) if k.isdigit() else k: _decode(v)
-        for k, v in encoded_polygons.items()
-    }
-    proj.scene.lines = {
-        int(k) if k.isdigit() else k: _decode(v)
-        for k, v in encoded_lines.items()
-    }
 
     raw_unit = payload.get("unit_system", UnitSystem.N_MM)
     if isinstance(raw_unit, UnitSystem):
@@ -355,10 +362,15 @@ def load_project_file(path: Path):
     proj.frame_auto_mesh = payload.get("frame_auto_mesh", {})
 
     math_model = MathModel()
-    math_model_data = payload.get("math_model")
-    if not isinstance(math_model_data, dict):
-        math_model_data = scene_data if isinstance(scene_data, dict) else {}
     math_model.units = math_model_data.get("units", "N, mm, C")
+    for key, raw_polygon in encoded_polygons.items():
+        polygon = _decode(raw_polygon)
+        if isinstance(polygon, Polygon):
+            math_model.add_polygon(polygon)
+    for key, raw_line in encoded_lines.items():
+        line = _decode(raw_line)
+        if isinstance(line, Line):
+            math_model.add_line(line)
     for key, value in math_model_data.get("polygon_analysis", {}).items():
         decoded = _decode(value)
         if isinstance(decoded, PolygonAnalysisData):
@@ -375,7 +387,7 @@ def load_project_file(path: Path):
             math_model.polygon_analysis[int(polygon_id)] = PolygonAnalysisData(
                 **legacy,
             )
-    for polygon in proj.scene.polygons.values():
+    for polygon in math_model.polygons.values():
         if isinstance(polygon, Polygon):
             for name in POLYGON_ANALYSIS_FIELDS:
                 polygon.__dict__.pop(name, None)
@@ -430,6 +442,8 @@ def load_project_file(path: Path):
     proj.custom_planes = {
         k: _decode_plane(v) for k, v in payload.get("custom_planes", {}).items()
     }
+    proj.transfer_grid_step = float(payload.get("transfer_grid_step", 0.0))
+    proj.transfer_grid_bins = int(payload.get("transfer_grid_bins", 12))
     proj.math_model = math_model
     proj.scene.mark_dirty()
     return proj

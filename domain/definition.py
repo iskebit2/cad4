@@ -432,6 +432,8 @@ class LoadManager:
         )
         analysis_data.assigned_loads.append(stored)
         analysis_data.transfer_target = transfer_target
+        if hasattr(polygon, "set_dist_type"):
+            polygon.set_dist_type(dist)
         analysis_data.transfer_dist_type = dist.value
         analysis_data.is_load_area = True
 

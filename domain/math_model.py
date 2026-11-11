@@ -8,6 +8,8 @@ import numpy as np
 from data.enums import ObjType
 from domain.bounds import Bounds3D
 from domain.element import Area, Element, Frame, Link, Node
+from domain.line import Line
+from domain.polygon import Polygon
 
 
 @dataclass
@@ -29,6 +31,8 @@ class MathModel:
         self.frames: dict[int, Frame] = {}
         self.areas: dict[int, Area] = {}
         self.links: dict[int, Link] = {}
+        self.polygons: dict[int, Polygon] = {}
+        self.lines: dict[int, Line] = {}
         self.polygon_analysis: dict[int, PolygonAnalysisData] = {}
         self._bounds: Bounds3D | None = None
         self.units = "N, mm, C"
@@ -52,6 +56,28 @@ class MathModel:
             if getattr(area, "is_visible", True):
                 coords.extend(
                     (node.x, node.y, node.z) for node in area.nodes
+                )
+        for polygon in self.polygons.values():
+            if getattr(polygon, "is_visible", True):
+                coords.extend(
+                    (node.x, node.y, node.z) for node in polygon.nodes
+                )
+                for zones in polygon.zone_children_by_direction.values():
+                    for zone in zones:
+                        zone_coords = (
+                            zone.get("coords", ())
+                            if isinstance(zone, dict)
+                            else getattr(zone, "coords", ())
+                        )
+                        coords.extend(
+                            tuple(float(value) for value in point[:3])
+                            for point in zone_coords
+                            if len(point) >= 3
+                        )
+        for line in self.lines.values():
+            if getattr(line, "visible", True):
+                coords.extend(
+                    (vertex.x, vertex.y, vertex.z) for vertex in line.vertices
                 )
         if not coords: return None
         arr = np.array(coords, dtype=float)
@@ -118,12 +144,20 @@ class MathModel:
         if link.node_j: link.node_j.add_connection(link)
         self.mark_dirty()
 
+    def add_polygon(self, polygon: Polygon):
+        self.polygons[polygon.unique_id] = polygon
+        self.mark_dirty()
+
+    def add_line(self, line: Line):
+        self.lines[line.unique_id] = line
+        self.mark_dirty()
+
     def can_remove(self, element: Element) -> tuple[bool, str]:
         if isinstance(element, Node) and element.connected:
             return False, f"Node'a bağlı {len(element.connected)} eleman"
         return True, ""
 
-    def remove_element(self, element: Element) -> bool:
+    def remove_element(self, element: Element | Polygon | Line) -> bool:
         ok, _ = self.can_remove(element)
         if not ok: return False
         bucket = self._bucket(element)
@@ -143,6 +177,9 @@ class MathModel:
         bucket = self._bucket(element)
         if bucket is None: return
         bucket[element.unique_id] = element
+        if isinstance(element, (Polygon, Line)):
+            self.mark_dirty()
+            return
         t = ObjType.FRAME if isinstance(element, Frame) else (ObjType.LINK if isinstance(element, Link) else ObjType.AREA)
         nodes = ([element.node_i, element.node_j] if isinstance(element, (Frame, Link))
                  else element.nodes if isinstance(element, Area) else [])
@@ -175,7 +212,10 @@ class MathModel:
         return None
 
     def get_element_by_unique_id(self, unique_id: int):
-        for b in (self.frames, self.nodes, self.areas, self.links):
+        for b in (
+            self.frames, self.nodes, self.areas, self.links,
+            self.polygons, self.lines,
+        ):
             if unique_id in b: return b[unique_id]
         return None
 
@@ -186,6 +226,8 @@ class MathModel:
         out.update(self.frames)
         out.update(self.areas)
         out.update(self.links)
+        out.update(self.polygons)
+        out.update(self.lines)
         return out
 
     def get_selected(self):
@@ -205,28 +247,32 @@ class MathModel:
             return np.array([0.0, 0.0, 0.0]), 1.0
         return bounds.center, bounds.size or 1.0
 
-    def _bucket(self, element: Element):
+    def _bucket(self, element: Element | Polygon | Line):
         if isinstance(element, Node): return self.nodes
         if isinstance(element, Frame): return self.frames
         if isinstance(element, Area): return self.areas
         if isinstance(element, Link): return self.links
+        if isinstance(element, Polygon): return self.polygons
+        if isinstance(element, Line): return self.lines
         return None
 
-    def is_element_added(self, element: Element) -> bool:
+    def is_element_added(self, element: Element | Polygon | Line) -> bool:
         b = self._bucket(element)
         return b is not None and element.unique_id in b
 
-    def add_element(self, element: Element) -> bool:
+    def add_element(self, element: Element | Polygon | Line) -> bool:
         if self.is_element_added(element): return False
         fn = {Node: self.add_node, Frame: self.add_frame,
-              Area: self.add_area, Link: self.add_link}.get(type(element))
+              Area: self.add_area, Link: self.add_link,
+              Polygon: self.add_polygon, Line: self.add_line}.get(type(element))
         if fn is None: return False
         fn(element)
         return True
 
     def __repr__(self):
         return (f"<MathModel nodes={len(self.nodes)} frames={len(self.frames)} "
-                f"areas={len(self.areas)} links={len(self.links)}>")
+                f"areas={len(self.areas)} links={len(self.links)} "
+                f"polygons={len(self.polygons)} lines={len(self.lines)}>")
 
     def summary(self) -> str:
         n_mass = sum(1 for n in self.nodes.values() if n.has_mass())
@@ -240,4 +286,6 @@ class MathModel:
                 f"  Nodes: {len(self.nodes)}  (mass: {n_mass}, constraint: {n_con}, spring: {n_spring})\n"
                 f"  Frames: {len(self.frames)}\n"
                 f"  Areas: {len(self.areas)}\n"
-                f"  Links: {len(self.links)}")
+                f"  Links: {len(self.links)}\n"
+                f"  Polygons: {len(self.polygons)}\n"
+                f"  Lines: {len(self.lines)}")

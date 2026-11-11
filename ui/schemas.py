@@ -1,6 +1,5 @@
 # ui/schemas.py
 """Her element tipi için hazır şemalar."""
-from data.enums import PolygonType
 from ui.schema import Field, Group
 
 
@@ -194,25 +193,29 @@ def polygon_schema():
         Group("Genel", [
             Field("label", "Etiket", "string"),
             Field("poly_type", "Tip", "enum",
-                  choices=("GENERIC", "SURFACE_ONEWAY", "SURFACE_TWOWAY",
-                           "ZONE", "SECTION_CUT", "LOAD_AREA")),
+                  choices=("GENERIC", "SURFACE", "ZONE",
+                           "SECTION_CUT", "LOAD_AREA")),
             Field("color", "Renk", "color"),
             Field("is_visible", "Görünür", "bool"),
             Field("transfer_dist_type", "Dağıtım", "enum",
                   choices=("one_way_u1", "one_way_u2", "two_way")),
-            Field("is_load_area", "Yük Alanı", "bool"),
         ]),
+        Group("Assoc", [
+            Field("assoc_auto", "Otomatik Tara", "bool"),
+            Field("assoc_depth", "Depth", "float"),
+            Field("assoc_ignore_bounds", "UV Sınırını Yok Say", "bool"),
+            Field("assoc_direction_filter", "Yön Filtresi", "bool"),
+            Field("assoc_angle_tol_deg", "Açı Toleransı (°)", "float"),
+            Field("assoc_count", "Assoc Sayısı", "info"),
+            Field("excluded_count", "Hariç Sayısı", "info"),
+        ], default_open=False),
         Group("Zone", [
             Field("show_zones_direction", "Göster", "string"),
             Field("zone_count", "Zone Sayısı", "info"),
         ]),
         Group("Bilgi", [
             Field("vertex_count", "Köşe", "info"),
-            Field("assoc_count", "Assoc", "info"),
             Field("assigned_loads_summary", "Yükler", "list"),
-        ]),
-        Group("Frame Assoc", [
-            Field("associated_frame_ids", "Frame ID'leri", "list"),
         ]),
     ]
 
