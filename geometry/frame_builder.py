@@ -1,6 +1,5 @@
 # geometry/frame_builder.py
 
-import time
 import mapbox_earcut as earcut
 import numpy as np
 
@@ -147,29 +146,20 @@ class FrameBuilder:
 
         return profile, start_ring, end_ring
     
-    def build(
-        self,
-        frame: Frame
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        t_start = time.perf_counter()
+    def build(self,frame: Frame) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         profile, start_ring, end_ring = self._prepare_geometry(frame)
-        t1 = time.perf_counter()
         if len(start_ring) == 0:
             return (
                 np.array([], dtype=np.float32),
                 np.array([], dtype=np.float32),
                 np.array([], dtype=np.uint32)
             )
-
         N = len(profile)
-
         verts = []
         idxs = []
-
         # ---------------------------------------------------------
         # SIDE FACES
         # ---------------------------------------------------------
-
         for i in range(N):
 
             i_next = (i + 1) % N
@@ -218,37 +208,19 @@ class FrameBuilder:
                 dtype=np.uint32
             )
 
-            tri = earcut.triangulate_float32(
-                profile_2d,
-                rings
-            ).tolist()
-            t2 = time.perf_counter()
-            logger.debug("[FrameBuilder.build] prepare: %.2f ms earcut: %.2f ms (id=%s)", (t1 - t_start) * 1000, (t2 - t1) * 1000, getattr(frame, "unique_id", "?"))
-
-            # -----------------------------------------------------
-            # START CAP
-            # -----------------------------------------------------
-
-            # Side face loopunun kullandığı v1 artık güvenilir
-            # bir normal kaynağı olmadığından ekseni tekrar alıyoruz.
+            tri = earcut.triangulate_float32(profile_2d, rings).tolist()
             axis = end_ring[0] - start_ring[0]
             axis = normalize(axis)
-
             n_start = -axis
-
             base = len(verts) // 6
-
             for p in start_ring:
-
                 verts.extend([
                     p[0], p[1], p[2],
                     n_start[0],
                     n_start[1],
                     n_start[2]
                 ])
-
             for i in range(0, len(tri), 3):
-
                 idxs.extend([
                     base + tri[i],
                     base + tri[i + 2],

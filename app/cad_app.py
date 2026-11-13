@@ -26,6 +26,7 @@ from inspector import InspectorWindow
 from inspector.catalog_project import ProjectCatalog
 from app.debug_panel import DebugPanel
 from core.viewport_manager import ViewportManager
+from plane.plane_source_dialog import PlaneSourceDialog
 from ui.viewport_panel import ViewportPanel
 
 from logging_config import CadLogger
@@ -58,7 +59,8 @@ class CadApp:
         self.viewport_manager = None
         self._viewport_panels: list = []
         self._last_active_viewport_name: str | None = None
-
+        self.plane_source_dialog = PlaneSourceDialog(self)
+        
         self.actions = AppActions(self)
         self._init_registry()
 
@@ -279,9 +281,6 @@ class CadApp:
         vp = self.viewport_manager.get(panel.viewport_name)
         if vp is None:
             return
-        controller = getattr(eng.input, "_fallback", None)
-        if controller is None:
-            return
 
         io = imgui.get_io()
         item_min = panel._item_min
@@ -293,11 +292,13 @@ class CadApp:
         if panel._is_hovered:
             eng.set_viewport_pointer(vp, x_px, y_px)
 
+        # ---- Mouse move (HER frame, hover'da) ----
         dx = float(io.mouse_delta.x)
         dy = float(io.mouse_delta.y)
-        if dx or dy or panel._is_hovered:
-            controller.handle_move(x_px, y_px, dx, dy)
+        if panel._is_hovered:
+            eng.input.dispatch_move(x_px, y_px, dx, dy)
 
+        # ---- Mouse click ----
         if panel._is_hovered:
             for button, imgui_btn in (
                 (0, imgui.MouseButton_.left),
@@ -305,24 +306,65 @@ class CadApp:
                 (1, imgui.MouseButton_.right),
             ):
                 if imgui.is_mouse_clicked(imgui_btn):
-                    controller.handle_click(x_px, y_px, button)
+                    eng.input.dispatch_click(x_px, y_px, button)
+                    break   # bir tık = bir event
 
-        is_marquee = eng.marquee is not None and eng.marquee.is_active
+        # ---- Mouse release ----
         for button, imgui_btn in (
             (0, imgui.MouseButton_.left),
             (2, imgui.MouseButton_.middle),
             (1, imgui.MouseButton_.right),
         ):
-            if not imgui.is_mouse_released(imgui_btn):
-                continue
-            if button == 0 and not (panel._is_hovered or is_marquee):
-                continue
-            controller.handle_release(x_px, y_px, button)
+            if imgui.is_mouse_released(imgui_btn):
+                eng.input.dispatch_release(x_px, y_px, button)
 
+        # ---- Scroll ----
         wheel = float(io.mouse_wheel)
-        if wheel != 0.0:
-            controller.handle_scroll(wheel)
+        if wheel != 0.0 and panel._is_hovered:
+            eng.input.dispatch_scroll(wheel)
             io.mouse_wheel = 0.0
+
+        # ---- Keyboard ----
+        if panel._is_hovered or self._any_viewport_active():
+            self._forward_keys(eng)
+            
+    def _any_viewport_active(self) -> bool:
+        """Herhangi bir viewport hovered veya drag aktif mi?"""
+        for panel in self._viewport_panels:
+            if getattr(panel, "_is_hovered", False):
+                return True
+        # Drag devam ediyorsa da aktif say
+        io = imgui.get_io()
+        if io.mouse_down[0] or io.mouse_down[1] or io.mouse_down[2]:
+            return self._last_active_viewport_name is not None
+        return False
+
+    def _forward_keys(self, eng):
+        """ImGui key state → engine input dispatch."""
+        import glfw
+        # Key → glfw mapping
+        key_map = {
+            imgui.Key.escape: glfw.KEY_ESCAPE,
+            imgui.Key.space: glfw.KEY_SPACE,
+            imgui.Key.enter: glfw.KEY_ENTER,
+            imgui.Key.tab: glfw.KEY_TAB,
+            imgui.Key.delete: glfw.KEY_DELETE,
+            imgui.Key.backspace: glfw.KEY_BACKSPACE,
+            imgui.Key.left_arrow: glfw.KEY_LEFT,
+            imgui.Key.right_arrow: glfw.KEY_RIGHT,
+            imgui.Key.up_arrow: glfw.KEY_UP,
+            imgui.Key.down_arrow: glfw.KEY_DOWN,
+        }
+        mods = 0
+        io = imgui.get_io()
+        if io.key_ctrl: mods |= glfw.MOD_CONTROL
+        if io.key_shift: mods |= glfw.MOD_SHIFT
+        if io.key_alt: mods |= glfw.MOD_ALT
+        if io.key_super: mods |= glfw.MOD_SUPER
+
+        for imgui_key, glfw_key in key_map.items():
+            if imgui.is_key_pressed(imgui_key):
+                eng.input.dispatch_key(glfw_key, mods)
         
     @staticmethod
     def _sync_input_state(eng, io, item_hovered: bool) -> None:
@@ -352,6 +394,7 @@ class CadApp:
             panel = entry["instance"]
             if getattr(panel, "visible", False):
                 panel.draw()
+        self.plane_source_dialog.draw()
 
     def _draw_dock_space(self) -> None:
         viewport = imgui.get_main_viewport()
@@ -477,6 +520,9 @@ class CadApp:
             "vp_iso_se": lambda: self._open_viewport("iso_se"),
             "vp_iso_ne": lambda: self._open_viewport("iso_ne"),
             "vp_iso_nw": lambda: self._open_viewport("iso_nw"),
+            "plane_3pt": lambda: self.engine.plane_draw_mgr.start_3pt(),
+            "plane_2pt_z": lambda: self.engine.plane_draw_mgr.start_2pt_z(),
+            "plane_from_element": lambda: self.plane_from_element_dialog.open(),
             "vp_close_all": self._close_all_viewports,
         }
         for name in self.panels:

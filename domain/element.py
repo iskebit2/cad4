@@ -1,15 +1,12 @@
 # domain/element.py
 from __future__ import annotations
-
 import math
-
+from dataclasses import dataclass, field
 from pyglm import glm
-
 from core.id_manager import IDManager
 from core.units import Dimension
 from data import enums as E
 from domain import definition as D
-
 
 def id_to_color(obj_id: int) -> tuple[float, float, float]:
     return (
@@ -18,31 +15,33 @@ def id_to_color(obj_id: int) -> tuple[float, float, float]:
         ((obj_id >> 16) & 0xFF) / 255.0,
     )
 
-
 def color_to_id(r, g, b) -> int:
     return int(r) + (int(g) << 8) + (int(b) << 16)
 
-
+@dataclass
 class Element:
-    def __init__(self, label: str = "", is_selected: bool = False,
-                 is_visible: bool = True, needs_update: bool = True, color=None):
-        self.unique_id = IDManager.generate_id()
-        self.pick_id = self.unique_id
-        self.label = label
-        self.is_selected = is_selected
-        self.is_visible = is_visible
-        self.needs_update = needs_update
-        self.element_type = None
-        self.color = list(color) if color is not None else None
-        self.show_axes_override: bool | None = None
+    label: str = ""
+    is_selected: bool = False
+    is_visible: bool = True
+    needs_update: bool = True
+    color: list | None = None
+    show_axes_override: bool | None = None
+    unique_id: int = field(default_factory=IDManager.generate_id)
+    pick_id: int = 0
+    element_type: str = "Element"
 
-    def toggle_selection(self):
+    def __post_init__(self):
+        if self.pick_id == 0:
+            self.pick_id = self.unique_id
+
+    def toggle_selection(self) -> None:
         self.is_selected = not self.is_selected
 
-    def mark_dirty(self):
+    def mark_dirty(self) -> None:
         self.needs_update = True
 
 
+@dataclass
 class Node(Element):
     DOF_ORDER = ("ux", "uy", "uz", "rx", "ry", "rz")
 
@@ -56,44 +55,56 @@ class Node(Element):
         "spring_r1": Dimension.MOMENT, "spring_r2": Dimension.MOMENT, "spring_r3": Dimension.MOMENT,
     }
 
-    def __init__(self, x, y, z, label: str = "",
-                 restraint: D.Restraint | None = None,
-                 color=None):
-        super().__init__(label, color=color)
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+    restraint: D.Restraint | None = None
+    dof_indices: list[int | None] = field(default_factory=lambda: [None] * 6)
+    connected: list[tuple[E.ObjType, int]] = field(default_factory=list)
+    loads: list[D.PointLoad] = field(default_factory=list)
+    coord_sys: str = "GLOBAL"
+    coord_type: str = "Cartesian"
+    special_jt: bool = False
+    constraint_name: str | None = None
+    mass_coord_sys: str = "Joint Local"
+    load_pattern: str = ""
+    
+    mass_1: float = 0.0
+    mass_2: float = 0.0
+    mass_3: float = 0.0
+    mmi_1: float = 0.0
+    mmi_2: float = 0.0
+    mmi_3: float = 0.0
+    added_mass_1: float = 0.0
+    added_mass_2: float = 0.0
+    added_mass_3: float = 0.0
+    added_mmi_1: float = 0.0
+    added_mmi_2: float = 0.0
+    added_mmi_3: float = 0.0
+    spring_u1: float = 0.0
+    spring_u2: float = 0.0
+    spring_u3: float = 0.0
+    spring_r1: float = 0.0
+    spring_r2: float = 0.0
+    spring_r3: float = 0.0
+
+    def __post_init__(self):
+        super().__post_init__()
         self.element_type = "Node"
-        self._x, self._y, self._z = float(x), float(y), float(z)
-        self.restraint = restraint
-        self.dof_indices: list[int | None] = [None] * 6
-        self.connected: list[tuple[E.ObjType, int]] = []
-        self.loads: list[D.PointLoad] = []
-        self.coord_sys = "GLOBAL"
-        self.coord_type = "Cartesian"
-        self.special_jt = False
-        self.constraint_name: str | None = None
-        self.mass_coord_sys = "Joint Local"
-        for f in ("mass_1", "mass_2", "mass_3", "mmi_1", "mmi_2", "mmi_3",
-                  "added_mass_1", "added_mass_2", "added_mass_3",
-                  "added_mmi_1", "added_mmi_2", "added_mmi_3",
-                  "spring_u1", "spring_u2", "spring_u3",
-                  "spring_r1", "spring_r2", "spring_r3"):
-            setattr(self, f, 0.0)
-        self.load_pattern = ""
+        self._x, self._y, self._z = float(self.x), float(self.y), float(self.z)
 
     @property
     def x(self): return self._x
-
     @x.setter
     def x(self, v): self._x = float(v); self.mark_dirty()
 
     @property
     def y(self): return self._y
-
     @y.setter
     def y(self, v): self._y = float(v); self.mark_dirty()
 
     @property
     def z(self): return self._z
-
     @z.setter
     def z(self, v): self._z = float(v); self.mark_dirty()
 
@@ -147,6 +158,7 @@ class Node(Element):
         return any(abs(v) > 1e-12 for v in self.total_mass)
 
 
+@dataclass
 class Frame(Element):
     __unit_schema__ = {
         "jt_offset_i": Dimension.LENGTH, "jt_offset_j": Dimension.LENGTH,
@@ -154,61 +166,72 @@ class Frame(Element):
         "mesh_max_length": Dimension.LENGTH, "max_sta_spcg": Dimension.LENGTH,
     }
 
-    def __init__(self, node_i, node_j, section, rotation_deg=0.0, label="", color=None):
-        super().__init__(label, color=color)
+    node_i: Node | None = None
+    node_j: Node | None = None
+    section: any = None
+    rotation_deg: float = 0.0
+    
+    release_i: dict | None = None
+    release_j: dict | None = None
+    point_loads: list = field(default_factory=list)
+    gravity_loads: list = field(default_factory=list)
+    temp_loads: list = field(default_factory=list)
+    dist_load_sets: dict[str, D.FrameDistributedLoad] = field(default_factory=dict)
+    
+    cardinal_pt: str = "10 (centroid)"
+    mirror2: bool = False
+    mirror3: bool = False
+    transform: bool = True
+    insertion_coord_sys: str = "Local"
+    jt_offset_i: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    jt_offset_j: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    offset_type: str = "User"
+    offset_length_i: float = 0.0
+    offset_length_j: float = 0.0
+    rigid_factor: float = 0.0
+    station_type: str = "MinNumSta"
+    min_num_sta: int = 3
+    add_at_elm_int: bool = True
+    add_at_pt_load: bool = True
+    max_sta_spcg: float | None = None
+    auto_mesh: bool = False
+    mesh_at_joints: bool = False
+    mesh_at_frames: bool = False
+    mesh_num_segments: int = 0
+    mesh_max_length: float = 0.0
+    mesh_max_degrees: float = 0.0
+    mirror_abt2: bool = False
+    mirror_abt3: bool = False
+    modifiers: dict[str, float] = field(default_factory=dict)
+    design_proc: str = "From Material"
+    load_transfer: bool = True
+    section_rebar: dict = field(default_factory=dict)
+    time_dependent: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        super().__post_init__()
         self.element_type = "Frame"
-        self.node_i, self.node_j = node_i, node_j
-        self.section = section
-        self.rotation_deg = float(rotation_deg)
-        self.release_i: dict | None = None
-        self.release_j: dict | None = None
-        self.point_loads: list = []
-        self.gravity_loads: list = []
-        self.temp_loads: list = []
-        self.dist_load_sets: dict[str, D.FrameDistributedLoad] = {}
-        self.cardinal_pt = "10 (centroid)"
-        self.mirror2 = False
-        self.mirror3 = False
-        self.transform = True
-        self.insertion_coord_sys = "Local"
-        self.jt_offset_i = (0.0, 0.0, 0.0)
-        self.jt_offset_j = (0.0, 0.0, 0.0)
-        self.offset_type = "User"
-        self.offset_length_i = 0.0
-        self.offset_length_j = 0.0
-        self.rigid_factor = 0.0
-        self.station_type = "MinNumSta"
-        self.min_num_sta = 3
-        self.add_at_elm_int = True
-        self.add_at_pt_load = True
-        self.max_sta_spcg: float | None = None
-        self.auto_mesh = False
-        self.mesh_at_joints = False
-        self.mesh_at_frames = False
-        self.mesh_num_segments = 0
-        self.mesh_max_length = 0.0
-        self.mesh_max_degrees = 0.0
-        self.mirror_abt2 = False
-        self.mirror_abt3 = False
-        self.modifiers: dict[str, float] = {}
-        self.design_proc = "From Material"
-        self.load_transfer = True
-        self.section_rebar: dict = {}
-        self.time_dependent: dict = {}
+        self.rotation_deg = float(self.rotation_deg)
 
     @property
     def dist_loads(self) -> list[D.FrameDistributedLoad]:
         return [s for ls in self.dist_load_sets.values() for s in ls.to_sap_loads()]
 
     def get_length(self) -> float:
+        if not self.node_i or not self.node_j:
+            return 0.0
         return self.node_i.distance_to(self.node_j)
 
     def get_midpoint(self):
+        if not self.node_i or not self.node_j:
+            return (0.0, 0.0, 0.0)
         return ((self.node_i._x + self.node_j._x) * 0.5,
                 (self.node_i._y + self.node_j._y) * 0.5,
                 (self.node_i._z + self.node_j._z) * 0.5)
 
     def get_axis(self):
+        if not self.node_i or not self.node_j:
+            return (1.0, 0.0, 0.0)
         d = (self.node_j._x - self.node_i._x,
              self.node_j._y - self.node_i._y,
              self.node_j._z - self.node_i._z)
@@ -216,6 +239,8 @@ class Frame(Element):
         return (1.0, 0.0, 0.0) if L < 1e-9 else tuple(c / L for c in d)
 
     def get_local_axes(self) -> glm.mat3:
+        if not self.node_i or not self.node_j:
+            return glm.mat3(1.0)
         dx = self.node_j._x - self.node_i._x
         dy = self.node_j._y - self.node_i._y
         dz = self.node_j._z - self.node_i._z
@@ -233,31 +258,35 @@ class Frame(Element):
         return glm.mat3(e1, e2, e3)
 
 
+@dataclass
 class Area(Element):
     __unit_schema__ = {
         "thick_over": Dimension.LENGTH,
         "offset_over": Dimension.LENGTH,
     }
 
-    def __init__(self, nodes, thickness, label="", color=None):
-        super().__init__(label, color)
+    nodes: list = field(default_factory=list)
+    _thickness_val: float = 0.0
+    material: any = None
+    section_name: str = ""
+    area_section: D.AreaSection | None = None
+    mat_prop: str = ""
+    thick_over: float | None = None
+    offset_over: float | None = None
+    gravity_loads: list = field(default_factory=list)
+    ref_temp: float | None = None
+    strain_loads: list = field(default_factory=list)
+    surface_pressures: list = field(default_factory=list)
+    temp_loads: list = field(default_factory=list)
+    uniform_loads: list = field(default_factory=list)
+    uniform_to_frame_loads: list = field(default_factory=list)
+    wind_pressures: list = field(default_factory=list)
+
+    def __post_init__(self):
+        super().__post_init__()
         self.element_type = "Area"
-        self.nodes = list(nodes)
-        self.__dict__["thickness"] = float(thickness)
-        self.material = None
-        self.section_name = ""
-        self.area_section: D.AreaSection | None = None
-        self.mat_prop = ""
-        self.thick_over: float | None = None
-        self.offset_over: float | None = None
-        self.gravity_loads: list = []
-        self.ref_temp: float | None = None
-        self.strain_loads: list = []
-        self.surface_pressures: list = []
-        self.temp_loads: list = []
-        self.uniform_loads: list = []
-        self.uniform_to_frame_loads: list = []
-        self.wind_pressures: list = []
+        self.nodes = list(self.nodes)
+        # self._thickness_val = float(self.thickness)
 
     @property
     def thickness(self) -> float:
@@ -265,14 +294,14 @@ class Area(Element):
             return self.thick_over
         if self.area_section is not None and self.area_section.thickness is not None:
             return float(self.area_section.thickness)
-        return float(self.__dict__.get("thickness", 0.0))
+        return self._thickness_val
 
     @thickness.setter
     def thickness(self, value):
         if self.area_section is not None:
             self.thick_over = float(value)
         else:
-            self.__dict__["thickness"] = float(value)
+            self._thickness_val = float(value)
 
     @property
     def section(self):
@@ -285,9 +314,12 @@ class Area(Element):
         return self.thickness
 
 
+@dataclass
 class Link(Element):
-    def __init__(self, node_i, node_j, propname="LINK1", label="", color=None):
-        super().__init__(label, color)
+    node_i: Node | None = None
+    node_j: Node | None = None
+    propname: str = "LINK1"
+
+    def __post_init__(self):
+        super().__post_init__()
         self.element_type = "Link"
-        self.node_i, self.node_j = node_i, node_j
-        self.propname = propname

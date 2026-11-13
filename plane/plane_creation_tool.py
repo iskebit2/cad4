@@ -61,6 +61,7 @@ class PlaneCreationTool:
         self._start(self.MODE_2PT_Z)
 
     def _start(self, mode):
+        print("plane başla", mode)
         self.is_active = True
         self.mode = mode
         self.stage = self.STAGE_P0
@@ -142,7 +143,12 @@ class PlaneCreationTool:
             return
         self._mouse_pos = (x, y)
         if self.stage in (self.STAGE_P0, self.STAGE_P1, self.STAGE_P2):
-            target, _, snap_type = self.engine.snap.find_snap(self.engine, x, y, magnetic=True)
+            active_vp = self.engine.viewport_manager.active
+            cam = active_vp.camera if active_vp else self.engine.cam
+            size = (active_vp.width, active_vp.height) if active_vp else (self.engine.w, self.engine.h)
+            target, _, snap_type = self.engine.snap.find_snap(
+                self.engine, x, y, magnetic=True, cam=cam, viewport_size=size,
+            )
             self.hover_node = target
             self.hover_snap_type = snap_type
         else:
@@ -158,12 +164,20 @@ class PlaneCreationTool:
             self._last_mouse_y = y
 
     def on_mouse_click(self, x, y) -> bool:
+        active_vp = self.engine.viewport_manager.active # veya ilgili viewport
+        cam = active_vp.camera if active_vp else self.engine.cam
+        w, h = active_vp.width if active_vp else self.engine.w, active_vp.height if active_vp else self.engine.h
+        size = (active_vp.width, active_vp.height) if active_vp else (self.engine.w, self.engine.h)
         if not self.is_active:
             return False
         self._mouse_pos = (x, y)
 
         if self.stage in (self.STAGE_P0, self.STAGE_P1, self.STAGE_P2):
-            target, _, _ = self.engine.snap.find_snap(self.engine, x, y, magnetic=True)
+            
+            target, _, snap_type = self.engine.snap.find_snap(
+                            self.engine, x, y, magnetic=True, cam=cam, viewport_size=size
+                        )
+
             if target is None:
                 return False
 
@@ -320,13 +334,20 @@ class PlaneCreationTool:
     def _preview_point(self):
         if self.hover_node is not None:
             return np.array([self.hover_node.x, self.hover_node.y,
-                             self.hover_node.z], dtype=float)
+                            self.hover_node.z], dtype=float)
         if self._mouse_pos is None or self.p0 is None:
             return None
-        cam = self.engine.cam
+            
+        # Aktif viewport kamerasını ve boyutlarını güvenli şekilde alalım
+        vm = getattr(self.engine, "viewport_manager", None)
+        active_vp = vm.get(vm.active_name) if vm and hasattr(vm, "active_name") else None
+        cam = active_vp.camera if active_vp else self.engine.cam
+        w = active_vp.width if active_vp else self.engine.w
+        h = active_vp.height if active_vp else self.engine.h
+
         x, y = self._mouse_pos
-        ndc_x = 2.0 * x / self.engine.w - 1.0
-        ndc_y = 1.0 - 2.0 * y / self.engine.h
+        ndc_x = 2.0 * x / w - 1.0
+        ndc_y = 1.0 - 2.0 * y / h
         inv = glm.inverse(cam.get_projection_matrix() @ cam.get_view_matrix())
         near = inv * glm.vec4(ndc_x, ndc_y, -1.0, 1.0)
         far = inv * glm.vec4(ndc_x, ndc_y, 1.0, 1.0)
@@ -363,7 +384,7 @@ class PlaneCreationTool:
     # Render — InteractionRenderer üzerinden çağrılır
     # ------------------------------------------------------------------
     def render(self, mvp):
-        if not self.is_active or self.p0 is None:
+        if not self.is_active:
             return
         ir = self.engine.interaction_renderer
         if ir is None or ir.overlay_shader is None:
@@ -380,26 +401,31 @@ class PlaneCreationTool:
 
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glEnable(GL_DEPTH_TEST)
+
+        # ★ Test için depth test'i tamamen kapatıp çizmeyi deneyin
+        glDisable(GL_DEPTH_TEST) 
         glDepthMask(GL_FALSE)
 
         ir._ensure_dynamic_buffers()
         vao = ir._dyn_vao
         vbo = ir._dyn_vbo
 
-        self._draw_u_v_lines(vao, vbo, loc_color)
-        if self.stage == self.STAGE_P2:
-            self._draw_quad_preview(vao, vbo, loc_color)
-        elif self.p2 is not None:
-            self._draw_quad(vao, vbo, loc_color)
-        if self.stage in (self.STAGE_DEPTH_PLUS, self.STAGE_DEPTH_MINUS):
-            self._draw_box(vao, vbo, loc_color)
+        if self.p0 is not None:
+            self._draw_u_v_lines(vao, vbo, loc_color)
+            if self.stage == self.STAGE_P2:
+                self._draw_quad_preview(vao, vbo, loc_color)
+            elif self.p2 is not None:
+                self._draw_quad(vao, vbo, loc_color)
+            if self.stage in (self.STAGE_DEPTH_PLUS, self.STAGE_DEPTH_MINUS):
+                self._draw_box(vao, vbo, loc_color)
+
         if self.hover_node is not None:
             self._draw_hover(vao, vbo, loc_color)
 
         glBindVertexArray(0)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glDepthMask(GL_TRUE)
+        glEnable(GL_DEPTH_TEST)
         glDisable(GL_BLEND)
 
     def _upload(self, vao, vbo, verts, mode, color, loc_color, width=1.0):
@@ -434,8 +460,13 @@ class PlaneCreationTool:
 
     def _draw_quad_preview(self, vao, vbo, loc_color):
         point = self._preview_point()
+        
+        if point is None:
+            return
         v = self._preview_v_perp(point)
-        if v is None or np.linalg.norm(v) < 1e-9:
+        v_norm = np.linalg.norm(v) if v is not None else "N/A"
+        
+        if v is None or v_norm < 1e-9:
             return
         self._draw_quad_geometry(vao, vbo, v, loc_color, alpha=0.15)
 
@@ -510,10 +541,12 @@ class PlaneCreationTool:
         return False
 
     def handle_move(self, x, y, dx, dy) -> bool:
+        if not self.is_active:
+            return False
         eng = self.engine
-        if eng.input.state.buttons.get(2):   # MIDDLE
-            return False   # CameraController'a bırak
-        if eng.input.state.buttons.get(0) and eng.input.is_shift():  # shift+left orbit
+        if eng.input.state.buttons.get(2):
+            return False
+        if eng.input.state.buttons.get(0) and eng.input.is_shift():
             return False
         self.on_mouse_move(x, y)
         return True
@@ -532,3 +565,84 @@ class PlaneCreationTool:
         return (abs(a.x - b.x) < 1e-3
                 and abs(a.y - b.y) < 1e-3
                 and abs(a.z - b.z) < 1e-3)
+
+class PlaneFromElementInputHandler:
+    def __init__(self, state):
+        self.state = state
+        self.engine = state.engine
+    
+    def handle_click(self, x, y, button):
+        if not self.state.active:
+            return False
+        if button != 0:
+            return False
+        # Hover'daki elementi seç
+        return self.state.try_confirm()
+    
+    def handle_key(self, key, mods):
+        if not self.state.active:
+            return False
+        import glfw
+        if key == glfw.KEY_ESCAPE:
+            self.state.cancel()
+            return True
+        if key == glfw.KEY_SPACE:
+            # 1-2 / 1-3 toggle
+            self.state.frame_axis_12 = not self.state.frame_axis_12
+            return True
+        return False
+    
+class PlaneFromElementState:
+    """Element seçimi state'i."""
+    def __init__(self):
+        self.active = False
+        self.hover_element = None
+        self.frame_axis_12 = False   # False → 1-3, True → 1-2
+    
+    def start(self):
+        self.active = True
+        self.hover_element = None
+    
+    def cancel(self):
+        self.active = False
+        self.hover_element = None
+    
+    def set_hover(self, element):
+        """Seçim hover'ında çağrılır."""
+        from domain.element import Frame, Area
+        from domain.polygon import Polygon
+        if not isinstance(element, (Frame, Area, Polygon)):
+            self.hover_element = None
+            return
+        self.hover_element = element
+    
+    def try_confirm(self) -> bool:
+        """Seçili elemandan plane oluştur."""
+        el = self.hover_element
+        if el is None:
+            return False
+        from plane.plane import Plane
+        try:
+            plane = Plane.from_element(
+                el, frame_local_12=self.frame_axis_12,
+                name=f"Plane_{el.element_type}_{el.unique_id}",
+            )
+        except Exception as e:
+            logger.warning("[PlaneFromElement] Plane oluşturulamadı: %s", e)
+            return False
+        eng = getattr(self, "engine", None)
+        if eng is not None:
+            proj = eng.project
+            if proj is not None:
+                plane.fit_to_math_model(eng.math_model)
+                proj.add_plane(plane)
+                eng.update_geo(proj)
+                # plane manager'da seç
+                pm = eng._app.panels.get("plane_manager", {}).get("instance") if eng._app else None
+                if pm is not None:
+                    pm._selected_name = plane.name
+                    pm.visible = True
+                    pm._load_edit(plane, force=True)
+        self.active = False
+        self.hover_element = None
+        return True

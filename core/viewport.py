@@ -27,6 +27,14 @@ class Viewport:
         self.fbo = OffscreenFBO(self.width, self.height, with_id=True)
         self.visible = True
         self.plane = None
+        self.is_2d = False
+        self.visible_ids: set[int] | None = None
+        self._visible_ids_dirty: bool = True
+
+        # ★ Element filter
+        self.element_filter = None   # ElementFilterQuery | None
+        self._element_filter_ids: frozenset[int] | None = None
+        self._element_filter_dirty = True
 
     # ------------------------------------------------------------------
     def resize(self, w: int, h: int):
@@ -67,7 +75,7 @@ class Viewport:
         
         if pid <= 0:
             return None
-        logger.debug(f"[VP_PICK_AT] fbo={self.fbo.fbo} pid={pid}")
+        # logger.debug(f"[VP_PICK_AT] fbo={self.fbo.fbo} pid={pid}")
         return pick_pass.get_element(pid)
 
     def pick_rect(self, pick_pass, x0, y0, x1, y1) -> list:
@@ -84,6 +92,15 @@ class Viewport:
                 result.append(el)
         return result
 
+    def set_element_filter(self, query):
+        """Element filtresini ayarla. None → filtreyi kaldır."""
+        self.element_filter = query
+        self._element_filter_dirty = True
+        self.invalidate_visible_ids()
+    
+    def invalidate_visible_ids(self):
+        self._visible_ids_dirty = True
+        self._element_filter_dirty = True
     # ------------------------------------------------------------------
     def cleanup(self):
         if self.fbo is not None:

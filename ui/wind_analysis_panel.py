@@ -69,8 +69,8 @@ class WindAnalysisPanel(BasePanel):
                     eng.renderer.set_show("node", True)
                     eng.renderer.set_show("link", True)
                     eng.renderer.set_show("area", True)
+                    eng.renderer.set_show("polygon", True)
                 if eng.presentation_renderer:
-                    eng.presentation_renderer.show["polygon"] = False
                     eng.presentation_renderer.show["zones"] = False
                 eng.active_wind_vector = None
                 eng.update_geo(self.project)

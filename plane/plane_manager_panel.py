@@ -158,7 +158,19 @@ class PlaneManagerPanel(BasePanel):
         if imgui.button("2pt+Z"):
             if pdm:
                 pdm.start_2pt_z()
-
+        imgui.same_line()
+        if imgui.button("Element"):
+            if pdm:
+                # Element moduna geç (dialog aç)
+                from plane.plane_source_dialog import SRC_ELEMENT
+                dialog = getattr(self.app, "plane_source_dialog", None)
+                if dialog is not None:
+                    dialog.source = SRC_ELEMENT
+                    dialog.open()
+                else:
+                    # Fallback: doğrudan element seçimi
+                    self._start_element_mode()
+                    
         imgui.same_line()
         has_selection = self._selected_plane() is not None
         if not has_selection:

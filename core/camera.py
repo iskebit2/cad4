@@ -130,10 +130,8 @@ class Camera:
 
     def orbit(self, dx, dy):
         if self.view_preset == "working_plane":
-            self.up = glm.vec3(0.0, 0.0, 1.0)
-            self.view_preset = None
+            self.view_preset = None  # up vektörünü bozmamak için Z-up zorlaması kaldırıldı
         elif self.view_preset == "top":
-            # ★ Top view'den orbit: pitch 89'a (gimbal lock önlemi)
             self.pitch = 89.0
             self.view_preset = None
         self.yaw -= dx * self.ORBIT_SENSITIVITY
@@ -202,8 +200,10 @@ class Camera:
                     glm.radians(self.fov), self.aspect_ratio, self.near, self.far
                 )
             else:
-                # Ortografik görünüm için boyutu doğrudan model boyutuna ve mesafeye endeksle
-                ortho_size = (self.model_size * 0.75) * (self.distance / (self.model_size * 1.5))
+                if self.view_preset == "working_plane":
+                    ortho_size = self.distance
+                else:
+                    ortho_size = (self.model_size * 0.75) * (self.distance / (self.model_size * 1.5))
                 self._projection_matrix = glm.ortho(
                     -ortho_size * self.aspect_ratio,
                     ortho_size * self.aspect_ratio,

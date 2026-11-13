@@ -116,7 +116,18 @@ class Toolbar:
                     if clicked:
                         self._fire_deferred(key)
                 imgui.end_menu()
-
+            if imgui.begin_menu("Plane"):
+                clicked, _ = imgui.menu_item("3 Noktadan", "", False)
+                if clicked:
+                    self._fire_deferred("plane_3pt")
+                clicked, _ = imgui.menu_item("2 Nokta + Z", "", False)
+                if clicked:
+                    self._fire_deferred("plane_2pt_z")
+                clicked, _ = imgui.menu_item("Element'ten...", "", False)
+                if clicked:
+                    self._fire_deferred("plane_from_element")
+                imgui.end_menu()
+                
             # Close all
             imgui.separator()
             clicked, _ = imgui.menu_item("Close All", "", False)

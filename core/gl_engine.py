@@ -10,6 +10,7 @@ from OpenGL.GL import *
 from pyglm import glm
 
 from core.camera import Camera
+from plane.plane_source_dialog import PlaneSourceDialog
 from tools.draw_manager import DrawManager
 from core.edit.edit_controller import EditController
 from core.input_manager import InputManager
@@ -20,21 +21,21 @@ from core.selection_policy import SelectionPolicy
 from domain.scene import Scene
 from domain.math_model import MathModel
 from geometry.geometry_processor import GeometryProcessor
-from logging_config import CadLogger
 from render.interactionrenderer import InteractionRenderer
 from render.mathmodelrenderer import MathModelRenderer
 from render.scenerenderer import SceneRenderer
 from render.shaderprogram import ShaderProgram
 from render.snapsquare import SnapSquareRenderer
-from plane.plane_creation_tool import PlaneCreationTool
+from plane.plane_creation_tool import PlaneCreationTool, PlaneFromElementInputHandler, PlaneFromElementState
 from core.input_manager import InputManager
 from core.camera_controller import CameraController
 
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 if TYPE_CHECKING:
     from plane.plane import Plane
 
-logger = CadLogger.get(__name__)
 
 SHADER_DIR = Path(__file__).resolve().parent.parent / "render" / "shaders"
 
@@ -87,6 +88,7 @@ class Engine:
         self.last_hover_time = 0.0
         self.hover_throttle = 0.05
         self.pending_pick_check = False
+        self._force_id_pass_once = False
 
         self.show = {
             "scene": True,
@@ -103,7 +105,14 @@ class Engine:
 
         self.working_plane_provider: Callable[[], Plane | None] | None = None
         self.on_hover_changed_callback = None
-        
+
+        self._plane_from_element = PlaneFromElementState()
+        self._plane_from_element.engine = self
+
+    @property
+    def plane_from_element_dialog(self):
+        return getattr(self, "_plane_source_dialog", None)
+
     @property
     def math_model_renderer(self):
         return getattr(self.renderer, "math_model_renderer", None) if self.renderer else None
@@ -194,6 +203,7 @@ class Engine:
         self.input.register(self.plane_draw_mgr)
         self.input.register(self.draw_mgr)
         self.input.set_global_escape(self._on_global_escape)
+        self.input.register(PlaneFromElementInputHandler(self._plane_from_element))
 
         from imgui_bundle import imgui
         self.input.set_capture_callbacks(
@@ -292,7 +302,7 @@ class Engine:
     # ------------------------------------------------------------------
     def render(self, cam, target_fbo: int = 0, draw_interaction: bool = True,
            target_size: tuple[int, int] | None = None,
-           viewport_name: str | None = None, viewport_plane=None):
+           viewport_name: str | None = None, viewport_plane=None, visible_ids=None):
         if not (cam and self.renderer and self.mrt):
             return
 
@@ -308,12 +318,15 @@ class Engine:
             tw = th = None
             render_w, render_h = self.mrt.w, self.mrt.h
         glViewport(0, 0, render_w, render_h)
-        
+        force_id = target_size is not None or self._force_id_pass_once
+        self._force_id_pass_once = False
+
         glDrawBuffer(GL_COLOR_ATTACHMENT0)
         self.renderer.render(
-                cam, target_fbo, force_id_pass=target_size is not None,
-                viewport_name=viewport_name, plane=viewport_plane,
-            )
+            cam, target_fbo, force_id_pass=force_id,
+            viewport_name=viewport_name, plane=viewport_plane,
+            visible_ids=visible_ids,
+        )
 
         self.mrt.blit_to(
             target_fbo,
@@ -350,13 +363,27 @@ class Engine:
         if vp is None or vp.camera is None:
             return
         vp.camera.set_aspect(vp.width, vp.height)
-        self.render(
-            vp.camera, target_fbo=vp.fbo.fbo,
-            target_size=(vp.width, vp.height),
-            viewport_name=vp.name,
-            viewport_plane=getattr(vp, "plane", None),
-        )
-    # ------------------------------------------------------------------
+        # ★ Viewport 2D modundaysa plane_2d projection kullan
+        is_2d = getattr(vp, "is_2d", False)
+        prev_projection = self.renderer.projection
+        if is_2d:
+            self.renderer.projection = "plane_2d"
+            if self.renderer.math_model_renderer:
+                self.renderer.math_model_renderer.projection = "plane_2d"
+        try:
+            self.render(
+                vp.camera, target_fbo=vp.fbo.fbo,
+                target_size=(vp.width, vp.height),
+                viewport_name=vp.name,
+                viewport_plane=getattr(vp, "plane", None),
+                visible_ids=getattr(vp, "visible_ids", None),
+            )
+        finally:
+            # ★ Global state'i geri yükle
+            self.renderer.projection = prev_projection
+            if self.renderer.math_model_renderer:
+                self.renderer.math_model_renderer.projection = prev_projection        
+# ------------------------------------------------------------------
     def set_scene(self, project):
         if self.interaction_renderer:
             self.interaction_renderer.preview_plane = None
@@ -445,9 +472,7 @@ class Engine:
         position = (viewport.name, int(x), int(y))
         if (now - self.last_hover_time) < self.hover_throttle:
             return
-        if position == (
-            self.last_hover_viewport, self.last_hover_x, self.last_hover_y,
-        ):
+        if position == (self.last_hover_viewport, self.last_hover_x, self.last_hover_y):
             return
         if pick_pass.pick_async(
             int(x), int(y),
@@ -465,13 +490,20 @@ class Engine:
         if not self.pending_pick_check:
             return False
         try:
-            pick_id, _, _ = self.renderer.check_pick()
+            pick_id, px, py = self.renderer.check_pick()
         except Exception:
             logger.exception("Pick kontrolü")
             self.pending_pick_check = False
             return False
         if pick_id is not None:
             self.pending_pick_check = False
+            # ★ İlk hover'da 0 dönerse bir kez daha dene
+            if pick_id == 0 and not getattr(self, "_hover_retry", False):
+                self._hover_retry = True
+                self.last_hover_x = -1
+                self.last_hover_y = -1
+                return False
+            self._hover_retry = False
             self._update_hover(pick_id)
             return True
         if not self.renderer.pick_pass.pending_pick:
@@ -490,6 +522,7 @@ class Engine:
             self.sel_mgr.clear()
 
     def _update_hover(self, pick_id):
+        # logger.debug(f"[HOVER] pick_id={pick_id}")
         if pick_id == self.hover_id:
             return
         self.hover_id = pick_id
@@ -497,8 +530,15 @@ class Engine:
             self.clear_hover()
             if self.on_hover_changed_callback:
                 self.on_hover_changed_callback(None)
+            pfe = getattr(self, "_plane_from_element", None)
+            if pfe is not None and pfe.active:
+                pfe.set_hover(None)
             return
         element = self._find_element(pick_id)
+        pfe = getattr(self, "_plane_from_element", None)
+        if pfe is not None and pfe.active:
+            pfe.set_hover(element)
+            
         if element is None:
             self.clear_hover()
             return
@@ -616,7 +656,16 @@ class Engine:
         self.renderer.projection = "3d"
         if self.renderer.math_model_renderer:
             self.renderer.math_model_renderer.projection = "3d"
-            
+
+    def start_plane_from_element(self):
+        self._plane_from_element.start()
+
+    def cancel_plane_from_element(self):
+        self._plane_from_element.cancel()
+
+    def toggle_plane_from_element_axis(self):
+        self._plane_from_element.frame_axis_12 = not self._plane_from_element.frame_axis_12
+        
     def _on_global_escape(self) -> None:
         changed = False
 
@@ -646,11 +695,3 @@ class Engine:
                 pm._editing_plane = None
                 # pm._clear_preview()
                 pm._preview_off()
-
-        # if self.project is not None and self.project.active_plane is not None:
-        #     self.project.deactivate_plane()
-        #     self.cam.clear_section_filter()
-        #     changed = True
-
-        # if changed and self.project is not None:
-        #     self.update_geo(self.project)

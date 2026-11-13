@@ -85,7 +85,7 @@ class SceneRenderer:
         )
 
     def render(self, camera, target_fbo=0, force_id_pass=False,
-               viewport_name=None, plane=None):
+               viewport_name=None, plane=None, visible_ids=None):
         if not self.engine:
             if self.math_model_renderer:
                 self.math_model_renderer.render(
@@ -117,7 +117,8 @@ class SceneRenderer:
             and self.presentation_renderer.show.get("lines", True)
         )
         if engine.show.get("scene", True):
-            base.render(camera, target_fbo, force_id_pass=force_id_pass, plane=plane)
+            base.render(camera, target_fbo, force_id_pass=force_id_pass,
+                        plane=plane, visible_ids=visible_ids)
 
     def render_scene_visuals(self, *args, **kwargs):
         return self.presentation_renderer.render_scene_visuals(*args, **kwargs)

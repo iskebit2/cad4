@@ -123,13 +123,10 @@ class CameraController:
             if not eng.input.is_ctrl():
                 eng.sel_mgr.clear()
             return
-
-        # Plane/section filtresi son doğrulama
-        math_renderer = getattr(eng, "math_model_renderer", None)
-        if math_renderer is not None:
-            vp_plane = getattr(vp, "plane", None)
-            if not math_renderer._element_in_section(element, vp.camera, vp_plane):
-                return
+        # ★ visible_ids kontrolü — O(1)
+        if vp.visible_ids is not None and element.unique_id not in vp.visible_ids:
+            return
+        eng.sel_mgr.select(element, additive=eng.input.is_ctrl())
 
         eng.sel_mgr.select(element, additive=eng.input.is_ctrl())
     def _on_escape(self):

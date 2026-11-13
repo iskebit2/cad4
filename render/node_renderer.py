@@ -12,6 +12,8 @@ from domain.element import Node
 from geometry.node_builder import NodeBuilder
 from render.base_renderer import BaseRenderer, _final_color_for
 
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 class NodeRenderer(BaseRenderer[Node]):
 
@@ -79,7 +81,7 @@ class NodeRenderer(BaseRenderer[Node]):
 
         sh = self.shader
         sh.use()
-
+        
         # --- Uniform'lar ---
         loc = sh.get_loc("pointSize")
         if loc != -1:
@@ -118,19 +120,31 @@ class NodeRenderer(BaseRenderer[Node]):
         if loc != -1:
             glUniformMatrix4fv(loc, 1, GL_FALSE, glm.value_ptr(mvp))
 
+        loc = sh.get_loc("useVertexColor")
+        if loc != -1:
+            glUniform1i(loc, 1)
+
+        loc = sh.get_loc("alpha")
+        if loc != -1:
+            glUniform1f(loc, float(alpha))
+
         glBindVertexArray(self.simple_vao)
         glEnable(GL_PROGRAM_POINT_SIZE)
+        
         if visible_ids is None:
+            # Filtre yoksa direkt tüm noktaları çiz
             glDrawArrays(GL_POINTS, 0, self.simple_vcount)
         else:
+            # Görünür ID filtrelemesi (Her node 1 simple vertex üretiyorsa)
             offset = 0
             for element in self.elements:
-                vc_ = self.elem_to_simple_vcount.get(element.unique_id, 0)
+                vc_ = self.elem_to_simple_vcount.get(element.unique_id, 1)
                 if vc_ == 0:
                     continue
                 if element.unique_id in visible_ids:
                     glDrawArrays(GL_POINTS, offset, vc_)
                 offset += vc_
+                
         glDisable(GL_PROGRAM_POINT_SIZE)
         glBindVertexArray(0)
 

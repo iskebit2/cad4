@@ -268,19 +268,41 @@ class MathModelRenderer:
         self.render_mode = modes[(idx + 1) % len(modes)]
         return self.render_mode
 
-    def render(self, cam, target_fbo=0, force_id_pass=False, plane=None):
+    def _apply_clip_uniforms(self, shader, plane):
+        """CLIP mode aktifse shader'a plane uniform'larını yazar.
+        INTERSECT / STRICT / plane=None → u_clip_active=0 (shader filtre uygulamaz)."""
+        if shader is None:
+            return
+        from plane.plane_policy import SectionFilterMode
+        active = (
+            plane is not None
+            and getattr(plane, "filter_mode", None) == SectionFilterMode.CLIP
+        )
+        shader.use()
+        shader.set_int("u_clip_active", 1 if active else 0)
+        if not active:
+            return
+        shader.set_vec3("u_plane_origin", *plane.origin)
+        shader.set_vec3("u_plane_normal", *plane.normal)
+        shader.set_vec3("u_plane_u", *plane.u)
+        shader.set_vec3("u_plane_v", *plane.v)
+        shader.set_float("u_u_min", plane.u_min if plane.u_min is not None else -1e30)
+        shader.set_float("u_u_max", plane.u_max if plane.u_max is not None else  1e30)
+        shader.set_float("u_v_min", plane.v_min if plane.v_min is not None else -1e30)
+        shader.set_float("u_v_max", plane.v_max if plane.v_max is not None else  1e30)
+        shader.set_float("u_depth_minus", plane.depth_minus)
+        shader.set_float("u_depth_plus",  plane.depth_plus)
+        
+    def render(self, cam, target_fbo=0, force_id_pass=False, plane=None, visible_ids=None):
         if not cam:
             return
-
-        # ★ visible_ids: section/plane filtresi
-        if cam.section_active or plane is not None:
-            visible_ids: set[int] | None = set()
-            for elems in self._render_elements.values():
-                for e in elems:
-                    if self._element_in_section(e, cam, plane):
-                        visible_ids.add(e.unique_id)
-        else:
-            visible_ids = None
+        # logger.debug(f"[MMR_RENDER] force_id_pass={force_id_pass} plane={plane} vis={len(visible_ids) if visible_ids is not None else 'all'}")
+        
+        self._apply_clip_uniforms(self.standard_shader, plane)
+        self._apply_clip_uniforms(self.simple_shader, plane)
+        self._apply_clip_uniforms(self.node_shader, plane)
+        if self.engine is not None and self.engine.pick_s is not None:
+            self._apply_clip_uniforms(self.engine.pick_s, plane)
 
         v = cam.get_view_matrix()
         p = cam.get_projection_matrix()
@@ -362,8 +384,9 @@ class MathModelRenderer:
             self.line_r.draw(mvp, visible_ids=visible_ids)
 
     def _render_id_pass(self, mvp, visible_ids=None):
-        logger.debug(f"[ID_PASS] vis={len(visible_ids) if visible_ids is not None else 'all'} poly_vao={self.polygon_r.simple_vao} vc={self.polygon_r.simple_vcount}")
-        
+        # logger.debug(f"[ID_PASS] vis={len(visible_ids) if visible_ids is not None else 'all'} poly_vao={self.polygon_r.simple_vao} vc={self.polygon_r.simple_vcount}")
+        # logger.debug(f"[ID_PASS] called pick_s={self.engine.pick_s}")
+
         if not (self.engine and self.engine.pick_s and self.engine.mrt):
             return
 
@@ -405,6 +428,7 @@ class MathModelRenderer:
             glEnable(GL_BLEND)
         else:
             glDisable(GL_BLEND)
+        glDrawBuffer(GL_COLOR_ATTACHMENT0)
 
     def get_bounds(self):
         return self.center, self.size

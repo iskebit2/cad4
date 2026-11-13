@@ -8,6 +8,7 @@ import numpy as np
 
 from core.id_manager import IDManager
 from data import enums as E
+from domain.element import Element
 from domain.vertex import Vertex
 from tools.polygon_frame_assoc import (
     angle_to_axis_deg, passes_direction_filter, segment_hits_band_and_box,
@@ -19,24 +20,15 @@ def _coords(v) -> tuple[float, float, float]:
 
 
 @dataclass
-class Polygon:
+class Polygon(Element):
     nodes: list = field(default_factory=list)
-    label: str = ""
     poly_type: E.PolygonType = E.PolygonType.GENERIC
     dist_type: E.DistType = E.DistType.TWO_WAY
-    color: list = field(default_factory=lambda: [0.8, 0.3, 0.8, 0.6])
-    is_selected: bool = False
-    is_visible: bool = True
-    element_type: str = "Polygon"
-    unique_id: int = field(default_factory=IDManager.generate_id)
-    pick_id: int = 0
-    show_axes_override: bool | None = None
     is_temporary: bool = False
     zone_children_by_direction: dict = field(default_factory=dict)
     show_zones_direction: str | None = None
-    needs_update: bool = True
 
-    # --- assoc (panel tetikler; otomatik çalışmaz) ---
+    # Assoc
     assoc_auto: bool = True
     assoc_depth: float = 500.0
     assoc_ignore_bounds: bool = False
@@ -46,12 +38,16 @@ class Polygon:
     excluded: set[int] = field(default_factory=set)
     association_revision: int = 0
 
-    def __post_init__(self):
-        self.pick_id = self.unique_id
+    element_type: str = "Polygon"
 
-    def toggle_selection(self): self.is_selected = not self.is_selected
-    def mark_dirty(self): self.needs_update = True
-    def is_valid(self) -> bool: return len(self.nodes) >= 3
+    def __post_init__(self):
+        super().__post_init__()
+        # color normalize: None → default rgba
+        if self.color is None or len(self.color) < 4:
+            self.color = [0.8, 0.3, 0.8, 0.6]
+
+    def is_valid(self) -> bool:
+        return len(self.nodes) >= 3
 
     def centroid(self) -> tuple[float, float, float]:
         if not self.nodes:

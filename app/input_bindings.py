@@ -12,6 +12,7 @@ def build_bindings(app):
         glfw.KEY_DELETE: lambda: eng().sel_mgr.delete_selected(),
         glfw.KEY_D: lambda: app.actions.toggle_draw(None),
         glfw.KEY_L: app.actions.toggle_loads,
+        glfw.KEY_F12: app.actions.set_app,
         
         (glfw.KEY_W, glfw.MOD_SHIFT): app.actions.toggle_plane,
         (glfw.KEY_Z, glfw.MOD_CONTROL): lambda: eng().sel_mgr.undo(),

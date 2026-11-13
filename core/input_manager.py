@@ -169,3 +169,63 @@ class InputManager:
         self._last_click[button] = 0.0 if is_double else now
         self._last_pos[button] = (x, y)
         return is_double
+
+    def dispatch_move(self, x: float, y: float, dx: float, dy: float) -> bool:
+        """Sırayla handler'lara ilet."""
+        for h in self._handlers:
+            if not getattr(h, "is_active", False):
+                continue
+            fn = getattr(h, "handle_move", None)
+            if callable(fn) and fn(x, y, dx, dy):
+                return True
+        if self._fallback and hasattr(self._fallback, "handle_move"):
+            return bool(self._fallback.handle_move(x, y, dx, dy))
+        return False
+
+    def dispatch_click(self, x: float, y: float, button: int) -> bool:
+        for h in self._handlers:
+            if not getattr(h, "is_active", False):
+                continue
+            fn = getattr(h, "handle_click", None)
+            if callable(fn) and fn(x, y, button):
+                return True
+        if self._fallback and hasattr(self._fallback, "handle_click"):
+            return bool(self._fallback.handle_click(x, y, button))
+        return False
+
+    def dispatch_release(self, x: float, y: float, button: int) -> bool:
+        for h in self._handlers:
+            if not getattr(h, "is_active", False):
+                continue
+            fn = getattr(h, "handle_release", None)
+            if callable(fn) and fn(x, y, button):
+                return True
+        if self._fallback and hasattr(self._fallback, "handle_release"):
+            return bool(self._fallback.handle_release(x, y, button))
+        return False
+
+    def dispatch_key(self, key: int, mods: int) -> bool:
+        # Escape özel
+        if key == glfw.KEY_ESCAPE and self._global_escape:
+            if self._global_escape():
+                return True
+        for h in self._handlers:
+            if not getattr(h, "is_active", False):
+                continue
+            fn = getattr(h, "handle_key", None)
+            if callable(fn) and fn(key, mods):
+                return True
+        if self._fallback and hasattr(self._fallback, "handle_key"):
+            return bool(self._fallback.handle_key(key, mods))
+        return False
+
+    def dispatch_scroll(self, delta: float) -> bool:
+        for h in self._handlers:
+            if not getattr(h, "is_active", False):
+                continue
+            fn = getattr(h, "handle_scroll", None)
+            if callable(fn) and fn(delta):
+                return True
+        if self._fallback and hasattr(self._fallback, "handle_scroll"):
+            return bool(self._fallback.handle_scroll(delta))
+        return False

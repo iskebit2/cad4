@@ -599,3 +599,8 @@ class AppActions:
             # Geometriyi ve görünümü güncelle
             eng.update_geo(project)
             eng.fit_view()
+
+    def set_app(self) -> None:
+        from tools.debug_nodes import debug_nodes
+        print("\ndebug_nodes")
+        debug_nodes(self.app)

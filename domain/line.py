@@ -5,22 +5,26 @@ import math
 from dataclasses import dataclass, field
 
 from core.id_manager import IDManager
+from domain.element import Element
 from domain.vertex import Vertex
 
 
 @dataclass
-class Line:
+class Line(Element):
     v1: Vertex = field(default_factory=Vertex)
     v2: Vertex = field(default_factory=Vertex)
-    color: tuple[float, float, float] = (1.0, 1.0, 1.0)
     width: float = 1.0
     style: str = "solid"
-    label: str = ""
-    visible: bool = True
     is_column: bool = False
-    is_selected: bool = False
-    unique_id: int = field(default_factory=IDManager.generate_id)
-    pick_id: int = 0
+    element_type: str = "Line"   # dataclass default override
+
+    def __post_init__(self):
+        super().__post_init__()
+        # color normalize: None veya list → tuple
+        if self.color is None:
+            self.color = (1.0, 1.0, 1.0)
+        elif isinstance(self.color, list):
+            self.color = tuple(self.color[:3])
 
     @property
     def vertices(self) -> tuple[Vertex, Vertex]:
@@ -53,5 +57,5 @@ class Line:
         return Line(
             v1=self.v1.copy(), v2=self.v2.copy(),
             color=self.color, width=self.width, style=self.style,
-            label=self.label, visible=self.visible, is_column=self.is_column,
+            label=self.label, is_column=self.is_column,
         )

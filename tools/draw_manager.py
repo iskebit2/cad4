@@ -61,7 +61,7 @@ class DrawManager:
         if len(self.points) < 3:
             self.cancel()
             return
-        self._finalize_polygon(Polygon(list(self.points), label=""))
+        self._finalize_polygon(Polygon(nodes=list(self.points), label=""))
 
     # ------------------------------------------------------------------
     def on_mouse_move(self, x, y):
@@ -71,16 +71,36 @@ class DrawManager:
         if now - self._last_move < self.MOVE_THROTTLE:
             return
         self._last_move = now
-        target, is_snap, snap_type = self.engine.snap.find_snap(self.engine, x, y, magnetic=True)
+
+        # ★ Aktif viewport bilgisi
+        eng = self.engine
+        vm = getattr(eng, "viewport_manager", None)
+        active_vp = vm.get(vm.active_name) if vm and getattr(vm, "active_name", None) else None
+        cam = active_vp.camera if active_vp else eng.cam
+        size = (active_vp.width, active_vp.height) if active_vp else (eng.w, eng.h)
+
+        target, is_snap, snap_type = eng.snap.find_snap(
+            eng, x, y, magnetic=True, cam=cam, viewport_size=size,
+        )
         self.hover_node = target
         self.hover_is_snap = is_snap
         self.hover_snap_type = snap_type
-        self.mouse_world_pos = self.engine.screen_to_world(x, y)
+        # mouse_world — plane için screen_to_world gerekli, şimdilik aynı
+        self.mouse_world_pos = eng.screen_to_world(x, y)
 
     def on_mouse_click(self, x, y) -> bool:
         if not self.is_active:
             return False
-        target, _, _ = self.engine.snap.find_snap(self.engine, x, y, magnetic=True)
+
+        eng = self.engine
+        vm = getattr(eng, "viewport_manager", None)
+        active_vp = vm.get(vm.active_name) if vm and getattr(vm, "active_name", None) else None
+        cam = active_vp.camera if active_vp else eng.cam
+        size = (active_vp.width, active_vp.height) if active_vp else (eng.w, eng.h)
+
+        target, _, _ = eng.snap.find_snap(
+            eng, x, y, magnetic=True, cam=cam, viewport_size=size,
+        )
         if target is None:
             return True
         if self.mode == "line":
@@ -158,7 +178,7 @@ class DrawManager:
             Vertex(p2.x, p2.y, p2.z),
             Vertex(p1.x, p2.y, p2.z),
         ]
-        self._finalize_polygon(Polygon(corners, label=""))
+        self._finalize_polygon(Polygon(nodes=corners, label=""))
 
     def _polygon_from_inside(self, start):
         math_model = self.engine.math_model
@@ -179,7 +199,7 @@ class DrawManager:
                    source_node_id=getattr(nd, "unique_id", None))
             for nd in near
         ]
-        self._finalize_polygon(Polygon(vertices, label=""))
+        self._finalize_polygon(Polygon(nodes=vertices, label=""))
 
     def _finalize_polygon(self, polygon: Polygon):
         project = self._project()
@@ -333,14 +353,26 @@ class DrawManager:
         finally:
             glEnable(GL_DEPTH_TEST)
 
+    def _preview_endpoint(self) -> Vertex | None:
+        """Aktif preview uç noktası: hover_node varsa onu, yoksa mouse_world_pos."""
+        if self.hover_node is not None:
+            if isinstance(self.hover_node, Vertex):
+                return self.hover_node
+            # Node objesi (x,y,z)
+            return Vertex(self.hover_node.x, self.hover_node.y, self.hover_node.z)
+        return self.mouse_world_pos
+
     def _render_line_preview(self, color_loc):
         n = len(self.points)
         if n == 0:
             return
         last = self.points[-1]
-        if self.mouse_world_pos is not None:
-            m = self.mouse_world_pos
-            verts = np.array([last.x, last.y, last.z, m.x, m.y, m.z], np.float32)
+        endpoint = self._preview_endpoint()
+        if endpoint is not None:
+            verts = np.array(
+                [last.x, last.y, last.z, endpoint.x, endpoint.y, endpoint.z],
+                np.float32,
+            )
             self._upload_draw(color_loc, verts, GL_LINES, 2, (1.0, 1.0, 0.0, 0.9))
         if n >= 1:
             p = self.points[0]
@@ -358,18 +390,25 @@ class DrawManager:
         if n >= 2:
             self._draw_points(color_loc, self.points, GL_LINE_STRIP, (1.0, 1.0, 0.0, 1.0))
 
-        if self.mouse_world_pos is not None and n >= 1:
+        endpoint = self._preview_endpoint()
+        if endpoint is not None and n >= 1:
             last = self.points[-1]
-            m = self.mouse_world_pos
-            verts = np.array([last.x, last.y, last.z, m.x, m.y, m.z], np.float32)
+            verts = np.array(
+                [last.x, last.y, last.z, endpoint.x, endpoint.y, endpoint.z],
+                np.float32,
+            )
             self._upload_draw(color_loc, verts, GL_LINES, 2, (1.0, 1.0, 1.0, 0.85))
 
         if n >= 3:
-            first, last = self.points[0], self.points[-1]
-            verts = np.array([last.x, last.y, last.z, first.x, first.y, first.z], np.float32)
+            first = self.points[0]
+            verts = np.array(
+                [self.points[-1].x, self.points[-1].y, self.points[-1].z,
+                first.x, first.y, first.z],
+                np.float32,
+            )
             self._upload_draw(color_loc, verts, GL_LINES, 2, (0.5, 1.0, 0.5, 0.7))
 
-        if self.mode == "rectangle" and n == 1 and self.mouse_world_pos is not None:
+        if self.mode == "rectangle" and n == 1 and endpoint is not None:
             self._draw_rectangle_preview(color_loc)
 
     def _draw_points(self, color_loc, points, mode, color):
@@ -379,7 +418,10 @@ class DrawManager:
         self._upload_draw(color_loc, verts, mode, len(points), color)
 
     def _draw_rectangle_preview(self, color_loc):
-        p1, p2 = self.points[0], self.mouse_world_pos
+        p1 = self.points[0]
+        p2 = self._preview_endpoint()
+        if p2 is None:
+            return
         c0 = (p1.x, p1.y, p1.z)
         c1 = (p2.x, p1.y, p1.z)
         c2 = (p2.x, p2.y, p2.z)

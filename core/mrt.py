@@ -1,6 +1,9 @@
 # core/mrt.py
 import numpy as np
 from OpenGL.GL import *
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
 
 
 class MRTFramebuffer:
@@ -61,35 +64,75 @@ class MRTFramebuffer:
         glClearBufferuiv(GL_COLOR, 0, zero)
         glDrawBuffer(GL_COLOR_ATTACHMENT0)
 
-    def blit_to(
-        self, target_fbo, target_w=None, target_h=None, copy_id=False,
-        source_w=None, source_h=None,
-    ):
+    def blit_to(self, target_fbo, target_w=None, target_h=None, copy_id=False,
+            source_w=None, source_h=None):
         tw = int(target_w) if target_w else self.w
         th = int(target_h) if target_h else self.h
         sw = int(source_w) if source_w else self.w
         sh = int(source_h) if source_h else self.h
+        
+        # ★ TEŞHİS: önceki hataları temizle
+        while glGetError() != GL_NO_ERROR: pass
+        
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, self.fbo)
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target_fbo)
+        
+        # ★ TEŞHİS: hedef FBO'da ID attachment var mı?
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, target_fbo)
+        obj_type = glGetFramebufferAttachmentParameteriv(
+            GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
+            GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+        )
+        
+        
+        # ★ TEŞHİS: format
+        if obj_type != GL_NONE:
+            fmt = glGetFramebufferAttachmentParameteriv(
+                GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
+                GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE,
+            )
+        
+        
         glBindFramebuffer(GL_READ_FRAMEBUFFER, self.fbo)
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target_fbo)
 
         # Color
         glReadBuffer(GL_COLOR_ATTACHMENT0)
         glDrawBuffer(GL_COLOR_ATTACHMENT0)
-        glBlitFramebuffer(0, 0, sw, sh,
-                          0, 0, tw, th,
-                          GL_COLOR_BUFFER_BIT, GL_NEAREST)
+        glBlitFramebuffer(0, 0, sw, sh, 0, 0, tw, th, GL_COLOR_BUFFER_BIT, GL_NEAREST)
+        err = glGetError()
+        if err != GL_NO_ERROR:
+            logger.error(f"[BLIT_TEŞHİS] COLOR blit error=0x{err:X}")
 
-        # ID (opsiyonel)
+        # ID
         if copy_id:
-            
-            glReadBuffer(GL_COLOR_ATTACHMENT1)
-            glDrawBuffer(GL_COLOR_ATTACHMENT1)
-            glBlitFramebuffer(0, 0, sw, sh,
-                              0, 0, tw, th,
-                              GL_COLOR_BUFFER_BIT, GL_NEAREST)
-            glDrawBuffer(GL_COLOR_ATTACHMENT0)
-
+            if obj_type != GL_NONE:
+                glReadBuffer(GL_COLOR_ATTACHMENT1)
+                glDrawBuffer(GL_COLOR_ATTACHMENT1)
+                glBlitFramebuffer(0, 0, sw, sh, 0, 0, tw, th, GL_COLOR_BUFFER_BIT, GL_NEAREST)
+                err = glGetError()
+                if err != GL_NO_ERROR:
+                    logger.error(f"[BLIT_TEŞHİS] ID blit error=0x{err:X}")
+                glDrawBuffer(GL_COLOR_ATTACHMENT0)
+            else:
+                logger.error("[BLIT_TEŞHİS] hedefte COLOR_ATTACHMENT1 yok → ID blit ATLANDI")
+        
+        glReadBuffer(GL_COLOR_ATTACHMENT0)
+        glDrawBuffer(GL_COLOR_ATTACHMENT0)
         glBindFramebuffer(GL_FRAMEBUFFER, target_fbo)
+
+    @staticmethod
+    def _fbo_has_attachment(fbo, attachment):
+        if not fbo:
+            return False
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo)
+        obj = glGetFramebufferAttachmentParameteriv(
+                GL_FRAMEBUFFER, attachment,
+                GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+            )
+        
+        return obj != GL_NONE
+
 
     def resize(self, w, h):
         self.cleanup()

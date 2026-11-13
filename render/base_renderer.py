@@ -1,5 +1,5 @@
 # render/base_renderer.py
-import time
+
 import ctypes
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
@@ -274,10 +274,10 @@ class BaseRenderer(ABC, Generic[T]):
     # =============================================================
 
     def update(self, raw: list[T]):
-        t_start = time.perf_counter()
-        t = time.perf_counter()
-
-        new_elements = [e for e in raw if e.is_visible]
+        new_elements = [
+                            e for e in raw
+                            if getattr(e, "is_visible", getattr(e, "visible", True))
+                        ]
         if (
             len(new_elements) == len(self.elements)
             and all(a is b for a, b in zip(self.elements, new_elements))
@@ -285,8 +285,6 @@ class BaseRenderer(ABC, Generic[T]):
         ):
             return  # cache hit
         self.elements = new_elements
-        logger.debug("[%s.update] visible_filter: %.1f ms", self.__class__.__name__, (time.perf_counter() - t) * 1000)
-
         self.elem_to_idx.clear()
         self.elem_to_vcount.clear()
         self.elem_to_inst.clear()
@@ -316,20 +314,13 @@ class BaseRenderer(ABC, Generic[T]):
 
         # --- Her element için -----------------------------------------
         for inst_idx, e in enumerate(self.elements):
-            t = time.perf_counter()
-
             # ---------- Ana geometri ----------
             v, c, i = self.build(e)
-
-            dt = (time.perf_counter() - t) * 1000
-            if dt > 1.0:
-                logger.debug("[%s.update] build(%s): %.1f ms", self.__class__.__name__, getattr(e, "unique_id", "?"), dt)
-                
             if len(v) > 0 and (len(v) % stride_floats) == 0:
                 vc = len(v) // stride_floats
                 ic = len(i)
-
-                id_data = np.full(vc, e.unique_id, dtype=np.uint32)
+                pick_id = int(getattr(e, "pick_id", e.unique_id))
+                id_data = np.full(vc, pick_id, dtype=np.uint32)
 
                 self.elem_to_idx[e.unique_id] = (ioff, ic)
                 self.elem_to_vcount[e.unique_id] = vc
@@ -365,7 +356,7 @@ class BaseRenderer(ABC, Generic[T]):
                     simple_verts.append(sv)
                     simple_colors.append(sc)
                     simple_ids.append(
-                        np.full(simple_vc, e.unique_id, dtype=np.uint32)
+                        np.full(simple_vc, pick_id, dtype=np.uint32)
                     )
                 else:
                     logger.debug("...build_simple")
@@ -389,7 +380,6 @@ class BaseRenderer(ABC, Generic[T]):
         self.inst_count = len(self.elements)
 
         # --- Ana buffer upload ----------------------------------------
-        t = time.perf_counter()
         if self.icount > 0 and verts:
             vertex_data = np.concatenate(verts)
             color_data = np.concatenate(cols)
@@ -408,9 +398,6 @@ class BaseRenderer(ABC, Generic[T]):
                 index_data,
                 line_index_data,
             )
-        logger.debug("[%s.update] upload_main: %.1f ms", self.__class__.__name__, (time.perf_counter() - t) * 1000)
-
-        logger.debug("[%s.update] TOTAL: %.1f ms (%d elements)", self.__class__.__name__, (time.perf_counter() - t_start) * 1000, len(self.elements))
         # --- Simple buffer upload -------------------------------------
         if simple_verts:
             sv_all = np.concatenate(simple_verts).astype(np.float32)
@@ -772,13 +759,13 @@ class FrameRenderer(BaseRenderer[Frame]):
 
     def build(self, f):
         v, c, i = self.builder.build(f)
-        logger.debug(
-            "[FrameRenderer.build] frame=%s sd=%s verts=%d idx=%d",
-            getattr(f, "label", "?"),
-            "VAR" if getattr(getattr(f, "section", None), "sd_section", None) else "YOK",
-            len(v) // 6 if len(v) > 0 else 0,
-            len(i) if len(i) > 0 else 0,
-        )
+        # logger.debug(
+        #     "[FrameRenderer.build] frame=%s sd=%s verts=%d idx=%d",
+        #     getattr(f, "label", "?"),
+        #     "VAR" if getattr(getattr(f, "section", None), "sd_section", None) else "YOK",
+        #     len(v) // 6 if len(v) > 0 else 0,
+        #     len(i) if len(i) > 0 else 0,
+        # )
         return v, c, i
 
     def build_lines(self, f):

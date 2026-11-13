@@ -42,13 +42,6 @@ class InteractionRenderer:
                 engine.input.state.mouse_pos.y,
             )
 
-        # # 1. Marquee (Seçim Kutusu) Çizimi
-        # if (
-        #     engine.marquee and engine.marquee.is_active
-        #     and engine.marquee.viewport_name == viewport_name
-        # ):
-        #     self._draw_marquee(engine.marquee, w, h)
-
         # 2. Snap (Yakalama) Göstergesi
         if engine.snap and getattr(engine, "hover_visual_enabled", True):
             self._draw_snap(engine, w, h, camera, mouse_pos)
@@ -69,6 +62,59 @@ class InteractionRenderer:
             mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             self._draw_plane_preview(self.preview_plane, mvp)
 
+        # 6. Plane from element preview
+        pfe = getattr(engine, "_plane_from_element", None)
+        if pfe is not None and pfe.active and pfe.hover_element is not None:
+            el = pfe.hover_element
+            # Element'i vurgula (kenar kalınlığı, glow)
+            self._draw_element_outline(el, camera, w, h, color=(0.3, 0.9, 0.3, 1.0))
+            # Aday plane'i yarı saydam çiz
+            try:
+                from plane.plane import Plane
+                plane = Plane.from_element(el, frame_local_12=pfe.frame_axis_12)
+                mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
+                self._draw_plane_preview(plane, mvp)   # mevcut metodu kullan
+            except Exception:
+                pass
+
+    def _draw_element_outline(self, element, camera, w, h, color=(1, 1, 0, 1)):
+        """Element'in kenar/vertex noktalarını vurgula."""
+        from domain.element import Node, Frame, Area, Link
+        from domain.polygon import Polygon
+        if not self._dyn_vao:
+            self._ensure_dynamic_buffers()
+        
+        verts = []
+        if isinstance(element, Frame):
+            ni, nj = element.node_i, element.node_j
+            if ni and nj:
+                verts.extend([ni.x, ni.y, ni.z, nj.x, nj.y, nj.z])
+        elif isinstance(element, (Area, Polygon)):
+            nodes = element.nodes
+            for i, n in enumerate(nodes):
+                m = nodes[(i + 1) % len(nodes)]
+                verts.extend([n.x, n.y, n.z, m.x, m.y, m.z])
+        if not verts:
+            return
+        self.overlay_shader.use()
+        mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
+        loc_mvp = self.overlay_shader.get_loc("mvp")
+        if loc_mvp != -1:
+            glUniformMatrix4fv(loc_mvp, 1, GL_FALSE, glm.value_ptr(mvp))
+        loc_color = self.overlay_shader.get_loc("color")
+        if loc_color == -1:
+            return
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glDisable(GL_DEPTH_TEST)
+        glLineWidth(3.0)
+        self._upload_and_draw(self._dyn_vao, self._dyn_vbo,
+                            np.array(verts, dtype=np.float32),
+                            GL_LINES, len(verts) // 3, color, loc_color)
+        glLineWidth(1.0)
+        glEnable(GL_DEPTH_TEST)
+        glDisable(GL_BLEND)
+        
     def _draw_marquee(self, marquee, w, h):
         coords = marquee.get_box_coords()
         if not coords:
@@ -148,11 +194,13 @@ class InteractionRenderer:
                     getattr(engine, "draw_mgr", None)):
             if tool is None or not tool.is_active or tool.hover_node is None:
                 continue
+            
             node = tool.hover_node
             screen = self._project(camera, node.x, node.y, node.z, w, h)
             if screen is None:
                 continue
             snap_type = getattr(tool, "hover_snap_type", None) or getattr(tool, "hover_type", "node")
+            
             snap.draw_snap(screen[0], screen[1], w, h, active=True, snap_type=snap_type)
             return True
         return False

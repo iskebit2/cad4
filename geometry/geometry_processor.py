@@ -1,7 +1,6 @@
 # geometry/geometry_processor.py
 
 from __future__ import annotations
-import time
 
 from copy import copy
 from dataclasses import dataclass
@@ -28,59 +27,21 @@ class GeometryProcessor:
 
     @classmethod
     def process(cls, scene, plane=None, math_model=None) -> ProcessedGeometry:
-        t_start = time.perf_counter()
-        total_steps = 7 if math_model is not None else 3
-        current_step = 0
-
-        current_step += 1
-        
-        t = time.perf_counter()
         grid_axes = cls.process_grid_axes(scene.grid, plane)
-        logger.debug("[GP] grid_axes: %.1f ms", (time.perf_counter() - t) * 1000)
-
-        current_step += 1
-        
-        t = time.perf_counter()
         lines = cls.process_lines(
             list(math_model.lines.values()) if math_model is not None else [],
             plane,
         )
-        logger.debug("[GP] lines: %.1f ms", (time.perf_counter() - t) * 1000)
-
-        current_step += 1
-        
-        t = time.perf_counter()
         polygons = cls.process_polygons(
             list(math_model.polygons.values()) if math_model is not None else [],
             plane,
         )
-        logger.debug("[GP] polygons: %.1f ms", (time.perf_counter() - t) * 1000)
-
         frames, nodes, areas, links = [], [], [], []
         if math_model is not None:
-            current_step += 1
-        
-            t = time.perf_counter()
             frames = cls.process_lines(list(math_model.frames.values()), plane)
-            logger.debug("[GP] frames: %.1f ms", (time.perf_counter() - t) * 1000)
-
-            current_step += 1
-        
-            t = time.perf_counter()
             nodes = cls.process_nodes(list(math_model.nodes.values()), plane)
-            logger.debug("[GP] nodes: %.1f ms", (time.perf_counter() - t) * 1000)
-
-            current_step += 1
-        
-            t = time.perf_counter()
             areas = cls.process_polygons(list(math_model.areas.values()), plane)
-            logger.debug("[GP] areas: %.1f ms", (time.perf_counter() - t) * 1000)
-
-            current_step += 1
-        
-            t = time.perf_counter()
             links = cls.process_lines(list(math_model.links.values()), plane)
-            logger.debug("[GP] links: %.1f ms", (time.perf_counter() - t) * 1000)
 
         
         return ProcessedGeometry(
