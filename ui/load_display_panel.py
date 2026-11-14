@@ -11,7 +11,9 @@ Load Display Panel — Frame/Area yük görselleştirme kontrolü.
 from imgui_bundle import imgui
 
 from ui.base_panel import BasePanel
+from logging_config import CadLogger
 
+logger = CadLogger.get(__name__)
 
 class LoadDisplayPanel(BasePanel):
     """
@@ -42,8 +44,8 @@ class LoadDisplayPanel(BasePanel):
 
         # Tip filtreleri
         self.show_frame_loads = True
-        self.show_area_loads = False    # henüz yok
-        self.show_point_loads = True   # henüz yok
+        self.show_area_loads = False
+        self.show_point_loads = False
 
         # Pattern
         self.active_pattern: str | None = None   # None = hepsi
@@ -144,13 +146,13 @@ class LoadDisplayPanel(BasePanel):
             self._apply()
 
         # Area — hâlâ disabled
-        imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.5, 0.5, 0.5, 1.0))
+        # imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.5, 0.5, 0.5, 1.0))
         changed, self.show_area_loads = imgui.checkbox(
-            "Area (yüzey) yükler (yakında)", self.show_area_loads
+            "Area (yüzey) alan yükleri", self.show_area_loads,
         )
         if changed:
-            self.show_area_loads = False
-        imgui.pop_style_color(1)
+            self._apply()
+        # imgui.pop_style_color(1)
 
         # Point — AKTİF
         changed, self.show_point_loads = imgui.checkbox(
@@ -412,7 +414,7 @@ class LoadDisplayPanel(BasePanel):
                     lr.show_frame_loads = self.show_frame_loads
                 if hasattr(lr, "show_point_loads"):
                     lr.show_point_loads = self.show_point_loads
-                # Yeni özellikler
+                # ★ Normalize ETME — _emit_profile kendi hesaplıyor
                 if hasattr(lr, "profile_scale"):
                     lr.profile_scale = self.profile_scale
                 if hasattr(lr, "line_width"):
@@ -423,6 +425,12 @@ class LoadDisplayPanel(BasePanel):
                     lr.show_arrows = self.show_arrows
                 if hasattr(lr, "show_fill"):
                     lr.show_fill = self.show_fill
+                if hasattr(lr, "show_area_loads"):
+                    lr.show_area_loads = self.show_area_loads   # LoadRenderer için değil
+                if hasattr(self.renderer, "area_loads"):
+                    self.renderer.area_loads.active_pattern = self.active_pattern
+                    self.renderer.area_loads.enabled = self.show_area_loads
+                    self.renderer.area_loads.arrow_scale = self.profile_scale
 
         # Sahneyi kirli işaretle → yeniden çizilecek
         if self.math_model:
@@ -434,11 +442,15 @@ class LoadDisplayPanel(BasePanel):
                     else 1.0
                 )
                 scene_size = getattr(self.renderer, "size", 1.0)
-                self.renderer.load_renderer.update(
-                    self.math_model,
-                    camera_scale=cam_scale,
-                    scene_size=scene_size,
-                )
+                try:
+                    logger.debug("load_renderer.update çağrılıyor")
+                    self.renderer.load_renderer.update(
+                        self.math_model,
+                        camera_scale=cam_scale,
+                        scene_size=scene_size,
+                    )
+                except Exception:
+                    logger.exception("[APPLY] update hatası")
 
         # Dış callback
         if callable(self.on_change):

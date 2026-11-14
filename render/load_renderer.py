@@ -166,6 +166,11 @@ class LoadRenderer:
     # UPDATE — vertex üretimi
     # ==================================================================
     def update(self, scene, camera_scale: float = 1.0, scene_size: float = 1.0):
+        logger.debug(
+            "[LOAD_UPDATE] scene_size=%.1f cam_scale=%.1f profile_scale=%.6f",
+            scene_size, camera_scale, self.profile_scale,
+        )
+
         if not self._initialized:
             self.init_gl()
 
@@ -173,7 +178,7 @@ class LoadRenderer:
             self.line_count = 0
             self.tri_count = 0
             return
-
+            
         self.available_patterns = self._scan_patterns(scene)
 
         lines = []
@@ -251,6 +256,7 @@ class LoadRenderer:
                self.show_frame_loads, self.show_point_loads,
                len(lines) // 6 if lines else 0,
                len(tris) // 3 if tris else 0)
+        
 
     def _scan_patterns(self, scene) -> list[str]:
         """Sahnedeki tüm pattern isimlerini topla."""
@@ -324,12 +330,6 @@ class LoadRenderer:
     # PROFİL — frame'e yerleştir
     # ==================================================================
     def _emit_profile(self, frame, pts, color, lines, tris, cam_scale, load=None):
-        """
-        Frame üzerindeki yayılı yük profilini çiz.
-
-        pts: [(xr, q), ...] — relative konum, yük değeri
-        load: FrameDistributedLoad (yön bilgisi için)
-        """
         ni = getattr(frame, "node_i", None)
         nj = getattr(frame, "node_j", None)
         if not ni or not nj:
@@ -338,6 +338,7 @@ class LoadRenderer:
         p0 = np.array([ni.x, ni.y, ni.z], dtype=float)
         p1 = np.array([nj.x, nj.y, nj.z], dtype=float)
         L = float(np.linalg.norm(p1 - p0))
+        
         if L < 1e-9:
             return
 
@@ -358,9 +359,13 @@ class LoadRenderer:
         up = load_dir_vec  # yük profili bu yönde uzayacak
 
         max_q = max(abs(q) for _, q in pts) or 1.0
-        profile_h = max(L * self.PROFILE_HEIGHT_RATIO * cam_scale * self.profile_scale,
-                self.MIN_PROFILE_H)
-
+        profile_h = max(
+                        L * self.PROFILE_HEIGHT_RATIO * self.profile_scale,
+                        L * 0.02,   # minimum: frame'in %2'si
+                    )
+        logger.debug("[EMIT_PROFILE] frame=%s L=%.1f profile_scale=%.3f profile_h=%.1f",
+             getattr(frame, "label", "?"), L, self.profile_scale, profile_h)
+        
         # İşaretli q → profil q yönünde, ters ise diğer yönde
         def to_3d(xr, q):
             base = p0 + axis * (xr * L)
@@ -467,6 +472,7 @@ class LoadRenderer:
     # RENDER — iki pass (tri + line)
     # ==================================================================
     def render(self, mvp):
+        logger.debug("[LOAD_RENDER] line_count=%d tri_count=%d", self.line_count, self.tri_count)
         if not self._initialized or not self.enabled:
             return
 

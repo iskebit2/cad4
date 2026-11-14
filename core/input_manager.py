@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from typing import Callable
 
 import glfw
 from pyglm import glm
-
+from logging_config import  CadLogger
+logger = CadLogger.get(__name__)
 
 LEFT = 0
 RIGHT = 1
@@ -41,6 +43,7 @@ class InputManager:
         self._captures_mouse = lambda: False
         self._captures_keyboard = lambda: False
         self._global_escape = None
+        self._context_pick_handler: Callable | None = None
 
     def set_global_escape(self, fn) -> None:
         self._global_escape = fn
@@ -182,7 +185,18 @@ class InputManager:
             return bool(self._fallback.handle_move(x, y, dx, dy))
         return False
 
-    def dispatch_click(self, x: float, y: float, button: int) -> bool:
+    def set_context_pick_handler(self, handler: Callable | None):
+        """Aktif panelin viewport tıklama handler'ı. None → devre dışı."""
+        self._context_pick_handler = handler
+
+    def dispatch_click(self, x, y, button):
+        # ★ Context pick öncelikli
+        if self._context_pick_handler is not None:
+            try:
+                if self._context_pick_handler(x, y, button):
+                    return True
+            except Exception:
+                logger.exception("[CTX_PICK] handler hatası")
         for h in self._handlers:
             if not getattr(h, "is_active", False):
                 continue

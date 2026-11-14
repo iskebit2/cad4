@@ -446,6 +446,18 @@ class DrawManager:
         return False
 
     def handle_move(self, x, y, dx, dy) -> bool:
+        if not self.is_active:
+            return False
+        eng = self.engine
+        # ★ MIDDLE basılıysa CameraController'a bırak (pan)
+        if eng.input.state.buttons.get(2):
+            return False
+        # ★ Shift+LEFT orbit
+        if eng.input.state.buttons.get(0) and eng.input.is_shift():
+            return False
+        # ★ RIGHT basılıysa (eğer varsa kamera kontrolü) — bırak
+        if eng.input.state.buttons.get(1):
+            return False
         self.on_mouse_move(x, y)
         return True
 

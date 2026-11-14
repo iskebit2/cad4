@@ -483,6 +483,7 @@ class PlaneManagerPanel(BasePanel):
             fit_radius=fit_radius,
         )
         vp.plane = plane
+        vp.is_2d = True   # ★ Kamera 2D → flag de 2D
 
         panel = ViewportPanel(app, name, app.viewport_manager, preset=None)
         

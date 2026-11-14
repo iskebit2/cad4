@@ -8,12 +8,15 @@ import numpy as np
 from OpenGL.GL import *
 from pyglm import glm
 
+from render.area_load_renderer import AreaLoadRenderer
 from render.axes_renderer import LocalAxesRenderer
 from render.global_axis_renderer import GlobalAxisRenderer
 from render.grid_renderer import GridRenderer, BubbleRenderer
 from render.label_batch import LabelBatch
 from render.load_renderer import LoadRenderer
 from tools.font_atlas import FontAtlas
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 
 class PresentationRenderer:
@@ -39,6 +42,7 @@ class PresentationRenderer:
         self.bubble = BubbleRenderer(grid_shader)
 
         self.loads = LoadRenderer()
+        self.area_loads = AreaLoadRenderer()
         self.axes = LocalAxesRenderer(axes_shader)
         self.axes.init_gl()
 
@@ -142,6 +146,19 @@ class PresentationRenderer:
             glDisable(GL_DEPTH_TEST)
             self.loads.render(mvp)
             glEnable(GL_DEPTH_TEST)
+
+        # Alan yükleri (ok)
+        if show.get("loads", True) and self.area_loads.enabled:
+            glDisable(GL_DEPTH_TEST)
+            self.area_loads.render(mvp)
+            glEnable(GL_DEPTH_TEST)
+
+        # Alan yükü label'ları (mevcut labels batch üzerinden)
+        if show.get("loads", True) and self.area_loads.enabled and self.area_loads.show_labels:
+            labels = self.area_loads.get_labels()
+            if labels:
+                self._draw_area_load_labels(camera, labels, height)
+                
         if show.get("local_axes", False):
             self._draw_local_axes(camera, scene, math_model)
         if show.get("global_axis", True):
@@ -154,9 +171,15 @@ class PresentationRenderer:
     def update_polygons(self, polygons):
         self._update_zones(polygons)
 
-    def update_loads(self, math_model, camera_scale=1.0, scene_size=1.0):
+    def update_loads(self, math_model, camera_scale=1.0, scene_size=1.0, unit_system=None, wind_results=None):
         if self.loads.enabled:
             self.loads.update(math_model, camera_scale=camera_scale, scene_size=scene_size)
+        if self.area_loads.enabled:
+            self.area_loads._wind_results = wind_results or {}
+            self.area_loads.update(
+                math_model, camera_scale=camera_scale,
+                scene_size=scene_size, unit_system=unit_system,
+            )
 
     def _bind_grid(self, scene):
         g = getattr(scene, "grid", None)
@@ -417,7 +440,8 @@ class PresentationRenderer:
 
         self.labels.begin(mode="world", mvp=mvp)
         for a, i in zip(anchors, info):
-            encoded = a["text"].encode("latin-1", "replace")
+            safe_text = self._ascii_safe(a["text"])
+            encoded = safe_text.encode("latin-1", "replace")
             advances = self.labels.lut["advance"][np.frombuffer(encoded, dtype=np.uint8)]
             size_world = a["text_world_width"] * self.font.size / float(advances.sum())
             self.labels.add(
@@ -443,7 +467,7 @@ class PresentationRenderer:
             pos[i] = ((f.node_i.x + f.node_j.x) * 0.5,
                       (f.node_i.y + f.node_j.y) * 0.5,
                       (f.node_i.z + f.node_j.z) * 0.5)
-            texts[i] = f"F{f.unique_id}"
+            texts[i] = self._ascii_safe(f"F{f.unique_id}")
 
         self.labels.begin(
             view=cam.get_view_matrix(),
@@ -553,6 +577,50 @@ class PresentationRenderer:
         glDeleteBuffers(1, [vbo])
         glDeleteVertexArrays(1, [vao])
         glLineWidth(1.0)
+
+    def _draw_area_load_labels(self, cam, labels, screen_h):
+        n = len(labels)
+        pos = np.empty((n, 3), dtype=np.float32)
+        colors = np.empty((n, 4), dtype=np.float32)
+        texts = [""] * n
+        off = np.tile(np.array([0.0, 0.0, 0.0], dtype=np.float32), (n, 1))
+        for i, item in enumerate(labels):
+            pos[i] = item["position"]
+            colors[i] = (*item["color"], 1.0)
+            texts[i] = self._ascii_safe(item["text"])   # ★ ASCII-safe
+
+        self.labels.begin(
+            view=cam.get_view_matrix(),
+            proj=cam.get_projection_matrix(),
+            cam_pos=(cam.position.x, cam.position.y, cam.position.z),
+            screen_h=screen_h,
+            fov_y_rad=math.radians(getattr(cam, "fov", 45.0)),
+            mode="billboard",
+        )
+        self.labels.add_many(
+            positions=pos, texts=texts, colors=colors,
+            pixel_sizes=13.0, anchors="center", world_offsets=off,
+        )
+        self.labels.flush()
+
+    @staticmethod
+    def _ascii_safe(text: str) -> str:
+        """LabelBatch LUT sadece ASCII — Unicode'ları ASCII'ye çevir."""
+        return (
+            text.replace("²", "^2")
+                .replace("³", "^3")
+                .replace("·", "*")
+                .replace("×", "x")
+                .replace("→", "->")
+                .replace("←", "<-")
+                .replace("±", "+/-")
+                .replace("°", "deg")
+                .replace("Δ", "Delta")
+                .replace("µ", "u")
+                .replace("–", "-")
+                .replace("—", "-")
+        )
+
 
     # ---------------------------------------------------------------- cleanup
     def cleanup(self):

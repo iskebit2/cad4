@@ -376,7 +376,7 @@ class LabelBatch:
         if disable_depth:
             glEnable(GL_DEPTH_TEST)
         glUseProgram(0)
-
+        
     def stats(self):
         return {"quads": self.write_offset // 6,
                 "capacity": self.capacity_quads}

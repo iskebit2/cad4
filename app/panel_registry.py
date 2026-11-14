@@ -104,7 +104,8 @@ PANEL_SPECS: list[PanelSpec] = [
     PanelSpec(name="report", cls=ReportPanel, title="Reports", category="Management", quick=True, menu_label="Reports", icon="file-text", context=["scene", "project"]),
 
     # --- Tools ---
-    PanelSpec(name="wind_analysis", cls=WindAnalysisPanel, title="Wind Analysis", category="Tools", quick=True, shortcut="F10", menu_label="Wind Analysis", icon="wind", context=["scene", "project"]),
+    PanelSpec(name="polygon_properties", cls=PolygonPropertiesPanel, title="Polygon", category="Tools", quick=True, menu_label="Polygon", icon="edit", context=["project"]),
+    PanelSpec(name="wind_analysis", cls=WindAnalysisPanel, title="Wind Analysis", category="Tools", quick=True, menu_label="Wind Analysis", icon="wind", context=["scene", "project"]),
     PanelSpec(name="sd_convert", cls=SDConvertPanel, title="SD to Area Conversion", category="Tools", shortcut="CTRL+SHIFT+J", menu_label="SD to Area", icon="edit"),
     PanelSpec(name="debug_panel", cls=DebugPanel, title="Debug Panel", category="Tools", shortcut="CTRL+SHIFT+D", menu_label="Debug Panel", icon="edit", context=["engine"]),
     PanelSpec(name="frame_preview", cls=FramePreviewPanel, title="FramePreview Panel", category="Tools", quick=True, menu_label="Preview Panel", icon="edit", context=["project","engine"]),

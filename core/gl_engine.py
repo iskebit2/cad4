@@ -290,8 +290,12 @@ class Engine:
         )
         scene_size = getattr(self.renderer, "size", 1.0)
         self.presentation_renderer.update_loads(
-            math_model, camera_scale=cam_scale, scene_size=scene_size,
-        )
+                math_model,
+                camera_scale=cam_scale,
+                scene_size=scene_size,
+                unit_system=project.unit_system,
+                wind_results=project.loads.wind_results,
+            )
 
         logger.debug("Update geo: %s", plane_name)
 

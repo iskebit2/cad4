@@ -245,30 +245,31 @@ class CadApp:
             model.clear_dirty()
 
     def _forward_active_viewport_events(self) -> None:
-        """Hovered (veya drag devam eden) viewport panelinin ImGui event'lerini
-        CameraController'a iletir. Paneller saf çizim; event routing burada."""
         eng = self.engine
         vm = self.viewport_manager
         if eng is None or vm is None or not self._viewport_panels:
             return
-
+        
         io = imgui.get_io()
         any_drag = bool(io.mouse_down[0] or io.mouse_down[1] or io.mouse_down[2])
-
-        hovered = next(
-            (p for p in self._viewport_panels if p._is_hovered),
-            None,
-        )
+        
+        hovered = next((p for p in self._viewport_panels if p._is_hovered), None)
         target = hovered
         if target is None and any_drag and self._last_active_viewport_name:
-            target = next(
-                (p for p in self._viewport_panels
-                if p.viewport_name == self._last_active_viewport_name),
-                None,
-            )
+            target = next((p for p in self._viewport_panels
+                        if p.viewport_name == self._last_active_viewport_name), None)
+        
+        # ★ Modifiers'ı her zaman senkronize et
+        mods = 0
+        if io.key_ctrl: mods |= glfw.MOD_CONTROL
+        if io.key_shift: mods |= glfw.MOD_SHIFT
+        if io.key_alt: mods |= glfw.MOD_ALT
+        if io.key_super: mods |= glfw.MOD_SUPER
+        eng.input.state.modifiers = mods
+        
         if target is None:
             return
-
+        
         vm.set_active(target.viewport_name)
         self._last_active_viewport_name = target.viewport_name
         self._forward_imgui_events(target)
@@ -554,11 +555,6 @@ class CadApp:
             return
 
         self.engine.set_scene(project)
-
-        if self.inspector:
-            self.inspector.set_catalog(self._catalog)
-            self.inspector.set_project(project)
-
         self.engine.update_geo(project)
 
         if self.engine.grid and project.scene.grid:
@@ -568,15 +564,17 @@ class CadApp:
         if self.engine.sel_mgr:
             self.engine.sel_mgr.clear()
 
-        pm = self.panels.get("plane_manager", {}).get("instance")
-        if pm is not None:
-            pm.reset()
-
         bounds = self.engine._combined_bounds()
         if bounds is not None and self.viewport_manager is not None:
             for vp in self.viewport_manager.viewports.values():
                 vp.camera.update_bounds(bounds.center, bounds.size)
                 vp.camera.focus_on_model()
+        
+        # ★ ZATEN AÇIK OLAN PANELLERİ YENİ PROJEYE GÜNCELLE (Tek tek uğraşmadan, dinamik)
+        for name, entry in self.panels.items():
+            panel = entry["instance"]
+            if getattr(panel, "visible", False):
+                self.actions.prepare_panel(name, panel)
 
     def _toggle_2d(self) -> None:
         eng = self.engine

@@ -22,7 +22,7 @@ class DuplicateMessageFilter(logging.Filter):
     def __init__(
         self,
         max_recent: int = 10,
-        window_seconds: float = 2.0,
+        window_seconds: float = 1.0,
         max_tracked: int = 1024,
     ):
         super().__init__()
@@ -107,7 +107,7 @@ class CadLogger:
     # Değer yoksa → NOTSET (root'tan miras)
     MODULE_LEVELS: dict[str, str] = {
         "cad.core.pickpass":            "WARNING",
-    "cad.render.load_renderer":     "INFO",
+    "cad.render.load_renderer":     "DEBUG",
     "cad.render.scenerenderer":     "INFO",   # render için info yeter
     "cad.ui.plane_manager_panel":   "WARNING",
     "cad.app.cad_app":              "INFO",
@@ -115,8 +115,8 @@ class CadLogger:
     "cad.core.camera":              "WARNING",
     "cad.core.input_manager":       "WARNING",
     "cad.tools.gridsystem":         "WARNING",
-    "cad.render.presentationrenderer":         "DEBUG",
-    "cad.ui.grid_panel": "DEBUG",
+    "cad.render.presentationrenderer":         "INFO",
+    "cad.ui.grid_panel": "INFO",
     }
 
     ROOT_NAME = "cad"

@@ -177,36 +177,17 @@ class AppActions:
         if app.inspector:
             app.inspector.set_selection(selected)
 
+        # Açık olan tüm panellere seçim sinyalini GÜVENLİ TEK BİR SEFERDE gönder
         for name, entry in app.panels.items():
             p = entry["instance"]
             if not getattr(p, "visible", False):
                 continue
-            hook = getattr(p, "on_scene_selection_changed", None)
+            hook = getattr(p, "on_scene_selection_changed", None) or getattr(p, "on_selection_changed", None)
             if callable(hook):
                 hook(selected)
-
-        self._refresh_presentation_renderers()
-
-        polys = [e for e in selected if isinstance(e, Polygon)]
-        if polys:
-            panel = app.panels.get("polygon_properties", {}).get("instance")
-            if panel is not None:
-                if not getattr(panel, "visible", False):
-                    self.prepare_panel("polygon_properties", panel)
-                panel.open(polygon=polys[0])
-
-        try:
-            from domain.line import Line
-        except ImportError:
-            Line = ()
-        lines = [e for e in selected if isinstance(e, Line)]
-        if lines:
-            panel = app.panels.get("line_properties", {}).get("instance")
-            if panel is not None:
-                if not getattr(panel, "visible", False):
-                    self.prepare_panel("line_properties", panel)
-                    panel.open()
-                panel.on_selection_changed(selected)
+                logger.debug("[SELECTION_DEBUG] Seçilen ID'ler: %s | Bulunan Polygonlar: %s", 
+             [e.unique_id for e in selected], 
+             [p.unique_id for p in selected if hasattr(p, "poly_type")])
 
         self._refresh_presentation_renderers()
 

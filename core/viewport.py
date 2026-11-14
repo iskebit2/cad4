@@ -91,6 +91,28 @@ class Viewport:
             if el is not None:
                 result.append(el)
         return result
+    
+    def pick_at_neighborhood(self, pick_pass, x_px: int, y_px: int, radius: int = 3):
+        """Merkez piksel etrafındaki en yakın elementi döndür."""
+        if pick_pass is None or self.fbo.id_tex is None:
+            return None
+        xa = max(0, int(x_px) - radius)
+        ya = max(0, int(y_px) - radius)
+        xb = min(self.width - 1, int(x_px) + radius)
+        yb = min(self.height - 1, int(y_px) + radius)
+        ids = pick_pass.pick_rect(
+            xa, ya, xb, yb, self.fbo.fbo, (self.width, self.height),
+        )
+        if not ids:
+            return None
+        # Merkeze en yakın ID — basit yaklaşım: ilk bulunan
+        # (daha iyi: her ID'nin piksel mesafesi hesaplanabilir, ama pick_rect
+        #  unique ID'ler döndürüyor, konum bilgisi yok)
+        for pid in ids:
+            el = pick_pass.get_element(pid)
+            if el is not None:
+                return el
+        return None
 
     def set_element_filter(self, query):
         """Element filtresini ayarla. None → filtreyi kaldır."""

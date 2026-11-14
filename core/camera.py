@@ -129,8 +129,12 @@ class Camera:
         self._invalidate()
 
     def orbit(self, dx, dy):
+        # ★ 2D/plane modda orbit engelle (pan/zoom çalışmaya devam eder)
+        if self._is_2d_locked():
+            return
+        
         if self.view_preset == "working_plane":
-            self.view_preset = None  # up vektörünü bozmamak için Z-up zorlaması kaldırıldı
+            self.view_preset = None
         elif self.view_preset == "top":
             self.pitch = 89.0
             self.view_preset = None
@@ -138,6 +142,24 @@ class Camera:
         self.pitch += dy * self.ORBIT_SENSITIVITY
         self.pitch = float(np.clip(self.pitch, self.min_pitch, self.max_pitch))
         self._invalidate()
+
+    def _is_2d_locked(self) -> bool:
+        """2D / plane görünümünde orbit engellenmeli mi?"""
+        # 1) Section filter aktif → 2D (plane_2d projection)
+        if self.section_active:
+            return True
+        # 2) Working plane preset (look_at_plane ile set edilir)
+        if self.view_preset == "working_plane":
+            return True
+        # 3) Top/bottom preset — pitch zaten sınırda, orbit kilitle
+        if self.view_preset in ("top", "bottom"):
+            return True
+        # 4) ORTHO + up Y ekseni (plane'e dik bakış)
+        if self.view_mode == "ORTHO":
+            up_y = abs(float(self.up.y))
+            if up_y > 0.9:
+                return True
+        return False
 
     def pan(self, dx, dy):
         forward = glm.normalize(self.target - self.position)

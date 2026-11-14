@@ -126,67 +126,42 @@ class WindSceneAdapter:
         engine_data: dict[str, Any] | None = None,
         direction: tuple[float, float, float] | None = None,
     ) -> None:
+        """Analiz önbelleği: project.loads.wind_zones + wind_results.
+
+        ★ polygon.zone_children_by_direction YAZMAZ — onu wind_analysis_panel
+        (_assign_zones_to_polygons) yapar. Böylece tek doğruluk kaynağı kalır.
+        """
         if not hasattr(project.loads, "wind_zones"):
             project.loads.wind_zones = {}
         project.loads.wind_zones[direction_key] = list(zones)
+
         if engine_data is None:
             return
 
-        zone_data = [
-            {
+        unit_system = project.unit_system
+        if not isinstance(unit_system, UnitSystem):
+            unit_system = UnitSystem.from_sap(unit_system)
+
+        # Proje birimine çevir
+        meters_to_project = convert_value(
+            Dimension.LENGTH, 1.0, UnitSystem.N_M, unit_system,
+        )
+
+        zone_data = []
+        for zone in zones:
+            coords = np.asarray(zone.coords, dtype=float)
+            # WindAnalyzer'dan gelen coords METRE cinsinden → proje birimine
+            coords_project = (coords * meters_to_project).tolist()
+            zone_data.append({
                 "label": zone.label,
                 "surface": zone.surface,
                 "table_type": zone.table_type,
                 "table_type_dir": zone.table_type_dir,
                 "pitch": float(zone.pitch),
-                "coords": np.asarray(zone.coords, dtype=float).tolist(),
-                "cpe10": list(
-                    WindSceneAdapter._coefficient_pair(zone.cpe10)
-                ),
-                "cpe1": list(
-                    WindSceneAdapter._coefficient_pair(zone.cpe1)
-                ),
-            }
-            for zone in zones
-        ]
-        unit_system = project.unit_system
-        if not isinstance(unit_system, UnitSystem):
-            unit_system = UnitSystem.from_sap(unit_system)
-        meters_to_project = convert_value(
-            Dimension.LENGTH,
-            1.0,
-            UnitSystem.N_M,
-            unit_system,
-        )
-        visual_zone_data = [
-            {
-                **item,
-                "coords": (
-                    np.asarray(item["coords"], dtype=float)
-                    * meters_to_project
-                ).tolist(),
-            }
-            for item in zone_data
-        ]
-        zones_by_surface: dict[str, list[dict[str, Any]]] = {}
-        for item in visual_zone_data:
-            zones_by_surface.setdefault(str(item["surface"]), []).append(item)
-        for polygon in project.math_model.polygons.values():
-            polygon_name = polygon.label
-            polygon_zones = zones_by_surface.get(polygon_name) if polygon_name else None
-            if polygon_zones is None:
-                for fallback_name in (
-                    f"POLYGON_{polygon.unique_id}",
-                    f"Polygon_{polygon.unique_id}",
-                ):
-                    polygon_zones = zones_by_surface.get(fallback_name)
-                    if polygon_zones is not None:
-                        break
-            if polygon_zones:
-                polygon.zone_children_by_direction[direction_key] = polygon_zones
-                polygon.show_zones_direction = direction_key
-                polygon.mark_dirty()
-        project.math_model.mark_dirty()
+                "coords": coords_project,
+                "cpe10": list(WindSceneAdapter._coefficient_pair(zone.cpe10)),
+                "cpe1": list(WindSceneAdapter._coefficient_pair(zone.cpe1)),
+            })
 
         project.loads.wind_results[direction_key] = WindResult(
             direction=tuple(direction or (0.0, 0.0, 0.0)),
@@ -198,9 +173,7 @@ class WindSceneAdapter:
             zones_cpe1=[
                 {
                     **zone,
-                    "cpe": list(
-                        WindSceneAdapter._coefficient_pair(source.cpe1)
-                    ),
+                    "cpe": list(WindSceneAdapter._coefficient_pair(source.cpe1)),
                 }
                 for zone, source in zip(zone_data, zones)
             ],

@@ -449,14 +449,23 @@ class ViewportPanel(BasePanel):
                 self.app._last_active_viewport_name = None
 
     def _toggle_2d_3d(self, vp):
-        """Viewport'u 2D (Camera.look_at_plane) ve 3D (Camera.restore_view) modlar arasında değiştir."""
         eng = getattr(self.app, "engine", None) if self.app else None
         if eng is None:
             return
         
-        new_mode = not getattr(vp, "is_2d", False)
+        # ★ Kamera gerçekten 2D mi? (flag'e değil kameraya bak)
+        def _camera_is_2d():
+            pitch = abs(getattr(vp.camera, "pitch", 0))
+            up = getattr(vp.camera, "up", None)
+            view_mode = getattr(vp.camera, "view_mode", "PERSPECTIVE")
+            up_y = float(up.y) if up is not None else 0.0
+            return pitch > 80 or view_mode == "ORTHO" or abs(up_y) > 0.9
+        
+        camera_2d = _camera_is_2d()
+        new_mode = not camera_2d   # ★ Kameraya göre karar ver
         
         if new_mode:
+            # ★ 2D'ye geç
             plane = getattr(vp, "plane", None)
             if plane is None:
                 proj = getattr(self.app, "current_project", None)
@@ -468,9 +477,7 @@ class ViewportPanel(BasePanel):
                 logger.warning("[ViewportPanel] 2D moda geçilemedi: plane yok")
                 return
             
-            # Camera sınıfındaki yerleşik save_view metodunu kullanıyoruz
             vp.camera.save_view()
-            
             uc = 0.5 * ((plane.u_min or 0.0) + (plane.u_max or 0.0))
             vc = 0.5 * ((plane.v_min or 0.0) + (plane.v_max or 0.0))
             center = plane.to_3d((uc, vc))
@@ -481,10 +488,8 @@ class ViewportPanel(BasePanel):
                 bounds = eng._combined_bounds()
                 fit_radius = float(bounds.size) if bounds else 1000.0
             
-            # Camera sınıfındaki look_at_plane metodunu çağırıyoruz
             vp.camera.look_at_plane(
-                origin=center,
-                u=plane.u, v=plane.v, n=plane.normal,
+                origin=center, u=plane.u, v=plane.v, n=plane.normal,
                 fit_radius=fit_radius,
             )
             vp.camera.set_section_filter(
@@ -493,11 +498,44 @@ class ViewportPanel(BasePanel):
             )
             vp.is_2d = True
         else:
-            # Camera sınıfındaki restore_view metodunu kullanıyoruz
+            # ★ 3D'ye dön — kamera durumunu ZORLA düzelt
             restored = vp.camera.restore_view()
             if not restored:
                 vp.camera.reset()
+            
+            # ★ 3D standart: Z-up, perspective
+            if hasattr(vp.camera, "up"):
+                vp.camera.up = glm.vec3(0, 0, 1)
+            if hasattr(vp.camera, "view_mode"):
+                vp.camera.view_mode = "PERSPECTIVE"
+            if hasattr(vp.camera, "active_plane"):
+                vp.camera.active_plane = None
+            if hasattr(vp.camera, "plane_offset"):
+                vp.camera.plane_offset = 0.0
+            if hasattr(vp.camera, "section_active"):
+                vp.camera.section_active = False
+            
+            # ★ Eğer pitch hâlâ 2D benzeri ise, iso'ya dön
+            pitch = abs(getattr(vp.camera, "pitch", 0))
+            if pitch > 80:
+                if hasattr(vp.camera, "set_view_preset"):
+                    vp.camera.set_view_preset("iso")
+                if hasattr(vp.camera, "up"):
+                    vp.camera.up = glm.vec3(0, 0, 1)
+            
             vp.camera.clear_section_filter()
             vp.is_2d = False
+            
+            if hasattr(vp.camera, "_update_position"):
+                vp.camera._update_position()
         
         vp.invalidate_visible_ids()
+        
+        logger.debug(
+            "[TOGGLE] after: is_2d=%s view_mode=%s pitch=%.1f yaw=%.1f up=%s",
+            vp.is_2d,
+            getattr(vp.camera, "view_mode", "?"),
+            getattr(vp.camera, "pitch", 0),
+            getattr(vp.camera, "yaw", 0),
+            getattr(vp.camera, "up", "?"),
+        )

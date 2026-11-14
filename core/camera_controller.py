@@ -76,6 +76,15 @@ class CameraController:
             return False
         eng = self.engine
         cam = self._active_camera()
+        if cam._is_2d_locked():
+            if self._middle_mode == "orbit":
+                cam.pan(dx, dy)   # orbit yerine pan
+                eng.clear_hover()
+                return True
+            if eng.input.state.buttons.get(LEFT) and eng.input.is_shift():
+                cam.pan(dx, dy)
+                eng.clear_hover()
+                return True
         if self._middle_mode == "orbit":
             cam.orbit(dx, dy)
             eng.clear_hover()
@@ -128,7 +137,6 @@ class CameraController:
             return
         eng.sel_mgr.select(element, additive=eng.input.is_ctrl())
 
-        eng.sel_mgr.select(element, additive=eng.input.is_ctrl())
     def _on_escape(self):
         eng = self.engine
         if eng.marquee and eng.marquee.is_active:

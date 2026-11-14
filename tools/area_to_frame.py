@@ -52,6 +52,18 @@ class AssocDraft:
     excluded: set[int] = field(default_factory=set)
     dirty: bool = False
 
+class _ZoneDictAdapter:
+    """zone_children_by_direction dict'ini zone objesi gibi sunar."""
+    def __init__(self, data: dict):
+        self._data = data
+        self.label = data.get("label", "")
+        self.surface = data.get("surface", "")
+        self.kind = data.get("kind", "")
+        self.coords = data.get("coords", [])
+        self.cpe10 = data.get("cpe10_override") or data.get("cpe10", (0.0, 0.0))
+        self.cpe1 = data.get("cpe1_override") or data.get("cpe1", (0.0, 0.0))
+        self.pitch = data.get("pitch", 0.0)
+        self.table_type = data.get("table_type", "")
 
 # ============================================================================
 # Servis
@@ -94,18 +106,12 @@ class AreaToFrame:
         return self.project.math_model.polygons.get(int(polygon_id))
 
     def list_wind_zones(self, polygon: Polygon) -> list[tuple[str, int, object]]:
-        """[(direction_key, zone_index, zone), ...] — bu polygon'a ait."""
-        if not self.project or not self.project.loads:
-            return []
-        source_refs = {
-            f"POLYGON_{int(polygon.unique_id)}",
-            f"AREA_{int(polygon.unique_id)}",
-        }
-        entries: list[tuple[str, int, object]] = []
-        for direction_key, zones in self.project.loads.wind_zones.items():
-            for index, zone in enumerate(zones):
-                if str(getattr(zone, "surface", "")) in source_refs:
-                    entries.append((str(direction_key), index, zone))
+        """Polygon'a ait zone'lar. Tek kaynak: polygon.zone_children_by_direction."""
+        zone_dict = polygon.zone_children_by_direction or {}
+        entries = []
+        for dir_key, zones in zone_dict.items():
+            for idx, zone_dict_item in enumerate(zones):
+                entries.append((str(dir_key), idx, _ZoneDictAdapter(zone_dict_item)))
         return entries
 
     def polygon_loads_summary(self, polygon: Polygon) -> dict:
@@ -296,11 +302,13 @@ class AreaToFrame:
     # Transfer: rüzgar zone
     # ----------------------------------------------------------------
     def transfer_wind_zone(
-        self, surface: Polygon, direction_key: str, zone_index: int, zone,
-        *, cpe_kind: str, cpi_pos: float, cpi_neg: float,
-    ) -> TransferResult:
+    self, surface: Polygon, direction_key: str, zone_index: int, zone,
+    *, cpe_kind: str, cpi_pos: float, cpi_neg: float,
+) -> TransferResult:
+        """Zone'u (dict veya adapter) frame'lere aktar. Kaynak: polygon.zone_children_by_direction."""
         if not self.math_model:
             return TransferResult(False, "Math model yok.", error="no_model")
+
         surface_data = self._analysis_data(surface)
         if not surface_data.associated_frame_ids:
             return TransferResult(
@@ -308,13 +316,8 @@ class AreaToFrame:
                 error="no_assoc",
             )
 
+        # ★ Basınç verisi wind_results'tan gelir (analiz önbelleği)
         pressure_result = self.project.loads.wind_results.get(direction_key)
-        if pressure_result is None:
-            directions = getattr(
-                getattr(self.project.analysis, "wind", None),
-                "directions", {},
-            )
-            pressure_result = directions.get(direction_key)
         if pressure_result is None:
             return TransferResult(
                 False, f"{direction_key} yönü için basınç sonucu yok.",
@@ -325,7 +328,8 @@ class AreaToFrame:
             q_p = float(getattr(pressure_result, "q_p", 0.0))
             if q_p <= 0.0:
                 return TransferResult(False, "Rüzgar tepe basıncı geçersiz.",
-                                      error="bad_qp")
+                                    error="bad_qp")
+
             wind_direction = getattr(
                 pressure_result, "direction",
                 getattr(pressure_result, "w_dir", (0.0, 0.0, 0.0)),
@@ -333,22 +337,28 @@ class AreaToFrame:
             wind_direction = np.asarray(wind_direction, dtype=float)
             if wind_direction.shape != (3,) or not np.isfinite(wind_direction).all():
                 return TransferResult(False, "Rüzgar yön vektörü geçersiz.",
-                                      error="bad_direction")
+                                    error="bad_direction")
 
             length_factor = convert_value(
                 Dimension.LENGTH, 1.0, UnitSystem.N_M,
                 self.project.unit_system,
             )
-            coords = np.asarray(zone.coords, dtype=float)
+
+            # ★ zone artık _ZoneDictAdapter (dict) — attribute erişimi çalışır
+            raw_coords = getattr(zone, "coords", None)
+            if not raw_coords:
+                return TransferResult(False, "Zone geometrisi boş.",
+                                    error="bad_geometry")
+            coords = np.asarray(raw_coords, dtype=float)
             if coords.ndim != 2 or coords.shape[0] < 3 or coords.shape[1] != 3:
                 return TransferResult(False, "Rüzgar zone geometrisi geçersiz.",
-                                      error="bad_geometry")
+                                    error="bad_geometry")
 
-            zone_nodes = [
-                Node(*(coords[i] * length_factor)) for i in range(len(coords))
-            ]
+            # zone.coords ZATEN proje biriminde (store_zones/_assign_zones çevirdi)
+            # ★ length_factor = 1.0 olmalı, tekrar çevirme!
+            zone_nodes = [Node(*coords[i]) for i in range(len(coords))]
             zone_polygon = Polygon(
-                zone_nodes,
+                nodes=zone_nodes,
                 label=f"{zone.label} wind zone",
                 poly_type=PolygonType.ZONE,
             )
@@ -357,14 +367,15 @@ class AreaToFrame:
                 transfer_dist_type=surface_data.transfer_dist_type,
             )
 
-            raw_coefs = getattr(zone, cpe_kind)
+            # ★ cpe_kind → cpe10 veya cpe1 (adapter'da override varsa onu kullanır)
+            raw_coefs = getattr(zone, cpe_kind, (0.0, 0.0))
             if np.isscalar(raw_coefs):
                 coefficients = (float(raw_coefs), float(raw_coefs))
             else:
                 values = tuple(float(v) for v in raw_coefs)
                 if not values:
                     return TransferResult(False, "Cpe katsayısı boş.",
-                                          error="empty_cpe")
+                                        error="empty_cpe")
                 coefficients = (
                     values[0],
                     values[1] if len(values) > 1 else values[0],
@@ -454,9 +465,7 @@ class AreaToFrame:
                 for pattern_loads in generated.values()
                 for load_set in pattern_loads.values()
             )
-            msg = (
-                f"{zone.label}: {segment_count} rüzgar yük segmenti aktarıldı."
-            )
+            msg = f"{zone.label}: {segment_count} rüzgar yük segmenti aktarıldı."
             logger.debug("[AreaToFrame] %s", msg)
             return TransferResult(
                 True, msg, segment_count=segment_count, touched_frames=touched,
