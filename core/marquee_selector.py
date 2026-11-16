@@ -152,7 +152,6 @@ class MarqueeSelector:
         cam = camera or self.engine.cam
         mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
 
-        # ★ visible_ids — viewport'tan
         visible = None
         vm = getattr(self.engine, "viewport_manager", None)
         if vm is not None and self.viewport_name is not None:
@@ -166,9 +165,29 @@ class MarqueeSelector:
             for element in math_model.all_elements.values():
                 if visible is not None and element.unique_id not in visible:
                     continue
+                if not self._is_element_visible(element):     # ★ YENİ
+                    continue
                 if self._in_rect(element, (x1, y1), (x2, y2), mvp, win_w, win_h, cross):
                     selected.append(element)
         return selected
+    
+    def _is_element_visible(self, element) -> bool:
+        """Element gerçekten görünür mü? (is_visible + render_filter)"""
+        # 1. render_filter (show_only)
+        math_model = self.engine.math_model
+        if math_model:
+            flt = getattr(math_model, "_render_filter", None)
+            if flt is not None and getattr(element, "unique_id", None) not in flt:
+                return False
+
+        # 2. is_visible / visible
+        is_vis = getattr(element, "is_visible", None)
+        if is_vis is None:
+            is_vis = getattr(element, "visible", True)
+        if not is_vis:
+            return False
+
+        return True
 
     def _project_line_in(self, line, x1, y1, x2, y2, mvp, win_w, win_h, cross):
         p1 = self._project(line.v1.x, line.v1.y, line.v1.z, mvp, win_w, win_h)

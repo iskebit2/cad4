@@ -8,7 +8,6 @@ import numpy as np
 from OpenGL.GL import *
 from pyglm import glm
 
-from render.area_load_renderer import AreaLoadRenderer
 from render.axes_renderer import LocalAxesRenderer
 from render.global_axis_renderer import GlobalAxisRenderer
 from render.grid_renderer import GridRenderer, BubbleRenderer
@@ -42,7 +41,6 @@ class PresentationRenderer:
         self.bubble = BubbleRenderer(grid_shader)
 
         self.loads = LoadRenderer()
-        self.area_loads = AreaLoadRenderer()
         self.axes = LocalAxesRenderer(axes_shader)
         self.axes.init_gl()
 
@@ -57,13 +55,7 @@ class PresentationRenderer:
         self.zone_outline_vbo = None
         self.zone_outline_vcount = 0
 
-        self.show = {
-            "zones": False,
-            "loads": False,
-            "local_axes": False,
-            "grid_labels": True,
-            "selected_labels": True,
-        }
+        self.show = {}
 
     @property
     def polygon(self):
@@ -83,6 +75,7 @@ class PresentationRenderer:
 
     def set_engine(self, engine):
         self.engine = engine
+        self.show = engine.show   # ★ aynı dict — tek kaynak
 
     def set_loads_enabled(self, enabled):
         self.loads.enabled = bool(enabled)
@@ -140,33 +133,24 @@ class PresentationRenderer:
             glDepthMask(GL_FALSE)
             self.grid.draw(mvp)
             glDepthMask(GL_TRUE)
+
         if show.get("zones", True):
-            self._draw_zones(mvp)
+            self._draw_zones(mvp, scene=scene, math_model=math_model, wind_vector=active_wind_vector)
+
         if show.get("loads", True) and self.loads.enabled:
             glDisable(GL_DEPTH_TEST)
             self.loads.render(mvp)
             glEnable(GL_DEPTH_TEST)
-
-        # Alan yükleri (ok)
-        if show.get("loads", True) and self.area_loads.enabled:
-            glDisable(GL_DEPTH_TEST)
-            self.area_loads.render(mvp)
-            glEnable(GL_DEPTH_TEST)
-
-        # Alan yükü label'ları (mevcut labels batch üzerinden)
-        if show.get("loads", True) and self.area_loads.enabled and self.area_loads.show_labels:
-            labels = self.area_loads.get_labels()
-            if labels:
-                self._draw_area_load_labels(camera, labels, height)
                 
         if show.get("local_axes", False):
             self._draw_local_axes(camera, scene, math_model)
+
         if show.get("global_axis", True):
             self._draw_global_axis(camera, width, height)
+
         if show.get("labels", True):
             self._draw_labels(camera, scene, math_model, height)
-        if active_wind_vector is not None:
-            self._draw_wind_vector(mvp, active_wind_vector, scene, math_model)
+        
 
     def update_polygons(self, polygons):
         self._update_zones(polygons)
@@ -174,12 +158,6 @@ class PresentationRenderer:
     def update_loads(self, math_model, camera_scale=1.0, scene_size=1.0, unit_system=None, wind_results=None):
         if self.loads.enabled:
             self.loads.update(math_model, camera_scale=camera_scale, scene_size=scene_size)
-        if self.area_loads.enabled:
-            self.area_loads._wind_results = wind_results or {}
-            self.area_loads.update(
-                math_model, camera_scale=camera_scale,
-                scene_size=scene_size, unit_system=unit_system,
-            )
 
     def _bind_grid(self, scene):
         g = getattr(scene, "grid", None)
@@ -321,7 +299,9 @@ class PresentationRenderer:
             glDeleteVertexArrays(1, [self.zone_outline_vao]); self.zone_outline_vao = None
         self.zone_outline_vcount = 0
 
-    def _draw_zones(self, mvp):
+    def _draw_zones(self, mvp, scene=None, math_model=None, wind_vector=None):
+        if wind_vector is not None:
+            self._draw_wind_vector(mvp, wind_vector, scene, math_model)
         if not (self.show.get("zones") and self.zone_vao and self.zone_vcount):
             return
         sh = self.simple_shader or self.standard_shader
@@ -492,28 +472,81 @@ class PresentationRenderer:
         if not sh:
             return
 
-        center = np.zeros(3, dtype=np.float32)
-        size = 1000.0
+        # Model sınırlarını hesapla
         bounds = [
             item for item in (
                 scene.bounds if scene else None,
                 math_model.bounds if math_model else None,
             ) if item is not None
         ]
-        if bounds:
-            minimum = np.min([item.min for item in bounds], axis=0)
-            maximum = np.max([item.max for item in bounds], axis=0)
-            center = (minimum + maximum) * 0.5
-            size = max(5.0, float(np.linalg.norm(maximum - minimum)) * 0.4)
+        if not bounds:
+            return
 
+        minimum = np.min([item.min for item in bounds], axis=0).astype(np.float32)
+        maximum = np.max([item.max for item in bounds], axis=0).astype(np.float32)
+        size_xyz = maximum - minimum
+        diag = float(np.linalg.norm(size_xyz))
+
+        if diag < 1e-6:
+            return
+
+        # Ok uzunluğu: köşegenin %35'i — model boyutundan küçük
+        arrow_len = diag * 0.35
+
+        # Başlangıç: zemin seviyesi, XY merkez
+        start = np.array([
+            (minimum[0] + maximum[0]) * 0.5,
+            (minimum[1] + maximum[1]) * 0.5,
+            maximum[2],
+        ], dtype=np.float32)
+
+        # Yönü normalize et
         v_dir = np.array(vec, dtype=np.float32)
-        norm = np.linalg.norm(v_dir)
+        norm = float(np.linalg.norm(v_dir))
         if norm < 1e-6:
             return
         v_dir /= norm
 
-        start = center - v_dir * (size * 1.5)
-        end = center + v_dir * (0.5)
+        # Vektör biter: start + v_dir * arrow_len
+        end = start + v_dir * arrow_len
+        head_len = arrow_len * 0.18
+        head_width = arrow_len * 0.06
+        head_base = end - v_dir * head_len
+
+        # Dik vektörler
+        up = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+        if abs(float(np.dot(v_dir, up))) > 0.99:
+            up = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+        right = np.cross(v_dir, up)
+        right /= np.linalg.norm(right)
+        up_dir = np.cross(right, v_dir)
+        up_dir /= np.linalg.norm(up_dir)
+
+        # Line listesi (başlangıç → bitiş + 4 ok başı çizgisi)
+        lines = np.array([
+            # gövde
+            start[0], start[1], start[2], end[0], end[1], end[2],
+            # ok başı 1
+            end[0], end[1], end[2],
+            head_base[0] + right[0] * head_width,
+            head_base[1] + right[1] * head_width,
+            head_base[2] + right[2] * head_width,
+            # ok başı 2
+            end[0], end[1], end[2],
+            head_base[0] - right[0] * head_width,
+            head_base[1] - right[1] * head_width,
+            head_base[2] - right[2] * head_width,
+            # ok başı 3
+            end[0], end[1], end[2],
+            head_base[0] + up_dir[0] * head_width,
+            head_base[1] + up_dir[1] * head_width,
+            head_base[2] + up_dir[2] * head_width,
+            # ok başı 4
+            end[0], end[1], end[2],
+            head_base[0] - up_dir[0] * head_width,
+            head_base[1] - up_dir[1] * head_width,
+            head_base[2] - up_dir[2] * head_width,
+        ], dtype=np.float32)
 
         sh.use()
         loc = sh.get_loc("mvp")
@@ -528,80 +561,22 @@ class PresentationRenderer:
         a = sh.get_loc("alpha")
         if a != -1:
             glUniform1f(a, 1.0)
-        glLineWidth(5.0)
-
-        up = np.array([0.0, 0.0, 1.0], dtype=np.float32)
-        if abs(np.dot(v_dir, up)) > 0.99:
-            up = np.array([0.0, 1.0, 0.0], dtype=np.float32)
-        right = np.cross(v_dir, up)
-        right /= np.linalg.norm(right)
-        up_dir = np.cross(right, v_dir)
-        up_dir /= np.linalg.norm(up_dir)
-
-        arrow_head_len = size * 0.25
-        arrow_head_width = size * 0.1
-        head_base = end - v_dir * arrow_head_len
-
-        lines = [
-            start[0], start[1], start[2], end[0], end[1], end[2],
-            end[0], end[1], end[2],
-            head_base[0] + right[0] * arrow_head_width,
-            head_base[1] + right[1] * arrow_head_width,
-            head_base[2] + right[2] * arrow_head_width,
-            end[0], end[1], end[2],
-            head_base[0] - right[0] * arrow_head_width,
-            head_base[1] - right[1] * arrow_head_width,
-            head_base[2] - right[2] * arrow_head_width,
-            end[0], end[1], end[2],
-            head_base[0] + up_dir[0] * arrow_head_width,
-            head_base[1] + up_dir[1] * arrow_head_width,
-            head_base[2] + up_dir[2] * arrow_head_width,
-            end[0], end[1], end[2],
-            head_base[0] - up_dir[0] * arrow_head_width,
-            head_base[1] - up_dir[1] * arrow_head_width,
-            head_base[2] - up_dir[2] * arrow_head_width,
-        ]
-        verts = np.array(lines, dtype=np.float32)
+        glLineWidth(3.0)
 
         vao = glGenVertexArrays(1)
         vbo = glGenBuffers(1)
         glBindVertexArray(vao)
         glBindBuffer(GL_ARRAY_BUFFER, vbo)
-        glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts, GL_STREAM_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, lines.nbytes, lines, GL_STREAM_DRAW)
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * 4, ctypes.c_void_p(0))
         glDisable(GL_DEPTH_TEST)
-        glDrawArrays(GL_LINES, 0, len(verts) // 3)
+        glDrawArrays(GL_LINES, 0, len(lines) // 3)
         glEnable(GL_DEPTH_TEST)
         glBindVertexArray(0)
         glDeleteBuffers(1, [vbo])
         glDeleteVertexArrays(1, [vao])
         glLineWidth(1.0)
-
-    def _draw_area_load_labels(self, cam, labels, screen_h):
-        n = len(labels)
-        pos = np.empty((n, 3), dtype=np.float32)
-        colors = np.empty((n, 4), dtype=np.float32)
-        texts = [""] * n
-        off = np.tile(np.array([0.0, 0.0, 0.0], dtype=np.float32), (n, 1))
-        for i, item in enumerate(labels):
-            pos[i] = item["position"]
-            colors[i] = (*item["color"], 1.0)
-            texts[i] = self._ascii_safe(item["text"])   # ★ ASCII-safe
-
-        self.labels.begin(
-            view=cam.get_view_matrix(),
-            proj=cam.get_projection_matrix(),
-            cam_pos=(cam.position.x, cam.position.y, cam.position.z),
-            screen_h=screen_h,
-            fov_y_rad=math.radians(getattr(cam, "fov", 45.0)),
-            mode="billboard",
-        )
-        self.labels.add_many(
-            positions=pos, texts=texts, colors=colors,
-            pixel_sizes=13.0, anchors="center", world_offsets=off,
-        )
-        self.labels.flush()
 
     @staticmethod
     def _ascii_safe(text: str) -> str:
@@ -620,8 +595,7 @@ class PresentationRenderer:
                 .replace("–", "-")
                 .replace("—", "-")
         )
-
-
+    
     # ---------------------------------------------------------------- cleanup
     def cleanup(self):
         self._cleanup_zone_verts()

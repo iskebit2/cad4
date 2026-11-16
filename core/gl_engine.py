@@ -10,7 +10,6 @@ from OpenGL.GL import *
 from pyglm import glm
 
 from core.camera import Camera
-from plane.plane_source_dialog import PlaneSourceDialog
 from tools.draw_manager import DrawManager
 from core.edit.edit_controller import EditController
 from core.input_manager import InputManager
@@ -27,7 +26,6 @@ from render.scenerenderer import SceneRenderer
 from render.shaderprogram import ShaderProgram
 from render.snapsquare import SnapSquareRenderer
 from plane.plane_creation_tool import PlaneCreationTool, PlaneFromElementInputHandler, PlaneFromElementState
-from core.input_manager import InputManager
 from core.camera_controller import CameraController
 
 from logging_config import CadLogger
@@ -91,17 +89,24 @@ class Engine:
         self._force_id_pass_once = False
 
         self.show = {
-            "scene": True,
-            "grid": True,
-            "polygon": True,
-            "lines": True,
-            "zones": True,
-            "loads": True,
-            "labels": True,
-            "global_axis": True,
-            "local_axes": False,
-            "interaction": True,
-        }
+                        # Sahne
+                        "scene": True,
+                        "grid": True,
+                        "polygon": True,
+                        "lines": True,
+                        "interaction": True,
+                        "presentation_any": True,   # zaten kullanılıyor scenerenderer'da
+                        # Yük
+                        "loads": True,
+                        "zones": False,              # presentation_renderer.show'dan geliyor
+                        # Etiketler
+                        "labels": True,
+                        "grid_labels": True,        # presentation_renderer.show'dan
+                        "selected_labels": True,    # presentation_renderer.show'dan
+                        # Eksen
+                        "global_axis": True,
+                        "local_axes": False,
+                    }
 
         self.working_plane_provider: Callable[[], Plane | None] | None = None
         self.on_hover_changed_callback = None
@@ -119,7 +124,7 @@ class Engine:
 
     # ------------------------------------------------------------------
     def init_gl(self):
-        logger.debug("GL_VERSION: %s", glGetString(GL_VERSION))
+        logger.info("GL_VERSION: %s", glGetString(GL_VERSION))
         self._init_shaders()
         self._init_camera()
         self.mrt = MRTFramebuffer(self.w, self.h)
@@ -266,7 +271,7 @@ class Engine:
 
         t = time.perf_counter()
         geometry = GeometryProcessor.process(scene, None, math_model)
-        logger.debug("[update_geo] GeometryProcessor: %.1f ms", (time.perf_counter() - t) * 1000)
+        logger.info("[update_geo] GeometryProcessor: %.1f ms", (time.perf_counter() - t) * 1000)
 
         t = time.perf_counter()
         self.renderer.update_geo(
@@ -281,7 +286,7 @@ class Engine:
             links=geometry.links,
         )
 
-        logger.debug("[update_geo] renderer.update_geo: %.1f ms", (time.perf_counter() - t) * 1000)
+        logger.info("[update_geo] renderer.update_geo: %.1f ms", (time.perf_counter() - t) * 1000)
 
         t = time.perf_counter()
         cam_scale = (
@@ -297,11 +302,11 @@ class Engine:
                 wind_results=project.loads.wind_results,
             )
 
-        logger.debug("Update geo: %s", plane_name)
+        logger.info("Update geo: %s", plane_name)
 
-        logger.debug("[update_geo] loads: %.1f ms", (time.perf_counter() - t) * 1000)
+        logger.info("[update_geo] loads: %.1f ms", (time.perf_counter() - t) * 1000)
 
-        logger.debug("[update_geo] TOTAL: %.1f ms", (time.perf_counter() - t_start) * 1000)
+        logger.info("[update_geo] TOTAL: %.1f ms", (time.perf_counter() - t_start) * 1000)
 
     # ------------------------------------------------------------------
     def render(self, cam, target_fbo: int = 0, draw_interaction: bool = True,
@@ -526,7 +531,7 @@ class Engine:
             self.sel_mgr.clear()
 
     def _update_hover(self, pick_id):
-        # logger.debug(f"[HOVER] pick_id={pick_id}")
+        # logger.info(f"[HOVER] pick_id={pick_id}")
         if pick_id == self.hover_id:
             return
         self.hover_id = pick_id

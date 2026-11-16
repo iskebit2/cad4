@@ -126,7 +126,7 @@ class UnitSystem(Enum):
                 if us.force_unit.lower() == force and us.length_unit.lower() == length:
                     return us
 
-        logger.debug("[Units] Tanınmayan CurrUnits=%r → N_MM", raw)
+        logger.info("[Units] Tanınmayan CurrUnits=%r → N_MM", raw)
         return cls.N_MM
 
     @staticmethod
@@ -198,7 +198,7 @@ def factor(dim: Dimension, from_sys: UnitSystem, to_sys: UnitSystem) -> float:
     if dim == Dimension.WEIGHT_DENSITY:
         return force_ratio / length_ratio**3
 
-    logger.debug("[Units] Bilinmeyen Dimension: %r → factor=1.0", dim)
+    logger.info("[Units] Bilinmeyen Dimension: %r → factor=1.0", dim)
     return 1.0
 
 
@@ -211,7 +211,7 @@ def convert_value(dim, value, from_sys, to_sys):
             import numpy as np
             return np.asarray(value, dtype=float) * factor(dim, from_sys, to_sys)
         except Exception:
-            logger.debug(
+            logger.info(
                 "[Units] convert_value(%s, ndarray) → dönüştürülemedi",
                 dim,
             )
@@ -221,7 +221,7 @@ def convert_value(dim, value, from_sys, to_sys):
     try:
         return float(value) * factor(dim, from_sys, to_sys)
     except (TypeError, ValueError):
-        logger.debug("[Units] convert_value(%s, %r) → dönüştürülemedi", dim, value)
+        logger.info("[Units] convert_value(%s, %r) → dönüştürülemedi", dim, value)
         return value
 
 
@@ -272,7 +272,7 @@ def convert_project_units(
     project.ui_dirty = True
 
     unit_change_event.emit(from_sys, target, reason)
-    logger.debug(
+    logger.info(
         "[Units] %s → %s (reason=%s, %d alan)",
         from_sys.value, target.value, reason, n,
     )
@@ -366,7 +366,7 @@ def _convert_field(
             )
             return 1
     except Exception as e:
-        logger.debug("[Units] %s dönüştürülemedi: %s", field_path, e)
+        logger.info("[Units] %s dönüştürülemedi: %s", field_path, e)
     return 0
 
 

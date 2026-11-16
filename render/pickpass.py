@@ -227,7 +227,7 @@ class PickPass:
                 success = True
 
             if success:
-                # logger.debug(
+                # logger.info(
                 #     "[PICK_ASYNC] fbo=%s fallback=%s viewport=%s "
                 #     "xy=(%d,%d) x0=%d y0=%d y_gl=%d",
                 #     read_fbo, used_fallback, viewport_size,
@@ -282,7 +282,7 @@ class PickPass:
             data = ctypes.cast(ptr, ctypes.POINTER(array_type)).contents
 
             ids = np.frombuffer(data, dtype=np.uint32).copy()
-            # logger.debug(
+            # logger.info(
             #     "[CHECK_PICK] ids=%s pending=%s",
             #     ids.tolist(), self.pending_pick,
             # )

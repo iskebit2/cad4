@@ -359,7 +359,7 @@ class BaseRenderer(ABC, Generic[T]):
                         np.full(simple_vc, pick_id, dtype=np.uint32)
                     )
                 else:
-                    logger.debug("...build_simple")
+                    logger.info("...build_simple")
             else:
                 self.elem_to_simple_vcount[e.unique_id] = 0   # ← boş element
 
@@ -759,7 +759,7 @@ class FrameRenderer(BaseRenderer[Frame]):
 
     def build(self, f):
         v, c, i = self.builder.build(f)
-        # logger.debug(
+        # logger.info(
         #     "[FrameRenderer.build] frame=%s sd=%s verts=%d idx=%d",
         #     getattr(f, "label", "?"),
         #     "VAR" if getattr(getattr(f, "section", None), "sd_section", None) else "YOK",

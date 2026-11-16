@@ -1,13 +1,13 @@
 # inspector/schema_bridge.py
 from typing import Any, Protocol
 
-from ui.adapters import (
+from ui.helpers.adapters import (
     MIXED,
     element_to_values,
     elements_to_common_values,
     values_to_element,
 )
-from ui.schemas import multi_schema_for, schema_for
+from ui.helpers.schemas import multi_schema_for, schema_for
 
 __all__ = [
     "MIXED",
@@ -30,7 +30,7 @@ class Catalog(Protocol):
 
 
 def schema_for_object(obj):
-    from ui.schemas import (
+    from ui.helpers.schemas import (
         polygon_schema, line_schema,
         grid_schema, plane_schema, schema_for as _schema_for,
     )

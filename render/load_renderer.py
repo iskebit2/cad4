@@ -1,12 +1,7 @@
 # render/load_renderer.py
-"""
-Frame yayılı yük görselleştirme.
-- Ayrı line ve triangle buffer'ları (karışma yok)
-- Pattern seçim filtresi
-- Alpha ile şeffaf dolgu
-"""
-import ctypes
+from __future__ import annotations
 
+import ctypes
 from pyglm import glm
 import numpy as np
 from OpenGL.GL import *
@@ -22,7 +17,6 @@ class LoadRenderer:
     ARROW_MIN = 3
     ARROW_MAX = 12
     ARROW_LENGTH_RATIO = 0.35
-    MIN_PROFILE_H = 5.0
 
     PATTERN_COLORS = [
         (1.00, 0.30, 0.30),
@@ -46,33 +40,25 @@ class LoadRenderer:
 
         self.shader = None
         self._initialized = False
-        self._pattern_color_cache: dict = {}
-        self.enabled = True
+        self._pattern_color_cache: dict[str, tuple[float, float, float]] = {}
 
-        # --- Pattern filtreleme ---
-        # None → hepsi gösterilir
-        # str  → sadece o pattern gösterilir
-        
-        # Alternatif: bir liste
         self.available_patterns: list[str] = []
-
         self.enabled = False
         self.active_pattern: str | None = None
 
-        # Görsel ayarlar
         self.profile_scale = 1.0
         self.line_width = 2.0
-        self.fill_alpha = 0.28
+        self.fill_alpha = 0.8
         self.show_arrows = True
         self.show_fill = True
-        self._point_force_scale = 50.0   # mm/kN — her update'te güncellenir
+        self._point_force_scale = 50.0
 
         self.show_frame_loads = True
         self.show_point_loads = True
+        self.show_area_loads = True
+        self.show_wind_zones = True
+        self._wind_results: dict = {}
 
-    # ==================================================================
-    # INIT
-    # ==================================================================
     def init_gl(self):
         if self._initialized:
             return
@@ -101,19 +87,17 @@ class LoadRenderer:
 
         self.shader = self._compile(vs, fs)
 
-        # Line VAO
+        stride = 6 * 4
         self.vao_line = glGenVertexArrays(1)
         self.vbo_line = glGenBuffers(1)
         glBindVertexArray(self.vao_line)
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo_line)
-        stride = 6 * 4
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(0))
         glEnableVertexAttribArray(1)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(3 * 4))
         glBindVertexArray(0)
 
-        # Tri VAO
         self.vao_tri = glGenVertexArrays(1)
         self.vbo_tri = glGenBuffers(1)
         glBindVertexArray(self.vao_tri)
@@ -131,30 +115,21 @@ class LoadRenderer:
         vs = glCreateShader(GL_VERTEX_SHADER)
         glShaderSource(vs, vs_src)
         glCompileShader(vs)
-        if not glGetShaderiv(vs, GL_COMPILE_STATUS):
-            raise RuntimeError(f"VS: {glGetShaderInfoLog(vs).decode()}")
 
         fs = glCreateShader(GL_FRAGMENT_SHADER)
         glShaderSource(fs, fs_src)
         glCompileShader(fs)
-        if not glGetShaderiv(fs, GL_COMPILE_STATUS):
-            raise RuntimeError(f"FS: {glGetShaderInfoLog(fs).decode()}")
 
         p = glCreateProgram()
         glAttachShader(p, vs)
         glAttachShader(p, fs)
         glLinkProgram(p)
-        if not glGetProgramiv(p, GL_LINK_STATUS):
-            raise RuntimeError(f"Link: {glGetProgramInfoLog(p).decode()}")
 
         glDeleteShader(vs)
         glDeleteShader(fs)
         return p
 
-    # ==================================================================
-    # PATTERN RENK
-    # ==================================================================
-    def _pattern_color(self, name: str):
+    def _pattern_color(self, name: str) -> tuple[float, float, float]:
         if name in self._pattern_color_cache:
             return self._pattern_color_cache[name]
         h = sum(ord(c) * (i + 1) for i, c in enumerate(str(name))) % len(self.PATTERN_COLORS)
@@ -162,15 +137,7 @@ class LoadRenderer:
         self._pattern_color_cache[name] = color
         return color
 
-    # ==================================================================
-    # UPDATE — vertex üretimi
-    # ==================================================================
     def update(self, scene, camera_scale: float = 1.0, scene_size: float = 1.0):
-        logger.debug(
-            "[LOAD_UPDATE] scene_size=%.1f cam_scale=%.1f profile_scale=%.6f",
-            scene_size, camera_scale, self.profile_scale,
-        )
-
         if not self._initialized:
             self.init_gl()
 
@@ -178,35 +145,25 @@ class LoadRenderer:
             self.line_count = 0
             self.tri_count = 0
             return
-            
+
         self.available_patterns = self._scan_patterns(scene)
 
-        lines = []
-        tris = []
+        lines: list[float] = []
+        tris: list[float] = []
 
-        # --- Frame yayılı yükleri (değişmez) ---
-        if self.show_frame_loads:
-            n_frames_with_sets = 0
-            n_sets_total = 0
+        if self.show_frame_loads and hasattr(scene, "frames"):
             for frame in scene.frames.values():
                 if not getattr(frame, "is_visible", True):
                     continue
                 load_sets = getattr(frame, "dist_load_sets", None)
                 if not load_sets:
                     continue
-                n_frames_with_sets += 1
                 for pat, ls in load_sets.items():
                     if self.active_pattern and pat != self.active_pattern:
-                        
                         continue
-                    n_sets_total += 1
-                    
                     self._emit_load_set(frame, ls, lines, tris, camera_scale)
-            
 
-        # --- Point loads: ÖLÇEĞİ ÖNCE HESAPLA ---
-        if self.show_point_loads:
-            # Maksimum yük büyüklüğü (filtre uygulanmış)
+        if self.show_point_loads and hasattr(scene, "nodes"):
             point_load_max = 1.0
             for node in scene.nodes.values():
                 if not getattr(node, "is_visible", True):
@@ -218,11 +175,9 @@ class LoadRenderer:
                     mag = abs(pl.fx) + abs(pl.fy) + abs(pl.fz)
                     point_load_max = max(point_load_max, mag)
 
-            # Ok boyu: sahnenin %5'i (max yük için)
             target_arrow_len = max(scene_size, 1.0) * 0.05
             self._point_force_scale = target_arrow_len / point_load_max
 
-            # Şimdi her yükü çiz
             for node in scene.nodes.values():
                 if not getattr(node, "is_visible", True):
                     continue
@@ -230,67 +185,96 @@ class LoadRenderer:
                     pat = getattr(pl, "pattern_name", "?")
                     if self.active_pattern and pat != self.active_pattern:
                         continue
-                    self._emit_point_load(node, pl, lines, tris, camera_scale)
-        
+                    self._emit_point_load(node, pl, lines, tris)
 
-        # Line buffer
+        if self.show_area_loads and hasattr(scene, "polygons") and hasattr(scene, "polygon_analysis"):
+            arrow_len = max(scene_size, 1.0) * 0.04 * self.profile_scale
+            for polygon in scene.polygons.values():
+                if not getattr(polygon, "is_visible", True):
+                    continue
+                analysis = scene.polygon_analysis.get(polygon.unique_id)
+                if analysis and analysis.assigned_loads:
+                    for load in analysis.assigned_loads:
+                        if self.active_pattern and load.pattern_name != self.active_pattern:
+                            continue
+                        self._emit_polygon_load(polygon, load, lines, tris, arrow_len)
+                if self.show_wind_zones:
+                    self._emit_wind_zones(polygon, lines, tris, arrow_len)
+
+        if self.show_area_loads and hasattr(scene, "areas") and hasattr(scene, "polygon_analysis"):
+            arrow_len = max(scene_size, 1.0) * 0.04 * self.profile_scale
+            for area in scene.areas.values():
+                if not getattr(area, "is_visible", True):
+                    continue
+                analysis = scene.polygon_analysis.get(area.unique_id)
+                if analysis and analysis.assigned_loads:
+                    for load in analysis.assigned_loads:
+                        if self.active_pattern and load.pattern_name != self.active_pattern:
+                            continue
+                        self._emit_area_load(area, load, lines, tris, arrow_len)
+
         if lines:
-            data = np.asarray(lines, dtype=np.float32)
-            self.line_count = len(data) // 6
+            data_line = np.asarray(lines, dtype=np.float32)
+            self.line_count = len(data_line) // 6
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_line)
-            glBufferData(GL_ARRAY_BUFFER, data.nbytes, data, GL_DYNAMIC_DRAW)
+            glBufferData(GL_ARRAY_BUFFER, data_line.nbytes, data_line, GL_DYNAMIC_DRAW)
         else:
             self.line_count = 0
 
-        # Tri buffer
         if tris:
-            data = np.asarray(tris, dtype=np.float32)
-            self.tri_count = len(data) // 6
+            data_tri = np.asarray(tris, dtype=np.float32)
+            self.tri_count = len(data_tri) // 6
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_tri)
-            glBufferData(GL_ARRAY_BUFFER, data.nbytes, data, GL_DYNAMIC_DRAW)
+            glBufferData(GL_ARRAY_BUFFER, data_tri.nbytes, data_tri, GL_DYNAMIC_DRAW)
         else:
             self.tri_count = 0
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
-        logger.debug("[LR.update] show_frame=%s show_point=%s lines_v=%d tris_v=%d",
-               self.show_frame_loads, self.show_point_loads,
-               len(lines) // 6 if lines else 0,
-               len(tris) // 3 if tris else 0)
-        
 
     def _scan_patterns(self, scene) -> list[str]:
-        """Sahnedeki tüm pattern isimlerini topla."""
         pats = set()
-        for frame in scene.frames.values():
-            load_sets = getattr(frame, "dist_load_sets", None)
-            if load_sets:
-                pats.update(load_sets.keys())
-            for dl in getattr(frame, "dist_loads", []) or []:
-                p = getattr(dl, "pattern_name", None)
-                if p:
-                    pats.add(p)
+        if hasattr(scene, "frames"):
+            for frame in scene.frames.values():
+                load_sets = getattr(frame, "dist_load_sets", None)
+                if load_sets:
+                    pats.update(load_sets.keys())
+                for dl in getattr(frame, "dist_loads", []) or []:
+                    p = getattr(dl, "pattern_name", None)
+                    if p:
+                        pats.add(p)
 
-        for node in scene.nodes.values():              # ← YENİ
-            for pl in getattr(node, "loads", None) or []:
-                p = getattr(pl, "pattern_name", None)
-                if p:
-                    pats.add(p)
+        if hasattr(scene, "nodes"):
+            for node in scene.nodes.values():
+                for pl in getattr(node, "loads", None) or []:
+                    p = getattr(pl, "pattern_name", None)
+                    if p:
+                        pats.add(p)
+
+        if hasattr(scene, "polygons") and hasattr(scene, "polygon_analysis"):
+            for polygon in scene.polygons.values():
+                analysis = scene.polygon_analysis.get(polygon.unique_id)
+                if analysis and analysis.assigned_loads:
+                    for load in analysis.assigned_loads:
+                        p = getattr(load, "pattern_name", None)
+                        if p:
+                            pats.add(p)
+
+        if hasattr(scene, "areas") and hasattr(scene, "polygon_analysis"):
+            for area in scene.areas.values():
+                analysis = scene.polygon_analysis.get(area.unique_id)
+                if analysis and analysis.assigned_loads:
+                    for load in analysis.assigned_loads:
+                        p = getattr(load, "pattern_name", None)
+                        if p:
+                            pats.add(p)
+
         return sorted(pats)
 
-    # ==================================================================
-    # EMIT
-    # ==================================================================
     def _emit_load_set(self, frame, ls, lines, tris, cam_scale):
         segments = getattr(ls, "segments", None) or []
-        logger.debug("[LR.emit] frame=%s pattern=%s segments=%d q1=%s",
-                   getattr(frame, "label", "?"),
-                   getattr(ls, "pattern_name", "?"),
-                   len(segments),
-                   segments[0].q1 if segments else "—")
         if not segments:
             return
 
-        # Segment'leri pts listesine çevir
         pts = []
         for seg in segments:
             x1 = self._attr(seg, "x1")
@@ -307,16 +291,7 @@ class LoadRenderer:
             return
 
         color = self._pattern_color(getattr(ls, "pattern_name", "?"))
-        # ls'in kendisini load olarak geçir (coord_sys, load_dir oradan gelir)
         self._emit_profile(frame, pts, color, lines, tris, cam_scale, load=ls)
-
-    def _emit_legacy(self, frame, dl, lines, tris, cam_scale):
-        pts_raw = getattr(dl, "points", None) or []
-        pts = [(float(a), float(b)) for a, b in pts_raw if a is not None and b is not None]
-        if len(pts) < 2:
-            return
-        color = self._pattern_color(getattr(dl, "pattern_name", "?"))
-        self._emit_profile(frame, pts, color, lines, tris, cam_scale)
 
     @staticmethod
     def _attr(obj, key):
@@ -326,9 +301,6 @@ class LoadRenderer:
             return obj.get(key)
         return None
 
-    # ==================================================================
-    # PROFİL — frame'e yerleştir
-    # ==================================================================
     def _emit_profile(self, frame, pts, color, lines, tris, cam_scale, load=None):
         ni = getattr(frame, "node_i", None)
         nj = getattr(frame, "node_j", None)
@@ -338,53 +310,37 @@ class LoadRenderer:
         p0 = np.array([ni.x, ni.y, ni.z], dtype=float)
         p1 = np.array([nj.x, nj.y, nj.z], dtype=float)
         L = float(np.linalg.norm(p1 - p0))
-        
+
         if L < 1e-9:
             return
 
         axis = (p1 - p0) / L
-
-        # --- Frame yerel eksenleri ---
         e1, e2, e3 = self._frame_local_axes(p0, p1, getattr(frame, "rotation_deg", 0.0))
 
-        # --- Yük yönü (3D dünya vektörü) ---
-        if load is not None:
-            load_dir_vec = self._resolve_load_direction(load, e1, e2, e3)
-        else:
-            # Varsayılan: Local 2 (kirişe dik, dünya Z'ye yakın)
-            load_dir_vec = e2
-
-        # --- Profil ekseni: yük yönü ---
-        # +q yükü load_dir_vec yönünde, -q ters yönde
-        up = load_dir_vec  # yük profili bu yönde uzayacak
+        load_dir_vec = self._resolve_load_direction(load, e1, e2, e3) if load is not None else e2
+        up = -load_dir_vec
 
         max_q = max(abs(q) for _, q in pts) or 1.0
         profile_h = max(
-                        L * self.PROFILE_HEIGHT_RATIO * self.profile_scale,
-                        L * 0.02,   # minimum: frame'in %2'si
-                    )
-        logger.debug("[EMIT_PROFILE] frame=%s L=%.1f profile_scale=%.3f profile_h=%.1f",
-             getattr(frame, "label", "?"), L, self.profile_scale, profile_h)
-        
-        # İşaretli q → profil q yönünde, ters ise diğer yönde
+            L * self.PROFILE_HEIGHT_RATIO * self.profile_scale,
+            L * 0.02,
+        )
+
         def to_3d(xr, q):
             base = p0 + axis * (xr * L)
-            return base + up * (q / max_q * profile_h)  # q işaretli, up birim
+            return base + up * (q / max_q * profile_h)
 
-        # --- Üst çizgi ---
         for i in range(len(pts) - 1):
             a = to_3d(*pts[i])
             b = to_3d(*pts[i + 1])
             self._push_line(lines, a, b, color)
 
-        # --- Dikey kenarlar (profilin frame eksenine bağlandığı yerler) ---
         for xr, q in (pts[0], pts[-1]):
             base = p0 + axis * (xr * L)
             tip = to_3d(xr, q)
             if np.linalg.norm(tip - base) > 1e-6:
                 self._push_line(lines, base, tip, color)
 
-        # --- Dolgu (üçgen şerit) ---
         for i in range(len(pts) - 1):
             xa, qa = pts[i]
             xb, qb = pts[i + 1]
@@ -395,7 +351,6 @@ class LoadRenderer:
             self._push_tri(tris, ta, ba, bb, color)
             self._push_tri(tris, ta, bb, tb, color)
 
-        # --- Oklar: yük yönünde ---
         if self.show_arrows:
             n = max(self.ARROW_MIN, min(self.ARROW_MAX, int(L / 400.0) + 2))
             for i in range(n):
@@ -405,20 +360,15 @@ class LoadRenderer:
                     continue
 
                 base = p0 + axis * (xr * L)
-                # Ok her zaman frame ekseninden BAŞLAR, yükün yönüne gider
                 tip = base + up * (q / max_q * profile_h)
-
-                # Gövde
                 self._push_line(lines, base, tip, color)
 
-                # Ok başı — uç kısmında
                 d = tip - base
                 dlen = np.linalg.norm(d)
                 if dlen < 1e-6:
                     continue
                 d = d / dlen
 
-                # Ok başı için bir "yan" vektör: axis ve up'a dik
                 side = np.cross(d, axis)
                 slen = np.linalg.norm(side)
                 if slen < 1e-6:
@@ -435,8 +385,6 @@ class LoadRenderer:
                 right = hb - side * head_w
 
                 self._push_tri(tris, tip, left, right, color)
-                logger.debug("[LR.profile] frame=%s L=%.2f profile_h=%.2f",
-               frame.label, L, profile_h)
 
     @staticmethod
     def _interp(pts, xr):
@@ -452,9 +400,6 @@ class LoadRenderer:
                 return qa + (qb - qa) * t
         return 0.0
 
-    # ==================================================================
-    # VERTEX PUSH — line ve tri AYRI
-    # ==================================================================
     @staticmethod
     def _push_line(out, a, b, color):
         r, g, bl = color
@@ -468,11 +413,7 @@ class LoadRenderer:
         out.extend([b[0], b[1], b[2], r, g, bl])
         out.extend([c[0], c[1], c[2], r, g, bl])
 
-    # ==================================================================
-    # RENDER — iki pass (tri + line)
-    # ==================================================================
     def render(self, mvp):
-        logger.debug("[LOAD_RENDER] line_count=%d tri_count=%d", self.line_count, self.tri_count)
         if not self._initialized or not self.enabled:
             return
 
@@ -483,7 +424,6 @@ class LoadRenderer:
 
         loc_a = glGetUniformLocation(self.shader, "uAlpha")
 
-        # --- Dolgu ---
         if self.show_fill and self.tri_count > 0:
             if loc_a != -1:
                 glUniform1f(loc_a, float(self.fill_alpha))
@@ -493,7 +433,6 @@ class LoadRenderer:
             glDrawArrays(GL_TRIANGLES, 0, self.tri_count)
             glBindVertexArray(0)
 
-        # --- Çizgiler ---
         if self.line_count > 0:
             if loc_a != -1:
                 glUniform1f(loc_a, 1.0)
@@ -504,9 +443,6 @@ class LoadRenderer:
 
         glUseProgram(0)
 
-    # ==================================================================
-    # CLEANUP
-    # ==================================================================
     def cleanup(self):
         for buf in (self.vbo_line, self.vbo_tri):
             if buf:
@@ -521,10 +457,8 @@ class LoadRenderer:
         self.shader = None
         self._initialized = False
 
-    # Yardımcı Metotlar
-
-    def _frame_local_axes(self, p0, p1, rotation_deg=0.0):
-        """Frame'in 3 yerel ekseni (1, 2, 3) — birim vektörler."""
+    @staticmethod
+    def _frame_local_axes(p0, p1, rotation_deg=0.0):
         e1 = p1 - p0
         L = np.linalg.norm(e1)
         if L < 1e-9:
@@ -536,7 +470,6 @@ class LoadRenderer:
         norm = np.linalg.norm(e2)
 
         if norm < 1e-6:
-            # Düşey çubuk → dünya X
             for ref in (np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])):
                 e2 = ref - e1 * np.dot(ref, e1)
                 norm = np.linalg.norm(e2)
@@ -549,7 +482,6 @@ class LoadRenderer:
 
         e3 = np.cross(e1, e2)
 
-        # Rotasyon (Local 1 etrafında)
         if abs(rotation_deg) > 1e-9:
             theta = np.radians(rotation_deg)
             c, s = np.cos(theta), np.sin(theta)
@@ -559,42 +491,32 @@ class LoadRenderer:
 
         return e1, e2, e3
 
-    def _resolve_load_direction(self, load, e1, e2, e3):
-        """Yükün 3D dünya yönü."""
+    @staticmethod
+    def _resolve_load_direction(load, e1, e2, e3):
         dir_raw = str(getattr(load, "load_dir", "2")).strip()
         csys = str(getattr(load, "coord_sys", "Local")).strip().lower()
 
-        # Global / Gravity / Projected
         if csys in ("global", "g") or dir_raw in ("4", "5", "6", "7", "8", "9", "10"):
             global_map = {
                 "4": np.array([1.0, 0.0, 0.0]),
                 "5": np.array([0.0, 1.0, 0.0]),
                 "6": np.array([0.0, 0.0, 1.0]),
-                "7": np.array([0.0, 0.0, -1.0]),   # Gravity
+                "7": np.array([0.0, 0.0, -1.0]),
                 "8": np.array([1.0, 0.0, 0.0]),
                 "9": np.array([0.0, 1.0, 0.0]),
                 "10": np.array([0.0, 0.0, 1.0]),
             }
             return global_map.get(dir_raw, np.array([0.0, 0.0, -1.0]))
 
-        # Local
         if dir_raw == "1":
             return e1
         if dir_raw == "3":
             return e3
-        return e2  # varsayılan Local 2
+        return e2
 
-    def _emit_point_load(self, node, pl, lines, tris, cam_scale):
-        """
-        PointLoad görselleştir:
-        - Fx, Fy, Fz → dünya ekseni yönünde ok
-        - Mx, My, Mz → şimdilik atla (torus dilimi karmaşık)
-        Ok boyu: |F| * scale (kamera bağımsız dünya birimi)
-        """
+    def _emit_point_load(self, node, pl, lines, tris):
         origin = np.array([node.x, node.y, node.z], dtype=float)
         color = self._pattern_color(getattr(pl, "pattern_name", "?"))
-
-        
 
         components = [
             (pl.fx, np.array([1.0, 0.0, 0.0])),
@@ -607,14 +529,115 @@ class LoadRenderer:
             length = float(val) * self._point_force_scale * self.profile_scale
             self._emit_arrow_3d(origin, axis, length, color, lines, tris)
 
-        # Moment — opsiyonel, atla. İstersen eksen etrafında yay çiz.
+    def _emit_polygon_load(self, polygon, load, lines, tris, arrow_len):
+        nodes = getattr(polygon, "nodes", None) or []
+        if not nodes:
+            return
+        direction = self._resolve_area_direction(load, polygon)
+        if direction is None:
+            return
+        color = self._pattern_color(load.pattern_name)
+        self._emit_distributed_patch(nodes, direction, arrow_len * 0.7, color, lines, tris)
+
+    def _emit_area_load(self, area, load, lines, tris, arrow_len):
+        nodes = getattr(area, "nodes", None) or []
+        if not nodes:
+            return
+        direction = self._resolve_area_direction(load, area)
+        if direction is None:
+            return
+        color = self._pattern_color(load.pattern_name)
+        self._emit_distributed_patch(nodes, direction, arrow_len * 0.7, color, lines, tris)
+
+    def _emit_wind_zones(self, polygon, lines, tris, arrow_len):
+        zone_dict = polygon.zone_children_by_direction or {}
+        direction = polygon.show_zones_direction
+        if direction is None or direction not in zone_dict:
+            return
+        wind_results = getattr(self, "_wind_results", None) or {}
+        result = wind_results.get(direction)
+        if result is None:
+            return
+        wind_dir = np.asarray(getattr(result, "direction", (0.0, 0.0, -1.0)), dtype=float)
+        if np.linalg.norm(wind_dir) < 1e-9:
+            wind_dir = np.array([0.0, 0.0, -1.0])
+        wind_dir = wind_dir / np.linalg.norm(wind_dir)
+
+        for zi, z_dict in enumerate(zone_dict.get(direction, [])):
+            coords = z_dict.get("coords") or []
+            if len(coords) < 3:
+                continue
+            zone_nodes = [type("N", (), {"x": c[0], "y": c[1], "z": c[2]})() for c in coords]
+            color = self._pattern_color(f"WIND_{direction}")
+            self._emit_distributed_patch(zone_nodes, wind_dir, arrow_len * 0.7, color, lines, tris)
+
+    def _emit_distributed_patch(self, nodes, direction, length, color, lines, tris):
+        pts = np.array([[n.x, n.y, n.z] for n in nodes], dtype=float)
+        center = pts.mean(axis=0)
+
+        d = np.array(direction, dtype=float)
+        dn = np.linalg.norm(d)
+        if dn < 1e-9:
+            return
+        d = d / dn
+
+        perp = self._perp_vector(d)
+        u = np.cross(d, perp)
+        un = np.linalg.norm(u)
+        u = u / un if un > 1e-9 else np.array([1.0, 0.0, 0.0])
+        v = np.cross(d, u)
+        vn = np.linalg.norm(v)
+        v = v / vn if vn > 1e-9 else np.array([0.0, 1.0, 0.0])
+
+        min_coords = pts.min(axis=0)
+        max_coords = pts.max(axis=0)
+        extent = max_coords - min_coords
+        span = max(extent[0], extent[1], extent[2]) * 0.35
+
+        offsets = [
+            center,
+            center + u * span,
+            center - u * span,
+            center + v * span,
+            center - v * span,
+        ]
+
+        for pos in offsets:
+            self._emit_arrow_3d(pos, d, length, color, lines, tris)
+
+    def _resolve_area_direction(self, load, element):
+        direction_map = {
+            "GRAV": np.array([0.0, 0.0, -1.0]),
+            "GX": np.array([1.0, 0.0, 0.0]),
+            "GY": np.array([0.0, 1.0, 0.0]),
+            "GZ": np.array([0.0, 0.0, 1.0]),
+        }
+        if load.direction is None:
+            return np.array([0.0, 0.0, -1.0])
+        val = load.direction.value if hasattr(load.direction, "value") else str(load.direction)
+        if val in direction_map:
+            return direction_map[val]
+        nodes = getattr(element, "nodes", None) or []
+        if len(nodes) >= 3:
+            return self._calculate_normal(nodes)
+        return np.array([0.0, 0.0, -1.0])
+
+    @staticmethod
+    def _calculate_normal(nodes):
+        if len(nodes) < 3:
+            return np.array([0.0, 0.0, 1.0])
+        p0 = np.array([nodes[0].x, nodes[0].y, nodes[0].z], dtype=float)
+        p1 = np.array([nodes[1].x, nodes[1].y, nodes[1].z], dtype=float)
+        p2 = np.array([nodes[2].x, nodes[2].y, nodes[2].z], dtype=float)
+        v1 = p1 - p0
+        v2 = p2 - p0
+        n = np.cross(v1, v2)
+        norm = np.linalg.norm(n)
+        if norm < 1e-9:
+            return np.array([0.0, 0.0, 1.0])
+        return n / norm
 
     def _emit_arrow_3d(self, origin, direction, length, color, lines, tris):
-        """
-        origin'den `direction` yönünde `length` boyunda 3D ok.
-        Negatif length → ters yön.
-        Gövde: line. Ok başı: üçgen (tri).
-        """
         d = np.array(direction, dtype=float)
         n = np.linalg.norm(d)
         if n < 1e-9:
@@ -627,12 +650,10 @@ class LoadRenderer:
 
         o = np.array(origin, dtype=float)
         tip = o + d * L
-        hb = o + d * (L * 0.85)   # ok başı tabanı
+        hb = o + d * (L * 0.85)
 
-        # Gövde
         self._push_line(lines, o, hb, color)
 
-        # Ok başı için dik vektörler
         perp = self._perp_vector(d)
         side = np.cross(d, perp)
         slen = np.linalg.norm(side)
@@ -641,14 +662,13 @@ class LoadRenderer:
         side = side / slen
 
         head_w = abs(L) * 0.10
-        left  = hb + side * head_w
+        left = hb + side * head_w
         right = hb - side * head_w
 
         self._push_tri(tris, tip, left, right, color)
 
     @staticmethod
     def _perp_vector(d):
-        """d'ye dik herhangi bir birim vektör."""
         a = np.array([0.0, 0.0, 1.0]) if abs(d[2]) < 0.9 else np.array([0.0, 1.0, 0.0])
         p = np.cross(d, a)
         n = np.linalg.norm(p)

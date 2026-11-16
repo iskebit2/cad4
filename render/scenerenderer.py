@@ -108,14 +108,8 @@ class SceneRenderer:
         if not self.math_model_renderer:
             return
         base = self.math_model_renderer
-        base.show["polygon"] = (
-            engine.show.get("polygon", True)
-            and self.presentation_renderer.show.get("polygon", True)
-        )
-        base.show["lines"] = (
-            engine.show.get("lines", True)
-            and self.presentation_renderer.show.get("lines", True)
-        )
+        base.show["polygon"] = engine.show.get("polygon", True)
+        base.show["lines"] = engine.show.get("lines", True)
         if engine.show.get("scene", True):
             base.render(camera, target_fbo, force_id_pass=force_id_pass,
                         plane=plane, visible_ids=visible_ids)

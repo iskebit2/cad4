@@ -1,4 +1,6 @@
 # core/selection_manager.py
+from dataclasses import field
+
 from core.commands import CommandManager, DeleteElementsCommand
 from core.selection_policy import SelectionMode
 
@@ -10,7 +12,8 @@ class SelectionManager:
         self.selected: set[int] = set()
         self.cmd_mgr = CommandManager(max_history=100)
         self.on_selection_changed = None
-
+        self.named_selections = {}
+        
     def _update(self):
         if self.r:
             self.r.update_sel()
@@ -35,7 +38,12 @@ class SelectionManager:
         if not element:
             return
         eid = getattr(element, "unique_id", id(element))
-
+        if additive:
+            if eid in self.selected:
+                self.selected.remove(eid)     # toggle-off
+            else:
+                self.selected.add(eid)         # toggle-on
+                
         if not additive:
             for e in self.get_selected():
                 if getattr(e, "unique_id", id(e)) != eid:
@@ -81,6 +89,69 @@ class SelectionManager:
             return
         self.select(element, additive=False)
 
+    def select_all(self):
+        if not (self.r and self.r.math_model):
+            return
+        mm = self.r.math_model
+        all_els = list(mm.all_elements.values())
+        self.select_multiple(all_els, mode=SelectionMode.REPLACE)
+
+    def invert_selection(self):
+        if not (self.r and self.r.math_model):
+            return
+        mm = self.r.math_model
+        all_els = list(mm.all_elements.values())
+        current = self.selected
+        new_els = [e for e in all_els if e.unique_id not in current]
+        self.select_multiple(new_els, mode=SelectionMode.REPLACE)
+
+    def expand_to_nodes(self):
+        """Filtrelenen/seçilen frame, line, link, area ve polygon'ların köşe node'lerini seçime ekler."""
+        if not (self.r and self.r.math_model):
+            return
+        selected_els = self.get_selected()
+        nodes_by_id: dict[int, object] = {}
+
+        for e in selected_els:
+            for attr in ("node_i", "node_j", "v1", "v2"):
+                node = getattr(e, attr, None)
+                if node is not None and hasattr(node, "unique_id"):
+                    nodes_by_id[node.unique_id] = node
+            nodes_list = getattr(e, "nodes", None)
+            if nodes_list:
+                for node in nodes_list:
+                    if node is not None and hasattr(node, "unique_id"):
+                        nodes_by_id[node.unique_id] = node
+
+        if nodes_by_id:
+            self.select_multiple(list(nodes_by_id.values()), mode=SelectionMode.ADD)
+
+    def save_selection(self, name: str):
+        """Seçimi isimle kaydet"""
+        if not name.strip():
+            return
+        # __init__ içine self.named_selections = {} tanımladığından emin ol
+        if not hasattr(self, "named_selections"):
+            self.named_selections = {}
+        self.named_selections[name.strip()] = list(self.selected)
+
+    def load_selection(self, name: str):
+        """İsmi verilen kayıtlı seçimi geri yükle"""
+        if not hasattr(self, "named_selections") or name not in self.named_selections:
+            return
+        ids = self.named_selections[name]
+        if not (self.r and self.r.math_model):
+            return
+        mm = self.r.math_model
+        all_dict = {}
+        for coll in (getattr(mm, 'nodes', {}), getattr(mm, 'frames', {}), 
+                     getattr(mm, 'areas', {}), getattr(mm, 'links', {}),
+                     getattr(mm, 'polygons', {}), getattr(mm, 'lines', {})):
+            all_dict.update(coll)
+            
+        elements = [all_dict[uid] for uid in ids if uid in all_dict]
+        self.select_multiple(elements, mode=SelectionMode.REPLACE)
+
     def clear(self):
         for e in self.get_selected():
             e.is_selected = False
@@ -112,17 +183,13 @@ class SelectionManager:
         return getattr(e, "unique_id", id(e)) in self.selected
 
     def delete_selected(self):
-        if not self.r or not self.r.math_model or not self.r.scene:
+        if not self.r or not self.r.math_model:
             return 0, 0
         selected = list(self.get_selected())
         if not selected:
             return 0, 0
-        cmd = DeleteElementsCommand(self.r.math_model, selected)
-        if not self.cmd_mgr.execute(cmd):
-            return 0, len(selected)
-        self.selected.clear()
-        self._update_geometry_renderers(self.r.scene)
-        return len(cmd.deleted), len(cmd.rejected)
+        # Yeni mimari: komutu kuyruğa at
+        ui = getattr(getattr(self.r, "engine", None), "_app", None)
 
     def undo(self):
         if not self.cmd_mgr.can_undo():
@@ -141,3 +208,4 @@ class SelectionManager:
         self.selected.clear()
         self._update_geometry_renderers(self.r.scene)
         return True
+    

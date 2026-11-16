@@ -1,7 +1,7 @@
 # app/cad_window.py
 from __future__ import annotations
 
-import os
+
 import time
 from collections.abc import Callable
 
@@ -9,93 +9,15 @@ import glfw
 from imgui_bundle import imgui
 from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 from OpenGL.GL import glViewport
-
+from assets.themes import _load_fonts, _apply_dark_theme
 from logging_config import CadLogger
-
 logger = CadLogger.get(__name__)
 
-
-def _load_fonts(font_size: int = 16):
-    io = imgui.get_io()
-    win_fonts = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
-    text_font = os.path.join(win_fonts, "segoeui.ttf")
-    symbol_font = os.path.join(win_fonts, "seguisym.ttf")
-
-    if not os.path.isfile(text_font):
-        io.fonts.add_font_default()
-        return None
-
-    font_obj = io.fonts.add_font_from_file_ttf(text_font, font_size)
-
-    if os.path.isfile(symbol_font):
-        cfg = imgui.ImFontConfig()
-        cfg.merge_mode = True
-        io.fonts.add_font_from_file_ttf(symbol_font, font_size, cfg)
-
-    return font_obj
-
-
-def _apply_dark_theme() -> None:
-    s = imgui.get_style()
-
-    s.window_rounding = 6.0
-    s.child_rounding = 4.0
-    s.frame_rounding = 4.0
-    s.popup_rounding = 6.0
-    s.scrollbar_rounding = 6.0
-    s.grab_rounding = 4.0
-
-    s.window_padding = imgui.ImVec2(10, 10)
-    s.frame_padding = imgui.ImVec2(8, 5)
-    s.item_spacing = imgui.ImVec2(8, 6)
-    s.item_inner_spacing = imgui.ImVec2(6, 4)
-    s.indent_spacing = 18
-    s.scrollbar_size = 12
-    s.frame_border_size = 1.0
-    s.window_border_size = 0.0
-
-    def C(col, r, g, b, a=1.0):
-        s.set_color_(col, imgui.ImVec4(r, g, b, a))
-
-    C(imgui.Col_.text, 0.90, 0.90, 0.90)
-    C(imgui.Col_.text_disabled, 0.50, 0.50, 0.50)
-    C(imgui.Col_.window_bg, 0.13, 0.15, 0.20, 0.97)
-    C(imgui.Col_.child_bg, 0.10, 0.12, 0.16)
-    C(imgui.Col_.popup_bg, 0.11, 0.13, 0.18, 0.98)
-    C(imgui.Col_.border, 0.30, 0.33, 0.40, 0.60)
-    C(imgui.Col_.border_shadow, 0.00, 0.00, 0.00, 0.00)
-    C(imgui.Col_.frame_bg, 0.15, 0.18, 0.24)
-    C(imgui.Col_.frame_bg_hovered, 0.20, 0.24, 0.32)
-    C(imgui.Col_.frame_bg_active, 0.24, 0.30, 0.40)
-    C(imgui.Col_.title_bg, 0.10, 0.13, 0.18)
-    C(imgui.Col_.title_bg_active, 0.16, 0.20, 0.28)
-    C(imgui.Col_.title_bg_collapsed, 0.10, 0.13, 0.18, 0.70)
-    C(imgui.Col_.scrollbar_bg, 0.10, 0.12, 0.16, 0.80)
-    C(imgui.Col_.scrollbar_grab, 0.30, 0.36, 0.46)
-    C(imgui.Col_.scrollbar_grab_hovered, 0.40, 0.48, 0.60)
-    C(imgui.Col_.scrollbar_grab_active, 0.50, 0.60, 0.75)
-    C(imgui.Col_.check_mark, 0.40, 0.90, 0.55)
-    C(imgui.Col_.slider_grab, 0.35, 0.55, 0.85)
-    C(imgui.Col_.slider_grab_active, 0.45, 0.65, 0.95)
-    C(imgui.Col_.button, 0.20, 0.26, 0.34)
-    C(imgui.Col_.button_hovered, 0.28, 0.36, 0.48)
-    C(imgui.Col_.button_active, 0.35, 0.45, 0.60)
-    C(imgui.Col_.header, 0.20, 0.28, 0.40)
-    C(imgui.Col_.header_hovered, 0.28, 0.38, 0.52)
-    C(imgui.Col_.header_active, 0.35, 0.48, 0.65)
-    C(imgui.Col_.separator, 0.30, 0.33, 0.40, 0.60)
-    C(imgui.Col_.separator_hovered, 0.40, 0.48, 0.60, 0.80)
-    C(imgui.Col_.separator_active, 0.50, 0.60, 0.75)
-    C(imgui.Col_.resize_grip, 0.40, 0.48, 0.60, 0.60)
-    C(imgui.Col_.resize_grip_hovered, 0.55, 0.65, 0.80, 0.80)
-    C(imgui.Col_.resize_grip_active, 0.65, 0.78, 0.95)
-    C(imgui.Col_.text_link, 0.55, 0.75, 1.00)
-    C(imgui.Col_.text_selected_bg, 0.30, 0.50, 0.80, 0.60)
 
 
 class CadWindow:
 
-    def __init__(self, width: int = 1280, height: int = 800, title: str = "CAD4"):
+    def __init__(self, width: int = 1200, height: int = 800, title: str = "CAD4"):
         self.width = width
         self.height = height
         self.title = title
@@ -129,7 +51,7 @@ class CadWindow:
             time.sleep(0.01)
 
         self.fb_width, self.fb_height = glfw.get_framebuffer_size(self.window)
-        logger.debug("Pencere hazır: %dx%d", self.fb_width, self.fb_height)
+        logger.info("Pencere hazır: %dx%d", self.fb_width, self.fb_height)
 
     def _init_glfw(self) -> None:
         if not glfw.init():
@@ -165,7 +87,7 @@ class CadWindow:
         self.imgui_backend = GlfwRenderer(self.window, attach_callbacks=False)
         self._wire_callbacks()
         _apply_dark_theme()
-        logger.debug("[CadWindow] ImGui hazır (docking enabled, title-bar move only)")
+        logger.info("[CadWindow] ImGui hazır (docking enabled, title-bar move only)")
 
     # ------------------------------------------------------------------
     def _wire_callbacks(self) -> None:

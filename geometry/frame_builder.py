@@ -102,32 +102,26 @@ class FrameBuilder:
         )
 
         if abs(np.dot(v1, world_up)) > 0.99:
-
-            v2 = np.array(
-                [1, 0, 0],
-                dtype=np.float32
-            )
-
-            v3 = np.array(
-                [0, 1, 0],
-                dtype=np.float32
-            )
-
+            # Düşey elemanlar (kolonlar) için SAP2000 yerel eksen kuralı:
+            # v1 yukarı bakıyorsa: v2 = +Y ([0,1,0]), v3 = -X ([-1,0,0])
+            # v1 aşağı bakıyorsa: v2 = +Y ([0,1,0]), v3 = +X ([1,0,0])
+            if v1[2] > 0:
+                v2 = np.array([0, 1, 0], dtype=np.float32)
+                v3 = np.array([-1, 0, 0], dtype=np.float32)
+            else:
+                v2 = np.array([0, 1, 0], dtype=np.float32)
+                v3 = np.array([1, 0, 0], dtype=np.float32)
         else:
-
-            v3 = world_up.copy()
-
+            # Yatay ve eğik elemanlar için
+            v3_ref = world_up.copy()
             v2 = normalize(
-                np.cross(v3, v1)
+                np.cross(v3_ref, v1)
             )
-
             v3 = normalize(
                 np.cross(v1, v2)
             )
 
-        R = np.column_stack(
-            (v1, v2, v3)
-        )
+        R = np.column_stack((v1, v2, v3))
 
         N = len(profile)
 

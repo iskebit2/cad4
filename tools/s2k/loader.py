@@ -15,7 +15,7 @@ from geometry.project_builder import ProjectBuilder
 from logging_config import CadLogger
 from tools.s2k.context import LoadContext
 from tools.s2k.handlers import build_router, build_sorted_router
-from tools.s2k.scene_builder import (
+from tools.s2k.s2k_scene_builder import (
     assign_joint_loads,
     assign_loads,
     create_areas,
@@ -81,7 +81,7 @@ class S2KParser:
         m = re.search(r'CurrUnits\s*=\s*"([^"]+)"', content)
         if m:
             self.curr_units = m.group(1)
-            logger.debug("CurrUnits: %s", self.curr_units)
+            logger.info("CurrUnits: %s", self.curr_units)
 
         # Multi-line kayıtları birleştir
         content = self.LINE_JOIN.sub(' ', content)
@@ -135,7 +135,7 @@ class S2KParser:
             else:
                 self.tables[name] = new_df
 
-        logger.debug("[Parser] %d tablo parse edildi", len(self.tables))
+        logger.info("[Parser] %d tablo parse edildi", len(self.tables))
 
     def _parse_rows(self, lines) -> list:
         rows = []
@@ -208,7 +208,7 @@ class S2KLoader:
 
         s2k_sys = UnitSystem.from_sap(ctx.units_source_string)
         self.units = s2k_sys
-        logger.debug("[Loader] S2K CurrUnits = %s", s2k_sys.value)
+        logger.info("[Loader] S2K CurrUnits = %s", s2k_sys.value)
 
         # Project birimini S2K'nın birimine ayarla — DEĞER DEĞİŞMEZ
         project.unit_system = s2k_sys
@@ -219,7 +219,7 @@ class S2KLoader:
 
         # finalize_and_convert / _migrate_materials ÇAĞRILMAZ
 
-        logger.debug("[Loader] Bitti — unit_system = %s", project.unit_system.value)
+        logger.info("[Loader] Bitti — unit_system = %s", project.unit_system.value)
         return project
 
     def _build_metadata(self, ctx: LoadContext) -> S2KMetadata:
@@ -245,7 +245,7 @@ class S2KLoader:
         tables = self.parser.get_all_tables()
 
         if not tables:
-            logger.debug("[Loader] Tablo yok")
+            logger.info("[Loader] Tablo yok")
             return ctx
 
         sorted_router = self._sorted_router()
@@ -273,7 +273,7 @@ class S2KLoader:
     def _safe_call(self, handler, ctx: LoadContext, df, table_name: str, prefix: str = ""):
         try:
             handler(ctx, df)
-            logger.debug("[Loader] %s%s (%d satır)", prefix, table_name, len(df))
+            logger.info("[Loader] %s%s (%d satır)", prefix, table_name, len(df))
         except Exception as e:
             logger.error("[Loader] HATA %s'%s': %s", prefix, table_name, e, exc_info=True)
 
@@ -298,16 +298,10 @@ class S2KLoader:
     # ------------------------------------------------------------------
     # MATERIALS
     # ------------------------------------------------------------------
-    def _apply_materials(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
-        for mat in ctx.materials.values():
-            builder.add_material(
-                mat.name,
-                mat_type=mat.mat_type,
-                E1=mat.E1, G12=mat.G12, density=mat.density,
-                fy=getattr(mat, "fy", 235.0),
-                fu=getattr(mat, "fu", 360.0),
-                nu12=mat.nu12,
-            )
+    def _apply_materials(self, ctx, builder):
+        for name, mat in ctx.materials.items():
+            builder.materials[name] = mat
+            builder.project.materials[name] = mat
 
 
     # ------------------------------------------------------------------
@@ -326,37 +320,27 @@ class S2KLoader:
                     sd_section=sd,
                 )
 
-        # 2) Tüm section'ları işle
+        # 2) Tüm section'ları işle — ctx nesnelerini doğrudan project'e aktar
         for sec in ctx.sections.values():
             sd = ctx.sd_sections.get(sec.name)
             if sd is not None:
                 sec.sd_section = sd
 
-                # SD varsa profile_params'ı türet/zenginleştir (h/b/I33/I22 vs.)
                 derived = _derive_params_from_sd(sd)
                 if derived:
                     merged = dict(sec.profile_params or {})
                     for k, v in derived.items():
-                        # 0 veya None değerleri ezme
                         if merged.get(k) in (None, 0.0):
                             merged[k] = v
                     sec.profile_params = merged
 
-            # material
-            mat = None
+            # ★ Referans bütünlüğü: ctx.materials'taki nesneye bağla
             if sec.material is not None:
-                mat = builder.materials.get(sec.material.name)
+                mat_name = getattr(sec.material, "name", None)
+                if mat_name:
+                    sec.material = ctx.materials.get(mat_name, sec.material)
 
-            builder.add_section(
-                sec.name,
-                profile_type=sec.profile_type,
-                profile_params=sec.profile_params,
-                material=mat,
-                color=getattr(sec, "color", (0.8, 0.8, 0.8)),
-                sd_section=getattr(sec, "sd_section", None),
-                catalog_props=getattr(sec, "catalog_props", {}),
-                catalog_source=getattr(sec, "catalog_source", ""),
-            )
+            builder.sections[sec.name] = sec
             builder.project.sections[sec.name] = sec
 
 
@@ -371,40 +355,25 @@ class S2KLoader:
     # ------------------------------------------------------------------
     # LOAD PATTERNS
     # ------------------------------------------------------------------
-    def _apply_load_patterns(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+    def _apply_load_patterns(self, ctx, builder):
         for lp in ctx.load_patterns.values():
-            builder.add_load_pattern(
-                lp.name,
-                design_type=lp.design_type,
-                self_wt_mult=lp.self_wt_mult,
-            )
+            builder.project.add_load_pattern(lp)
 
 
     # ------------------------------------------------------------------
     # LOAD CASES
     # ------------------------------------------------------------------
-    def _apply_load_cases(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+    def _apply_load_cases(self, ctx, builder):
         for lc in ctx.load_cases.values():
-            builder.add_load_case(
-                lc.name,
-                case_type=lc.case_type,
-                initial_cond=lc.initial_cond,
-                design_type=lc.design_type,
-                auto_type=lc.auto_type,
-                run_case=lc.run_case,
-            )
+            builder.project.add_load_case(lc)
 
 
     # ------------------------------------------------------------------
     # COMBINATIONS
     # ------------------------------------------------------------------
-    def _apply_combinations(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+    def _apply_combinations(self, ctx, builder):
         for combo in ctx.load_combos.values():
-            builder.add_combination(
-                combo.name,
-                combo_type=combo.combo_type,
-                auto_design=combo.auto_design,
-            )
+            builder.project.add_combination(combo)
 
 
     # ------------------------------------------------------------------
@@ -433,7 +402,7 @@ class S2KLoader:
         assign_loads(ctx, node_map, frame_map, area_map)
         assign_joint_loads(ctx, node_map)
 
-        logger.debug(
+        logger.info(
             "[Scene] %d düğüm, %d çubuk, %d alan, %d bağ",
             len(node_map), n_frames, n_areas, n_links,
         )

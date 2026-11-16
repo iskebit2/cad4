@@ -25,18 +25,6 @@ DEFAULT_PALETTE = [
 
 
 def color_edit3(label: str, color, palette=DEFAULT_PALETTE, show_popup: bool = True, expanded: bool = False):
-    """
-    Renk editörü. Palet + popup renk seçici.
-
-    Args:
-        label: Görünen isim ("" ise sadece widget)
-        color: Tuple[float, float, float] (0..1)
-        palette: Hızlı seçim için renk listesi
-        show_popup: imgui.color_edit3 açılır pencere göster
-
-    Returns:
-        (changed: bool, new_color: Tuple[float, float, float])
-    """
     r, g, b = (float(color[0]), float(color[1]), float(color[2])) if color else (0.8, 0.8, 0.8)
     changed = False
 
@@ -44,22 +32,8 @@ def color_edit3(label: str, color, palette=DEFAULT_PALETTE, show_popup: bool = T
         imgui.text(label)
         imgui.same_line()
 
-    # 1) imgui.color_edit3 — popup renk seçici
-    if show_popup:
-        c, new_rgb = imgui.color_edit3(f"##{label}_edit", [r, g, b])
-        if c:
-            r, g, b = new_rgb
-            changed = True
-        imgui.same_line()
-    else:
-        # Popup yoksa sadece küçük renk kutusu
-        imgui.color_button(
-            f"##{label}_swatch", imgui.ImVec4(r, g, b, 1.0)
-        )
-        imgui.same_line()
-
-    # 2) Palet açılır panel
-    if imgui.button(f"Palet ▾##{label}_pal"):
+    
+    if imgui.color_button(f"##{label}_swatch", imgui.ImVec4(r, g, b, 1.0)):
         imgui.open_popup(f"##{label}_palette_popup")
 
     if imgui.begin_popup(f"##{label}_palette_popup"):

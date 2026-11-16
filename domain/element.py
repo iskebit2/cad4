@@ -41,7 +41,7 @@ class Element:
         self.needs_update = True
 
 
-@dataclass
+@dataclass(init=False)
 class Node(Element):
     DOF_ORDER = ("ux", "uy", "uz", "rx", "ry", "rz")
 
@@ -55,9 +55,6 @@ class Node(Element):
         "spring_r1": Dimension.MOMENT, "spring_r2": Dimension.MOMENT, "spring_r3": Dimension.MOMENT,
     }
 
-    x: float = 0.0
-    y: float = 0.0
-    z: float = 0.0
     restraint: D.Restraint | None = None
     dof_indices: list[int | None] = field(default_factory=lambda: [None] * 6)
     connected: list[tuple[E.ObjType, int]] = field(default_factory=list)
@@ -88,10 +85,75 @@ class Node(Element):
     spring_r2: float = 0.0
     spring_r3: float = 0.0
 
-    def __post_init__(self):
-        super().__post_init__()
+    def __init__(
+        self,
+        x: float = 0.0,
+        y: float = 0.0,
+        z: float = 0.0,
+        label: str = "",
+        restraint: D.Restraint | None = None,
+        dof_indices=None,
+        connected=None,
+        loads=None,
+        coord_sys: str = "GLOBAL",
+        coord_type: str = "Cartesian",
+        special_jt: bool = False,
+        constraint_name: str | None = None,
+        mass_coord_sys: str = "Joint Local",
+        load_pattern: str = "",
+        mass_1: float = 0.0,
+        mass_2: float = 0.0,
+        mass_3: float = 0.0,
+        mmi_1: float = 0.0,
+        mmi_2: float = 0.0,
+        mmi_3: float = 0.0,
+        added_mass_1: float = 0.0,
+        added_mass_2: float = 0.0,
+        added_mass_3: float = 0.0,
+        added_mmi_1: float = 0.0,
+        added_mmi_2: float = 0.0,
+        added_mmi_3: float = 0.0,
+        spring_u1: float = 0.0,
+        spring_u2: float = 0.0,
+        spring_u3: float = 0.0,
+        spring_r1: float = 0.0,
+        spring_r2: float = 0.0,
+        spring_r3: float = 0.0,
+        **kwargs
+    ):
+        super().__init__(label=label, **kwargs)
+        self._x = float(x)
+        self._y = float(y)
+        self._z = float(z)
+        self.restraint = restraint
+        self.dof_indices = dof_indices if dof_indices is not None else [None] * 6
+        self.connected = connected if connected is not None else []
+        self.loads = loads if loads is not None else []
+        self.coord_sys = coord_sys
+        self.coord_type = coord_type
+        self.special_jt = special_jt
+        self.constraint_name = constraint_name
+        self.mass_coord_sys = mass_coord_sys
+        self.load_pattern = load_pattern
+        self.mass_1 = mass_1
+        self.mass_2 = mass_2
+        self.mass_3 = mass_3
+        self.mmi_1 = mmi_1
+        self.mmi_2 = mmi_2
+        self.mmi_3 = mmi_3
+        self.added_mass_1 = added_mass_1
+        self.added_mass_2 = added_mass_2
+        self.added_mass_3 = added_mass_3
+        self.added_mmi_1 = added_mmi_1
+        self.added_mmi_2 = added_mmi_2
+        self.added_mmi_3 = added_mmi_3
+        self.spring_u1 = spring_u1
+        self.spring_u2 = spring_u2
+        self.spring_u3 = spring_u3
+        self.spring_r1 = spring_r1
+        self.spring_r2 = spring_r2
+        self.spring_r3 = spring_r3
         self.element_type = "Node"
-        self._x, self._y, self._z = float(self.x), float(self.y), float(self.z)
 
     @property
     def x(self): return self._x
@@ -314,12 +376,22 @@ class Area(Element):
         return self.thickness
 
 
-@dataclass
+@dataclass(init=False)
 class Link(Element):
     node_i: Node | None = None
     node_j: Node | None = None
     propname: str = "LINK1"
 
-    def __post_init__(self):
-        super().__post_init__()
+    def __init__(
+        self,
+        node_i: Node | None = None,
+        node_j: Node | None = None,
+        propname: str = "LINK1",
+        label: str = "",
+        **kwargs
+    ):
+        super().__init__(label=label, **kwargs)
+        self.node_i = node_i
+        self.node_j = node_j
+        self.propname = propname
         self.element_type = "Link"

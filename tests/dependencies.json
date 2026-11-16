@@ -1,0 +1,419 @@
+{
+  "project": "tests",
+  "dependencies": [
+    {
+      "source": "input_smoke_test",
+      "target": "glfw",
+      "type": "import",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "input_smoke_test",
+      "target": "core.input_manager",
+      "type": "from",
+      "imported_name": "InputManager",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "input_smoke_test",
+      "target": "core.input_manager",
+      "type": "from",
+      "imported_name": "LEFT",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "input_smoke_test",
+      "target": "core.input_manager",
+      "type": "from",
+      "imported_name": "MIDDLE",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "input_smoke_test",
+      "target": "core.input_manager",
+      "type": "from",
+      "imported_name": "RIGHT",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "project_mapper",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "project_mapper",
+      "target": "ast",
+      "type": "import",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "project_mapper",
+      "target": "json",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "project_mapper",
+      "target": "os",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "project_mapper",
+      "target": "pathlib",
+      "type": "from",
+      "imported_name": "Path",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "project_mapper",
+      "target": "datetime",
+      "type": "from",
+      "imported_name": "datetime",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "test1",
+      "target": "glfw",
+      "type": "import",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "test1",
+      "target": "imgui_bundle",
+      "type": "from",
+      "imported_name": "imgui",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "test1",
+      "target": "imgui_bundle.python_backends.glfw_backend",
+      "type": "from",
+      "imported_name": "GlfwRenderer",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "test1",
+      "target": "domain.polygon",
+      "type": "from",
+      "imported_name": "Polygon",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "test1",
+      "target": "data.enums",
+      "type": "from",
+      "imported_name": "PolygonType",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "test1",
+      "target": "tools.s2k.loader",
+      "type": "from",
+      "imported_name": "S2KLoader",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "test1",
+      "target": "ui.panels.load_manager_panel",
+      "type": "from",
+      "imported_name": "LoadManagerPanel",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "test_0",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "UnitSystem",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "test_0",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "convert_project_units",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "test_0",
+      "target": "data.enums",
+      "type": "from",
+      "imported_name": "SectionType",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "test_0",
+      "target": "geometry.frame_builder",
+      "type": "from",
+      "imported_name": "FrameBuilder",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "test_0",
+      "target": "geometry.profile_generator",
+      "type": "from",
+      "imported_name": "ProfileGenerator",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "test_0",
+      "target": "tools.s2k.loader",
+      "type": "from",
+      "imported_name": "S2KLoader",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "test_0",
+      "target": "tools.s2k_exporter",
+      "type": "from",
+      "imported_name": "S2KExporter",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "test_createagac",
+      "target": "os",
+      "type": "import",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "test_createagac",
+      "target": "ast",
+      "type": "import",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "json",
+      "type": "import",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "logging",
+      "type": "import",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "zipfile",
+      "type": "import",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "data.serializer",
+      "type": "from",
+      "imported_name": "load_project_file",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "data.serializer",
+      "type": "from",
+      "imported_name": "save_project_file",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Area",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Frame",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Link",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Node",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "domain.line",
+      "type": "from",
+      "imported_name": "Line",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "domain.polygon",
+      "type": "from",
+      "imported_name": "Polygon",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "domain.project",
+      "type": "from",
+      "imported_name": "Project",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "domain.vertex",
+      "type": "from",
+      "imported_name": "Vertex",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "test_math_model_geometry_ownership",
+      "target": "geometry.geometry_processor",
+      "type": "from",
+      "imported_name": "GeometryProcessor",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "test_registry",
+      "target": "ui.registry",
+      "type": "from",
+      "imported_name": "discover_panels",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "test_registry",
+      "target": "ui.panels",
+      "type": "import",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "test_section_render_cache",
+      "target": "types",
+      "type": "from",
+      "imported_name": "SimpleNamespace",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "test_section_render_cache",
+      "target": "render",
+      "type": "from",
+      "imported_name": "scenerenderer",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "test_section_render_cache",
+      "target": "render.scenerenderer",
+      "type": "from",
+      "imported_name": "SceneRenderer",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "test_viewport_interaction",
+      "target": "types",
+      "type": "from",
+      "imported_name": "SimpleNamespace",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "test_viewport_interaction",
+      "target": "core.marquee_selector",
+      "type": "from",
+      "imported_name": "MarqueeSelector",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "test_viewport_interaction",
+      "target": "core",
+      "type": "from",
+      "imported_name": "mrt",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "test_viewport_interaction",
+      "target": "core.mrt",
+      "type": "from",
+      "imported_name": "MRTFramebuffer",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "test_viewport_interaction",
+      "target": "render",
+      "type": "from",
+      "imported_name": "pickpass",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "test_viewport_interaction",
+      "target": "render.interactionrenderer",
+      "type": "from",
+      "imported_name": "InteractionRenderer",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "test_viewport_interaction",
+      "target": "render.pickpass",
+      "type": "from",
+      "imported_name": "PickPass",
+      "scope": "external",
+      "line": 8
+    }
+  ],
+  "inheritance": []
+}

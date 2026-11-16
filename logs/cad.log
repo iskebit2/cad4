@@ -1,138 +1,39 @@
-2026-11-14 03:56:03 [DEBUG   ] cad.main: ================================================================
-2026-11-14 03:56:03 [DEBUG   ] cad.main: CAD4 başlatılıyor
-2026-11-14 03:56:03 [DEBUG   ] cad.main: Python   : 3.12.10
-2026-11-14 03:56:03 [DEBUG   ] cad.main: Log dos. : D:\Program\cad4\logs\cad.log
-2026-11-14 03:56:05 [DEBUG   ] cad.app.cad_window: [CadWindow] ImGui hazır (docking enabled, title-bar move only)
-2026-11-14 03:56:05 [DEBUG   ] cad.app.cad_window: Pencere hazır: 1280x800
-2026-11-14 03:56:05 [DEBUG   ] cad.main: [Boot] CadWindow: 1.96s
-2026-11-14 03:56:06 [DEBUG   ] cad.main: [Boot] CadApp: 1.26s
-2026-11-14 03:56:06 [DEBUG   ] cad.main: [Boot] Ana döngü başlıyor
-2026-11-14 03:56:06 [DEBUG   ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
-2026-11-14 03:56:06 [DEBUG   ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=2, u_mvp=0)
-2026-11-14 03:56:06 [DEBUG   ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
-2026-11-14 03:56:06 [DEBUG   ] cad.core.viewport_manager: [ViewportManager] create: iso preset=iso
-2026-11-14 03:56:06 [DEBUG   ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.1 ms
-2026-11-14 03:56:06 [DEBUG   ] cad.core.gl_engine: [update_geo] renderer.update_geo: 0.1 ms
-2026-11-14 03:56:06 [DEBUG   ] cad.core.gl_engine: Update geo: full
-2026-11-14 03:56:06 [DEBUG   ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
-2026-11-14 03:56:06 [DEBUG   ] cad.core.gl_engine: [update_geo] TOTAL: 0.7 ms
-2026-11-14 03:56:06 [DEBUG   ] cad.core.gl_engine: [update_geo] loads: 0.1 ms
-2026-11-14 03:56:06 [DEBUG   ] cad.core.gl_engine: [update_geo] TOTAL: 0.5 ms
-2026-11-14 03:56:09 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] ENTER magnetic=True cam=True size=(947, 696) math_model=<MathModel nodes=0 frames=0 areas=0 links=0 polygons=0 lines=0> nodes=0
-2026-11-14 03:56:09 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] calling SnapSquareRenderer._find_node
-2026-11-14 03:56:09 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=node
-2026-11-14 03:56:09 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] calling SnapSquareRenderer._find_grid_snap
-2026-11-14 03:56:09 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=1) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=2) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=3) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=4) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=5) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=6) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=7) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=8) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=9) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=10) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=11) kind=grid
-2026-11-14 03:56:10 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=12) kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=13) kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=14) kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=15) kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=16) kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=17) kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=18) kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=19) kind=grid
-2026-11-14 03:56:11 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=20) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=21) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=22) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=23) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=24) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=25) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=26) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=27) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=28) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=29) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=30) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=31) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=32) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=33) kind=grid
-2026-11-14 03:56:12 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=grid
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] ENTER magnetic=True cam=True size=(947, 696) math_model=<MathModel nodes=0 frames=0 areas=0 links=0 polygons=0 lines=0> nodes=0
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] calling SnapSquareRenderer._find_node
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=node
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] calling SnapSquareRenderer._find_grid_snap
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=grid
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=34) kind=grid
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=35) kind=grid
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=36) kind=grid
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=37) kind=grid
-2026-11-14 03:56:14 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=38) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=39) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=40) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=41) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=42) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=43) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=44) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=45) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=46) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=47) kind=grid
-2026-11-14 03:56:15 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=grid
-2026-11-14 03:56:16 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=48) kind=grid
-2026-11-14 03:56:16 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=49) kind=grid
-2026-11-14 03:56:16 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=50) kind=grid
-2026-11-14 03:56:17 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=grid
-2026-11-14 03:56:18 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=51) kind=grid
-2026-11-14 03:56:18 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=52) kind=grid
-2026-11-14 03:56:18 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=53) kind=grid
-2026-11-14 03:56:18 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=54) kind=grid
-2026-11-14 03:56:18 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=55) kind=grid
-2026-11-14 03:56:18 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=56) kind=grid
-2026-11-14 03:56:18 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=57) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=58) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=59) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=60) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=61) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=62) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=63) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=64) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=65) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=66) kind=grid
-2026-11-14 03:56:19 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=None kind=grid
-2026-11-14 03:56:20 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=67) kind=grid
-2026-11-14 03:56:20 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=68) kind=grid
-2026-11-14 03:56:20 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=69) kind=grid
-2026-11-14 03:56:20 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=70) kind=grid
-2026-11-14 03:56:20 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=71) kind=grid
-2026-11-14 03:56:20 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=72) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=73) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=74) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=75) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=76) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=77) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=78) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=79) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.render.snapsquare: [FIND_SNAP] result=Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=80) kind=grid
-2026-11-14 03:56:21 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: [Polygon(label='', is_selected=True, is_visible=True, needs_update=True, color=[0.8, 0.3, 0.8, 0.6], show_axes_override=None, unique_id=81, pick_id=81, element_type='Polygon', nodes=[Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=13), Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=30), Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=45), Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=63)], poly_type=<PolygonType.GENERIC: 1>, dist_type=<DistType.TWO_WAY: 'Two way'>, is_temporary=False, zone_children_by_direction={}, show_zones_direction=None, assoc_auto=True, assoc_depth=500.0, assoc_ignore_bounds=False, assoc_direction_filter=True, assoc_angle_tol_deg=10.0, associated=set(), excluded=set(), association_revision=0)]
-2026-11-14 03:56:21 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [81] | Bulunan Polygonlar: [81]
-2026-11-14 03:56:23 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: []
-2026-11-14 03:56:23 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [] | Bulunan Polygonlar: []
-2026-11-14 03:56:23 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: [Polygon(label='', is_selected=True, is_visible=True, needs_update=False, color=[0.8, 0.3, 0.8, 0.6], show_axes_override=None, unique_id=81, pick_id=81, element_type='Polygon', nodes=[Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=13), Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=30), Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=45), Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=63)], poly_type=<PolygonType.GENERIC: 1>, dist_type=<DistType.TWO_WAY: 'Two way'>, is_temporary=False, zone_children_by_direction={}, show_zones_direction=None, assoc_auto=True, assoc_depth=500.0, assoc_ignore_bounds=False, assoc_direction_filter=True, assoc_angle_tol_deg=10.0, associated=set(), excluded=set(), association_revision=0)]
-2026-11-14 03:56:23 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [81] | Bulunan Polygonlar: [81]
-2026-11-14 03:56:26 [DEBUG   ] cad.ui.viewport_panel: [TOGGLE] after: is_2d=True view_mode=ORTHO pitch=90.0 yaw=0.0 up=vec3(            0,            1,            0 )
-2026-11-14 03:56:29 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: [Polygon(label='', is_selected=True, is_visible=True, needs_update=False, color=[0.8, 0.3, 0.8, 0.6], show_axes_override=None, unique_id=81, pick_id=81, element_type='Polygon', nodes=[Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=13), Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=30), Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=45), Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=63)], poly_type=<PolygonType.GENERIC: 1>, dist_type=<DistType.TWO_WAY: 'Two way'>, is_temporary=False, zone_children_by_direction={}, show_zones_direction=None, assoc_auto=True, assoc_depth=500.0, assoc_ignore_bounds=False, assoc_direction_filter=True, assoc_angle_tol_deg=10.0, associated=set(), excluded=set(), association_revision=0)]
-2026-11-14 03:56:29 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [81] | Bulunan Polygonlar: [81]
-2026-11-14 03:56:29 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: []
-2026-11-14 03:56:29 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [] | Bulunan Polygonlar: []
-2026-11-14 03:56:30 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: [Polygon(label='', is_selected=True, is_visible=True, needs_update=False, color=[0.8, 0.3, 0.8, 0.6], show_axes_override=None, unique_id=81, pick_id=81, element_type='Polygon', nodes=[Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=13), Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=30), Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=45), Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=63)], poly_type=<PolygonType.GENERIC: 1>, dist_type=<DistType.TWO_WAY: 'Two way'>, is_temporary=False, zone_children_by_direction={}, show_zones_direction=None, assoc_auto=True, assoc_depth=500.0, assoc_ignore_bounds=False, assoc_direction_filter=True, assoc_angle_tol_deg=10.0, associated=set(), excluded=set(), association_revision=0)]
-2026-11-14 03:56:30 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [81] | Bulunan Polygonlar: [81]
-2026-11-14 03:56:31 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: []
-2026-11-14 03:56:31 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [] | Bulunan Polygonlar: []
-2026-11-14 03:56:32 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: [Polygon(label='', is_selected=True, is_visible=True, needs_update=False, color=[0.8, 0.3, 0.8, 0.6], show_axes_override=None, unique_id=81, pick_id=81, element_type='Polygon', nodes=[Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=13), Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=30), Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=45), Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=63)], poly_type=<PolygonType.GENERIC: 1>, dist_type=<DistType.TWO_WAY: 'Two way'>, is_temporary=False, zone_children_by_direction={}, show_zones_direction=None, assoc_auto=True, assoc_depth=500.0, assoc_ignore_bounds=False, assoc_direction_filter=True, assoc_angle_tol_deg=10.0, associated=set(), excluded=set(), association_revision=0)]
-2026-11-14 03:56:32 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [81] | Bulunan Polygonlar: [81]
-2026-11-14 03:56:38 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: []
-2026-11-14 03:56:38 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [] | Bulunan Polygonlar: []
-2026-11-14 03:56:44 [DEBUG   ] cad.ui.polygon_properties_panel: [PANEL_DEBUG] open() çağrıldı -> Panel Adresi: 0x1c57f9452b0 | Görünür mü: True | Gelen Polygon: [Polygon(label='', is_selected=True, is_visible=True, needs_update=True, color=[0.8, 0.3, 0.8, 0.6], show_axes_override=None, unique_id=81, pick_id=81, element_type='Polygon', nodes=[Vertex(x=0.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=13), Vertex(x=4000.0, y=0.0, z=0.0, label='', source_node_id=None, unique_id=30), Vertex(x=4000.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=45), Vertex(x=0.0, y=5000.0, z=0.0, label='', source_node_id=None, unique_id=63)], poly_type=<PolygonType.LOAD_AREA: 5>, dist_type=<DistType.TWO_WAY: 'Two way'>, is_temporary=False, zone_children_by_direction={}, show_zones_direction=None, assoc_auto=True, assoc_depth=500.0, assoc_ignore_bounds=False, assoc_direction_filter=True, assoc_angle_tol_deg=10.0, associated=set(), excluded=set(), association_revision=0)]
-2026-11-14 03:56:44 [DEBUG   ] cad.app.app_actions: [SELECTION_DEBUG] Seçilen ID'ler: [81] | Bulunan Polygonlar: [81]
-2026-11-14 03:56:46 [DEBUG   ] cad.main: [Boot] Ana döngü bitti: 39.42s
-2026-11-14 03:56:46 [DEBUG   ] cad.main: Çıkış kodu: 0
+2026-11-16 04:05:23 [INFO    ] cad.app.cad_window: [CadWindow] ImGui hazır (docking enabled, title-bar move only)
+2026-11-16 04:05:23 [INFO    ] cad.app.cad_window: Pencere hazır: 1200x800
+2026-11-16 04:05:23 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-11-16 04:05:23 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=2, u_mvp=0)
+2026-11-16 04:05:23 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-11-16 04:05:23 [INFO    ] cad.core.viewport_manager: [ViewportManager] create: iso preset=iso
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.1 ms
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 0.1 ms
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: Update geo: full
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 0.8 ms
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 0.0 ms
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.1 ms
+2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 0.5 ms
+2026-11-16 04:05:24 [INFO    ] cad.ui.ui_host: [registry] 17 panel yüklendi
+2026-11-16 04:05:35 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.2 ms
+2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 669.1 ms
+2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: Update geo: full
+2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.3 ms
+2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 670.2 ms
+2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 14.1 ms
+2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
+2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 14.7 ms
+2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.2 ms
+2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 10.5 ms
+2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: Update geo: full
+2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
+2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 11.4 ms
+2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.3 ms
+2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 10.2 ms
+2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: Update geo: full
+2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
+2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 11.1 ms
+2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.1 ms
+2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 9.9 ms
+2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: Update geo: full
+2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
+2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 10.7 ms

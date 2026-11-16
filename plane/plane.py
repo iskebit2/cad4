@@ -379,12 +379,12 @@ class Plane:
                 status = self.classify_element(el, kind)
                 dt = (time.perf_counter() - t) * 1000
                 if dt > 0.5:
-                    logger.debug("[Plane.refresh_assoc] classify(%s,%s): %.1f ms", kind, uid, dt)
+                    logger.info("[Plane.refresh_assoc] classify(%s,%s): %.1f ms", kind, uid, dt)
                 self.association_status[kind][int(uid)] = status
                 if status != OUTSIDE and not self.is_excluded(kind, uid):
                     self.associated[kind].add(int(uid))
         self._association_revision += 1
-        logger.debug("[Plane.refresh_assoc] %s TOTAL: %.1f ms", self.name, (time.perf_counter() - t_start) * 1000)
+        logger.info("[Plane.refresh_assoc] %s TOTAL: %.1f ms", self.name, (time.perf_counter() - t_start) * 1000)
 
     def classify_element(self, el, kind):
         if kind not in ASSOC_KINDS: raise ValueError(f"bilinmeyen kind: {kind}")

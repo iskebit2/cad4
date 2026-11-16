@@ -1,0 +1,14 @@
+Kritik Başlangıç Hatası:
+Traceback (most recent call last):
+  File "D:\Program\cad4\main.py", line 64, in main
+    window.run(ui_host.frame)
+  File "D:\Program\cad4\app\cad_window.py", line 173, in run
+    frame_callback(dt)
+  File "D:\Program\cad4\ui\ui_host.py", line 244, in frame
+    self.plane_source_dialog.draw()
+  File "D:\Program\cad4\plane\plane_source_dialog.py", line 77, in draw
+    self._start()
+  File "D:\Program\cad4\plane\plane_source_dialog.py", line 93, in _start
+    eng = self.app.engine
+          ^^^^^^^^^^^^^^^
+AttributeError: 'UIHost' object has no attribute 'engine'

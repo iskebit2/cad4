@@ -284,12 +284,12 @@ class AreaToFrame:
                 f"{segment_count} yayılı yük segmenti "
                 f"{len(generated)} frame'e aktarıldı."
             )
-            logger.debug("[AreaToFrame] %s", msg)
+            logger.info("[AreaToFrame] %s", msg)
             return TransferResult(
                 True, msg, segment_count=segment_count, touched_frames=touched,
             )
         except (TypeError, ValueError) as e:
-            logger.debug("[AreaToFrame] transfer: %s", e)
+            logger.info("[AreaToFrame] transfer: %s", e)
             return TransferResult(False, str(e), error=str(e))
         except Exception as e:
             logger.exception("[AreaToFrame] transfer başarısız")
@@ -466,13 +466,13 @@ class AreaToFrame:
                 for load_set in pattern_loads.values()
             )
             msg = f"{zone.label}: {segment_count} rüzgar yük segmenti aktarıldı."
-            logger.debug("[AreaToFrame] %s", msg)
+            logger.info("[AreaToFrame] %s", msg)
             return TransferResult(
                 True, msg, segment_count=segment_count, touched_frames=touched,
             )
 
         except (TypeError, ValueError, KeyError) as e:
-            logger.debug("[AreaToFrame] wind zone: %s", e)
+            logger.info("[AreaToFrame] wind zone: %s", e)
             return TransferResult(False, str(e), error=str(e))
         except Exception as e:
             logger.exception("[AreaToFrame] wind zone başarısız")

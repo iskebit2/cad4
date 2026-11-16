@@ -296,7 +296,7 @@ class MathModelRenderer:
     def render(self, cam, target_fbo=0, force_id_pass=False, plane=None, visible_ids=None):
         if not cam:
             return
-        # logger.debug(f"[MMR_RENDER] force_id_pass={force_id_pass} plane={plane} vis={len(visible_ids) if visible_ids is not None else 'all'}")
+        # logger.info(f"[MMR_RENDER] force_id_pass={force_id_pass} plane={plane} vis={len(visible_ids) if visible_ids is not None else 'all'}")
         
         self._apply_clip_uniforms(self.standard_shader, plane)
         self._apply_clip_uniforms(self.simple_shader, plane)
@@ -384,8 +384,8 @@ class MathModelRenderer:
             self.line_r.draw(mvp, visible_ids=visible_ids)
 
     def _render_id_pass(self, mvp, visible_ids=None):
-        # logger.debug(f"[ID_PASS] vis={len(visible_ids) if visible_ids is not None else 'all'} poly_vao={self.polygon_r.simple_vao} vc={self.polygon_r.simple_vcount}")
-        # logger.debug(f"[ID_PASS] called pick_s={self.engine.pick_s}")
+        # logger.info(f"[ID_PASS] vis={len(visible_ids) if visible_ids is not None else 'all'} poly_vao={self.polygon_r.simple_vao} vc={self.polygon_r.simple_vcount}")
+        # logger.info(f"[ID_PASS] called pick_s={self.engine.pick_s}")
 
         if not (self.engine and self.engine.pick_s and self.engine.mrt):
             return

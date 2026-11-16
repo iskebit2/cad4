@@ -75,7 +75,7 @@ class Viewport:
         
         if pid <= 0:
             return None
-        # logger.debug(f"[VP_PICK_AT] fbo={self.fbo.fbo} pid={pid}")
+        # logger.info(f"[VP_PICK_AT] fbo={self.fbo.fbo} pid={pid}")
         return pick_pass.get_element(pid)
 
     def pick_rect(self, pick_pass, x0, y0, x1, y1) -> list:

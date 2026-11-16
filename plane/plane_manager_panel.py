@@ -6,8 +6,8 @@ from imgui_bundle import imgui
 
 from plane.plane import Plane
 from logging_config import CadLogger
-from ui.base_panel import BasePanel
-from ui.viewport_panel import ViewportPanel
+from ui.widgets.base_panel import BasePanel
+from ui.panels.viewport_panel import ViewportPanel
 
 logger = CadLogger.get(__name__)
 
@@ -421,7 +421,7 @@ class PlaneManagerPanel(BasePanel):
             new_name = self._edit_name.strip()
             if new_name and new_name != plane.name:
                 if new_name in proj.custom_planes:
-                    logger.debug("[PlaneMgr] '%s' zaten var.", new_name)
+                    logger.info("[PlaneMgr] '%s' zaten var.", new_name)
                 else:
                     old = plane.name
                     proj.custom_planes.pop(old, None)
@@ -445,7 +445,7 @@ class PlaneManagerPanel(BasePanel):
                 plane.filter_mode = self._edit_filter_mode
 
         self._sync_render()
-        logger.debug("[PlaneMgr] Apply: %s", plane.name)
+        logger.info("[PlaneMgr] Apply: %s", plane.name)
 
     def _open_plane_viewport(self, plane: Plane | None):
         """Seçili plane için yeni viewport açar (bağımsız kamera + section filter)."""
@@ -453,7 +453,7 @@ class PlaneManagerPanel(BasePanel):
             return
         app = self.app
         if app is None or getattr(app, "viewport_manager", None) is None:
-            logger.debug("[PlaneMgr] viewport_manager yok")
+            logger.info("[PlaneMgr] viewport_manager yok")
             return
 
         
@@ -488,7 +488,7 @@ class PlaneManagerPanel(BasePanel):
         panel = ViewportPanel(app, name, app.viewport_manager, preset=None)
         
         app._viewport_panels.append(panel)
-        logger.debug("[PlaneMgr] viewport açıldı: %s", name)
+        logger.info("[PlaneMgr] viewport açıldı: %s", name)
 
     # ------------------------------------------------------------------
     def _do_delete(self, name: str):
@@ -505,7 +505,7 @@ class PlaneManagerPanel(BasePanel):
             self._selected_name = next(iter(proj.custom_planes), None)
         self._edit_loaded_for = None
         self._sync_render()
-        logger.debug("[PlaneMgr] Silindi: %s", name)
+        logger.info("[PlaneMgr] Silindi: %s", name)
 
     # ------------------------------------------------------------------
     def _update_preview(self):

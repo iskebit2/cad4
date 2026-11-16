@@ -27,7 +27,7 @@ def ensure_default_link_prop(project) -> LinkPropLinear:
     prop.Ce = {"U1": 0.0, "U2": 0.0, "U3": 0.0,
                "R1": 0.0, "R2": 0.0, "R3": 0.0}
     project.add_link_prop(prop)
-    logger.debug(f"[LinkProp] '{DEFAULT_LINK_PROP_NAME}' oluşturuldu")
+    logger.info(f"[LinkProp] '{DEFAULT_LINK_PROP_NAME}' oluşturuldu")
     return prop
 
 
@@ -65,7 +65,7 @@ def convert_frames_to_links(
 
     # LinkProp kontrolü
     if link_prop_name not in project.link_props:
-        logger.debug(
+        logger.info(
             f"[Frame→Link] '{link_prop_name}' projede yok, DefaultLink oluşturuluyor"
         )
         ensure_default_link_prop(project)
@@ -87,7 +87,7 @@ def convert_frames_to_links(
         if delete_original:
             ok = scene.remove_element(frame)
             if not ok:
-                logger.debug(f"[Frame→Link] Frame '{frame.label}' silinemedi")
+                logger.info(f"[Frame→Link] Frame '{frame.label}' silinemedi")
         else:
             frame.is_visible = False
             frame.mark_dirty()
@@ -95,7 +95,7 @@ def convert_frames_to_links(
         report["converted"] += 1
 
     scene.mark_dirty()
-    logger.debug(
+    logger.info(
         f"[Frame→Link] converted={report['converted']}, "
         f"failed={report['failed']}"
     )

@@ -62,7 +62,7 @@ class SnapSquareRenderer:
 
     # ------------------------------------------------------------------
     def find_snap(self, engine, x, y, magnetic=False, cam=None, viewport_size=None):
-        logger.debug("[FIND_SNAP] ENTER magnetic=%s cam=%s size=%s math_model=%s nodes=%d",
+        logger.info("[FIND_SNAP] ENTER magnetic=%s cam=%s size=%s math_model=%s nodes=%d",
                  magnetic, bool(cam), viewport_size,
                  engine.math_model,
                  len(engine.math_model.nodes) if engine.math_model else 0)
@@ -84,13 +84,13 @@ class SnapSquareRenderer:
             )
 
         for finder, kind in finders:
-            logger.debug("[FIND_SNAP] calling %s.%s", finder.__self__.__class__.__name__, finder.__name__)
+            logger.info("[FIND_SNAP] calling %s.%s", finder.__self__.__class__.__name__, finder.__name__)
             try:
                 # Her finder'a isteğe bağlı cam ve viewport_size parametrelerini iletiyoruz
                 result = finder(engine, x, y, cam=cam, viewport_size=viewport_size)
-                logger.debug("[FIND_SNAP] result=%s kind=%s", result, kind)
+                logger.info("[FIND_SNAP] result=%s kind=%s", result, kind)
             except Exception as e:
-                logger.debug("[FIND_SNAP] %s exception: %s", kind, e)
+                logger.info("[FIND_SNAP] %s exception: %s", kind, e)
                 result = None
             
             if result is not None:

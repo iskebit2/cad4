@@ -37,7 +37,7 @@ class ViewportManager:
         self.viewports[name] = vp
         if self.active_name is None:
             self.active_name = name
-        logger.debug("[ViewportManager] create: %s preset=%s", name, preset)
+        logger.info("[ViewportManager] create: %s preset=%s", name, preset)
         return vp
 
     def next_name(self, base: str) -> str:
@@ -59,7 +59,7 @@ class ViewportManager:
         vp.cleanup()
         if self.active_name == name:
             self.active_name = next(iter(self.viewports), None)
-        logger.debug("[ViewportManager] remove: %s", name)
+        logger.info("[ViewportManager] remove: %s", name)
         return True
 
     def get(self, name: str) -> Viewport | None:

@@ -109,10 +109,10 @@ class LocalAxesRenderer:
             loc = self.shader.get_loc("u_mvp")
             self._u_mvp_loc = loc if loc is not None else -1
             if self._u_mvp_loc == -1:
-                logger.debug("[LocalAxes] shader'da 'u_mvp' uniform'u bulunamadı")
+                logger.info("[LocalAxes] shader'da 'u_mvp' uniform'u bulunamadı")
 
             self._initialized = True
-            logger.debug(f"[LocalAxes] Hazır — {self._VERTEX_COUNT} vertex, "
+            logger.info(f"[LocalAxes] Hazır — {self._VERTEX_COUNT} vertex, "
                         f"u_mvp_loc={self._u_mvp_loc}")
             return True
 

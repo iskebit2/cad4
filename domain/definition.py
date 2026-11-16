@@ -127,9 +127,9 @@ DEFAULT_MATERIAL = Material(
 @dataclass
 class Section:
     name: str = ""
+    material: Material | None = None
     profile_type: SectionType = SectionType.RECT
     profile_params: dict[str, float] = field(default_factory=dict)
-    material: Material | None = None
     color: tuple[float, float, float] = (0.8, 0.8, 0.8)
     catalog_props: dict[str, float] = field(default_factory=dict)
     catalog_source: str = ""

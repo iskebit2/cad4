@@ -131,7 +131,7 @@ def handle_load_cases(ctx: LoadContext, df: pd.DataFrame) -> None:
     elif "LoadCase" in df.columns:
         _handle_load_patterns_v10(ctx, df)
     else:
-        logger.debug(
+        logger.info(
             "[LoadCase] Bilinmeyen şema: %s", list(df.columns),
         )
 

@@ -5,7 +5,7 @@ from imgui_bundle.python_backends.glfw_backend import GlfwRenderer
 from domain.polygon import Polygon
 from data.enums import PolygonType
 from tools.s2k.loader import S2KLoader
-from ui.load_manager_panel import LoadManagerPanel
+from ui.panels.load_manager_panel import LoadManagerPanel
 
 # === Proje yükle ===
 p = S2KLoader(r"tests/simple_steel3.s2k").load()
