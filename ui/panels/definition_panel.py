@@ -1,9 +1,5 @@
 # ui/panels/definition_panel.py
-"""Tüm dataclass tanımlarını tek panelde yöneten jenerik editör.
 
-Yeni mimari: draft/apply. Tüm düzenlemeler `self.draft` (Project kopyası)
-üzerinde yapılır; Apply → delta Command'ları → UIHost.command_queue.
-"""
 from __future__ import annotations
 
 import dataclasses
@@ -14,7 +10,7 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from imgui_bundle import imgui
 
-from core.commands import project_commands as PC
+from app.commands import project_commands as PC
 from data.enums import ConstraintType, LinkPropType, SectionType
 from domain.definition import (
     AreaSection, AutoSeismicTSC2018, ConstraintDefinition,
@@ -191,8 +187,8 @@ class DefinitionPanel(PanelBase):
     title = "Definition Manager"
     category = Category.MANAGEMENT
     context = ("project",)
-    width = 1000
-    height = 680
+    width = 400
+    height = 600
 
     def __init__(self, app=None, **overrides):
         super().__init__(app=app, **overrides)

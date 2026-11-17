@@ -33,6 +33,8 @@ BLACKLIST = {
     "node_modules",
     ".tox",
     ".nox",
+    "tests",
+    "assets",
 }
 
 # Projeye özgü mimari bilgileri buraya ekleyebilirsin.

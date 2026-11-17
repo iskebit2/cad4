@@ -10,14 +10,14 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from core.analysis.mass_assembly import build_mass
-from core.analysis.solver import StructuralSolver
-from core.analysis.stiffness_assembly import (
+from app.commands.analysis.mass_assembly import build_mass
+from app.commands.analysis.solver import StructuralSolver
+from app.commands.analysis.stiffness_assembly import (
     build_stiffness,
     local_stiffness,
     transformation_matrix,
 )
-from core.analysis.structuralanalysis import _collect_fixed_dofs
+from app.commands.analysis.structuralanalysis import _collect_fixed_dofs
 from core.units import MEGAGRAM
 
 
@@ -364,7 +364,7 @@ def report_modal(scn, stiff, mass, fixed_dofs, sap_file: str | None = None):
     # ------------------------------------------------------------------
     # --- Kütle tutarlılığı (consistent-aware) ---
     #print("\n--- Kütle tutarlılığı ---")
-    from core.analysis.validation import _total_mass_consistent
+    from app.commands.analysis.validation import _total_mass_consistent
 
     M_total_ton = _total_mass_consistent(mass.M_global)   # Σ_ij M_ij (UX bloğu)
     node_total_ton = sum(mass.node_masses.values()) / MEGAGRAM

@@ -14,7 +14,7 @@ class IconManager:
     def __init__(self) -> None:
         self._textures: dict[str, tuple[int, int, int]] = {}
         self._failed: set[str] = set()
-        print(f"[IconManager] {len(ICON_DATA)} ikon mevcut: {list(ICON_DATA.keys())[:5]}...")
+        # print(f"[IconManager] {len(ICON_DATA)} ikon mevcut: {list(ICON_DATA.keys())[:5]}...")
 
     def get_texture(self, icon_name):
         if not icon_name:
@@ -22,7 +22,7 @@ class IconManager:
         if icon_name in self._failed:
             return None
         if icon_name not in ICON_DATA:
-            print(f"[IconManager] '{icon_name}' ICON_DATA'da YOK. Mevcut: {list(ICON_DATA.keys())}")
+            # print(f"[IconManager] '{icon_name}' ICON_DATA'da YOK. Mevcut: {list(ICON_DATA.keys())}")
             self._failed.add(icon_name)
             return None
         if icon_name in self._textures:

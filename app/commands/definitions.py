@@ -1,16 +1,11 @@
 # app/commands/definitions.py
 from __future__ import annotations
-from core.commands import project_commands as PC
+from app.commands import project_commands as PC
 from app.commands.result import CommandResult
+from app.commands.registry import command
 
 
-def register(reg):
-    reg.register(PC.AddDefinition, _add)
-    reg.register(PC.UpdateDefinition, _update)
-    reg.register(PC.RemoveDefinition, _remove)
-    reg.register(PC.RenameDefinition, _rename)
-
-
+@command(PC.AddDefinition)
 def _add(app, cmd: PC.AddDefinition) -> CommandResult:
     container = getattr(app.current_project, cmd.container_attr, None)
     if container is None:
@@ -19,6 +14,7 @@ def _add(app, cmd: PC.AddDefinition) -> CommandResult:
     return CommandResult(project_dirty=True)
 
 
+@command(PC.UpdateDefinition)
 def _update(app, cmd: PC.UpdateDefinition) -> CommandResult:
     container = getattr(app.current_project, cmd.container_attr, None)
     if container is None:
@@ -36,6 +32,7 @@ def _update(app, cmd: PC.UpdateDefinition) -> CommandResult:
     return CommandResult(project_dirty=True)
 
 
+@command(PC.RemoveDefinition)
 def _remove(app, cmd: PC.RemoveDefinition) -> CommandResult:
     container = getattr(app.current_project, cmd.container_attr, None)
     if container is None:
@@ -44,6 +41,7 @@ def _remove(app, cmd: PC.RemoveDefinition) -> CommandResult:
     return CommandResult(project_dirty=True)
 
 
+@command(PC.RenameDefinition)
 def _rename(app, cmd: PC.RenameDefinition) -> CommandResult:
     container = getattr(app.current_project, cmd.container_attr, None)
     if container is None or cmd.old_name not in container:

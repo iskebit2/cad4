@@ -5,7 +5,7 @@ import pytest
 
 from app.commands.registry import CommandRegistry, build_registry
 from app.commands.result import CommandResult
-from core.commands import project_commands as PC
+from app.commands import project_commands as PC
 from domain.definition import Section
 from domain.element import Frame, Node
 from domain.math_model import MathModel
@@ -615,7 +615,7 @@ class TestRegistryCoverage:
         """core.commands.project_commands içindeki her Command alt sınıfı
         registry'de kayıtlı olmalı. Yeni komut eklenirse bu test patlar."""
         import inspect
-        from core.commands import base
+        from app.commands import base
 
         expected: set[type] = set()
         for name, obj in inspect.getmembers(PC, inspect.isclass):

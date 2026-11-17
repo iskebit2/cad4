@@ -9,7 +9,7 @@ from data.enums import SAP_DIR_LABELS
 from domain.definition import FrameDistributedLoad, LoadSegment
 from domain.element import Frame
 from ui.base.panel_base import PanelBase, Category
-from core.commands import project_commands as PC
+from app.commands import project_commands as PC
 
 
 class _DrawListAdapter:

@@ -1,11 +1,11 @@
 # cad4 - Project Context
 
-Generated: 2026-11-16T02:41:39
+Generated: 2026-11-17T23:24:52
 
 ## Project Overview
 
 - Name: cad4
-- Python files: 241
+- Python files: 246
 
 ## Architecture Notes
 
@@ -20,18 +20,13 @@ Path: `app/cad_app.py`
 
 #### Classes
 
-- **CadApp** (line 29)
-  - Uygulama çekirdeği — SADECE iş mantığı.
+- **CadApp** (line 27)
   - `__init__(self, window: CadWindow)`
+  - `_load_section_catalog(self -> Dict[str, Section])`
   - `attach_ui(self, ui_host: 'UIHost' -> None)`
-    - UIHost app frame'inde bir kez bağlanır.
   - `ui(self -> 'UIHost | None')`
   - `tick(self, dt: float -> None)`
-    - Frame callback — UI host tarafından çağrılır.
   - `_ensure_engine(self -> None)`
-  - `_open_viewport(self, preset: str)`
-    - Toolbar'dan çağrılır. Yeni viewport açar.
-  - `_close_all_viewports(self)`
   - `shutdown(self -> None)`
   - `new_project(self -> None)`
   - `load_project(self, path: str -> None)`
@@ -39,29 +34,22 @@ Path: `app/cad_app.py`
   - `quick_save(self -> None)`
   - `set_project(self, project: Project -> None)`
   - `on_s2k_import_complete(self, project: Project -> None)`
-  - `import_s2k_direct(self -> None)`
   - `on_selection_changed(self, selected: list -> None)`
   - `on_hover_changed(self, element -> None)`
-  - `_refresh_presentation_renderers(self -> None)`
   - `get_selected(self -> list)`
   - `set_unit_system(self, unit_system: UnitSystem -> None)`
   - `wind_state(self -> dict)`
   - `run_wind(self -> None)`
   - `select_wind_direction(self, w_dir -> None)`
-  - `_wind_key(self, w_dir -> str)`
-  - `_start_wind_analysis(self, direction_key: str, direction -> None)`
-  - `process_wind_queue(self -> None)`
   - `on_plane_selected(self, plane -> None)`
   - `toggle_2d(self -> None)`
   - `get_loads_visible(self -> bool)`
   - `set_loads_visible(self, enabled: bool -> None)`
   - `show_entire_model(self -> None)`
-  - `convert_frames_to_links(self, link_prop_name='DefaultLink', delete_original=True)`
+  - `convert_frames_to_links(self, link_prop_name='DefaultLink', delete_original=True -> None)`
   - `_active_working_plane(self)`
   - `_update_scene_if_dirty(self -> None)`
   - `_drain_commands(self -> None)`
-  - `_apply_command(self, cmd -> bool)`
-  - `_load_section_catalog(self)`
 
 ### `app.cad_window`
 
@@ -88,18 +76,124 @@ Path: `app/cad_window.py`
   - `should_close(self -> bool)`
   - `shutdown(self -> None)`
 
-### `app.debug_panel`
+### `app.commands.camera`
 
-Path: `app/debug_panel.py`
+Path: `app/commands/camera.py`
+
+#### Module Functions
+
+- `register(reg)`
+- `_toggle_render_mode(app, cmd: PC.ToggleRenderMode -> CommandResult)`
+- `_fit(app, cmd: PC.FitView -> CommandResult)`
+- `_zoom(app, cmd: PC.ZoomExtents -> CommandResult)`
+- `_preset(app, cmd: PC.SetCameraPreset -> CommandResult)`
+
+### `app.commands.definitions`
+
+Path: `app/commands/definitions.py`
+
+#### Module Functions
+
+- `register(reg)`
+- `_add(app, cmd: PC.AddDefinition -> CommandResult)`
+- `_update(app, cmd: PC.UpdateDefinition -> CommandResult)`
+- `_remove(app, cmd: PC.RemoveDefinition -> CommandResult)`
+- `_rename(app, cmd: PC.RenameDefinition -> CommandResult)`
+
+### `app.commands.elements`
+
+Path: `app/commands/elements.py`
+
+#### Module Functions
+
+- `register(reg)`
+- `_delete_selected(app, cmd: PC.DeleteSelected -> CommandResult)`
+- `_update_fields(app, cmd: PC.UpdateElementFields -> CommandResult)`
+- `_delete(app, cmd: PC.DeleteElements -> CommandResult)`
+- `_add_node(app, cmd: PC.AddNode -> CommandResult)`
+- `_add_frame(app, cmd: PC.AddFrame -> CommandResult)`
+
+### `app.commands.engine_flags`
+
+Path: `app/commands/engine_flags.py`
+
+#### Module Functions
+
+- `register(reg)`
+- `_hover(app, cmd: PC.HoverChanged -> CommandResult)`
+- `_start_draw(app, cmd: PC.StartDrawTool -> CommandResult)`
+- `_start_plane(app, cmd: PC.StartPlaneTool -> CommandResult)`
+- `_undo(app, cmd: PC.Undo -> CommandResult)`
+- `_redo(app, cmd: PC.Redo -> CommandResult)`
+- `_toggle_2d(app, cmd: PC.Toggle2D -> CommandResult)`
+- `_loads(app, cmd: PC.ToggleLoadsVisible -> CommandResult)`
+- `_local_axes(app, cmd: PC.ToggleLocalAxes -> CommandResult)`
+- `_render_flag(app, cmd: PC.ToggleRenderFlag -> CommandResult)`
+- `_render_mode(app, cmd: PC.SetRenderMode -> CommandResult)`
+
+### `app.commands.project`
+
+Path: `app/commands/project.py`
+
+#### Module Functions
+
+- `register(reg)`
+- `_replace(app, cmd: PC.ReplaceProject -> CommandResult)`
+- `_set_unit(app, cmd: PC.SetUnitSystem -> CommandResult)`
+
+### `app.commands.registry`
+
+Path: `app/commands/registry.py`
 
 #### Classes
 
-- **DebugPanel** (line 5)
-  - `__init__(self, engine=None)`
-  - `set_context(self, ctx: dict)`
-  - `open(self)`
-  - `close(self)`
-  - `draw(self)`
+- **CommandRegistry** (line 14)
+  - `__init__(self -> None)`
+  - `register(self, cmd_type: type, handler: CommandHandler -> None)`
+  - `dispatch(self, app: 'CadApp', cmd: Command -> CommandResult)`
+
+#### Module Functions
+
+- `build_registry( -> CommandRegistry)`
+
+### `app.commands.result`
+
+Path: `app/commands/result.py`
+
+#### Classes
+
+- **CommandResult** (line 7)
+  - Komut uygulama sonucu.
+
+### `app.commands.selection`
+
+Path: `app/commands/selection.py`
+
+#### Module Functions
+
+- `register(reg)`
+- `_clear(app, cmd: PC.ClearSelection -> CommandResult)`
+- `_select(app, cmd: PC.SelectElements -> CommandResult)`
+
+### `app.commands.signals`
+
+Path: `app/commands/signals.py`
+
+#### Module Functions
+
+- `register(reg)`
+- `_refresh(app, cmd: PC.RefreshGeometry -> CommandResult)`
+
+### `app.commands.visibility`
+
+Path: `app/commands/visibility.py`
+
+#### Module Functions
+
+- `register(reg)`
+- `_show_only(app, cmd: PC.ShowOnly -> CommandResult)`
+- `_hide(app, cmd: PC.HideElements -> CommandResult)`
+- `_show_all(app, cmd: PC.ShowEntireModel -> CommandResult)`
 
 ### `app.input_bindings`
 
@@ -107,34 +201,7 @@ Path: `app/input_bindings.py`
 
 #### Module Functions
 
-- `build_bindings(app)`
-  - GLFW event → CadApp metodu eşlemesi.
-
-### `assets.icons_base64`
-
-Path: `assets/icons_base64.py`
-
-Otomatik üretilmiştir: gömülü CAD4 ikonları.
-
-#### Module Functions
-
-- `get_icon_bytes(name)`
-  - İkonun ham PNG baytlarını döndürür.
-
-### `assets.list_icon`
-
-Path: `assets/list_icon.py`
-
-**Parse error:** expected an indented block after 'except' statement on line 123 (list_icon.py, line 126)
-
-### `assets.themes`
-
-Path: `assets/themes.py`
-
-#### Module Functions
-
-- `_load_fonts(font_size: int=16)`
-- `_apply_dark_theme( -> None)`
+- `build_bindings(command_queue -> dict)`
 
 ### `core.analysis`
 
@@ -425,7 +492,7 @@ Path: `core/camera_controller.py`
 #### Classes
 
 - **CameraController** (line 7)
-  - `__init__(self, engine, app)`
+  - `__init__(self, engine)`
   - `_active_camera(self)`
   - `_active_viewport(self)`
   - `handle_click(self, x, y, button -> bool)`
@@ -569,6 +636,13 @@ Path: `core/commands/project_commands.py`
 - **ShowEntireModel** (line 131)
 - **ToggleRenderFlag** (line 134)
 - **SetRenderMode** (line 139)
+- **ToggleRenderMode** (line 143)
+- **DeleteSelected** (line 148)
+- **StartDrawTool** (line 153)
+- **StartPlaneTool** (line 158)
+- **Undo** (line 163)
+- **Redo** (line 168)
+- **HoverChanged** (line 172)
 
 ### `core.commands.update`
 
@@ -617,52 +691,169 @@ Path: `core/edit/edit_controller.py`
   - `_read_field_safe(self, element, field)`
     - Bulk update için güvenli field okuma.
 
-### `core.gl_engine`
+### `core.engine`
 
-Path: `core/gl_engine.py`
+Path: `core/engine/__init__.py`
 
 #### Classes
 
-- **Engine** (line 41)
-  - `__init__(self, w: int, h: int)`
-  - `plane_from_element_dialog(self)`
-  - `math_model_renderer(self)`
-  - `init_gl(self)`
-  - `_init_shaders(self)`
-  - `_init_camera(self)`
-  - `_init_components(self)`
-  - `set_app(self, app -> None)`
-  - `set_project(self, project -> None)`
-  - `_combined_bounds(self)`
-  - `resize(self, w: int, h: int)`
-  - `update_geo(self, project=None)`
-  - `render(self, cam, target_fbo: int=0, draw_interaction: bool=True, target_size: tuple[int, int] | None=None, viewport_name: str | None=None, viewport_plane=None, visible_ids=None)`
-  - `render_viewport(self, vp)`
-  - `set_scene(self, project)`
-  - `clear_scene(self)`
-  - `fit_view(self)`
-  - `focus_plane(self, plane -> None)`
-  - `zoom_extents(self)`
-  - `set_working_plane_provider(self, provider)`
-  - `active_working_plane(self)`
-  - `start_hover_pick(self, x, y)`
-  - `start_viewport_hover_pick(self, viewport, x, y)`
-  - `set_viewport_pointer(self, viewport, x, y)`
-  - `check_pick_result(self)`
-  - `handle_pick_from_hover(self, ctrl: bool=False)`
-  - `_update_hover(self, pick_id)`
-  - `_find_element(self, pick_id)`
-  - `clear_hover(self)`
+- **Engine** (line 25)
+  - Render pipeline orkestratörü. App bilmez, UI bilmez.
+  - `__init__(self, width: int, height: int, command_queue -> None)`
+  - `init_gl(self -> None)`
+  - `resize(self, w: int, h: int -> None)`
+  - `update_geo(self, project: 'Project | None'=None -> None)`
+  - `render_viewport(self, vp: 'Viewport' -> None)`
+  - `tick(self -> None)`
+  - `enter_plane_2d(self, plane -> None)`
+  - `exit_plane_2d(self -> None)`
+  - `fit_view(self -> None)`
+  - `zoom_extents(self -> None)`
+  - `default_xy_plane(self)`
+  - `set_viewport_pointer(self, viewport, x: int, y: int -> None)`
+  - `clear_hover(self -> None)`
+  - `handle_pick_from_hover(self, ctrl: bool=False -> None)`
+  - `start_hover_pick(self, x: int, y: int -> None)`
+  - `start_viewport_hover_pick(self, viewport, x: int, y: int -> None)`
+  - `check_pick_result(self -> bool)`
+  - `_find_element(self, pick_id: int)`
   - `screen_ray(self, x: float, y: float)`
   - `screen_to_world(self, x: float, y: float)`
-  - `update_world_pos(self, x: float, y: float)`
-  - `default_xy_plane(self)`
-  - `enter_plane_2d(self, plane)`
-  - `exit_plane_2d(self)`
-  - `start_plane_from_element(self)`
-  - `cancel_plane_from_element(self)`
-  - `toggle_plane_from_element_axis(self)`
-  - `_on_global_escape(self -> None)`
+  - `update_world_pos(self, x: float, y: float -> None)`
+  - `start_plane_from_element(self -> None)`
+  - `cancel_plane_from_element(self -> None)`
+  - `toggle_plane_from_element_axis(self -> None)`
+  - `cleanup(self -> None)`
+  - `cam(self)`
+  - `renderer(self)`
+  - `pick_pass(self)`
+  - `mrt(self)`
+  - `presentation_renderer(self)`
+  - `interaction_renderer(self)`
+  - `math_model_renderer(self)`
+  - `grid(self)`
+  - `scene(self)`
+  - `math_model(self)`
+  - `hover_id(self)`
+  - `preview_s(self)`
+  - `pick_s(self)`
+  - `sel_mgr(self)`
+  - `sel_policy(self)`
+  - `draw_mgr(self)`
+  - `plane_draw_mgr(self)`
+  - `marquee(self)`
+  - `edit(self)`
+  - `snap(self)`
+  - `pending_pick_check(self)`
+  - `active_working_plane(self)`
+  - `viewport_pointer(self)`
+  - `_combined_bounds(self)`
+  - `set_scene(self, project -> None)`
+
+### `core.engine.camera_rig`
+
+Path: `core/engine/camera_rig.py`
+
+#### Classes
+
+- **CameraRig** (line 13)
+  - Kamera + view operasyonları. Engine/app bilmez.
+  - `__init__(self, width: int, height: int -> None)`
+  - `resize(self, width: int, height: int -> None)`
+  - `fit_view(self, bounds: 'Bounds3D | None' -> None)`
+  - `zoom_extents(self, bounds: 'Bounds3D | None' -> None)`
+  - `enter_plane_2d(self, plane: 'Plane' -> None)`
+  - `exit_plane_2d(self -> None)`
+
+### `core.engine.gl_context`
+
+Path: `core/engine/gl_context.py`
+
+#### Classes
+
+- **GLContext** (line 18)
+  - GL init + shader yükleme. Engine/app bilmez.
+  - `__init__(self, width: int, height: int, shader_dir: Path | None=None -> None)`
+  - `init(self -> None)`
+  - `_load_shaders(self -> None)`
+  - `resize(self, width: int, height: int -> None)`
+  - `get(self, name: str -> ShaderProgram | None)`
+
+### `core.engine.hover_system`
+
+Path: `core/engine/hover_system.py`
+
+#### Classes
+
+- **HoverSystem** (line 13)
+  - `__init__(self, pick_pass, command_queue -> None)`
+  - `set_pick_pass(self, pick_pass -> None)`
+  - `invalidate(self -> None)`
+  - `clear(self -> None)`
+  - `set_pointer(self, viewport_name: str, x: int, y: int -> None)`
+  - `start_pick(self, x: float, y: float, viewport: 'Viewport | None'=None -> None)`
+  - `check_pick_result(self -> bool)`
+  - `_update_hover(self, pick_id: int, force: bool=False -> None)`
+
+### `core.engine.plane_mode`
+
+Path: `core/engine/plane_mode.py`
+
+#### Classes
+
+- **PlaneMode** (line 15)
+  - 2D/3D projeksiyon modu. Engine/app bilmez, komut üretir.
+  - `__init__(self, camera_rig: 'CameraRig', pipeline: 'RendererPipeline', command_queue -> None)`
+  - `enter_2d(self, plane: 'Plane' -> None)`
+  - `exit_2d(self -> None)`
+  - `toggle(self, project: 'Project | None' -> bool)`
+    - 2D/3D arasında geç. Aktif plane seç ya da oluştur.
+  - `_set_projection(self, mode: str -> None)`
+  - `_resolve_plane(self, project: 'Project | None' -> 'Plane | None')`
+  - `_default_xy_plane(project: 'Project' -> 'Plane | None')`
+
+### `core.engine.ray_cast`
+
+Path: `core/engine/ray_cast.py`
+
+#### Module Functions
+
+- `screen_ray(camera: 'Camera', x: float, y: float, width: int, height: int -> tuple[np.ndarray, np.ndarray] | None)`
+- `screen_to_world(camera: 'Camera', x: float, y: float, width: int, height: int, working_plane: 'Plane | None'=None)`
+
+### `core.engine.renderer_pipeline`
+
+Path: `core/engine/renderer_pipeline.py`
+
+#### Classes
+
+- **RendererPipeline** (line 26)
+  - MRT + SceneRenderer + pick_pass. Interaction Engine.render_viewport'ta.
+  - `__init__(self, width: int, height: int, shaders: dict, snap_renderer -> None)`
+  - `_build(self -> None)`
+  - `resize(self, width: int, height: int -> None)`
+  - `update_geo(self, project: 'Project | None' -> None)`
+  - `render(self, vp: 'Viewport', camera_rig: 'CameraRig' -> None)`
+    - Sadece scene render + blit. Interaction Engine'de çağrılır.
+  - `get_element_by_id(self, pick_id: int)`
+  - `in_section(self, element, camera, plane -> bool)`
+  - `iter_render_elements(self)`
+  - `math_model_renderer(self)`
+  - `grid(self)`
+  - `fit_view_bounds(self)`
+  - `cleanup(self -> None)`
+
+### `core.engine.tools_registry`
+
+Path: `core/engine/tools_registry.py`
+
+#### Classes
+
+- **ToolsRegistry** (line 18)
+  - Engine araçlarını DI ile kurar. Test'te fake fabrikalar geçirilebilir.
+  - `__init__(self, engine: 'Engine' -> None)`
+  - `build(self -> None)`
+  - `tick(self -> None)`
 
 ### `core.id_manager`
 
@@ -701,16 +892,14 @@ Path: `core/input_manager.py`
   - `on_mouse_move(self, x: float, y: float -> None)`
   - `on_key(self, key: int, action: int, mods: int -> None)`
   - `on_scroll(self, delta: float -> None)`
-  - `_dispatch(self, method: str, *args -> bool)`
   - `_double_click(self, button: int, x: float, y: float -> bool)`
-  - `dispatch_move(self, x: float, y: float, dx: float, dy: float -> bool)`
-    - Sırayla handler'lara ilet.
   - `set_context_pick_handler(self, handler: Callable | None)`
-    - Aktif panelin viewport tıklama handler'ı. None → devre dışı.
   - `dispatch_click(self, x, y, button)`
   - `dispatch_release(self, x: float, y: float, button: int -> bool)`
+  - `dispatch_move(self, x: float, y: float, dx: float, dy: float -> bool)`
   - `dispatch_key(self, key: int, mods: int -> bool)`
   - `dispatch_scroll(self, delta: float -> bool)`
+  - `dispatch_double_click(self, x: float, y: float, button: int -> bool)`
 
 ### `core.marquee_selector`
 
@@ -858,51 +1047,6 @@ Import stratejisi:
   - obj.field_path (nested, a.b.c) alanını dönüştür.
 - `validate_project_units(project, original_system: UnitSystem -> list[str])`
   - Roundtrip doğrulaması için stub.
-
-### `core.viewport`
-
-Path: `core/viewport.py`
-
-#### Classes
-
-- **Viewport** (line 17)
-  - Bağımsız kamera + FBO. Renderer'lar ortaktır (VAO paylaşımı).
-  - `__init__(self, name: str, width: int=640, height: int=480, camera: Camera | None=None)`
-  - `resize(self, w: int, h: int)`
-  - `bind(self)`
-  - `unbind(self)`
-  - `texture_id(self -> int)`
-  - `pick_at(self, pick_pass, x_px: int, y_px: int)`
-    - FBO'nun ID attachment'ından piksel oku → element döndür.
-  - `pick_rect(self, pick_pass, x0, y0, x1, y1 -> list)`
-    - Kutu içindeki elementleri döndürür (filter'a tabi).
-  - `pick_at_neighborhood(self, pick_pass, x_px: int, y_px: int, radius: int=3)`
-    - Merkez piksel etrafındaki en yakın elementi döndür.
-  - `set_element_filter(self, query)`
-    - Element filtresini ayarla. None → filtreyi kaldır.
-  - `invalidate_visible_ids(self)`
-  - `cleanup(self)`
-
-### `core.viewport_manager`
-
-Path: `core/viewport_manager.py`
-
-#### Classes
-
-- **ViewportManager** (line 10)
-  - Eşit viewport'lar. "Ana" yok. Tüm viewport'lar `engine` renderer'larını paylaşır.
-  - `__init__(self, engine)`
-  - `create_viewport(self, name=None, width=640, height=480, preset: str | None=None, plane=None -> Viewport)`
-  - `next_name(self, base: str -> str)`
-    - 'top 2', 'top 3' gibi çakışmayan isim üretir.
-  - `remove_viewport(self, name: str -> bool)`
-  - `get(self, name: str -> Viewport | None)`
-  - `active(self -> Viewport | None)`
-  - `set_active(self, name: str -> None)`
-  - `_ensure_visible_ids(self, vp -> None)`
-  - `render_all(self -> None)`
-  - `invalidate_all_visible_ids(self -> None)`
-  - `cleanup(self)`
 
 ### `data.enums`
 
@@ -1369,6 +1513,16 @@ Path: `domain/project.py`
   - `_migrate_materials(self)`
   - `__repr__(self -> str)`
   - `summary(self -> str)`
+- **ProjectCatalog** (line 390)
+  - `__init__(self, project)`
+  - `list_sections(self)`
+  - `get_section(self, name)`
+  - `get_link_prop(self, name)`
+  - `list_materials(self)`
+  - `get_material(self, name)`
+  - `list_link_props(self)`
+  - `list_load_patterns(self)`
+  - `list_planes(self)`
 
 ### `domain.scene`
 
@@ -1697,23 +1851,6 @@ Kullanım (CadApp içinden):
 
     # seçim değişince:
     self.inspector.set_selection(selected_elements)
-
-### `inspector.catalog_project`
-
-Path: `inspector/catalog_project.py`
-
-#### Classes
-
-- **ProjectCatalog** (line 3)
-  - `__init__(self, project)`
-  - `list_sections(self)`
-  - `get_section(self, name)`
-  - `get_link_prop(self, name)`
-  - `list_materials(self)`
-  - `get_material(self, name)`
-  - `list_link_props(self)`
-  - `list_load_patterns(self)`
-  - `list_planes(self)`
 
 ### `inspector.controller`
 
@@ -3549,130 +3686,6 @@ Path: `structload/windcalc/zone_generator.py`
 - `_get_roof_zones(plane1: Surface, e: float -> list[Zone])`
 - `_analysis_all_zones(all_surfaces, e)`
 
-### `tests._test_discovery`
-
-Path: `tests/_test_discovery.py`
-
-### `tests.input_smoke_test`
-
-Path: `tests/input_smoke_test.py`
-
-InputManager + bindings + handler dispatch'in doğruluğunu GLFW penceresi olmadan test eder.
-Kullanım:
-    python -m tools.input_smoke_test
-
-#### Classes
-
-- **MockHandler** (line 11)
-  - `__init__(self, name, active=True, swallow=True)`
-  - `handle_click(self, x, y, button)`
-  - `handle_release(self, x, y, button)`
-  - `handle_move(self, x, y, dx, dy)`
-  - `handle_key(self, key, mods)`
-  - `handle_scroll(self, delta)`
-
-#### Module Functions
-
-- `_test_dispatch_order()`
-- `_test_dispatch_skip_inactive()`
-- `_test_double_click()`
-- `_test_binding()`
-- `_test_fallback()`
-- `_test_state()`
-- `_test_modifiers()`
-- `main()`
-
-### `tests.test1`
-
-Path: `tests/test1.py`
-
-#### Module Functions
-
-- `make_polygon(scene, node_ids, label)`
-  - Node ID listesinden polygon üret.
-- `main()`
-
-### `tests.test_0`
-
-Path: `tests/test_0.py`
-
-### `tests.test_createagac`
-
-Path: `tests/test_createagac.py`
-
-#### Module Functions
-
-- `get_classes_in_file(file_path)`
-  - Dosyadaki sınıfları ve docstring'lerini bulur.
-- `print_tree(root_path, prefix='')`
-
-### `tests.test_math_model_geometry_ownership`
-
-Path: `tests/test_math_model_geometry_ownership.py`
-
-#### Module Functions
-
-- `_project_with_six_elements()`
-- `test_six_geometry_types_share_math_model_ownership_and_bounds()`
-- `test_geometry_processor_prepares_polygon_and_line_from_math_model()`
-- `test_serializer_stores_geometry_in_math_model_and_reads_legacy_scene_fields(tmp_path)`
-
-### `tests.test_panel_runner`
-
-Path: `tests/test_panel_runner.py`
-
-#### Classes
-
-- **MockObject** (line 11)
-  - Eksik özelliklerde güvenli varsayılanlar döndürür.
-  - `__init__(self, **kwargs)`
-  - `__getattr__(self, name)`
-- **MockEngine** (MockObject) (line 21)
-  - `__init__(self)`
-- **MockUI** (MockObject) (line 32)
-  - `__init__(self)`
-- **MockApp** (MockObject) (line 40)
-  - `__init__(self)`
-
-#### Module Functions
-
-- `select_panel(spec)`
-
-### `tests.test_registry`
-
-Path: `tests/test_registry.py`
-
-### `tests.test_section_render_cache`
-
-Path: `tests/test_section_render_cache.py`
-
-#### Classes
-
-- **_SectionRendererStub** (line 7)
-  - `__init__(self, **kwargs)`
-  - `set_engine(self, engine)`
-  - `set_cam(self, camera)`
-  - `set_lighting(self, lighting)`
-  - `update_geo(self, model)`
-  - `render(self, camera, target_fbo, force_id_pass=False)`
-
-#### Module Functions
-
-- `_scene_renderer_stub()`
-- `test_section_renderer_is_reused_per_viewport_and_refreshed_on_plane_change(monkeypatch)`
-- `test_section_viewport_renders_with_its_cached_renderer(monkeypatch)`
-
-### `tests.test_viewport_interaction`
-
-Path: `tests/test_viewport_interaction.py`
-
-#### Module Functions
-
-- `test_marquee_uses_viewport_dimensions()`
-- `test_async_pick_reads_viewport_fbo_and_coordinates(monkeypatch)`
-- `test_mrt_clear_targets_integer_id_attachment(monkeypatch)`
-- `test_interaction_renderer_targets_matching_viewport_and_pointer()`
-
 ### `tools.area_to_frame`
 
 Path: `tools/area_to_frame.py`
@@ -4487,6 +4500,21 @@ Section.profile_type + profile_params + color'dan otomatik avatar üretir.
   - SD Section — polygon'lardan kesit önizleme.
 - `draw_section_preview(section, avail_w=200, avail_h=150)`
 
+### `tools.wind_manager`
+
+Path: `tools/wind_manager.py`
+
+#### Classes
+
+- **WindManager** (line 16)
+  - `__init__(self, app: CadApp)`
+  - `wind_state(self -> dict)`
+  - `run_wind(self -> None)`
+  - `select_wind_direction(self, w_dir -> None)`
+  - `_wind_key(self, w_dir -> str)`
+  - `_start_wind_analysis(self, direction_key: str, direction -> None)`
+  - `process_queue(self -> None)`
+
 ### `tools.wind_scene_adapter`
 
 Path: `tools/wind_scene_adapter.py`
@@ -4514,8 +4542,14 @@ Path: `ui/actions_registry.py`
 
 #### Classes
 
-- **ActionSpec** (line 8)
-  - Panel olmayan, AppActions metodlarına bağlanan menü öğesi.
+- **ActionSpec** (line 15)
+
+#### Module Functions
+
+- `build_commands(host: 'UIHost' -> dict[str, Callable])`
+  - ActionSpec listesinden runtime dispatch tablosu üret.
+- `build_panel_states(host: 'UIHost' -> dict[str, Callable[[], bool]])`
+  - Panel görünürlük ve aksiyon aktiflik durumları.
 
 ### `ui.base`
 
@@ -4528,7 +4562,7 @@ Path: `ui/base/panel_base.py`
 #### Classes
 
 - **Category** (StrEnum) (line 12)
-- **PanelBase** (line 24)
+- **PanelBase** (line 26)
   - `__init_subclass__(cls, **kwargs)`
   - `__init__(self, app=None, **overrides)`
   - `open(self, **kw -> None)`
@@ -4674,18 +4708,28 @@ Area to Frame paneli — standart layout + collapsing sections.
   - `_selected_frames_from_scene(self -> list[Frame])`
   - `_polygon_label(p: Polygon -> str)`
 
+### `ui.panels.debug_panel`
+
+Path: `ui/panels/debug_panel.py`
+
+#### Classes
+
+- **DebugPanel** (PanelBase) (line 10)
+  - `draw_header(self -> None)`
+  - `draw_settings(self -> None)`
+  - `_draw_input(self, inp -> None)`
+  - `_draw_context_sensitivity(self, eng -> None)`
+  - `_draw_handlers(self, inp -> None)`
+  - `_draw_tools(self, eng -> None)`
+  - `_draw_bindings(self, inp -> None)`
+
 ### `ui.panels.definition_panel`
 
 Path: `ui/panels/definition_panel.py`
 
-Tüm dataclass tanımlarını tek panelde yöneten jenerik editör.
-
-Yeni mimari: draft/apply. Tüm düzenlemeler `self.draft` (Project kopyası)
-üzerinde yapılır; Apply → delta Command'ları → UIHost.command_queue.
-
 #### Classes
 
-- **DefinitionPanel** (PanelBase) (line 189)
+- **DefinitionPanel** (PanelBase) (line 185)
   - `__init__(self, app=None, **overrides)`
   - `_on_draft_refreshed(self -> None)`
   - `_get_hints(self, cls -> dict[str, Any])`
@@ -5243,40 +5287,6 @@ ViewFilterPanel — Kamera + Görünüm Aralığı (aktif UCS'ye göre).
   - `_apply_preset(self)`
   - `_apply_section(self)`
 
-### `ui.panels.viewport_panel`
-
-Path: `ui/panels/viewport_panel.py`
-
-#### Classes
-
-- **ViewportPanel** (BasePanel) (line 10)
-  - `__init__(self, app, viewport_name: str, manager, preset: str | None=None)`
-  - `_load_plane_edit(self, plane)`
-    - Plane değerlerini geçici düzenleme tamponuna yükler.
-  - `_is_plane_edited(self, plane -> bool)`
-    - Tampondaki değerler ile mevcut plane değerlerinin farklı olup olmadığını denetler.
-  - `_apply_plane_edit(self, plane)`
-    - Değişiklikleri plane nesnesine uygular ve render/geometriyi günceller.
-  - `_draw_plane_settings_popup(self, vp)`
-    - Plane sınırlarını, derinlikleri ve filtreyi 'Apply' mekanizmasıyla düzenler.
-  - `draw(self)`
-  - `_draw_viewport_toolbar(self, vp)`
-  - `_draw_filter_popup(self, vp)`
-    - Filtre kurallarını düzenle ve uygula (ID çakışması giderilmiş hali).
-  - `_load_filter_state(self, vp)`
-    - Viewport'un filter'ını UI state'ine yükle.
-  - `_apply_filter(self, vp)`
-    - UI state'inden ElementFilterQuery oluştur ve viewport'a ata.
-  - `_clear_filter(self, vp)`
-  - `_collect_sections(self, project)`
-    - Projede kullanılan tüm kesit isimlerini topla.
-  - `_get_bounds_summary(self, vp -> str)`
-    - Viewport'a bağlı plane sınırlarının özetini döndürür.
-  - `_draw_content(self, vp)`
-  - `_draw_marquee_overlay(self, vp)`
-  - `_close_and_remove(self)`
-  - `_toggle_2d_3d(self, vp)`
-
 ### `ui.panels.visibility_panel`
 
 Path: `ui/panels/visibility_panel.py`
@@ -5350,16 +5360,9 @@ Path: `ui/registry.py`
 
 Path: `ui/ui_host.py`
 
-UIHost — ImGui'ye ait TÜM sorumluluklar burada.
-
-CadApp ile sözleşme:
-  - CadApp.attach_ui(self)   → bağlan
-  - CadApp.tick(dt)          → iş mantığı frame'i
-  - ui_host.frame(dt)        → ImGui frame çizimi (CadWindow.run'dan çağrılır)
-
 #### Classes
 
-- **UIHost** (line 37)
+- **UIHost** (line 53)
   - ImGui frame, dock space, panel yönetimi, event bridge.
   - `__init__(self, app: CadApp)`
   - `on_panel_applied(self, panel -> None)`
@@ -5369,11 +5372,7 @@ CadApp ile sözleşme:
   - `on_selection_changed(self, selected: list -> None)`
   - `on_wind_analysis_done(self, key: str -> None)`
   - `on_unit_changed(self -> None)`
-  - `refresh_open_panels(self -> None)`
   - `_init_registry(self -> None)`
-  - `_build_commands(self -> dict)`
-  - `_build_panel_states(self -> dict)`
-  - `_build_view_menu(self)`
   - `get_panel(self, name: str)`
   - `prepare_panel(self, name: str, panel -> None)`
   - `_resolve_context(self, keys: list[str] -> dict)`
@@ -5397,11 +5396,24 @@ CadApp ile sözleşme:
   - `_consume_plane_completion(self)`
   - `open_open_dialog(self)`
   - `open_save_dialog(self)`
-  - `on_project_mutated(self -> None)`
-    - CadApp bir komutu uygulayıp projeyi değiştirdiğinde çağrılır.
   - `_build_view_menu(self)`
   - `_toggle_row(self, label: str, key: str, current: bool -> None)`
+  - `close_app(self -> None)`
+  - `open_s2k_import(self -> None)`
+  - `open_s2k_export(self -> None)`
+  - `start_plane_3pt(self -> None)`
+  - `start_plane_2pt_z(self -> None)`
+  - `open_plane_source_dialog(self -> None)`
+  - `toggle_view_2d(self -> None)`
   - `shutdown(self -> None)`
+  - `on_viewport_panel_closed(self, panel -> None)`
+  - `_draw_marquee_overlays(self -> None)`
+  - `reset_all(self -> None)`
+    - Tüm sistemi (yeni proje, paneller, viewport'lar) sıfırdan kurar.
+  - `on_project_changed(self -> None)`
+  - `get_interaction_debug_info(self -> dict)`
+    - Debug panel için anlık UI ve Viewport etkileşim bağlamını döndürür.
+  - `on_hover_changed(self, element_id: int -> None)`
 
 ### `ui.widgets.base_panel`
 
@@ -5465,9 +5477,8 @@ Path: `ui/widgets/icon_manager.py`
 #### Classes
 
 - **IconManager** (line 13)
-  - Base64 PNG → OpenGL texture cache.
   - `__init__(self -> None)`
-  - `get_texture(self, icon_name: str | None -> tuple[int, int, int] | None)`
+  - `get_texture(self, icon_name)`
 
 ### `ui.widgets.plane_2d_loads`
 
@@ -5614,16 +5625,13 @@ Path: `ui/widgets/toolbar.py`
 #### Classes
 
 - **Toolbar** (line 23)
-  - Registry'den gelen PanelSpec listesini menüde ve quick ikonlarda gösterir.
   - `__init__(self, commands: dict[str, Callable], panel_states: dict[str, Callable[[], bool]], specs: list[Any] | None=None, categories: list[str] | None=None, extra_menus=None -> None)`
+  - `_compose_buckets(self -> dict[str, list])`
   - `set_specs(self, specs: list[Any], categories: list[str] | None=None -> None)`
   - `draw(self, model_text: str='', current_unit=None, project=None -> None)`
-  - `_run_command(self, key: str, args: tuple -> None)`
-  - `_fire_deferred(self, key: str, *args -> None)`
   - `_draw_menus(self -> None)`
   - `_draw_menu_item(self, spec: Any -> None)`
   - `_draw_quick_icons(self -> None)`
-  - `_icon_button(self, scope: str, *, icon_name: str | None=None, fallback: str='?', label: str='', icon_size: tuple[float, float]=(16, 16), tooltip: str='', base_color: tuple[float, float, float, float] | None=None, on_click: Callable | None=None -> bool)`
   - `_state(self, key: str -> bool)`
   - `_icon(self, name: str | None -> int | None)`
   - `_draw_unit_selector(self -> None)`
@@ -5635,25 +5643,97 @@ Path: `ui/widgets/toolbar.py`
 - `_v4(r, g, b, a=1.0)`
 - `_vec2(x, y)`
 
+### `viewport`
+
+Path: `viewport/__init__.py`
+
+### `viewport.viewport`
+
+Path: `viewport/viewport.py`
+
+#### Classes
+
+- **Viewport** (line 17)
+  - Bağımsız kamera + FBO. Renderer'lar ortaktır (VAO paylaşımı).
+  - `__init__(self, name: str, width: int=640, height: int=480, camera: Camera | None=None)`
+  - `resize(self, w: int, h: int)`
+  - `bind(self)`
+  - `unbind(self)`
+  - `texture_id(self -> int)`
+  - `pick_at(self, pick_pass, x_px: int, y_px: int)`
+    - FBO'nun ID attachment'ından piksel oku → element döndür.
+  - `pick_rect(self, pick_pass, x0, y0, x1, y1 -> list)`
+    - Kutu içindeki elementleri döndürür (filter'a tabi).
+  - `pick_at_neighborhood(self, pick_pass, x_px: int, y_px: int, radius: int=3)`
+    - Merkez piksel etrafındaki en yakın elementi döndür.
+  - `set_element_filter(self, query)`
+    - Element filtresini ayarla. None → filtreyi kaldır.
+  - `invalidate_visible_ids(self)`
+  - `cleanup(self)`
+
+### `viewport.viewport_manager`
+
+Path: `viewport/viewport_manager.py`
+
+#### Classes
+
+- **ViewportManager** (line 10)
+  - Eşit viewport'lar. "Ana" yok. Tüm viewport'lar `engine` renderer'larını paylaşır.
+  - `__init__(self, engine)`
+  - `create_viewport(self, name=None, width=640, height=480, preset: str | None=None, plane=None -> Viewport)`
+  - `next_name(self, base: str -> str)`
+    - 'top 2', 'top 3' gibi çakışmayan isim üretir.
+  - `remove_viewport(self, name: str -> bool)`
+  - `get(self, name: str -> Viewport | None)`
+  - `active(self -> Viewport | None)`
+  - `set_active(self, name: str -> None)`
+  - `_ensure_visible_ids(self, vp -> None)`
+  - `render_all(self -> None)`
+  - `invalidate_all_visible_ids(self -> None)`
+  - `cleanup(self)`
+
+### `viewport.viewport_panel`
+
+Path: `viewport/viewport_panel.py`
+
+#### Classes
+
+- **ViewportPanel** (line 13)
+  - `__init__(self, host: 'UIHost', viewport_name: str, manager: 'ViewportManager' -> None)`
+  - `draw(self -> None)`
+  - `_draw_image(self, vp -> None)`
+  - `_close(self -> None)`
+
 ## Internal Dependencies
 
 - `app.cad_app` → `core.units`
 - `app.cad_app` → `core.units`
-- `app.cad_app` → `core.commands.project_commands`
 - `app.cad_app` → `domain.definition`
 - `app.cad_app` → `domain.definition`
-- `app.cad_app` → `domain.element`
-- `app.cad_app` → `domain.element`
-- `app.cad_app` → `domain.element`
-- `app.cad_app` → `domain.element`
-- `app.cad_app` → `domain.polygon`
 - `app.cad_app` → `domain.project`
-- `app.cad_app` → `inspector.catalog_project`
+- `app.cad_app` → `domain.project`
+- `app.cad_app` → `tools.wind_manager`
 - `app.cad_app` → `logging_config`
-- `app.cad_app` → `ui.panels.viewport_panel`
-- `app.cad_window` → `assets.themes`
-- `app.cad_window` → `assets.themes`
 - `app.cad_window` → `logging_config`
+- `app.commands.camera` → `app.commands.result`
+- `app.commands.camera` → `core.commands.project_commands`
+- `app.commands.definitions` → `core.commands.project_commands`
+- `app.commands.definitions` → `app.commands.result`
+- `app.commands.elements` → `app.commands.result`
+- `app.commands.elements` → `core.commands.project_commands`
+- `app.commands.engine_flags` → `app.commands.result`
+- `app.commands.engine_flags` → `core.commands.project_commands`
+- `app.commands.project` → `app.commands.result`
+- `app.commands.project` → `core.commands.project_commands`
+- `app.commands.registry` → `core.commands.base`
+- `app.commands.registry` → `app.commands.result`
+- `app.commands.selection` → `app.commands.result`
+- `app.commands.selection` → `core.commands.project_commands`
+- `app.commands.signals` → `app.commands.result`
+- `app.commands.signals` → `core.commands.project_commands`
+- `app.commands.visibility` → `app.commands.result`
+- `app.commands.visibility` → `core.commands.project_commands`
+- `app.input_bindings` → `core.commands.project_commands`
 - `core.analysis` → `core.analysis.mass_assembly`
 - `core.analysis` → `core.analysis.mass_assembly`
 - `core.analysis` → `core.analysis.mass_assembly`
@@ -5721,27 +5801,34 @@ Path: `ui/widgets/toolbar.py`
 - `core.edit.edit_controller` → `core.commands`
 - `core.edit.edit_controller` → `core.commands`
 - `core.edit.edit_controller` → `logging_config`
-- `core.gl_engine` → `core.camera`
-- `core.gl_engine` → `tools.draw_manager`
-- `core.gl_engine` → `core.edit.edit_controller`
-- `core.gl_engine` → `core.input_manager`
-- `core.gl_engine` → `core.marquee_selector`
-- `core.gl_engine` → `core.mrt`
-- `core.gl_engine` → `core.selection_manager`
-- `core.gl_engine` → `core.selection_policy`
-- `core.gl_engine` → `domain.scene`
-- `core.gl_engine` → `domain.math_model`
-- `core.gl_engine` → `geometry.geometry_processor`
-- `core.gl_engine` → `render.interactionrenderer`
-- `core.gl_engine` → `render.mathmodelrenderer`
-- `core.gl_engine` → `render.scenerenderer`
-- `core.gl_engine` → `render.shaderprogram`
-- `core.gl_engine` → `render.snapsquare`
-- `core.gl_engine` → `plane.plane_creation_tool`
-- `core.gl_engine` → `plane.plane_creation_tool`
-- `core.gl_engine` → `plane.plane_creation_tool`
-- `core.gl_engine` → `core.camera_controller`
-- `core.gl_engine` → `logging_config`
+- `core.engine` → `core.input_manager`
+- `core.engine` → `core.engine.gl_context`
+- `core.engine` → `core.engine.renderer_pipeline`
+- `core.engine` → `core.engine.camera_rig`
+- `core.engine` → `core.engine.hover_system`
+- `core.engine` → `core.engine.plane_mode`
+- `core.engine` → `core.engine.tools_registry`
+- `core.engine` → `render.snapsquare`
+- `core.engine` → `plane.plane_creation_tool`
+- `core.engine` → `logging_config`
+- `core.engine.camera_rig` → `core.camera`
+- `core.engine.gl_context` → `render.shaderprogram`
+- `core.engine.gl_context` → `logging_config`
+- `core.engine.hover_system` → `core.commands.project_commands`
+- `core.engine.plane_mode` → `core.commands.project_commands`
+- `core.engine.renderer_pipeline` → `core.mrt`
+- `core.engine.renderer_pipeline` → `render.interactionrenderer`
+- `core.engine.renderer_pipeline` → `render.mathmodelrenderer`
+- `core.engine.renderer_pipeline` → `render.scenerenderer`
+- `core.engine.renderer_pipeline` → `geometry.geometry_processor`
+- `core.engine.renderer_pipeline` → `logging_config`
+- `core.engine.tools_registry` → `core.selection_manager`
+- `core.engine.tools_registry` → `core.selection_policy`
+- `core.engine.tools_registry` → `core.marquee_selector`
+- `core.engine.tools_registry` → `core.edit.edit_controller`
+- `core.engine.tools_registry` → `tools.draw_manager`
+- `core.engine.tools_registry` → `plane.plane_creation_tool`
+- `core.engine.tools_registry` → `render.snapsquare`
 - `core.input_manager` → `logging_config`
 - `core.marquee_selector` → `logging_config`
 - `core.marquee_selector` → `domain.element`
@@ -5755,11 +5842,6 @@ Path: `ui/widgets/toolbar.py`
 - `core.selection_manager` → `core.commands`
 - `core.selection_manager` → `core.selection_policy`
 - `core.selection_policy` → `logging_config`
-- `core.viewport` → `core.camera`
-- `core.viewport` → `render.offscreen_fbo`
-- `core.viewport` → `logging_config`
-- `core.viewport_manager` → `logging_config`
-- `core.viewport_manager` → `core.viewport`
 - `data.materials_catalog` → `data.enums`
 - `data.materials_catalog` → `structload.data.mechanical`
 - `data.materials_catalog` → `structload.data.mechanical`
@@ -6034,7 +6116,7 @@ Path: `ui/widgets/toolbar.py`
 - `plane.plane_manager_panel` → `plane.plane`
 - `plane.plane_manager_panel` → `logging_config`
 - `plane.plane_manager_panel` → `ui.widgets.base_panel`
-- `plane.plane_manager_panel` → `ui.panels.viewport_panel`
+- `plane.plane_manager_panel` → `viewport.viewport_panel`
 - `plane.plane_source_dialog` → `domain.element`
 - `plane.plane_source_dialog` → `domain.element`
 - `plane.plane_source_dialog` → `domain.polygon`
@@ -6174,50 +6256,6 @@ Path: `ui/widgets/toolbar.py`
 - `structload.windcalc.zone_generator` → `structload.windcalc.geometry_utils`
 - `structload.windcalc.zone_generator` → `structload.windcalc.surface`
 - `structload.windcalc.zone_generator` → `structload.windcalc.zone`
-- `tests._test_discovery` → `ui.registry`
-- `tests._test_discovery` → `ui.panels`
-- `tests.input_smoke_test` → `core.input_manager`
-- `tests.input_smoke_test` → `core.input_manager`
-- `tests.input_smoke_test` → `core.input_manager`
-- `tests.input_smoke_test` → `core.input_manager`
-- `tests.test1` → `domain.polygon`
-- `tests.test1` → `data.enums`
-- `tests.test1` → `tools.s2k.loader`
-- `tests.test1` → `ui.panels.load_manager_panel`
-- `tests.test_0` → `core.units`
-- `tests.test_0` → `core.units`
-- `tests.test_0` → `data.enums`
-- `tests.test_0` → `geometry.frame_builder`
-- `tests.test_0` → `geometry.profile_generator`
-- `tests.test_0` → `tools.s2k.loader`
-- `tests.test_0` → `tools.s2k_exporter`
-- `tests.test_math_model_geometry_ownership` → `data.serializer`
-- `tests.test_math_model_geometry_ownership` → `data.serializer`
-- `tests.test_math_model_geometry_ownership` → `domain.element`
-- `tests.test_math_model_geometry_ownership` → `domain.element`
-- `tests.test_math_model_geometry_ownership` → `domain.element`
-- `tests.test_math_model_geometry_ownership` → `domain.element`
-- `tests.test_math_model_geometry_ownership` → `domain.line`
-- `tests.test_math_model_geometry_ownership` → `domain.polygon`
-- `tests.test_math_model_geometry_ownership` → `domain.project`
-- `tests.test_math_model_geometry_ownership` → `domain.vertex`
-- `tests.test_math_model_geometry_ownership` → `geometry.geometry_processor`
-- `tests.test_panel_runner` → `core.input_manager`
-- `tests.test_panel_runner` → `domain.project`
-- `tests.test_panel_runner` → `assets.themes`
-- `tests.test_panel_runner` → `assets.themes`
-- `tests.test_panel_runner` → `ui.panels`
-- `tests.test_panel_runner` → `ui.registry`
-- `tests.test_registry` → `ui.registry`
-- `tests.test_registry` → `ui.panels`
-- `tests.test_section_render_cache` → `render.scenerenderer`
-- `tests.test_section_render_cache` → `render.scenerenderer`
-- `tests.test_viewport_interaction` → `core.marquee_selector`
-- `tests.test_viewport_interaction` → `core.mrt`
-- `tests.test_viewport_interaction` → `core.mrt`
-- `tests.test_viewport_interaction` → `render.pickpass`
-- `tests.test_viewport_interaction` → `render.interactionrenderer`
-- `tests.test_viewport_interaction` → `render.pickpass`
 - `tools.area_to_frame` → `core.units`
 - `tools.area_to_frame` → `core.units`
 - `tools.area_to_frame` → `core.units`
@@ -6356,6 +6394,8 @@ Path: `ui/widgets/toolbar.py`
 - `tools.section_checks` → `domain.definition`
 - `tools.section_preview` → `data.enums`
 - `tools.section_preview` → `logging_config`
+- `tools.wind_manager` → `domain.definition`
+- `tools.wind_manager` → `tools.wind_scene_adapter`
 - `tools.wind_scene_adapter` → `core.units`
 - `tools.wind_scene_adapter` → `core.units`
 - `tools.wind_scene_adapter` → `core.units`
@@ -6383,6 +6423,8 @@ Path: `ui/widgets/toolbar.py`
 - `ui.panels.area_to_frame_panel` → `logging_config`
 - `ui.panels.area_to_frame_panel` → `ui.base.panel_base`
 - `ui.panels.area_to_frame_panel` → `ui.base.panel_base`
+- `ui.panels.debug_panel` → `ui.base.panel_base`
+- `ui.panels.debug_panel` → `ui.base.panel_base`
 - `ui.panels.definition_panel` → `core.commands.project_commands`
 - `ui.panels.definition_panel` → `data.enums`
 - `ui.panels.definition_panel` → `data.enums`
@@ -6522,8 +6564,6 @@ Path: `ui/widgets/toolbar.py`
 - `ui.panels.test_panel` → `ui.base.panel_base`
 - `ui.panels.view_filter_panel` → `ui.base.panel_base`
 - `ui.panels.view_filter_panel` → `ui.base.panel_base`
-- `ui.panels.viewport_panel` → `ui.widgets.base_panel`
-- `ui.panels.viewport_panel` → `logging_config`
 - `ui.panels.visibility_panel` → `ui.base.panel_base`
 - `ui.panels.visibility_panel` → `ui.base.panel_base`
 - `ui.panels.wind_analysis_panel` → `core.units`
@@ -6546,7 +6586,10 @@ Path: `ui/widgets/toolbar.py`
 - `ui.ui_host` → `domain.element`
 - `ui.ui_host` → `domain.polygon`
 - `ui.ui_host` → `logging_config`
-- `ui.widgets.icon_manager` → `assets.icons_base64`
+- `ui.ui_host` → `ui.actions_registry`
+- `ui.ui_host` → `ui.actions_registry`
+- `ui.ui_host` → `ui.actions_registry`
+- `ui.ui_host` → `viewport.viewport_panel`
 - `ui.widgets.plane_2d_loads` → `domain.definition`
 - `ui.widgets.plane_2d_view` → `plane.plane`
 - `ui.widgets.plane_2d_view` → `plane.plane`
@@ -6555,6 +6598,14 @@ Path: `ui/widgets/toolbar.py`
 - `ui.widgets.plane_2d_view` → `ui.widgets.plane_2d_tools`
 - `ui.widgets.plane_2d_view` → `ui.widgets.plane_2d_tools`
 - `ui.widgets.toolbar` → `ui.widgets.icon_manager`
+- `viewport` → `viewport.viewport`
+- `viewport` → `viewport.viewport_manager`
+- `viewport` → `viewport.viewport_panel`
+- `viewport.viewport` → `core.camera`
+- `viewport.viewport` → `render.offscreen_fbo`
+- `viewport.viewport` → `logging_config`
+- `viewport.viewport_manager` → `logging_config`
+- `viewport.viewport_manager` → `viewport.viewport`
 
 ## Inheritance
 
@@ -6631,11 +6682,9 @@ Path: `ui/widgets/toolbar.py`
 - `structload.utils.status_manager.StatusManager` extends `EventDispatcher`
 - `structload.windcalc.wind_analyzer.ZoneKind` extends `Enum`
 - `structload.windcalc.zone_generator.ZoneKind` extends `Enum`
-- `tests.test_panel_runner.MockEngine` extends `MockObject`
-- `tests.test_panel_runner.MockUI` extends `MockObject`
-- `tests.test_panel_runner.MockApp` extends `MockObject`
 - `ui.base.panel_base.Category` extends `StrEnum`
 - `ui.panels.area_to_frame_panel.AreaToFramePanel` extends `PanelBase`
+- `ui.panels.debug_panel.DebugPanel` extends `PanelBase`
 - `ui.panels.definition_panel.DefinitionPanel` extends `PanelBase`
 - `ui.panels.frame_load_panel.FrameLoadPanel` extends `PanelBase`
 - `ui.panels.frame_preview_panel.FramePreviewPanel` extends `BasePanel`
@@ -6659,7 +6708,6 @@ Path: `ui/widgets/toolbar.py`
 - `ui.panels.selection_panel.SelectionPanel` extends `PanelBase`
 - `ui.panels.test_panel.TestPanel` extends `PanelBase`
 - `ui.panels.view_filter_panel.ViewFilterPanel` extends `PanelBase`
-- `ui.panels.viewport_panel.ViewportPanel` extends `BasePanel`
 - `ui.panels.visibility_panel.VisibilityPanel` extends `PanelBase`
 - `ui.panels.wind_analysis_panel.WindAnalysisPanel` extends `PanelBase`
 - `ui.widgets.plane_2d_tools.ToolKind` extends `Enum`

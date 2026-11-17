@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from app.commands import definitions
-from core.commands import project_commands as PC
+from app.commands import project_commands as PC
 from domain.definition import Section
 
 

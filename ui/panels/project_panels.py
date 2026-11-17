@@ -8,7 +8,7 @@ from queue import Empty, Queue
 
 from imgui_bundle import imgui
 
-from core.analysis.run import AnalysisBundle, AnalysisOptions, AnalysisService
+from app.commands.analysis.run import AnalysisBundle, AnalysisOptions, AnalysisService
 from logging_config import CadLogger
 from ui.widgets.base_panel import BasePanel
 

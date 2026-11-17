@@ -1,12 +1,10 @@
 # app/commands/visibility.py
+from app.commands.registry import command, factory
 from app.commands.result import CommandResult
-from core.commands import project_commands as PC
-def register(reg):
-    reg.register(PC.ShowOnly, _show_only)
-    reg.register(PC.HideElements, _hide)
-    reg.register(PC.ShowEntireModel, _show_all)
+from app.commands import project_commands as PC
 
 
+@command(PC.ShowOnly)
 def _show_only(app, cmd: PC.ShowOnly) -> CommandResult:
     app._show_only_ids = set(cmd.uids) if cmd.uids else None
     eng = app.engine
@@ -15,6 +13,7 @@ def _show_only(app, cmd: PC.ShowOnly) -> CommandResult:
     return CommandResult(geometry_dirty=True)
 
 
+@command(PC.HideElements)
 def _hide(app, cmd: PC.HideElements) -> CommandResult:
     if app._hidden_ids is None:
         app._hidden_ids = set()
@@ -30,6 +29,27 @@ def _hide(app, cmd: PC.HideElements) -> CommandResult:
     return CommandResult(geometry_dirty=True)
 
 
+@command(PC.ShowEntireModel)
 def _show_all(app, cmd: PC.ShowEntireModel) -> CommandResult:
     app.show_entire_model()
     return CommandResult(handled=True)
+
+
+@factory("show_only")
+def _f_show_only(args: list[str]):
+    if not args:
+        return PC.ShowOnly(None)
+    try:
+        return PC.ShowOnly([int(a) for a in args])
+    except ValueError:
+        return None
+
+
+@factory("hide")
+def _f_hide(args: list[str]):
+    if not args:
+        return None
+    try:
+        return PC.HideElements([int(a) for a in args])
+    except ValueError:
+        return None

@@ -63,7 +63,14 @@ class MarqueeSelector:
             )
 
             if selected:
-                selection_mode = mode or self.policy.get_marquee_mode()
+                # ★ Ctrl basılıysa modu otomatik olarak ADD (ekleme) yap, 
+                # aksi halde politikanın belirlediği modu kullan
+                if self.engine and hasattr(self.engine, "input") and self.engine.input.is_ctrl():
+                    from core.selection_policy import SelectionMode
+                    selection_mode = SelectionMode.ADD
+                else:
+                    selection_mode = mode or self.policy.get_marquee_mode()
+                    
                 self.sel.select_multiple(selected, mode=selection_mode)
 
         self._reset()

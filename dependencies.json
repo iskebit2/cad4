@@ -32,11 +32,19 @@
     },
     {
       "source": "app.cad_app",
+      "target": "pathlib",
+      "type": "from",
+      "imported_name": "Path",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "app.cad_app",
       "target": "typing",
       "type": "from",
       "imported_name": "TYPE_CHECKING",
       "scope": "external",
-      "line": 7
+      "line": 8
     },
     {
       "source": "app.cad_app",
@@ -44,14 +52,14 @@
       "type": "from",
       "imported_name": "Dict",
       "scope": "external",
-      "line": 7
+      "line": 8
     },
     {
       "source": "app.cad_app",
       "target": "numpy",
       "type": "import",
       "scope": "external",
-      "line": 9
+      "line": 10
     },
     {
       "source": "app.cad_app",
@@ -59,21 +67,13 @@
       "type": "from",
       "imported_name": "UnitSystem",
       "scope": "internal",
-      "line": 11
+      "line": 12
     },
     {
       "source": "app.cad_app",
       "target": "core.units",
       "type": "from",
       "imported_name": "convert_project_units",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "app.cad_app",
-      "target": "core.commands.project_commands",
-      "type": "from",
-      "imported_name": "project_commands",
       "scope": "internal",
       "line": 12
     },
@@ -95,59 +95,27 @@
     },
     {
       "source": "app.cad_app",
-      "target": "domain.element",
+      "target": "domain.project",
       "type": "from",
-      "imported_name": "Area",
+      "imported_name": "Project",
       "scope": "internal",
       "line": 14
-    },
-    {
-      "source": "app.cad_app",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Frame",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "app.cad_app",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Link",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "app.cad_app",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Node",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "app.cad_app",
-      "target": "domain.polygon",
-      "type": "from",
-      "imported_name": "Polygon",
-      "scope": "internal",
-      "line": 15
     },
     {
       "source": "app.cad_app",
       "target": "domain.project",
       "type": "from",
-      "imported_name": "Project",
+      "imported_name": "ProjectCatalog",
       "scope": "internal",
-      "line": 16
+      "line": 14
     },
     {
       "source": "app.cad_app",
-      "target": "inspector.catalog_project",
+      "target": "tools.wind_manager",
       "type": "from",
-      "imported_name": "ProjectCatalog",
+      "imported_name": "WindManager",
       "scope": "internal",
-      "line": 17
+      "line": 15
     },
     {
       "source": "app.cad_app",
@@ -155,15 +123,7 @@
       "type": "from",
       "imported_name": "CadLogger",
       "scope": "internal",
-      "line": 18
-    },
-    {
-      "source": "app.cad_app",
-      "target": "ui.panels.viewport_panel",
-      "type": "from",
-      "imported_name": "ViewportPanel",
-      "scope": "internal",
-      "line": 19
+      "line": 17
     },
     {
       "source": "app.cad_window",
@@ -224,7 +184,7 @@
       "target": "assets.themes",
       "type": "from",
       "imported_name": "_load_fonts",
-      "scope": "internal",
+      "scope": "external",
       "line": 12
     },
     {
@@ -232,7 +192,7 @@
       "target": "assets.themes",
       "type": "from",
       "imported_name": "_apply_dark_theme",
-      "scope": "internal",
+      "scope": "external",
       "line": 12
     },
     {
@@ -244,10 +204,202 @@
       "line": 13
     },
     {
-      "source": "app.debug_panel",
-      "target": "imgui_bundle",
+      "source": "app.commands.camera",
+      "target": "app.commands.result",
       "type": "from",
-      "imported_name": "imgui",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.camera",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.definitions",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.definitions",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.definitions",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands.elements",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.elements",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.engine_flags",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.engine_flags",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.project",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.project",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "core.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 6
+    },
+    {
+      "source": "app.commands.result",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.result",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.selection",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.selection",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.signals",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.signals",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.visibility",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.visibility",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.input_bindings",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
       "scope": "external",
       "line": 2
     },
@@ -256,37 +408,15 @@
       "target": "glfw",
       "type": "import",
       "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "assets.icons_base64",
-      "target": "base64",
-      "type": "import",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "assets.themes",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "assets.themes",
-      "target": "os",
-      "type": "import",
-      "scope": "external",
       "line": 4
     },
     {
-      "source": "assets.themes",
-      "target": "imgui_bundle",
+      "source": "app.input_bindings",
+      "target": "core.commands.project_commands",
       "type": "from",
-      "imported_name": "imgui",
-      "scope": "external",
-      "line": 5
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 6
     },
     {
       "source": "core.analysis",
@@ -1234,7 +1364,7 @@
       "line": 12
     },
     {
-      "source": "core.gl_engine",
+      "source": "core.engine",
       "target": "__future__",
       "type": "from",
       "imported_name": "annotations",
@@ -1242,226 +1372,434 @@
       "line": 2
     },
     {
-      "source": "core.gl_engine",
+      "source": "core.engine",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "core.engine",
+      "target": "core.input_manager",
+      "type": "from",
+      "imported_name": "InputManager",
+      "scope": "internal",
+      "line": 6
+    },
+    {
+      "source": "core.engine",
+      "target": "core.engine.gl_context",
+      "type": "from",
+      "imported_name": "GLContext",
+      "scope": "internal",
+      "line": 7
+    },
+    {
+      "source": "core.engine",
+      "target": "core.engine.renderer_pipeline",
+      "type": "from",
+      "imported_name": "RendererPipeline",
+      "scope": "internal",
+      "line": 8
+    },
+    {
+      "source": "core.engine",
+      "target": "core.engine.camera_rig",
+      "type": "from",
+      "imported_name": "CameraRig",
+      "scope": "internal",
+      "line": 9
+    },
+    {
+      "source": "core.engine",
+      "target": "core.engine.hover_system",
+      "type": "from",
+      "imported_name": "HoverSystem",
+      "scope": "internal",
+      "line": 10
+    },
+    {
+      "source": "core.engine",
+      "target": "core.engine.plane_mode",
+      "type": "from",
+      "imported_name": "PlaneMode",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "core.engine",
+      "target": "core.engine.tools_registry",
+      "type": "from",
+      "imported_name": "ToolsRegistry",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "core.engine",
+      "target": "render.snapsquare",
+      "type": "from",
+      "imported_name": "SnapSquareRenderer",
+      "scope": "internal",
+      "line": 13
+    },
+    {
+      "source": "core.engine",
+      "target": "plane.plane_creation_tool",
+      "type": "from",
+      "imported_name": "PlaneFromElementState",
+      "scope": "internal",
+      "line": 14
+    },
+    {
+      "source": "core.engine",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 15
+    },
+    {
+      "source": "core.engine.camera_rig",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "core.engine.camera_rig",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "core.engine.camera_rig",
+      "target": "core.camera",
+      "type": "from",
+      "imported_name": "Camera",
+      "scope": "internal",
+      "line": 6
+    },
+    {
+      "source": "core.engine.gl_context",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "core.engine.gl_context",
+      "target": "pathlib",
+      "type": "from",
+      "imported_name": "Path",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "core.engine.gl_context",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glGetString",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "core.engine.gl_context",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_VERSION",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "core.engine.gl_context",
+      "target": "render.shaderprogram",
+      "type": "from",
+      "imported_name": "ShaderProgram",
+      "scope": "internal",
+      "line": 8
+    },
+    {
+      "source": "core.engine.gl_context",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 9
+    },
+    {
+      "source": "core.engine.hover_system",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "core.engine.hover_system",
       "target": "time",
       "type": "import",
       "scope": "external",
       "line": 4
     },
     {
-      "source": "core.gl_engine",
-      "target": "pathlib",
-      "type": "from",
-      "imported_name": "Path",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "typing",
-      "type": "from",
-      "imported_name": "Callable",
-      "scope": "external",
-      "line": 6
-    },
-    {
-      "source": "core.gl_engine",
+      "source": "core.engine.hover_system",
       "target": "typing",
       "type": "from",
       "imported_name": "TYPE_CHECKING",
       "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "core.engine.hover_system",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 7
+    },
+    {
+      "source": "core.engine.plane_mode",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "core.engine.plane_mode",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "core.engine.plane_mode",
+      "target": "core.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
       "line": 6
     },
     {
-      "source": "core.gl_engine",
+      "source": "core.engine.ray_cast",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "core.engine.ray_cast",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "core.engine.ray_cast",
       "target": "numpy",
       "type": "import",
       "scope": "external",
-      "line": 8
+      "line": 6
     },
     {
-      "source": "core.gl_engine",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "*",
-      "scope": "external",
-      "line": 9
-    },
-    {
-      "source": "core.gl_engine",
+      "source": "core.engine.ray_cast",
       "target": "pyglm",
       "type": "from",
       "imported_name": "glm",
       "scope": "external",
-      "line": 10
+      "line": 7
     },
     {
-      "source": "core.gl_engine",
-      "target": "core.camera",
+      "source": "core.engine.renderer_pipeline",
+      "target": "__future__",
       "type": "from",
-      "imported_name": "Camera",
-      "scope": "internal",
-      "line": 12
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
     },
     {
-      "source": "core.gl_engine",
-      "target": "tools.draw_manager",
+      "source": "core.engine.renderer_pipeline",
+      "target": "typing",
       "type": "from",
-      "imported_name": "DrawManager",
-      "scope": "internal",
-      "line": 13
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
     },
     {
-      "source": "core.gl_engine",
-      "target": "core.edit.edit_controller",
+      "source": "core.engine.renderer_pipeline",
+      "target": "OpenGL.GL",
       "type": "from",
-      "imported_name": "EditController",
-      "scope": "internal",
-      "line": 14
+      "imported_name": "GL_COLOR_ATTACHMENT0",
+      "scope": "external",
+      "line": 6
     },
     {
-      "source": "core.gl_engine",
-      "target": "core.input_manager",
+      "source": "core.engine.renderer_pipeline",
+      "target": "OpenGL.GL",
       "type": "from",
-      "imported_name": "InputManager",
-      "scope": "internal",
-      "line": 15
+      "imported_name": "GL_FRAMEBUFFER",
+      "scope": "external",
+      "line": 6
     },
     {
-      "source": "core.gl_engine",
-      "target": "core.marquee_selector",
+      "source": "core.engine.renderer_pipeline",
+      "target": "OpenGL.GL",
       "type": "from",
-      "imported_name": "MarqueeSelector",
-      "scope": "internal",
-      "line": 16
+      "imported_name": "glBindFramebuffer",
+      "scope": "external",
+      "line": 6
     },
     {
-      "source": "core.gl_engine",
+      "source": "core.engine.renderer_pipeline",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDrawBuffer",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "core.engine.renderer_pipeline",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glViewport",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "core.engine.renderer_pipeline",
       "target": "core.mrt",
       "type": "from",
       "imported_name": "MRTFramebuffer",
       "scope": "internal",
-      "line": 17
+      "line": 11
     },
     {
-      "source": "core.gl_engine",
-      "target": "core.selection_manager",
-      "type": "from",
-      "imported_name": "SelectionManager",
-      "scope": "internal",
-      "line": 18
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "core.selection_policy",
-      "type": "from",
-      "imported_name": "SelectionPolicy",
-      "scope": "internal",
-      "line": 19
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "domain.scene",
-      "type": "from",
-      "imported_name": "Scene",
-      "scope": "internal",
-      "line": 20
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "domain.math_model",
-      "type": "from",
-      "imported_name": "MathModel",
-      "scope": "internal",
-      "line": 21
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "geometry.geometry_processor",
-      "type": "from",
-      "imported_name": "GeometryProcessor",
-      "scope": "internal",
-      "line": 22
-    },
-    {
-      "source": "core.gl_engine",
+      "source": "core.engine.renderer_pipeline",
       "target": "render.interactionrenderer",
       "type": "from",
       "imported_name": "InteractionRenderer",
       "scope": "internal",
-      "line": 23
+      "line": 12
     },
     {
-      "source": "core.gl_engine",
+      "source": "core.engine.renderer_pipeline",
       "target": "render.mathmodelrenderer",
       "type": "from",
       "imported_name": "MathModelRenderer",
       "scope": "internal",
-      "line": 24
+      "line": 13
     },
     {
-      "source": "core.gl_engine",
+      "source": "core.engine.renderer_pipeline",
       "target": "render.scenerenderer",
       "type": "from",
       "imported_name": "SceneRenderer",
       "scope": "internal",
-      "line": 25
+      "line": 14
     },
     {
-      "source": "core.gl_engine",
-      "target": "render.shaderprogram",
+      "source": "core.engine.renderer_pipeline",
+      "target": "geometry.geometry_processor",
       "type": "from",
-      "imported_name": "ShaderProgram",
+      "imported_name": "GeometryProcessor",
       "scope": "internal",
-      "line": 26
+      "line": 15
     },
     {
-      "source": "core.gl_engine",
-      "target": "render.snapsquare",
-      "type": "from",
-      "imported_name": "SnapSquareRenderer",
-      "scope": "internal",
-      "line": 27
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "plane.plane_creation_tool",
-      "type": "from",
-      "imported_name": "PlaneCreationTool",
-      "scope": "internal",
-      "line": 28
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "plane.plane_creation_tool",
-      "type": "from",
-      "imported_name": "PlaneFromElementInputHandler",
-      "scope": "internal",
-      "line": 28
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "plane.plane_creation_tool",
-      "type": "from",
-      "imported_name": "PlaneFromElementState",
-      "scope": "internal",
-      "line": 28
-    },
-    {
-      "source": "core.gl_engine",
-      "target": "core.camera_controller",
-      "type": "from",
-      "imported_name": "CameraController",
-      "scope": "internal",
-      "line": 29
-    },
-    {
-      "source": "core.gl_engine",
+      "source": "core.engine.renderer_pipeline",
       "target": "logging_config",
       "type": "from",
       "imported_name": "CadLogger",
       "scope": "internal",
-      "line": 31
+      "line": 16
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "core.selection_manager",
+      "type": "from",
+      "imported_name": "SelectionManager",
+      "scope": "internal",
+      "line": 6
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "core.selection_policy",
+      "type": "from",
+      "imported_name": "SelectionPolicy",
+      "scope": "internal",
+      "line": 7
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "core.marquee_selector",
+      "type": "from",
+      "imported_name": "MarqueeSelector",
+      "scope": "internal",
+      "line": 8
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "core.edit.edit_controller",
+      "type": "from",
+      "imported_name": "EditController",
+      "scope": "internal",
+      "line": 9
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "tools.draw_manager",
+      "type": "from",
+      "imported_name": "DrawManager",
+      "scope": "internal",
+      "line": 10
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "plane.plane_creation_tool",
+      "type": "from",
+      "imported_name": "PlaneCreationTool",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "core.engine.tools_registry",
+      "target": "render.snapsquare",
+      "type": "from",
+      "imported_name": "SnapSquareRenderer",
+      "scope": "internal",
+      "line": 12
     },
     {
       "source": "core.id_manager",
@@ -1713,141 +2051,6 @@
       "imported_name": "Any",
       "scope": "external",
       "line": 18
-    },
-    {
-      "source": "core.viewport",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "core.viewport",
-      "target": "numpy",
-      "type": "import",
-      "scope": "external",
-      "line": 4
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "GL_FRAMEBUFFER",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "GL_READ_FRAMEBUFFER",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "GL_DRAW_FRAMEBUFFER",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "GL_COLOR_ATTACHMENT1",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "glBindFramebuffer",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "glReadBuffer",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "glReadPixels",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "GL_RED_INTEGER",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "OpenGL.GL",
-      "type": "from",
-      "imported_name": "GL_UNSIGNED_INT",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.viewport",
-      "target": "core.camera",
-      "type": "from",
-      "imported_name": "Camera",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.viewport",
-      "target": "render.offscreen_fbo",
-      "type": "from",
-      "imported_name": "OffscreenFBO",
-      "scope": "internal",
-      "line": 12
-    },
-    {
-      "source": "core.viewport",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "core.viewport_manager",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "core.viewport_manager",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 4
-    },
-    {
-      "source": "core.viewport_manager",
-      "target": "core.viewport",
-      "type": "from",
-      "imported_name": "Viewport",
-      "scope": "internal",
-      "line": 5
     },
     {
       "source": "data.enums",
@@ -5277,7 +5480,7 @@
     },
     {
       "source": "plane.plane_manager_panel",
-      "target": "ui.panels.viewport_panel",
+      "target": "viewport.viewport_panel",
       "type": "from",
       "imported_name": "ViewportPanel",
       "scope": "internal",
@@ -8288,467 +8491,6 @@
       "line": 14
     },
     {
-      "source": "tests._test_discovery",
-      "target": "ui.registry",
-      "type": "from",
-      "imported_name": "discover_panels",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "tests._test_discovery",
-      "target": "ui.panels",
-      "type": "import",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "tests.input_smoke_test",
-      "target": "glfw",
-      "type": "import",
-      "scope": "external",
-      "line": 7
-    },
-    {
-      "source": "tests.input_smoke_test",
-      "target": "core.input_manager",
-      "type": "from",
-      "imported_name": "InputManager",
-      "scope": "internal",
-      "line": 8
-    },
-    {
-      "source": "tests.input_smoke_test",
-      "target": "core.input_manager",
-      "type": "from",
-      "imported_name": "LEFT",
-      "scope": "internal",
-      "line": 8
-    },
-    {
-      "source": "tests.input_smoke_test",
-      "target": "core.input_manager",
-      "type": "from",
-      "imported_name": "MIDDLE",
-      "scope": "internal",
-      "line": 8
-    },
-    {
-      "source": "tests.input_smoke_test",
-      "target": "core.input_manager",
-      "type": "from",
-      "imported_name": "RIGHT",
-      "scope": "internal",
-      "line": 8
-    },
-    {
-      "source": "tests.test1",
-      "target": "glfw",
-      "type": "import",
-      "scope": "external",
-      "line": 1
-    },
-    {
-      "source": "tests.test1",
-      "target": "imgui_bundle",
-      "type": "from",
-      "imported_name": "imgui",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "tests.test1",
-      "target": "imgui_bundle.python_backends.glfw_backend",
-      "type": "from",
-      "imported_name": "GlfwRenderer",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "tests.test1",
-      "target": "domain.polygon",
-      "type": "from",
-      "imported_name": "Polygon",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "tests.test1",
-      "target": "data.enums",
-      "type": "from",
-      "imported_name": "PolygonType",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "tests.test1",
-      "target": "tools.s2k.loader",
-      "type": "from",
-      "imported_name": "S2KLoader",
-      "scope": "internal",
-      "line": 7
-    },
-    {
-      "source": "tests.test1",
-      "target": "ui.panels.load_manager_panel",
-      "type": "from",
-      "imported_name": "LoadManagerPanel",
-      "scope": "internal",
-      "line": 8
-    },
-    {
-      "source": "tests.test_0",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "UnitSystem",
-      "scope": "internal",
-      "line": 1
-    },
-    {
-      "source": "tests.test_0",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "convert_project_units",
-      "scope": "internal",
-      "line": 1
-    },
-    {
-      "source": "tests.test_0",
-      "target": "data.enums",
-      "type": "from",
-      "imported_name": "SectionType",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "tests.test_0",
-      "target": "geometry.frame_builder",
-      "type": "from",
-      "imported_name": "FrameBuilder",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "tests.test_0",
-      "target": "geometry.profile_generator",
-      "type": "from",
-      "imported_name": "ProfileGenerator",
-      "scope": "internal",
-      "line": 4
-    },
-    {
-      "source": "tests.test_0",
-      "target": "tools.s2k.loader",
-      "type": "from",
-      "imported_name": "S2KLoader",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "tests.test_0",
-      "target": "tools.s2k_exporter",
-      "type": "from",
-      "imported_name": "S2KExporter",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "tests.test_createagac",
-      "target": "os",
-      "type": "import",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "tests.test_createagac",
-      "target": "ast",
-      "type": "import",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "json",
-      "type": "import",
-      "scope": "external",
-      "line": 1
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "logging",
-      "type": "import",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "zipfile",
-      "type": "import",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "data.serializer",
-      "type": "from",
-      "imported_name": "load_project_file",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "data.serializer",
-      "type": "from",
-      "imported_name": "save_project_file",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Area",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Frame",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Link",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Node",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "domain.line",
-      "type": "from",
-      "imported_name": "Line",
-      "scope": "internal",
-      "line": 7
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "domain.polygon",
-      "type": "from",
-      "imported_name": "Polygon",
-      "scope": "internal",
-      "line": 8
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "domain.project",
-      "type": "from",
-      "imported_name": "Project",
-      "scope": "internal",
-      "line": 9
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "domain.vertex",
-      "type": "from",
-      "imported_name": "Vertex",
-      "scope": "internal",
-      "line": 10
-    },
-    {
-      "source": "tests.test_math_model_geometry_ownership",
-      "target": "geometry.geometry_processor",
-      "type": "from",
-      "imported_name": "GeometryProcessor",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "glfw",
-      "type": "import",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "imgui_bundle",
-      "type": "from",
-      "imported_name": "imgui",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "imgui_bundle.python_backends.glfw_backend",
-      "type": "from",
-      "imported_name": "GlfwRenderer",
-      "scope": "external",
-      "line": 4
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "queue",
-      "type": "from",
-      "imported_name": "Queue",
-      "scope": "external",
-      "line": 6
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "core.input_manager",
-      "type": "from",
-      "imported_name": "InputManager",
-      "scope": "internal",
-      "line": 7
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "domain.project",
-      "type": "from",
-      "imported_name": "Project",
-      "scope": "internal",
-      "line": 8
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "assets.themes",
-      "type": "from",
-      "imported_name": "_load_fonts",
-      "scope": "internal",
-      "line": 9
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "assets.themes",
-      "type": "from",
-      "imported_name": "_apply_dark_theme",
-      "scope": "internal",
-      "line": 9
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "ui.panels",
-      "type": "import",
-      "scope": "internal",
-      "line": 49
-    },
-    {
-      "source": "tests.test_panel_runner",
-      "target": "ui.registry",
-      "type": "from",
-      "imported_name": "discover_panels",
-      "scope": "internal",
-      "line": 50
-    },
-    {
-      "source": "tests.test_registry",
-      "target": "ui.registry",
-      "type": "from",
-      "imported_name": "discover_panels",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "tests.test_registry",
-      "target": "ui.panels",
-      "type": "import",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "tests.test_section_render_cache",
-      "target": "types",
-      "type": "from",
-      "imported_name": "SimpleNamespace",
-      "scope": "external",
-      "line": 1
-    },
-    {
-      "source": "tests.test_section_render_cache",
-      "target": "render.scenerenderer",
-      "type": "from",
-      "imported_name": "scenerenderer",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "tests.test_section_render_cache",
-      "target": "render.scenerenderer",
-      "type": "from",
-      "imported_name": "SceneRenderer",
-      "scope": "internal",
-      "line": 4
-    },
-    {
-      "source": "tests.test_viewport_interaction",
-      "target": "types",
-      "type": "from",
-      "imported_name": "SimpleNamespace",
-      "scope": "external",
-      "line": 1
-    },
-    {
-      "source": "tests.test_viewport_interaction",
-      "target": "core.marquee_selector",
-      "type": "from",
-      "imported_name": "MarqueeSelector",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "tests.test_viewport_interaction",
-      "target": "core.mrt",
-      "type": "from",
-      "imported_name": "mrt",
-      "scope": "internal",
-      "line": 4
-    },
-    {
-      "source": "tests.test_viewport_interaction",
-      "target": "core.mrt",
-      "type": "from",
-      "imported_name": "MRTFramebuffer",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "tests.test_viewport_interaction",
-      "target": "render.pickpass",
-      "type": "from",
-      "imported_name": "pickpass",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "tests.test_viewport_interaction",
-      "target": "render.interactionrenderer",
-      "type": "from",
-      "imported_name": "InteractionRenderer",
-      "scope": "internal",
-      "line": 7
-    },
-    {
-      "source": "tests.test_viewport_interaction",
-      "target": "render.pickpass",
-      "type": "from",
-      "imported_name": "PickPass",
-      "scope": "internal",
-      "line": 8
-    },
-    {
       "source": "tools.area_to_frame",
       "target": "__future__",
       "type": "from",
@@ -10690,6 +10432,59 @@
       "line": 11
     },
     {
+      "source": "tools.wind_manager",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "tools.wind_manager",
+      "target": "queue",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "tools.wind_manager",
+      "target": "threading",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "tools.wind_manager",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "tools.wind_manager",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "tools.wind_manager",
+      "target": "domain.definition",
+      "type": "from",
+      "imported_name": "WindDirectionResult",
+      "scope": "internal",
+      "line": 9
+    },
+    {
+      "source": "tools.wind_manager",
+      "target": "tools.wind_scene_adapter",
+      "type": "from",
+      "imported_name": "WindSceneAdapter",
+      "scope": "internal",
+      "line": 10
+    },
+    {
       "source": "tools.wind_scene_adapter",
       "target": "__future__",
       "type": "from",
@@ -10782,7 +10577,31 @@
       "type": "from",
       "imported_name": "dataclass",
       "scope": "external",
-      "line": 3
+      "line": 4
+    },
+    {
+      "source": "ui.actions_registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "ui.actions_registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "ui.actions_registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 5
     },
     {
       "source": "ui.actions_registry",
@@ -10790,7 +10609,7 @@
       "type": "from",
       "imported_name": "Category",
       "scope": "internal",
-      "line": 5
+      "line": 7
     },
     {
       "source": "ui.base.panel_base",
@@ -11065,26 +10884,65 @@
       "line": 11
     },
     {
+      "source": "ui.panels.debug_panel",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "ui.panels.debug_panel",
+      "target": "glfw",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "ui.panels.debug_panel",
+      "target": "imgui_bundle",
+      "type": "from",
+      "imported_name": "imgui",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "ui.panels.debug_panel",
+      "target": "ui.base.panel_base",
+      "type": "from",
+      "imported_name": "PanelBase",
+      "scope": "internal",
+      "line": 7
+    },
+    {
+      "source": "ui.panels.debug_panel",
+      "target": "ui.base.panel_base",
+      "type": "from",
+      "imported_name": "Category",
+      "scope": "internal",
+      "line": 7
+    },
+    {
       "source": "ui.panels.definition_panel",
       "target": "__future__",
       "type": "from",
       "imported_name": "annotations",
       "scope": "external",
-      "line": 7
+      "line": 3
     },
     {
       "source": "ui.panels.definition_panel",
       "target": "dataclasses",
       "type": "import",
       "scope": "external",
-      "line": 9
+      "line": 5
     },
     {
       "source": "ui.panels.definition_panel",
       "target": "types",
       "type": "import",
       "scope": "external",
-      "line": 10
+      "line": 6
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11092,7 +10950,7 @@
       "type": "from",
       "imported_name": "fields",
       "scope": "external",
-      "line": 11
+      "line": 7
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11100,7 +10958,7 @@
       "type": "from",
       "imported_name": "is_dataclass",
       "scope": "external",
-      "line": 11
+      "line": 7
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11108,7 +10966,7 @@
       "type": "from",
       "imported_name": "Enum",
       "scope": "external",
-      "line": 12
+      "line": 8
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11116,7 +10974,7 @@
       "type": "from",
       "imported_name": "Any",
       "scope": "external",
-      "line": 13
+      "line": 9
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11124,7 +10982,7 @@
       "type": "from",
       "imported_name": "Union",
       "scope": "external",
-      "line": 13
+      "line": 9
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11132,7 +10990,7 @@
       "type": "from",
       "imported_name": "get_args",
       "scope": "external",
-      "line": 13
+      "line": 9
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11140,7 +10998,7 @@
       "type": "from",
       "imported_name": "get_origin",
       "scope": "external",
-      "line": 13
+      "line": 9
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11148,7 +11006,7 @@
       "type": "from",
       "imported_name": "get_type_hints",
       "scope": "external",
-      "line": 13
+      "line": 9
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11156,7 +11014,7 @@
       "type": "from",
       "imported_name": "imgui",
       "scope": "external",
-      "line": 15
+      "line": 11
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11164,7 +11022,7 @@
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
-      "line": 17
+      "line": 13
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11172,7 +11030,7 @@
       "type": "from",
       "imported_name": "ConstraintType",
       "scope": "internal",
-      "line": 18
+      "line": 14
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11180,7 +11038,7 @@
       "type": "from",
       "imported_name": "LinkPropType",
       "scope": "internal",
-      "line": 18
+      "line": 14
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11188,7 +11046,7 @@
       "type": "from",
       "imported_name": "SectionType",
       "scope": "internal",
-      "line": 18
+      "line": 14
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11196,7 +11054,7 @@
       "type": "from",
       "imported_name": "AreaSection",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11204,7 +11062,7 @@
       "type": "from",
       "imported_name": "AutoSeismicTSC2018",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11212,7 +11070,7 @@
       "type": "from",
       "imported_name": "ConstraintDefinition",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11220,7 +11078,7 @@
       "type": "from",
       "imported_name": "LinkProp",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11228,7 +11086,7 @@
       "type": "from",
       "imported_name": "LinkPropLinear",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11236,7 +11094,7 @@
       "type": "from",
       "imported_name": "LoadCase",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11244,7 +11102,7 @@
       "type": "from",
       "imported_name": "LoadCombination",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11252,7 +11110,7 @@
       "type": "from",
       "imported_name": "LoadPattern",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11260,7 +11118,7 @@
       "type": "from",
       "imported_name": "Material",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11268,7 +11126,7 @@
       "type": "from",
       "imported_name": "ModalCase",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11276,7 +11134,7 @@
       "type": "from",
       "imported_name": "ResponseSpectrumCase",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11284,7 +11142,7 @@
       "type": "from",
       "imported_name": "Section",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11292,7 +11150,7 @@
       "type": "from",
       "imported_name": "SectionCut",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11300,7 +11158,7 @@
       "type": "from",
       "imported_name": "SpectrumFunction",
       "scope": "internal",
-      "line": 19
+      "line": 15
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11308,7 +11166,7 @@
       "type": "from",
       "imported_name": "CadLogger",
       "scope": "internal",
-      "line": 25
+      "line": 21
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11316,7 +11174,7 @@
       "type": "from",
       "imported_name": "analytical_pipe_section",
       "scope": "internal",
-      "line": 26
+      "line": 22
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11324,7 +11182,7 @@
       "type": "from",
       "imported_name": "analytical_properties",
       "scope": "internal",
-      "line": 26
+      "line": 22
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11332,7 +11190,7 @@
       "type": "from",
       "imported_name": "draw_section_preview",
       "scope": "internal",
-      "line": 27
+      "line": 23
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11340,7 +11198,7 @@
       "type": "from",
       "imported_name": "PanelBase",
       "scope": "internal",
-      "line": 28
+      "line": 24
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11348,7 +11206,7 @@
       "type": "from",
       "imported_name": "Category",
       "scope": "internal",
-      "line": 28
+      "line": 24
     },
     {
       "source": "ui.panels.definition_panel",
@@ -11356,7 +11214,7 @@
       "type": "from",
       "imported_name": "color_edit3",
       "scope": "internal",
-      "line": 29
+      "line": 25
     },
     {
       "source": "ui.panels.frame_load_panel",
@@ -12678,46 +12536,6 @@
       "line": 9
     },
     {
-      "source": "ui.panels.viewport_panel",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "ui.panels.viewport_panel",
-      "target": "pyglm",
-      "type": "from",
-      "imported_name": "glm",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "ui.panels.viewport_panel",
-      "target": "imgui_bundle",
-      "type": "from",
-      "imported_name": "imgui",
-      "scope": "external",
-      "line": 4
-    },
-    {
-      "source": "ui.panels.viewport_panel",
-      "target": "ui.widgets.base_panel",
-      "type": "from",
-      "imported_name": "BasePanel",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "ui.panels.viewport_panel",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 7
-    },
-    {
       "source": "ui.panels.visibility_panel",
       "target": "imgui_bundle",
       "type": "from",
@@ -12909,7 +12727,7 @@
       "type": "from",
       "imported_name": "annotations",
       "scope": "external",
-      "line": 10
+      "line": 2
     },
     {
       "source": "ui.ui_host",
@@ -12917,21 +12735,21 @@
       "type": "from",
       "imported_name": "TYPE_CHECKING",
       "scope": "external",
-      "line": 12
+      "line": 4
     },
     {
       "source": "ui.ui_host",
       "target": "os",
       "type": "import",
       "scope": "external",
-      "line": 14
+      "line": 6
     },
     {
       "source": "ui.ui_host",
       "target": "glfw",
       "type": "import",
       "scope": "external",
-      "line": 15
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12939,7 +12757,7 @@
       "type": "from",
       "imported_name": "imgui",
       "scope": "external",
-      "line": 16
+      "line": 8
     },
     {
       "source": "ui.ui_host",
@@ -12947,7 +12765,7 @@
       "type": "from",
       "imported_name": "GL_ARRAY_BUFFER",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -12955,7 +12773,7 @@
       "type": "from",
       "imported_name": "GL_BLEND",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -12963,7 +12781,7 @@
       "type": "from",
       "imported_name": "GL_COLOR_BUFFER_BIT",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -12971,7 +12789,7 @@
       "type": "from",
       "imported_name": "GL_CULL_FACE",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -12979,7 +12797,7 @@
       "type": "from",
       "imported_name": "GL_DEPTH_BUFFER_BIT",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -12987,7 +12805,7 @@
       "type": "from",
       "imported_name": "GL_DEPTH_TEST",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -12995,7 +12813,7 @@
       "type": "from",
       "imported_name": "GL_ELEMENT_ARRAY_BUFFER",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13003,7 +12821,7 @@
       "type": "from",
       "imported_name": "GL_FRAMEBUFFER",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13011,7 +12829,7 @@
       "type": "from",
       "imported_name": "GL_ONE_MINUS_SRC_ALPHA",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13019,7 +12837,7 @@
       "type": "from",
       "imported_name": "GL_SRC_ALPHA",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13027,7 +12845,7 @@
       "type": "from",
       "imported_name": "glBindBuffer",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13035,7 +12853,7 @@
       "type": "from",
       "imported_name": "glBindFramebuffer",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13043,7 +12861,7 @@
       "type": "from",
       "imported_name": "glBindVertexArray",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13051,7 +12869,7 @@
       "type": "from",
       "imported_name": "glBlendFunc",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13059,7 +12877,7 @@
       "type": "from",
       "imported_name": "glClear",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13067,7 +12885,7 @@
       "type": "from",
       "imported_name": "glClearColor",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13075,7 +12893,7 @@
       "type": "from",
       "imported_name": "glDisable",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13083,7 +12901,7 @@
       "type": "from",
       "imported_name": "glEnable",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13091,7 +12909,7 @@
       "type": "from",
       "imported_name": "glUseProgram",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13099,7 +12917,7 @@
       "type": "from",
       "imported_name": "glViewport",
       "scope": "external",
-      "line": 17
+      "line": 9
     },
     {
       "source": "ui.ui_host",
@@ -13107,7 +12925,7 @@
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
-      "line": 24
+      "line": 16
     },
     {
       "source": "ui.ui_host",
@@ -13115,7 +12933,7 @@
       "type": "from",
       "imported_name": "CommandQueue",
       "scope": "internal",
-      "line": 25
+      "line": 17
     },
     {
       "source": "ui.ui_host",
@@ -13123,7 +12941,7 @@
       "type": "from",
       "imported_name": "RefreshGeometry",
       "scope": "internal",
-      "line": 26
+      "line": 18
     },
     {
       "source": "ui.ui_host",
@@ -13131,7 +12949,7 @@
       "type": "from",
       "imported_name": "Area",
       "scope": "internal",
-      "line": 27
+      "line": 19
     },
     {
       "source": "ui.ui_host",
@@ -13139,7 +12957,7 @@
       "type": "from",
       "imported_name": "Frame",
       "scope": "internal",
-      "line": 27
+      "line": 19
     },
     {
       "source": "ui.ui_host",
@@ -13147,7 +12965,7 @@
       "type": "from",
       "imported_name": "Link",
       "scope": "internal",
-      "line": 27
+      "line": 19
     },
     {
       "source": "ui.ui_host",
@@ -13155,7 +12973,7 @@
       "type": "from",
       "imported_name": "Node",
       "scope": "internal",
-      "line": 27
+      "line": 19
     },
     {
       "source": "ui.ui_host",
@@ -13163,7 +12981,7 @@
       "type": "from",
       "imported_name": "Polygon",
       "scope": "internal",
-      "line": 28
+      "line": 20
     },
     {
       "source": "ui.ui_host",
@@ -13171,7 +12989,39 @@
       "type": "from",
       "imported_name": "CadLogger",
       "scope": "internal",
-      "line": 29
+      "line": 21
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.actions_registry",
+      "type": "from",
+      "imported_name": "ACTION_SPECS",
+      "scope": "internal",
+      "line": 22
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.actions_registry",
+      "type": "from",
+      "imported_name": "build_commands",
+      "scope": "internal",
+      "line": 22
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.actions_registry",
+      "type": "from",
+      "imported_name": "build_panel_states",
+      "scope": "internal",
+      "line": 22
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "viewport.viewport_panel",
+      "type": "from",
+      "imported_name": "ViewportPanel",
+      "scope": "internal",
+      "line": 23
     },
     {
       "source": "ui.widgets.base_panel",
@@ -13287,7 +13137,7 @@
       "target": "assets.icons_base64",
       "type": "from",
       "imported_name": "ICON_DATA",
-      "scope": "internal",
+      "scope": "external",
       "line": 10
     },
     {
@@ -13501,6 +13351,189 @@
       "imported_name": "IconManager",
       "scope": "internal",
       "line": 8
+    },
+    {
+      "source": "viewport",
+      "target": "viewport.viewport",
+      "type": "from",
+      "imported_name": "Viewport",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "viewport",
+      "target": "viewport.viewport_manager",
+      "type": "from",
+      "imported_name": "ViewportManager",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "viewport",
+      "target": "viewport.viewport_panel",
+      "type": "from",
+      "imported_name": "ViewportPanel",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_FRAMEBUFFER",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_READ_FRAMEBUFFER",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_DRAW_FRAMEBUFFER",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_COLOR_ATTACHMENT1",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glBindFramebuffer",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glReadBuffer",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glReadPixels",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_RED_INTEGER",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_UNSIGNED_INT",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "core.camera",
+      "type": "from",
+      "imported_name": "Camera",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "render.offscreen_fbo",
+      "type": "from",
+      "imported_name": "OffscreenFBO",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "viewport.viewport",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 14
+    },
+    {
+      "source": "viewport.viewport_manager",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "viewport.viewport_manager",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "viewport.viewport_manager",
+      "target": "viewport.viewport",
+      "type": "from",
+      "imported_name": "Viewport",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "viewport.viewport_panel",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "viewport.viewport_panel",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "viewport.viewport_panel",
+      "target": "imgui_bundle",
+      "type": "from",
+      "imported_name": "imgui",
+      "scope": "external",
+      "line": 6
     }
   ],
   "inheritance": [
@@ -13870,21 +13903,6 @@
       "base": "Enum"
     },
     {
-      "module": "tests.test_panel_runner",
-      "class": "MockEngine",
-      "base": "MockObject"
-    },
-    {
-      "module": "tests.test_panel_runner",
-      "class": "MockUI",
-      "base": "MockObject"
-    },
-    {
-      "module": "tests.test_panel_runner",
-      "class": "MockApp",
-      "base": "MockObject"
-    },
-    {
       "module": "ui.base.panel_base",
       "class": "Category",
       "base": "StrEnum"
@@ -13892,6 +13910,11 @@
     {
       "module": "ui.panels.area_to_frame_panel",
       "class": "AreaToFramePanel",
+      "base": "PanelBase"
+    },
+    {
+      "module": "ui.panels.debug_panel",
+      "class": "DebugPanel",
       "base": "PanelBase"
     },
     {
@@ -14008,11 +14031,6 @@
       "module": "ui.panels.view_filter_panel",
       "class": "ViewFilterPanel",
       "base": "PanelBase"
-    },
-    {
-      "module": "ui.panels.viewport_panel",
-      "class": "ViewportPanel",
-      "base": "BasePanel"
     },
     {
       "module": "ui.panels.visibility_panel",

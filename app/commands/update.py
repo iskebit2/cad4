@@ -1,0 +1,37 @@
+# core/commands/update.py
+from collections.abc import Callable
+from typing import Any
+
+from app.commands.base import Command
+from logging_config import CadLogger
+
+logger = CadLogger.get(__name__)
+
+
+class UpdateElementCommand(Command):
+    """
+    Bir elemanın alanlarını değiştirir.
+    before/after: {field_name: value}
+    setter: setter(element, field, value)
+    """
+
+    def __init__(self, element, before: dict[str, Any],
+                 after: dict[str, Any],
+                 setter: Callable[[Any, str, Any], None]):
+        self.element = element
+        self.before = dict(before)
+        self.after = dict(after)
+        self.setter = setter
+
+    def execute(self):
+        for f, v in self.after.items():
+            self.setter(self.element, f, v)
+
+    def undo(self):
+        # Ters sırayla — bağımlı alanlar için
+        for f in reversed(list(self.before.keys())):
+            self.setter(self.element, f, self.before[f])
+
+    @property
+    def name(self) -> str:
+        return f"Update({type(self.element).__name__}, {len(self.after)} alan)"

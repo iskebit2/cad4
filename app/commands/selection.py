@@ -1,18 +1,17 @@
 # app/commands/selection.py
+from app.commands.registry import command, factory
 from app.commands.result import CommandResult
-from core.commands import project_commands as PC
-
-def register(reg):
-    reg.register(PC.ClearSelection, _clear)
-    reg.register(PC.SelectElements, _select)
+from app.commands import project_commands as PC
 
 
+@command(PC.ClearSelection)
 def _clear(app, cmd: PC.ClearSelection) -> CommandResult:
     if app.engine and app.engine.sel_mgr:
         app.engine.sel_mgr.clear()
     return CommandResult(handled=True)
 
 
+@command(PC.SelectElements)
 def _select(app, cmd: PC.SelectElements) -> CommandResult:
     eng = app.engine
     if not eng or not eng.sel_mgr:
@@ -30,3 +29,14 @@ def _select(app, cmd: PC.SelectElements) -> CommandResult:
         for e in els:
             eng.sel_mgr.select(e, additive=True)
     return CommandResult(handled=True)
+
+
+@factory("select")
+def _f_select(args: list[str]):
+    if not args:
+        return None
+    try:
+        uids = [int(a) for a in args]
+    except ValueError:
+        return None
+    return PC.SelectElements(uids)

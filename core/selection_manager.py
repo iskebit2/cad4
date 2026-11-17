@@ -1,7 +1,7 @@
 # core/selection_manager.py
 from dataclasses import field
 
-from core.commands import CommandManager, DeleteElementsCommand
+from app.commands import CommandManager, DeleteElementsCommand
 from core.selection_policy import SelectionMode
 
 
@@ -38,26 +38,24 @@ class SelectionManager:
         if not element:
             return
         eid = getattr(element, "unique_id", id(element))
+        
         if additive:
-            if eid in self.selected:
-                self.selected.remove(eid)     # toggle-off
-            else:
-                self.selected.add(eid)         # toggle-on
-                
-        if not additive:
-            for e in self.get_selected():
-                if getattr(e, "unique_id", id(e)) != eid:
-                    e.is_selected = False
-            self.selected.clear()
-            self.selected.add(eid)
-            element.is_selected = True
-        else:
+            # Ctrl basılıyken: Varsa çıkar, yoksa ekle (Toggle)
             if eid in self.selected:
                 self.selected.remove(eid)
                 element.is_selected = False
             else:
                 self.selected.add(eid)
                 element.is_selected = True
+        else:
+            # Ctrl basılı değilken: Diğerlerini temizle, sadece bunu seç
+            for e in self.get_selected():
+                if getattr(e, "unique_id", id(e)) != eid:
+                    e.is_selected = False
+            self.selected.clear()
+            self.selected.add(eid)
+            element.is_selected = True
+            
         self._update()
 
     def select_multiple(self, elements: list, mode=SelectionMode.REPLACE):

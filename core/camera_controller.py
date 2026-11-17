@@ -6,9 +6,8 @@ from core.input_manager import LEFT, RIGHT, MIDDLE
 
 class CameraController:
 
-    def __init__(self, engine, app):
+    def __init__(self, engine):
         self.engine = engine
-        self.app = app
         self.is_active = True
         self._middle_mode = None
 
@@ -35,7 +34,7 @@ class CameraController:
             return True
         if button == RIGHT:
             if eng.hover_id > 0:
-                self.app.actions.toggle_panel("inspector")
+                print("button == RIGHT")
                 return True
             return False
         if button == LEFT:

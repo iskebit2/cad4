@@ -1,39 +1,31 @@
-2026-11-16 04:05:23 [INFO    ] cad.app.cad_window: [CadWindow] ImGui hazır (docking enabled, title-bar move only)
-2026-11-16 04:05:23 [INFO    ] cad.app.cad_window: Pencere hazır: 1200x800
-2026-11-16 04:05:23 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: GL_VERSION: b'3.3.0 NVIDIA 581.80'
-2026-11-16 04:05:23 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=2, u_mvp=0)
-2026-11-16 04:05:23 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
-2026-11-16 04:05:23 [INFO    ] cad.core.viewport_manager: [ViewportManager] create: iso preset=iso
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.1 ms
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 0.1 ms
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: Update geo: full
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 0.8 ms
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 0.0 ms
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.1 ms
-2026-11-16 04:05:23 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 0.5 ms
-2026-11-16 04:05:24 [INFO    ] cad.ui.ui_host: [registry] 17 panel yüklendi
-2026-11-16 04:05:35 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.2 ms
-2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 669.1 ms
-2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: Update geo: full
-2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.3 ms
-2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 670.2 ms
-2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 14.1 ms
-2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
-2026-11-16 04:05:36 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 14.7 ms
-2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.2 ms
-2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 10.5 ms
-2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: Update geo: full
-2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
-2026-11-16 04:05:50 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 11.4 ms
-2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.3 ms
-2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 10.2 ms
-2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: Update geo: full
-2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
-2026-11-16 04:06:08 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 11.1 ms
-2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: [update_geo] GeometryProcessor: 0.1 ms
-2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: [update_geo] renderer.update_geo: 9.9 ms
-2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: Update geo: full
-2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: [update_geo] loads: 0.2 ms
-2026-11-16 04:06:19 [INFO    ] cad.core.gl_engine: [update_geo] TOTAL: 10.7 ms
+2026-11-18 02:29:03 [INFO    ] cad.app.cad_window: [CadWindow] Hazır: 1280x800
+2026-11-18 02:29:03 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
+2026-11-18 02:29:04 [WARNING ] cad.app.commands.registry: [registry] factory çakışması: 'add_node' (app.commands.registry vs app.commands.elements)
+2026-11-18 02:29:04 [WARNING ] cad.app.commands.registry: [registry] factory çakışması: 'delete_selected' (app.commands.registry vs app.commands.elements)
+2026-11-18 02:29:04 [WARNING ] cad.app.commands.registry: [registry] factory çakışması: 'set_render_mode' (app.commands.registry vs app.commands.engine_flags)
+2026-11-18 02:29:04 [WARNING ] cad.app.commands.registry: [registry] factory çakışması: 'show_only' (app.commands.registry vs app.commands.visibility)
+2026-11-18 02:29:04 [INFO    ] cad.core.engine.gl_context: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-11-18 02:29:04 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=1, u_mvp=0)
+2026-11-18 02:29:04 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-11-18 02:29:04 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso
+2026-11-18 02:29:04 [INFO    ] cad.ui.ui_host: [UIHost] Hazır (19 panel, 30 aksiyon)
+2026-11-18 02:30:17 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
+2026-11-18 02:30:17 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso
+2026-11-18 02:30:56 [WARNING ] cad.app.cad_app: [cmd] bilinmeyen: Undo() (Undo)
+2026-11-18 02:31:04 [WARNING ] cad.app.cad_app: [cmd] bilinmeyen: Undo() (Undo)
+2026-11-18 02:32:18 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: top preset=top
+2026-11-18 02:32:44 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
+2026-11-18 02:32:44 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: top
+2026-11-18 02:32:44 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso
+2026-11-18 02:33:35 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
+2026-11-18 02:33:35 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso
+2026-11-18 02:33:47 [INFO    ] cad.tools.s2k.loader: CurrUnits: N, mm, C
+2026-11-18 02:33:47 [INFO    ] cad.tools.s2k.loader: [Parser] 69 tablo parse edildi
+2026-11-18 02:33:49 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = N, mm, C
+2026-11-18 02:33:49 [INFO    ] cad.tools.s2k.loader: [Scene] 27 düğüm, 42 çubuk, 6 alan, 0 bağ
+2026-11-18 02:33:49 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = N, mm, C
+2026-11-18 02:33:49 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
+2026-11-18 02:33:49 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso
+2026-11-18 02:35:08 [WARNING ] cad.app.cad_app: [cmd] bilinmeyen: SaveProjectAs(path='') (SaveProjectAs)
+2026-11-18 02:35:19 [WARNING ] cad.app.cad_app: [cmd] bilinmeyen: SaveProjectAs(path='') (SaveProjectAs)
+2026-11-18 02:35:28 [WARNING ] cad.app.cad_app: [cmd] bilinmeyen: SaveProjectAs(path='') (SaveProjectAs)

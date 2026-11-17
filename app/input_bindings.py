@@ -1,36 +1,33 @@
 # app/input_bindings.py
+from __future__ import annotations
+
 import glfw
 
+from app.commands import project_commands as PC
 
-def build_bindings(app):
-    """GLFW event → CadApp metodu eşlemesi.
 
-    Not: Tüm handler'lar artık doğrudan CadApp üzerinde.
-    AppActions sınıfı silindi (CadApp + UIHost'a bölündü).
-    """
-    def eng():
-        return app.engine
-
+def build_bindings(command_queue) -> dict:
+    q = command_queue
     return {
         # --- Kamera / projeksiyon ---
-        glfw.KEY_F2: app.toggle_2d,
-        glfw.KEY_F3: lambda: eng().renderer.toggle_render_mode(),
-        glfw.KEY_F4: app.show_entire_model,
-        glfw.KEY_F5: lambda: eng().zoom_extents(),
+        glfw.KEY_F2: lambda: q.put(PC.Toggle2D()),
+        glfw.KEY_F3: lambda: q.put(PC.ToggleRenderMode()),
+        glfw.KEY_F4: lambda: q.put(PC.ShowEntireModel()),
+        glfw.KEY_F5: lambda: q.put(PC.ZoomExtents()),
 
         # --- Seçim ---
-        glfw.KEY_DELETE: lambda: eng().sel_mgr.delete_selected,
+        glfw.KEY_DELETE: lambda: q.put(PC.DeleteSelected()),
 
-        # --- Çizim ---
-        glfw.KEY_D: lambda: (app.ui.toggle_draw(None) if app.ui else None),
+        # # --- Çizim ---
+        # glfw.KEY_D: lambda: q.put(PC.StartDrawTool("line")),
 
-        # --- Yük görünürlüğü ---
-        glfw.KEY_L: lambda: app.set_loads_visible(not app.get_loads_visible()),
+        # # --- Yük görünürlüğü ---
+        # glfw.KEY_L: lambda: q.put(PC.ToggleLoadsVisible()),
 
         # --- Plane ---
-        (glfw.KEY_W, glfw.MOD_SHIFT): lambda: (app.ui.toggle_plane() if app.ui else None),
+        (glfw.KEY_W, glfw.MOD_SHIFT): lambda: q.put(PC.StartPlaneTool()),
 
         # --- Undo / Redo ---
-        (glfw.KEY_Z, glfw.MOD_CONTROL): lambda: eng().sel_mgr.undo(),
-        (glfw.KEY_Y, glfw.MOD_CONTROL): lambda: eng().sel_mgr.redo(),
+        (glfw.KEY_Z, glfw.MOD_CONTROL): lambda: q.put(PC.Undo()),
+        (glfw.KEY_Y, glfw.MOD_CONTROL): lambda: q.put(PC.Redo()),
     }

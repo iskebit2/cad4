@@ -135,7 +135,8 @@ class MathModelRenderer:
     ):
         if scene is None:
             scene = self.math_model
-
+        if scene is None:
+            return
         flt = getattr(scene, '_render_filter', None)
 
         def _f(d, prepared):

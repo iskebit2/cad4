@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from imgui_bundle import imgui
 
-from core.commands import project_commands as PC
+from app.commands import project_commands as PC
 from domain.definition import PointLoad
 from domain.element import Node
 from logging_config import CadLogger

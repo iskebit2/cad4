@@ -164,7 +164,7 @@ class SelectionPanel(PanelBase):
         if ui is None:
             return
 
-        from core.commands import project_commands as PC
+        from app.commands import project_commands as PC
 
         show_only = getattr(app, "_show_only_ids", None) is not None
         hidden = getattr(app, "_hidden_ids", None) or set()

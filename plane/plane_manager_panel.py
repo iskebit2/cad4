@@ -7,7 +7,7 @@ from imgui_bundle import imgui
 from plane.plane import Plane
 from logging_config import CadLogger
 from ui.widgets.base_panel import BasePanel
-from ui.panels.viewport_panel import ViewportPanel
+from viewport.viewport_panel import ViewportPanel
 
 logger = CadLogger.get(__name__)
 

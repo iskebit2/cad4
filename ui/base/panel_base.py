@@ -17,6 +17,7 @@ class Category(StrEnum):
     LOADS = "Loads"
     MANAGEMENT = "Management"
     TOOLS = "Tools"
+    DEBUG = "Debug"
 
 
 CATEGORY_ORDER: tuple[Category, ...] = tuple(Category)
@@ -301,5 +302,7 @@ class PanelBase:
                     eng.show[k] = v
                 self._preview_snapshot = None
 
-        if eng.renderer is not None and getattr(app, "current_project", None) is not None:
+        if (eng.renderer is not None
+                and getattr(app, "current_project", None) is not None
+                and eng.math_model is not None):          # ← EKLE
             eng.renderer.update_geo(eng.math_model)
