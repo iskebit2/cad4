@@ -208,19 +208,25 @@ class InteractionRenderer:
     def _draw_hover_snap(self, engine, snap, w, h, camera, mouse_pos) -> bool:
         if engine.hover_id <= 0 or mouse_pos is None:
             return False
-        element = engine._find_element(engine.hover_id)
+
+        try:
+            element = engine._find_element(engine.hover_id)
+        except Exception:
+            logger.exception("[SNAP] _find_element exception")
+            return False
+
         if element is None:
             return False
 
         mx, my = mouse_pos
-
         if isinstance(element, Node):
             screen = self._project(camera, element.x, element.y, element.z, w, h)
             if screen is not None:
                 snap.draw_snap(screen[0], screen[1], w, h, active=True, snap_type="node")
                 return True
 
-        snap.draw_snap(mx, my, w, h, active=True, snap_type="default")
+        kind = type(element).__name__.lower()  # "frame", "link", "area", "polygon"
+        snap.draw_snap(mx, my, w, h, active=True, snap_type=kind)
         return True
 
     @staticmethod

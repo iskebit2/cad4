@@ -149,22 +149,6 @@ class DrawManager:
         self._close_line()
         return True
 
-    def _close_line(self):
-        if len(self.points) < 2:
-            self.cancel()
-            return
-        v1, v2 = self.points[0], self.points[1]
-        line = Line(v1=v1, v2=v2)
-        project = self._project()
-        if project is not None:
-            project.add_line(line)
-            self.engine.update_geo(project)
-        pr = getattr(self.engine, "presentation_renderer", None)
-        if pr:
-            self._refresh_pr()
-        if self.engine.sel_mgr:
-            self.engine.sel_mgr.select(line)
-        self.cancel()
 
     # ------------------------------------------------------------------
     def _close_rectangle(self):
@@ -201,17 +185,34 @@ class DrawManager:
         ]
         self._finalize_polygon(Polygon(nodes=vertices, label=""))
 
+    def _close_line(self):
+        if len(self.points) < 2:
+            self.cancel()
+            return
+        v1, v2 = self.points[0], self.points[1]
+        line = Line(v1=v1, v2=v2)
+        self._emit_drawn(line)
+        self.cancel()
+
     def _finalize_polygon(self, polygon: Polygon):
+        self._emit_drawn(polygon)
+        self.cancel()
+
+    def _emit_drawn(self, element) -> None:
+        cq = getattr(self.engine, "command_queue", None)
+        if cq is not None:
+            from app.commands import project_commands as PC
+            cq.put(PC.CommitDrawnElement(element=element))
+            return
+
+        # Fallback (test ortamlarında command_queue yoksa)
         project = self._project()
         if project is not None:
-            project.add_polygon(polygon)
-        pr = getattr(self.engine, "presentation_renderer", None)
-        if pr:
-            pr.update_polygons(list(project.polygons.values()))
-            self._refresh_pr()
-        if self.engine.sel_mgr:
-            self.engine.sel_mgr.select(polygon)
-        self.cancel()
+            if isinstance(element, Line):
+                project.add_line(element)
+            elif isinstance(element, Polygon):
+                project.add_polygon(element)
+            self.engine.update_geo(project)
 
     def _project(self):
         return self.engine.project

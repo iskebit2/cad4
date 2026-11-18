@@ -29,6 +29,7 @@ class Engine:
         self.w = max(1, int(width))
         self.h = max(1, int(height))
         self.command_queue = command_queue
+        self.project: Project | None = None
 
         self.gl = GLContext(self.w, self.h)
         self.camera_rig = CameraRig(self.w, self.h)
@@ -64,7 +65,13 @@ class Engine:
         self.pipeline.renderer.set_snap(self.tools.snap)
         self.pipeline.renderer.set_engine(self)
         self.plane_mode = PlaneMode(self.camera_rig, self.pipeline, self.command_queue)
-        self.hover = HoverSystem(self.pipeline.pick_pass, self.command_queue)
+
+        # ✅ resolver: pick_id → element
+        self.hover = HoverSystem(
+            self.pipeline.pick_pass,
+            self.command_queue,
+            resolve_element=self._find_element,
+        )
         from core.camera_controller import CameraController
         self.camera_ctrl = CameraController(self)
         self.input.set_fallback(self.camera_ctrl)
@@ -78,6 +85,8 @@ class Engine:
 
     def update_geo(self, project: "Project | None" = None) -> None:
         if self.pipeline is not None:
+            if project is not None:
+                self.project = project
             self.pipeline.update_geo(project)
 
     def render_viewport(self, vp: "Viewport") -> None:
@@ -93,7 +102,6 @@ class Engine:
         try:
             self.pipeline.render(vp, self.camera_rig)
 
-            # ★ interaction — pointer her zaman
             pointer = None
             if self.hover is not None and self.hover.pointer is not None:
                 if self.hover.pointer[0] == vp.name:
@@ -105,10 +113,16 @@ class Engine:
                 )
 
             if self.show.get("interaction", True) and self.pipeline.interaction:
-                self.pipeline.interaction.render(
-                    self, vp.width, vp.height, camera=vp.camera,
-                    viewport_name=vp.name, mouse_pos=pointer,
-                )
+                from OpenGL.GL import GL_FRAMEBUFFER, glBindFramebuffer, glViewport
+                glBindFramebuffer(GL_FRAMEBUFFER, vp.fbo.fbo)
+                glViewport(0, 0, vp.width, vp.height)
+                try:
+                    self.pipeline.interaction.render(
+                        self, vp.width, vp.height, camera=vp.camera,
+                        viewport_name=vp.name, mouse_pos=pointer,
+                    )
+                finally:
+                    glBindFramebuffer(GL_FRAMEBUFFER, 0)
         finally:
             self.pipeline.renderer.projection = prev_proj
             if self.pipeline.math_model_renderer:
@@ -168,11 +182,10 @@ class Engine:
     def handle_pick_from_hover(self, ctrl: bool = False) -> None:
         if self.sel_mgr is None:
             return
-        if self.hover_id > 0:
-            element = self.sel_mgr.find_element_by_id(self.hover_id)
-            if element:
-                self.sel_mgr.select(element, additive=ctrl)
-                return
+        element = self.hover_element
+        if element is not None:
+            self.sel_mgr.select(element, additive=ctrl)
+            return
         if not ctrl:
             self.sel_mgr.clear()
 
@@ -280,6 +293,10 @@ class Engine:
     @property
     def hover_id(self):
         return self.hover.element_id if self.hover else 0
+
+    @property
+    def hover_element(self):
+        return self.hover.element if self.hover else None
 
     @property
     def preview_s(self):

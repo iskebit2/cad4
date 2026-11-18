@@ -124,6 +124,9 @@ class CadLogger:
         "cad.tools.gridsystem": "WARNING",
         "cad.ui.ui_host": "INFO",
         "cad.tools.s2k.loader": "INFO",
+        "cad.render.interactionrenderer": "DEBUG",
+        "cad.render.snapsquare": "DEBUG",
+        
     }
 
     ROOT_NAME = "cad"
@@ -147,7 +150,7 @@ class CadLogger:
     @classmethod
     def _file_level(cls) -> int:
         return cls._resolve_level(
-            cls._env("CAD_LOG_FILE_LEVEL", "INFO"),
+            cls._env("CAD_LOG_FILE_LEVEL", "DEBUG"),
             logging.INFO,
         )
 
@@ -259,7 +262,7 @@ class CadLogger:
                 )
 
             # Eski kullanım biçimiyle uyumluluk.
-            log.setup = lambda level="INFO": cls.setup(level)  # type: ignore[attr-defined]
+            log.setup = lambda level="DEBUG": cls.setup(level)  # type: ignore[attr-defined]
 
             cls._loggers[full_name] = log
             return log

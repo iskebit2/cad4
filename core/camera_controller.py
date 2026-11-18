@@ -32,11 +32,11 @@ class CameraController:
         if button == MIDDLE:
             self._middle_mode = "orbit" if eng.input.is_shift() else "pan"
             return True
-        if button == RIGHT:
-            if eng.hover_id > 0:
-                print("button == RIGHT")
-                return True
-            return False
+        # if button == RIGHT:
+        #     if eng.hover_id > 0:
+        #         print("button == RIGHT")
+        #         return True
+        #     return False
         if button == LEFT:
             vp = self._active_viewport()
             if eng.marquee:
@@ -123,18 +123,32 @@ class CameraController:
 
     def _pick_at_viewport(self, vp, x_px, y_px):
         eng = self.engine
-        pick_pass = getattr(eng, "pick_pass", None)
-        if pick_pass is None:
+        if eng.sel_mgr is None:
             return
-        element = vp.pick_at(pick_pass, int(x_px), int(y_px))
+
+        ctrl = eng.input.is_ctrl()
+
+        # 1. Öncelik: Ekranda zaten yakalanmış (hover/snap) eleman varsa doğrudan onu seç
+        element = getattr(eng, "hover_element", None)
+        if element is None and getattr(eng, "hover_id", 0) > 0:
+            element = eng._find_element(eng.hover_id)
+
+        # 2. Fallback: Henüz hover güncellenmediyse viewport pick buffer'dan oku
         if element is None:
-            if not eng.input.is_ctrl():
+            pick_pass = getattr(eng, "pick_pass", None)
+            if pick_pass is not None:
+                element = vp.pick_at(pick_pass, int(x_px), int(y_px))
+
+        if element is None:
+            if not ctrl:
                 eng.sel_mgr.clear()
             return
+
         # ★ visible_ids kontrolü — O(1)
         if vp.visible_ids is not None and element.unique_id not in vp.visible_ids:
             return
-        eng.sel_mgr.select(element, additive=eng.input.is_ctrl())
+
+        eng.sel_mgr.select(element, additive=ctrl)
 
     def _on_escape(self):
         eng = self.engine

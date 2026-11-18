@@ -1,11 +1,11 @@
 # cad4 - Project Context
 
-Generated: 2026-11-17T23:24:52
+Generated: 2026-11-18T22:49:12
 
 ## Project Overview
 
 - Name: cad4
-- Python files: 246
+- Python files: 250
 
 ## Architecture Notes
 
@@ -20,13 +20,15 @@ Path: `app/cad_app.py`
 
 #### Classes
 
-- **CadApp** (line 27)
-  - `__init__(self, window: CadWindow)`
+- **CadApp** (line 23)
+  - `__init__(self, width: int=1200, height: int=800)`
   - `_load_section_catalog(self -> Dict[str, Section])`
-  - `attach_ui(self, ui_host: 'UIHost' -> None)`
-  - `ui(self -> 'UIHost | None')`
+  - `init_engine(self -> None)`
+  - `attach_ui(self, ui_host: UIHost -> None)`
+  - `ui(self -> UIHost | None)`
+  - `resize(self, width: int, height: int -> None)`
   - `tick(self, dt: float -> None)`
-  - `_ensure_engine(self -> None)`
+  - `request_quit(self -> None)`
   - `shutdown(self -> None)`
   - `new_project(self -> None)`
   - `load_project(self, path: str -> None)`
@@ -46,7 +48,7 @@ Path: `app/cad_app.py`
   - `get_loads_visible(self -> bool)`
   - `set_loads_visible(self, enabled: bool -> None)`
   - `show_entire_model(self -> None)`
-  - `convert_frames_to_links(self, link_prop_name='DefaultLink', delete_original=True -> None)`
+  - `convert_frames_to_links(self, link_prop_name: str='DefaultLink', delete_original: bool=True -> None)`
   - `_active_working_plane(self)`
   - `_update_scene_if_dirty(self -> None)`
   - `_drain_commands(self -> None)`
@@ -57,11 +59,10 @@ Path: `app/cad_window.py`
 
 #### Classes
 
-- **CadWindow** (line 18)
+- **CadWindow** (line 12)
+  - Saf GLFW penceresi. ImGui, UIHost veya CadApp bilmez.
   - `__init__(self, width: int=1200, height: int=800, title: str='CAD4')`
   - `create(self -> None)`
-  - `_init_glfw(self -> None)`
-  - `_init_imgui(self -> None)`
   - `_wire_callbacks(self -> None)`
   - `_cb_resize(self, win, w: int, h: int -> None)`
   - `_cb_key(self, win, key: int, scancode: int, action: int, mods: int -> None)`
@@ -70,146 +71,23 @@ Path: `app/cad_window.py`
   - `_cb_scroll(self, win, xoff: float, yoff: float -> None)`
   - `_cb_char(self, win, codepoint: int -> None)`
   - `_cb_focus(self, win, focused: bool -> None)`
-  - `run(self, frame_callback: Callable[[float], None], target_fps: int=60 -> None)`
-  - `get_mouse_pos(self -> tuple[float, float])`
-  - `is_key_pressed(self, key: int -> bool)`
+  - `poll_events(self -> None)`
+  - `swap_buffers(self -> None)`
+  - `request_close(self -> None)`
   - `should_close(self -> bool)`
   - `shutdown(self -> None)`
 
-### `app.commands.camera`
+### `app.commands`
 
-Path: `app/commands/camera.py`
+Path: `app/commands/__init__.py`
 
-#### Module Functions
+### `app.commands.analysis`
 
-- `register(reg)`
-- `_toggle_render_mode(app, cmd: PC.ToggleRenderMode -> CommandResult)`
-- `_fit(app, cmd: PC.FitView -> CommandResult)`
-- `_zoom(app, cmd: PC.ZoomExtents -> CommandResult)`
-- `_preset(app, cmd: PC.SetCameraPreset -> CommandResult)`
+Path: `app/commands/analysis/__init__.py`
 
-### `app.commands.definitions`
+### `app.commands.analysis.mass_assembly`
 
-Path: `app/commands/definitions.py`
-
-#### Module Functions
-
-- `register(reg)`
-- `_add(app, cmd: PC.AddDefinition -> CommandResult)`
-- `_update(app, cmd: PC.UpdateDefinition -> CommandResult)`
-- `_remove(app, cmd: PC.RemoveDefinition -> CommandResult)`
-- `_rename(app, cmd: PC.RenameDefinition -> CommandResult)`
-
-### `app.commands.elements`
-
-Path: `app/commands/elements.py`
-
-#### Module Functions
-
-- `register(reg)`
-- `_delete_selected(app, cmd: PC.DeleteSelected -> CommandResult)`
-- `_update_fields(app, cmd: PC.UpdateElementFields -> CommandResult)`
-- `_delete(app, cmd: PC.DeleteElements -> CommandResult)`
-- `_add_node(app, cmd: PC.AddNode -> CommandResult)`
-- `_add_frame(app, cmd: PC.AddFrame -> CommandResult)`
-
-### `app.commands.engine_flags`
-
-Path: `app/commands/engine_flags.py`
-
-#### Module Functions
-
-- `register(reg)`
-- `_hover(app, cmd: PC.HoverChanged -> CommandResult)`
-- `_start_draw(app, cmd: PC.StartDrawTool -> CommandResult)`
-- `_start_plane(app, cmd: PC.StartPlaneTool -> CommandResult)`
-- `_undo(app, cmd: PC.Undo -> CommandResult)`
-- `_redo(app, cmd: PC.Redo -> CommandResult)`
-- `_toggle_2d(app, cmd: PC.Toggle2D -> CommandResult)`
-- `_loads(app, cmd: PC.ToggleLoadsVisible -> CommandResult)`
-- `_local_axes(app, cmd: PC.ToggleLocalAxes -> CommandResult)`
-- `_render_flag(app, cmd: PC.ToggleRenderFlag -> CommandResult)`
-- `_render_mode(app, cmd: PC.SetRenderMode -> CommandResult)`
-
-### `app.commands.project`
-
-Path: `app/commands/project.py`
-
-#### Module Functions
-
-- `register(reg)`
-- `_replace(app, cmd: PC.ReplaceProject -> CommandResult)`
-- `_set_unit(app, cmd: PC.SetUnitSystem -> CommandResult)`
-
-### `app.commands.registry`
-
-Path: `app/commands/registry.py`
-
-#### Classes
-
-- **CommandRegistry** (line 14)
-  - `__init__(self -> None)`
-  - `register(self, cmd_type: type, handler: CommandHandler -> None)`
-  - `dispatch(self, app: 'CadApp', cmd: Command -> CommandResult)`
-
-#### Module Functions
-
-- `build_registry( -> CommandRegistry)`
-
-### `app.commands.result`
-
-Path: `app/commands/result.py`
-
-#### Classes
-
-- **CommandResult** (line 7)
-  - Komut uygulama sonucu.
-
-### `app.commands.selection`
-
-Path: `app/commands/selection.py`
-
-#### Module Functions
-
-- `register(reg)`
-- `_clear(app, cmd: PC.ClearSelection -> CommandResult)`
-- `_select(app, cmd: PC.SelectElements -> CommandResult)`
-
-### `app.commands.signals`
-
-Path: `app/commands/signals.py`
-
-#### Module Functions
-
-- `register(reg)`
-- `_refresh(app, cmd: PC.RefreshGeometry -> CommandResult)`
-
-### `app.commands.visibility`
-
-Path: `app/commands/visibility.py`
-
-#### Module Functions
-
-- `register(reg)`
-- `_show_only(app, cmd: PC.ShowOnly -> CommandResult)`
-- `_hide(app, cmd: PC.HideElements -> CommandResult)`
-- `_show_all(app, cmd: PC.ShowEntireModel -> CommandResult)`
-
-### `app.input_bindings`
-
-Path: `app/input_bindings.py`
-
-#### Module Functions
-
-- `build_bindings(command_queue -> dict)`
-
-### `core.analysis`
-
-Path: `core/analysis/__init__.py`
-
-### `core.analysis.mass_assembly`
-
-Path: `core/analysis/mass_assembly.py`
+Path: `app/commands/analysis/mass_assembly.py`
 
 #### Classes
 
@@ -237,9 +115,9 @@ Path: `core/analysis/mass_assembly.py`
 - `build_mass(scene, project, n_live: float=0.3, *, validate: bool=True -> MassAssembly)`
   - Kütle matrisi montajı.
 
-### `core.analysis.material_takeoff`
+### `app.commands.analysis.material_takeoff`
 
-Path: `core/analysis/material_takeoff.py`
+Path: `app/commands/analysis/material_takeoff.py`
 
 Malzeme metrajı — ElementWeight ve özet tablolar.
 
@@ -265,9 +143,9 @@ Birim sözleşmesi: units.py (kg, mm, N, MPa, kg/mm³).
 - `compute_takeoff(scene: MathModel -> TakeoffResult)`
 - `takeoff_to_dataframes(result: TakeoffResult)`
 
-### `core.analysis.modal_analysis`
+### `app.commands.analysis.modal_analysis`
 
-Path: `core/analysis/modal_analysis.py`
+Path: `app/commands/analysis/modal_analysis.py`
 
 #### Classes
 
@@ -281,9 +159,9 @@ Path: `core/analysis/modal_analysis.py`
 - `_direction_vector(modal_dofs, direction)`
 - `response_spectrum_solve(modal: ModalResult, M_global, num_dofs, spectrum, n_modes=None)`
 
-### `core.analysis.run`
+### `app.commands.analysis.run`
 
-Path: `core/analysis/run.py`
+Path: `app/commands/analysis/run.py`
 
 Yüksek seviye analiz servisi — UI'nin tek giriş noktası.
 
@@ -298,9 +176,9 @@ Yüksek seviye analiz servisi — UI'nin tek giriş noktası.
 - **AnalysisService** (line 41)
   - `run(scene, project, options: AnalysisOptions -> AnalysisBundle)`
 
-### `core.analysis.solver`
+### `app.commands.analysis.solver`
 
-Path: `core/analysis/solver.py`
+Path: `app/commands/analysis/solver.py`
 
 #### Classes
 
@@ -324,9 +202,9 @@ Path: `core/analysis/solver.py`
 
 - `perform_guyan_condensation(K, M, master_indices, slave_indices)`
 
-### `core.analysis.spectrum`
+### `app.commands.analysis.spectrum`
 
-Path: `core/analysis/spectrum.py`
+Path: `app/commands/analysis/spectrum.py`
 
 TBDY 2018 spektrum ve spektral analiz.
 
@@ -350,9 +228,9 @@ TBDY 2018 spektrum ve spektral analiz.
 - `read_spectrum_from_parser(parser)`
   - S2K tablolarından spektrum parametrelerini oku.
 
-### `core.analysis.stiffness_assembly`
+### `app.commands.analysis.stiffness_assembly`
 
-Path: `core/analysis/stiffness_assembly.py`
+Path: `app/commands/analysis/stiffness_assembly.py`
 
 Rijitlik Matrisi Toplama — TEK Çıkış: StiffnessAssembly (Frame Timoshenko + Area 3D Shell Simetrik)
 
@@ -381,9 +259,9 @@ Birim Sözleşmesi (units.py):
 - `_assemble_frame(frame, K: np.ndarray, num_dofs: int, use_shear_deform: bool=True -> str | None)`
 - `_assemble_area(area, K: np.ndarray, num_dofs: int -> str | None)`
 
-### `core.analysis.structuralanalysis`
+### `app.commands.analysis.structuralanalysis`
 
-Path: `core/analysis/structuralanalysis.py`
+Path: `app/commands/analysis/structuralanalysis.py`
 
 Orchestration — mass + stiffness + modal (+ spectrum).
 
@@ -406,18 +284,18 @@ Birim sözleşmesi: units.py.
   - Tam analiz zinciri: mass → stiffness → modal (+ spectrum).
 - `_resolve_spectrum(project, spectrum)`
 
-### `core.analysis.unit_guard`
+### `app.commands.analysis.unit_guard`
 
-Path: `core/analysis/unit_guard.py`
+Path: `app/commands/analysis/unit_guard.py`
 
 #### Module Functions
 
 - `ensure_nmm(project -> None)`
   - Solver öncesi project'i N_MM'ye çevir.
 
-### `core.analysis.validation`
+### `app.commands.analysis.validation`
 
-Path: `core/analysis/validation.py`
+Path: `app/commands/analysis/validation.py`
 
 Analiz ara doğrulama.
 
@@ -438,6 +316,385 @@ Tüm toleranslar ölçek-bağımsız (göreli) veya mutlak olarak açıkça beli
   - MassAssembly nesnesi üzerinde kütle ve matris doğrulama kontrolleri.
 - `validate_stiffness(asm -> list[str])`
   - StiffnessAssembly doğrula.
+
+### `app.commands.base`
+
+Path: `app/commands/base.py`
+
+#### Classes
+
+- **Command** (ABC) (line 10)
+  - Tüm komutların arayüzü.
+  - `execute(self)`
+    - İşlemi uygula.
+  - `undo(self)`
+    - İşlemi geri al.
+  - `redo(self)`
+    - Yeniden uygula (varsayılan: execute).
+  - `name(self -> str)`
+    - Debug/log için okunabilir isim.
+- **CommandManager** (line 31)
+  - Komut geçmişi ve undo/redo yönetimi.
+  - `__init__(self, max_history: int=100)`
+  - `execute(self, command: Command -> bool)`
+    - Komutu çalıştır ve geçmişe ekle.
+  - `undo(self -> bool)`
+    - Son komutu geri al.
+  - `redo(self -> bool)`
+    - Son geri alınanı yeniden uygula.
+  - `can_undo(self -> bool)`
+  - `can_redo(self -> bool)`
+  - `clear(self)`
+    - Tüm geçmişi temizle.
+  - `add_listener(self, callback)`
+    - Komut sonrası tetiklenecek callback ekle.
+  - `_notify(self)`
+
+### `app.commands.bulk_update`
+
+Path: `app/commands/bulk_update.py`
+
+BulkUpdateCommand — Birden fazla elemana aynı anda alan uygular.
+
+- execute(): plan'daki tüm (element, after) çiftlerini uygular
+- undo():    ters sırayla before değerlerini geri koyar
+- Tek bir Command → CommandManager'da tek undo/redo kaydı
+
+#### Classes
+
+- **BulkUpdateCommand** (Command) (line 19)
+  - plan: List[(element, before_dict, after_dict)]
+  - `__init__(self, plan: list[tuple[Any, dict[str, Any], dict[str, Any]]], setter: Callable[[Any, str, Any], None])`
+  - `execute(self)`
+    - Tüm alanları sırayla uygula.
+  - `undo(self)`
+    - Ters sırayla eski değerleri geri koy.
+  - `name(self -> str)`
+
+### `app.commands.camera`
+
+Path: `app/commands/camera.py`
+
+#### Module Functions
+
+- `_fit(app, cmd: PC.FitView -> CommandResult)`
+- `_zoom(app, cmd: PC.ZoomExtents -> CommandResult)`
+- `_preset(app, cmd: PC.SetCameraPreset -> CommandResult)`
+- `_toggle_render_mode(app, cmd: PC.ToggleRenderMode -> CommandResult)`
+- `_set_preset(args: list[str])`
+
+### `app.commands.command_queue`
+
+Path: `app/commands/command_queue.py`
+
+#### Classes
+
+- **CommandQueue** (line 6)
+  - `__init__(self -> None)`
+  - `put(self, command: Any -> None)`
+  - `drain(self -> list[Any])`
+
+### `app.commands.create`
+
+Path: `app/commands/create.py`
+
+#### Classes
+
+- **CreateElementCommand** (Command) (line 11)
+  - Yeni bir eleman oluşturup scene'e ekler.
+  - `__init__(self, scene, element_type: str, factory: Callable[[dict[str, Any]], Any], values: dict[str, Any])`
+  - `execute(self)`
+  - `undo(self)`
+  - `name(self -> str)`
+
+### `app.commands.definitions`
+
+Path: `app/commands/definitions.py`
+
+#### Module Functions
+
+- `_add(app, cmd: PC.AddDefinition -> CommandResult)`
+- `_update(app, cmd: PC.UpdateDefinition -> CommandResult)`
+- `_remove(app, cmd: PC.RemoveDefinition -> CommandResult)`
+- `_rename(app, cmd: PC.RenameDefinition -> CommandResult)`
+
+### `app.commands.delete`
+
+Path: `app/commands/delete.py`
+
+#### Classes
+
+- **DeleteElementsCommand** (Command) (line 8)
+  - Seçili elemanları sil. Node bağlı ise reddedilir.
+  - `__init__(self, scene, elements: list)`
+    - Parameters
+  - `execute(self)`
+    - Elemanları sil.
+  - `undo(self)`
+    - Silinenleri geri koy.
+  - `name(self -> str)`
+
+### `app.commands.edit_controller`
+
+Path: `app/commands/edit_controller.py`
+
+#### Classes
+
+- **EditResult** (line 18)
+- **EditController** (line 25)
+  - Panel ↔ Scene köprüsü.
+  - `__init__(self, engine, max_history: int=100)`
+  - `scene(self)`
+  - `create(self, element_type: str, values: dict[str, Any] -> EditResult)`
+  - `update(self, element, new_values: dict[str, Any] -> EditResult)`
+  - `delete(self, elements -> EditResult)`
+  - `undo(self -> EditResult)`
+  - `redo(self -> EditResult)`
+  - `_factory_for(self, et: str)`
+  - `_build_node(self, v)`
+  - `_build_frame(self, v)`
+  - `_build_link(self, v)`
+  - `_build_area(self, v)`
+  - `_build_polygon(self, v)`
+  - `_read_field(self, element, field: str)`
+  - `_apply_field(self, element, field: str, value)`
+  - `_resolve_node(self, ref)`
+    - ref: Node | unique_id (int) | label (str) | UUID (str)
+  - `_resolve_section(self, name)`
+  - `_is_same(self, a, b)`
+  - `_refresh(self)`
+  - `bulk_update(self, elements, changes -> EditResult)`
+    - Birden fazla elemente aynı anda alan uygula.
+  - `_read_field_safe(self, element, field)`
+    - Bulk update için güvenli field okuma.
+
+### `app.commands.elements`
+
+Path: `app/commands/elements.py`
+
+#### Module Functions
+
+- `_delete_selected(app, cmd: PC.DeleteSelected -> CommandResult)`
+- `_update_fields(app, cmd: PC.UpdateElementFields -> CommandResult)`
+- `_delete(app, cmd: PC.DeleteElements -> CommandResult)`
+- `_add_node(app, cmd: PC.AddNode -> CommandResult)`
+- `_add_frame(app, cmd: PC.AddFrame -> CommandResult)`
+- `_f_add_node(args: list[str])`
+- `_f_delete_selected(args: list[str])`
+
+### `app.commands.engine_flags`
+
+Path: `app/commands/engine_flags.py`
+
+#### Module Functions
+
+- `_hover(app, cmd: PC.HoverChanged -> CommandResult)`
+- `_start_draw(app, cmd: PC.StartDrawTool -> CommandResult)`
+- `_start_plane(app, cmd: PC.StartPlaneTool -> CommandResult)`
+- `_undo(app, cmd: PC.Undo -> CommandResult)`
+- `_redo(app, cmd: PC.Redo -> CommandResult)`
+- `_toggle_2d(app, cmd: PC.Toggle2D -> CommandResult)`
+- `_loads(app, cmd: PC.ToggleLoadsVisible -> CommandResult)`
+- `_local_axes(app, cmd: PC.ToggleLocalAxes -> CommandResult)`
+- `_render_flag(app, cmd: PC.ToggleRenderFlag -> CommandResult)`
+- `_render_mode(app, cmd: PC.SetRenderMode -> CommandResult)`
+- `_f_set_render_mode(args: list[str])`
+- `_f_toggle_flag(args: list[str])`
+- `_f_start_draw(args: list[str])`
+
+### `app.commands.file_ops`
+
+Path: `app/commands/file_ops.py`
+
+#### Module Functions
+
+- `_new(app, cmd: PC.NewProject -> CommandResult)`
+- `_open(app, cmd: PC.OpenProject -> CommandResult)`
+- `_save(app, cmd: PC.SaveProject -> CommandResult)`
+- `_save_as(app, cmd: PC.SaveProjectAs -> CommandResult)`
+- `_close(app, cmd: PC.CloseProject -> CommandResult)`
+- `_import_s2k(app, cmd: PC.ImportS2K -> CommandResult)`
+- `_export_s2k(app, cmd: PC.ExportS2K -> CommandResult)`
+- `_f_open(args: list[str])`
+- `_f_save(args: list[str])`
+- `_f_save_as(args: list[str])`
+- `_f_import_s2k(args: list[str])`
+- `_f_export_s2k(args: list[str])`
+
+### `app.commands.project`
+
+Path: `app/commands/project.py`
+
+#### Module Functions
+
+- `_replace(app, cmd: PC.ReplaceProject -> CommandResult)`
+- `_set_unit(app, cmd: PC.SetUnitSystem -> CommandResult)`
+- `_f_set_unit(args: list[str])`
+
+### `app.commands.project_commands`
+
+Path: `app/commands/project_commands.py`
+
+#### Classes
+
+- **AddDefinition** (line 9)
+- **UpdateDefinition** (line 16)
+- **RemoveDefinition** (line 24)
+- **RenameDefinition** (line 30)
+- **UpdateElementFields** (line 38)
+- **DeleteElements** (line 44)
+- **AddNode** (line 49)
+- **AddFrame** (line 58)
+- **ReplaceProject** (line 68)
+- **SetUnitSystem** (line 74)
+- **FitView** (line 81)
+- **ZoomExtents** (line 85)
+- **SetCameraPreset** (line 89)
+- **Toggle2D** (line 94)
+- **ToggleLoadsVisible** (line 98)
+- **ToggleLocalAxes** (line 103)
+- **ClearSelection** (line 107)
+- **SelectElements** (line 111)
+- **RefreshGeometry** (line 117)
+- **ShowOnly** (line 121)
+- **HideElements** (line 126)
+- **ShowEntireModel** (line 131)
+- **ToggleRenderFlag** (line 134)
+- **SetRenderMode** (line 139)
+- **ToggleRenderMode** (line 143)
+- **DeleteSelected** (line 148)
+- **StartDrawTool** (line 153)
+- **StartPlaneTool** (line 158)
+- **Undo** (line 163)
+- **Redo** (line 168)
+- **HoverChanged** (line 172)
+- **NewProject** (line 176)
+- **OpenProject** (line 179)
+- **SaveProject** (line 183)
+- **SaveProjectAs** (line 187)
+- **CloseProject** (line 191)
+- **ImportS2K** (line 194)
+- **ExportS2K** (line 199)
+
+### `app.commands.registry`
+
+Path: `app/commands/registry.py`
+
+#### Classes
+
+- **CommandRegistry** (line 36)
+  - `__init__(self -> None)`
+  - `register(self, cmd_type: type, handler: CommandHandler -> None)`
+  - `get_usage(self, name: str -> str)`
+  - `get_command_catalog(self -> list[tuple[str, str]])`
+    - (komut_adi, kullanim_imzasi) çiftlerini alfabetik döndürür.
+  - `add_factory(self, name: str, factory: CommandFactory -> None)`
+  - `list_names(self -> list[str])`
+  - `list_types(self -> list[type])`
+  - `has_factory(self, name: str -> bool)`
+  - `has_handler(self, cmd_type: type -> bool)`
+  - `build_by_name(self, name: str, args: list[str] -> Any | None)`
+  - `dispatch(self, app: 'CadApp', cmd: Any -> CommandResult)`
+  - `conflicts(self -> list[str])`
+
+#### Module Functions
+
+- `_snake(name: str -> str)`
+- `_no_args_factory(cmd_type: type -> CommandFactory)`
+- `command(cmd_type: type -> Callable[[CommandHandler], CommandHandler])`
+- `factory(name: str -> Callable[[CommandFactory], CommandFactory])`
+- `_discover_modules( -> list[str])`
+- `_import_command_modules( -> None)`
+- `build_registry( -> CommandRegistry)`
+- `_auto_factory(cmd_type: type -> tuple[CommandFactory, str])`
+  - Dataclass alanlarından otomatik CLI parser ve kullanım imzası üretir.
+
+### `app.commands.result`
+
+Path: `app/commands/result.py`
+
+#### Classes
+
+- **CommandResult** (line 8)
+
+### `app.commands.selection`
+
+Path: `app/commands/selection.py`
+
+#### Module Functions
+
+- `_clear(app, cmd: PC.ClearSelection -> CommandResult)`
+- `_select(app, cmd: PC.SelectElements -> CommandResult)`
+- `_f_select(args: list[str])`
+
+### `app.commands.signals`
+
+Path: `app/commands/signals.py`
+
+#### Module Functions
+
+- `_refresh(app, cmd: PC.RefreshGeometry -> CommandResult)`
+
+### `app.commands.update`
+
+Path: `app/commands/update.py`
+
+#### Classes
+
+- **UpdateElementCommand** (Command) (line 11)
+  - Bir elemanın alanlarını değiştirir.
+  - `__init__(self, element, before: dict[str, Any], after: dict[str, Any], setter: Callable[[Any, str, Any], None])`
+  - `execute(self)`
+  - `undo(self)`
+  - `name(self -> str)`
+
+### `app.commands.visibility`
+
+Path: `app/commands/visibility.py`
+
+#### Module Functions
+
+- `_show_only(app, cmd: PC.ShowOnly -> CommandResult)`
+- `_hide(app, cmd: PC.HideElements -> CommandResult)`
+- `_show_all(app, cmd: PC.ShowEntireModel -> CommandResult)`
+- `_f_show_only(args: list[str])`
+- `_f_hide(args: list[str])`
+
+### `app.glfw_debug_overlay`
+
+Path: `app/glfw_debug_overlay.py`
+
+#### Classes
+
+- **DebugButton** (line 39)
+  - `__init__(self, label: str, ndc_rect: tuple[float, float, float, float], color: tuple[float, float, float], on_click: Callable[[], None])`
+  - `contains(self, nx: float, ny: float -> bool)`
+- **GlfwDebugOverlay** (line 53)
+  - `__init__(self, width: int, height: int)`
+  - `_init_gl(self -> None)`
+  - `_trigger_engine(self -> None)`
+  - `_trigger_ui(self -> None)`
+  - `_trigger_test(self -> None)`
+  - `log(self, msg: str -> None)`
+  - `_to_ndc(self, x: float, y: float -> tuple[float, float])`
+  - `resize(self, w: int, h: int -> None)`
+  - `on_mouse_move(self, x: float, y: float -> None)`
+  - `on_mouse_button(self, button: int, action: int, mods: int -> bool)`
+  - `on_scroll(self, xoff: float, yoff: float -> None)`
+  - `on_key(self, key: int, scancode: int, action: int, mods: int -> bool)`
+  - `render(self, clear_bg: bool=True -> None)`
+  - `_draw_rect(self, x0: float, y0: float, x1: float, y1: float, color: tuple[float, float, float] -> None)`
+  - `_draw_border(self, x0: float, y0: float, x1: float, y1: float, color: tuple[float, float, float] -> None)`
+  - `_draw(self, verts: list[float], mode: int, color: tuple[float, float, float] -> None)`
+  - `cleanup(self -> None)`
+
+### `app.input_bindings`
+
+Path: `app/input_bindings.py`
+
+#### Module Functions
+
+- `build_bindings(command_queue -> dict)`
 
 ### `core.camera`
 
@@ -502,194 +759,6 @@ Path: `core/camera_controller.py`
   - `handle_scroll(self, delta -> bool)`
   - `_pick_at_viewport(self, vp, x_px, y_px)`
   - `_on_escape(self)`
-
-### `core.commands`
-
-Path: `core/commands/__init__.py`
-
-### `core.commands.base`
-
-Path: `core/commands/base.py`
-
-#### Classes
-
-- **Command** (ABC) (line 10)
-  - Tüm komutların arayüzü.
-  - `execute(self)`
-    - İşlemi uygula.
-  - `undo(self)`
-    - İşlemi geri al.
-  - `redo(self)`
-    - Yeniden uygula (varsayılan: execute).
-  - `name(self -> str)`
-    - Debug/log için okunabilir isim.
-- **CommandManager** (line 31)
-  - Komut geçmişi ve undo/redo yönetimi.
-  - `__init__(self, max_history: int=100)`
-  - `execute(self, command: Command -> bool)`
-    - Komutu çalıştır ve geçmişe ekle.
-  - `undo(self -> bool)`
-    - Son komutu geri al.
-  - `redo(self -> bool)`
-    - Son geri alınanı yeniden uygula.
-  - `can_undo(self -> bool)`
-  - `can_redo(self -> bool)`
-  - `clear(self)`
-    - Tüm geçmişi temizle.
-  - `add_listener(self, callback)`
-    - Komut sonrası tetiklenecek callback ekle.
-  - `_notify(self)`
-
-### `core.commands.bulk_update`
-
-Path: `core/commands/bulk_update.py`
-
-BulkUpdateCommand — Birden fazla elemana aynı anda alan uygular.
-
-- execute(): plan'daki tüm (element, after) çiftlerini uygular
-- undo():    ters sırayla before değerlerini geri koyar
-- Tek bir Command → CommandManager'da tek undo/redo kaydı
-
-#### Classes
-
-- **BulkUpdateCommand** (Command) (line 19)
-  - plan: List[(element, before_dict, after_dict)]
-  - `__init__(self, plan: list[tuple[Any, dict[str, Any], dict[str, Any]]], setter: Callable[[Any, str, Any], None])`
-  - `execute(self)`
-    - Tüm alanları sırayla uygula.
-  - `undo(self)`
-    - Ters sırayla eski değerleri geri koy.
-  - `name(self -> str)`
-
-### `core.commands.command_queue`
-
-Path: `core/commands/command_queue.py`
-
-UI thread → CadApp.tick arasında komut kuyruğu.
-
-Thread-safe. UI Host kendi thread'inden put() yapar, CadApp ana thread'de
-drain() yapar ve komutları uygular.
-
-#### Classes
-
-- **CommandQueue** (line 16)
-  - `__init__(self -> None)`
-  - `put(self, command: 'Command' -> None)`
-  - `drain(self -> list['Command'])`
-
-### `core.commands.create`
-
-Path: `core/commands/create.py`
-
-#### Classes
-
-- **CreateElementCommand** (Command) (line 11)
-  - Yeni bir eleman oluşturup scene'e ekler.
-  - `__init__(self, scene, element_type: str, factory: Callable[[dict[str, Any]], Any], values: dict[str, Any])`
-  - `execute(self)`
-  - `undo(self)`
-  - `name(self -> str)`
-
-### `core.commands.delete`
-
-Path: `core/commands/delete.py`
-
-#### Classes
-
-- **DeleteElementsCommand** (Command) (line 8)
-  - Seçili elemanları sil. Node bağlı ise reddedilir.
-  - `__init__(self, scene, elements: list)`
-    - Parameters
-  - `execute(self)`
-    - Elemanları sil.
-  - `undo(self)`
-    - Silinenleri geri koy.
-  - `name(self -> str)`
-
-### `core.commands.project_commands`
-
-Path: `core/commands/project_commands.py`
-
-#### Classes
-
-- **AddDefinition** (line 9)
-- **UpdateDefinition** (line 16)
-- **RemoveDefinition** (line 24)
-- **RenameDefinition** (line 30)
-- **UpdateElementFields** (line 38)
-- **DeleteElements** (line 44)
-- **AddNode** (line 49)
-- **AddFrame** (line 58)
-- **ReplaceProject** (line 68)
-- **SetUnitSystem** (line 74)
-- **FitView** (line 81)
-- **ZoomExtents** (line 85)
-- **SetCameraPreset** (line 89)
-- **Toggle2D** (line 94)
-- **ToggleLoadsVisible** (line 98)
-- **ToggleLocalAxes** (line 103)
-- **ClearSelection** (line 107)
-- **SelectElements** (line 111)
-- **RefreshGeometry** (line 117)
-- **ShowOnly** (line 121)
-- **HideElements** (line 126)
-- **ShowEntireModel** (line 131)
-- **ToggleRenderFlag** (line 134)
-- **SetRenderMode** (line 139)
-- **ToggleRenderMode** (line 143)
-- **DeleteSelected** (line 148)
-- **StartDrawTool** (line 153)
-- **StartPlaneTool** (line 158)
-- **Undo** (line 163)
-- **Redo** (line 168)
-- **HoverChanged** (line 172)
-
-### `core.commands.update`
-
-Path: `core/commands/update.py`
-
-#### Classes
-
-- **UpdateElementCommand** (Command) (line 11)
-  - Bir elemanın alanlarını değiştirir.
-  - `__init__(self, element, before: dict[str, Any], after: dict[str, Any], setter: Callable[[Any, str, Any], None])`
-  - `execute(self)`
-  - `undo(self)`
-  - `name(self -> str)`
-
-### `core.edit.edit_controller`
-
-Path: `core/edit/edit_controller.py`
-
-#### Classes
-
-- **EditResult** (line 18)
-- **EditController** (line 25)
-  - Panel ↔ Scene köprüsü.
-  - `__init__(self, engine, max_history: int=100)`
-  - `scene(self)`
-  - `create(self, element_type: str, values: dict[str, Any] -> EditResult)`
-  - `update(self, element, new_values: dict[str, Any] -> EditResult)`
-  - `delete(self, elements -> EditResult)`
-  - `undo(self -> EditResult)`
-  - `redo(self -> EditResult)`
-  - `_factory_for(self, et: str)`
-  - `_build_node(self, v)`
-  - `_build_frame(self, v)`
-  - `_build_link(self, v)`
-  - `_build_area(self, v)`
-  - `_build_polygon(self, v)`
-  - `_read_field(self, element, field: str)`
-  - `_apply_field(self, element, field: str, value)`
-  - `_resolve_node(self, ref)`
-    - ref: Node | unique_id (int) | label (str) | UUID (str)
-  - `_resolve_section(self, name)`
-  - `_is_same(self, a, b)`
-  - `_refresh(self)`
-  - `bulk_update(self, elements, changes -> EditResult)`
-    - Birden fazla elemente aynı anda alan uygula.
-  - `_read_field_safe(self, element, field)`
-    - Bulk update için güvenli field okuma.
 
 ### `core.engine`
 
@@ -880,11 +949,13 @@ Path: `core/input_manager.py`
 - **InputState** (line 20)
 - **InputManager** (line 34)
   - `__init__(self)`
-  - `set_global_escape(self, fn -> None)`
-  - `set_capture_callbacks(self, mouse_fn, keyboard_fn -> None)`
+  - `set_global_escape(self, fn: Callable | None -> None)`
+  - `set_capture_callbacks(self, mouse_fn: Callable[[], bool] | bool, keyboard_fn: Callable[[], bool] | bool -> None)`
+  - `_is_mouse_captured(self -> bool)`
+  - `_is_keyboard_captured(self -> bool)`
   - `register(self, handler -> None)`
   - `set_fallback(self, handler -> None)`
-  - `bind(self, key: int, mods: int, action -> None)`
+  - `bind(self, key: int, mods: int, action: Callable -> None)`
   - `is_shift(self -> bool)`
   - `is_ctrl(self -> bool)`
   - `is_alt(self -> bool)`
@@ -892,14 +963,16 @@ Path: `core/input_manager.py`
   - `on_mouse_move(self, x: float, y: float -> None)`
   - `on_key(self, key: int, action: int, mods: int -> None)`
   - `on_scroll(self, delta: float -> None)`
-  - `_double_click(self, button: int, x: float, y: float -> bool)`
-  - `set_context_pick_handler(self, handler: Callable | None)`
-  - `dispatch_click(self, x, y, button)`
+  - `_check_double_click(self, button: int, x: float, y: float -> bool)`
+  - `set_context_pick_handler(self, handler: Callable | None -> None)`
+  - `dispatch_click(self, x: float, y: float, button: int -> bool)`
   - `dispatch_release(self, x: float, y: float, button: int -> bool)`
   - `dispatch_move(self, x: float, y: float, dx: float, dy: float -> bool)`
   - `dispatch_key(self, key: int, mods: int -> bool)`
   - `dispatch_scroll(self, delta: float -> bool)`
   - `dispatch_double_click(self, x: float, y: float, button: int -> bool)`
+  - `has_binding(self, key: int, mods: int -> bool)`
+  - `on_key(self, key: int, action: int, mods: int -> None)`
 
 ### `core.marquee_selector`
 
@@ -2091,9 +2164,7 @@ Path: `main.py`
 
 #### Module Functions
 
-- `_bootstrap( -> None)`
-- `_install_excepthook( -> None)`
-- `main()`
+- `main( -> int)`
 
 ### `plane`
 
@@ -4708,6 +4779,32 @@ Area to Frame paneli — standart layout + collapsing sections.
   - `_selected_frames_from_scene(self -> list[Frame])`
   - `_polygon_label(p: Polygon -> str)`
 
+### `ui.panels.command_panel`
+
+Path: `ui/panels/command_panel.py`
+
+#### Classes
+
+- **CommandPanel** (PanelBase) (line 12)
+  - `__init__(self, app=None, **overrides)`
+  - `append_info(self, text: str -> None)`
+  - `append_success(self, text: str -> None)`
+  - `append_warn(self, text: str -> None)`
+  - `append_error(self, text: str -> None)`
+  - `append_result(self, text: str, level: str='info' -> None)`
+  - `_append(self, text: str, color: tuple[float, float, float] -> None)`
+  - `open(self, **kwargs -> None)`
+  - `draw_header(self -> None)`
+  - `draw_settings(self -> None)`
+  - `_draw_output(self -> None)`
+  - `_draw_hint_bar(self -> None)`
+  - `_on_input_callback(self, data: imgui.InputTextCallbackData -> int)`
+  - `_draw_input(self -> None)`
+  - `_submit(self, raw: str -> None)`
+  - `_dispatch(self, text: str -> None)`
+  - `_get_catalog(self -> list[tuple[str, str]])`
+  - `_cmd_help(self, filter_prefix: str | None=None -> None)`
+
 ### `ui.panels.debug_panel`
 
 Path: `ui/panels/debug_panel.py`
@@ -5362,58 +5459,51 @@ Path: `ui/ui_host.py`
 
 #### Classes
 
-- **UIHost** (line 53)
-  - ImGui frame, dock space, panel yönetimi, event bridge.
+- **UIHost** (line 61)
   - `__init__(self, app: CadApp)`
-  - `on_panel_applied(self, panel -> None)`
-    - Panel Apply'a bastı. Kuyruğa sadece bir 'geometry refresh' at.
+  - `init_context(self -> None)`
   - `on_engine_ready(self -> None)`
-    - Engine hazır olduğunda çağrılır.
-  - `on_selection_changed(self, selected: list -> None)`
-  - `on_wind_analysis_done(self, key: str -> None)`
-  - `on_unit_changed(self -> None)`
   - `_init_registry(self -> None)`
   - `get_panel(self, name: str)`
   - `prepare_panel(self, name: str, panel -> None)`
   - `_resolve_context(self, keys: list[str] -> dict)`
   - `toggle_panel(self, name: str -> None)`
   - `open_panel(self, name: str, **kwargs -> None)`
-  - `frame(self, dt: float -> None)`
-  - `_reset_gl_state_for_imgui(self -> None)`
-  - `_draw_panels(self -> None)`
+  - `on_panel_applied(self, panel -> None)`
+  - `notify_key(self, key: int, action: int, mods: int -> None)`
+  - `draw_frame(self, dt: float -> None)`
+  - `_reset_gl_state(self -> None)`
   - `_draw_dock_space(self -> None)`
-  - `_forward_active_viewport_events(self -> None)`
-  - `_forward_imgui_events(self, panel -> None)`
-  - `_any_viewport_active(self -> bool)`
-  - `_forward_keys(self, eng -> None)`
-  - `_sync_input_state(eng, io, item_hovered: bool -> None)`
-  - `toggle_draw(self, sender=None)`
-  - `toggle_plane(self)`
-  - `toggle_local_axes(self)`
-  - `toggle_loads(self)`
-  - `open_viewport(self, preset: str)`
-  - `close_all_viewports(self)`
-  - `_consume_plane_completion(self)`
-  - `open_open_dialog(self)`
-  - `open_save_dialog(self)`
-  - `_build_view_menu(self)`
-  - `_toggle_row(self, label: str, key: str, current: bool -> None)`
-  - `close_app(self -> None)`
-  - `open_s2k_import(self -> None)`
-  - `open_s2k_export(self -> None)`
+  - `_forward_viewport_mouse_events(self -> None)`
+  - `_draw_marquee_overlays(self -> None)`
+  - `toggle_draw(self, sender: str | None=None -> None)`
+  - `toggle_plane(self -> None)`
   - `start_plane_3pt(self -> None)`
   - `start_plane_2pt_z(self -> None)`
   - `open_plane_source_dialog(self -> None)`
+  - `toggle_local_axes(self -> None)`
+  - `toggle_loads(self -> None)`
   - `toggle_view_2d(self -> None)`
-  - `shutdown(self -> None)`
-  - `on_viewport_panel_closed(self, panel -> None)`
-  - `_draw_marquee_overlays(self -> None)`
+  - `open_open_dialog(self -> None)`
+  - `open_save_dialog(self -> None)`
+  - `open_s2k_import(self -> None)`
+  - `open_s2k_export(self -> None)`
+  - `close_app(self -> None)`
+  - `_ensure_default_viewport(self -> None)`
+  - `open_viewport(self, preset: str)`
+  - `close_all_viewports(self -> None)`
+  - `on_viewport_panel_closed(self, panel: ViewportPanel -> None)`
+  - `_consume_plane_completion(self -> None)`
+  - `_build_view_menu(self)`
+  - `_toggle_row(self, label: str, key: str, current: bool -> None)`
   - `reset_all(self -> None)`
-    - Tüm sistemi (yeni proje, paneller, viewport'lar) sıfırdan kurar.
   - `on_project_changed(self -> None)`
-  - `get_interaction_debug_info(self -> dict)`
-    - Debug panel için anlık UI ve Viewport etkileşim bağlamını döndürür.
-  - `on_hover_changed(self, element_id: int -> None)`
+  - `on_selection_changed(self, selected: list -> None)`
+  - `on_unit_changed(self -> None)`
+  - `on_wind_analysis_done(self, key: str -> None)`
+  - `on_hover_changed(self, key: str -> None)`
+  - `log_command_result(self, text: str, level: str='info' -> None)`
+  - `shutdown(self -> None)`
 
 ### `ui.widgets.base_panel`
 
@@ -5618,6 +5708,22 @@ Model verisine YAZMAZ.
 - `_segment_intersects_rect(a, b, rect)`
 - `_element_intersects_rect(kind, points, rect)`
 
+### `ui.widgets.status_bar`
+
+Path: `ui/widgets/status_bar.py`
+
+#### Classes
+
+- **StatusBar** (line 10)
+  - `__init__(self, height: float=26.0 -> None)`
+  - `notify_key(self, key: int, action: int, mods: int -> None)`
+  - `notify_command(self, text: str -> None)`
+  - `draw(self, engine_connected: bool, app_status: str, mouse_pos: tuple[float, float], mouse_buttons: dict[int, bool], modifiers: int, fps: float -> None)`
+
+#### Module Functions
+
+- `_v4(r: float, g: float, b: float, a: float=1.0)`
+
 ### `ui.widgets.toolbar`
 
 Path: `ui/widgets/toolbar.py`
@@ -5706,101 +5812,118 @@ Path: `viewport/viewport_panel.py`
 
 ## Internal Dependencies
 
+- `app.cad_app` → `app.commands.command_queue`
 - `app.cad_app` → `core.units`
 - `app.cad_app` → `core.units`
 - `app.cad_app` → `domain.definition`
-- `app.cad_app` → `domain.definition`
 - `app.cad_app` → `domain.project`
 - `app.cad_app` → `domain.project`
-- `app.cad_app` → `tools.wind_manager`
 - `app.cad_app` → `logging_config`
+- `app.cad_app` → `tools.wind_manager`
 - `app.cad_window` → `logging_config`
+- `app.commands` → `app.commands.base`
+- `app.commands` → `app.commands.base`
+- `app.commands` → `app.commands.bulk_update`
+- `app.commands` → `app.commands.create`
+- `app.commands` → `app.commands.delete`
+- `app.commands` → `app.commands.update`
+- `app.commands.analysis` → `app.commands.analysis.mass_assembly`
+- `app.commands.analysis` → `app.commands.analysis.mass_assembly`
+- `app.commands.analysis` → `app.commands.analysis.mass_assembly`
+- `app.commands.analysis` → `app.commands.analysis.material_takeoff`
+- `app.commands.analysis` → `app.commands.analysis.material_takeoff`
+- `app.commands.analysis` → `app.commands.analysis.solver`
+- `app.commands.analysis` → `app.commands.analysis.solver`
+- `app.commands.analysis` → `app.commands.analysis.stiffness_assembly`
+- `app.commands.analysis` → `app.commands.analysis.stiffness_assembly`
+- `app.commands.analysis` → `app.commands.analysis.stiffness_assembly`
+- `app.commands.analysis` → `app.commands.analysis.stiffness_assembly`
+- `app.commands.analysis` → `app.commands.analysis.structuralanalysis`
+- `app.commands.analysis` → `app.commands.analysis.structuralanalysis`
+- `app.commands.analysis.mass_assembly` → `app.commands.analysis.stiffness_assembly`
+- `app.commands.analysis.mass_assembly` → `core.units`
+- `app.commands.analysis.mass_assembly` → `core.units`
+- `app.commands.analysis.mass_assembly` → `domain.definition`
+- `app.commands.analysis.mass_assembly` → `logging_config`
+- `app.commands.analysis.material_takeoff` → `core.units`
+- `app.commands.analysis.material_takeoff` → `core.units`
+- `app.commands.analysis.material_takeoff` → `domain.element`
+- `app.commands.analysis.material_takeoff` → `domain.element`
+- `app.commands.analysis.material_takeoff` → `domain.math_model`
+- `app.commands.analysis.material_takeoff` → `logging_config`
+- `app.commands.analysis.modal_analysis` → `core.units`
+- `app.commands.analysis.modal_analysis` → `app.commands.analysis.solver`
+- `app.commands.analysis.run` → `app.commands.analysis.material_takeoff`
+- `app.commands.analysis.run` → `app.commands.analysis.material_takeoff`
+- `app.commands.analysis.run` → `app.commands.analysis.modal_analysis`
+- `app.commands.analysis.run` → `app.commands.analysis.structuralanalysis`
+- `app.commands.analysis.run` → `app.commands.analysis.structuralanalysis`
+- `app.commands.analysis.spectrum` → `logging_config`
+- `app.commands.analysis.structuralanalysis` → `app.commands.analysis.mass_assembly`
+- `app.commands.analysis.structuralanalysis` → `app.commands.analysis.mass_assembly`
+- `app.commands.analysis.structuralanalysis` → `app.commands.analysis.solver`
+- `app.commands.analysis.structuralanalysis` → `app.commands.analysis.solver`
+- `app.commands.analysis.structuralanalysis` → `app.commands.analysis.stiffness_assembly`
+- `app.commands.analysis.structuralanalysis` → `app.commands.analysis.stiffness_assembly`
+- `app.commands.analysis.structuralanalysis` → `app.commands.analysis.unit_guard`
+- `app.commands.analysis.unit_guard` → `core.units`
+- `app.commands.analysis.unit_guard` → `core.units`
+- `app.commands.analysis.validation` → `core.units`
+- `app.commands.base` → `logging_config`
+- `app.commands.bulk_update` → `app.commands.base`
+- `app.commands.bulk_update` → `logging_config`
+- `app.commands.camera` → `app.commands.registry`
+- `app.commands.camera` → `app.commands.registry`
 - `app.commands.camera` → `app.commands.result`
-- `app.commands.camera` → `core.commands.project_commands`
-- `app.commands.definitions` → `core.commands.project_commands`
+- `app.commands.camera` → `app.commands.project_commands`
+- `app.commands.create` → `app.commands.base`
+- `app.commands.create` → `logging_config`
+- `app.commands.definitions` → `app.commands.project_commands`
 - `app.commands.definitions` → `app.commands.result`
+- `app.commands.definitions` → `app.commands.registry`
+- `app.commands.delete` → `app.commands.base`
+- `app.commands.delete` → `logging_config`
+- `app.commands.edit_controller` → `app.commands`
+- `app.commands.edit_controller` → `app.commands`
+- `app.commands.edit_controller` → `app.commands`
+- `app.commands.edit_controller` → `app.commands`
+- `app.commands.edit_controller` → `app.commands`
+- `app.commands.edit_controller` → `logging_config`
+- `app.commands.elements` → `app.commands.registry`
+- `app.commands.elements` → `app.commands.registry`
 - `app.commands.elements` → `app.commands.result`
-- `app.commands.elements` → `core.commands.project_commands`
+- `app.commands.elements` → `app.commands.project_commands`
+- `app.commands.engine_flags` → `app.commands.registry`
+- `app.commands.engine_flags` → `app.commands.registry`
 - `app.commands.engine_flags` → `app.commands.result`
-- `app.commands.engine_flags` → `core.commands.project_commands`
+- `app.commands.engine_flags` → `app.commands.project_commands`
+- `app.commands.file_ops` → `app.commands.registry`
+- `app.commands.file_ops` → `app.commands.registry`
+- `app.commands.file_ops` → `app.commands.result`
+- `app.commands.file_ops` → `app.commands.project_commands`
+- `app.commands.project` → `app.commands.registry`
+- `app.commands.project` → `app.commands.registry`
 - `app.commands.project` → `app.commands.result`
-- `app.commands.project` → `core.commands.project_commands`
-- `app.commands.registry` → `core.commands.base`
+- `app.commands.project` → `app.commands.project_commands`
 - `app.commands.registry` → `app.commands.result`
+- `app.commands.selection` → `app.commands.registry`
+- `app.commands.selection` → `app.commands.registry`
 - `app.commands.selection` → `app.commands.result`
-- `app.commands.selection` → `core.commands.project_commands`
+- `app.commands.selection` → `app.commands.project_commands`
+- `app.commands.signals` → `app.commands.registry`
 - `app.commands.signals` → `app.commands.result`
-- `app.commands.signals` → `core.commands.project_commands`
+- `app.commands.signals` → `app.commands.project_commands`
+- `app.commands.update` → `app.commands.base`
+- `app.commands.update` → `logging_config`
+- `app.commands.visibility` → `app.commands.registry`
+- `app.commands.visibility` → `app.commands.registry`
 - `app.commands.visibility` → `app.commands.result`
-- `app.commands.visibility` → `core.commands.project_commands`
-- `app.input_bindings` → `core.commands.project_commands`
-- `core.analysis` → `core.analysis.mass_assembly`
-- `core.analysis` → `core.analysis.mass_assembly`
-- `core.analysis` → `core.analysis.mass_assembly`
-- `core.analysis` → `core.analysis.material_takeoff`
-- `core.analysis` → `core.analysis.material_takeoff`
-- `core.analysis` → `core.analysis.solver`
-- `core.analysis` → `core.analysis.solver`
-- `core.analysis` → `core.analysis.stiffness_assembly`
-- `core.analysis` → `core.analysis.stiffness_assembly`
-- `core.analysis` → `core.analysis.stiffness_assembly`
-- `core.analysis` → `core.analysis.stiffness_assembly`
-- `core.analysis` → `core.analysis.structuralanalysis`
-- `core.analysis` → `core.analysis.structuralanalysis`
-- `core.analysis.mass_assembly` → `core.analysis.stiffness_assembly`
-- `core.analysis.mass_assembly` → `core.units`
-- `core.analysis.mass_assembly` → `core.units`
-- `core.analysis.mass_assembly` → `domain.definition`
-- `core.analysis.mass_assembly` → `logging_config`
-- `core.analysis.material_takeoff` → `core.units`
-- `core.analysis.material_takeoff` → `core.units`
-- `core.analysis.material_takeoff` → `domain.element`
-- `core.analysis.material_takeoff` → `domain.element`
-- `core.analysis.material_takeoff` → `domain.math_model`
-- `core.analysis.material_takeoff` → `logging_config`
-- `core.analysis.modal_analysis` → `core.units`
-- `core.analysis.modal_analysis` → `core.analysis.solver`
-- `core.analysis.run` → `core.analysis.material_takeoff`
-- `core.analysis.run` → `core.analysis.material_takeoff`
-- `core.analysis.run` → `core.analysis.modal_analysis`
-- `core.analysis.run` → `core.analysis.structuralanalysis`
-- `core.analysis.run` → `core.analysis.structuralanalysis`
-- `core.analysis.spectrum` → `logging_config`
-- `core.analysis.structuralanalysis` → `core.analysis.mass_assembly`
-- `core.analysis.structuralanalysis` → `core.analysis.mass_assembly`
-- `core.analysis.structuralanalysis` → `core.analysis.solver`
-- `core.analysis.structuralanalysis` → `core.analysis.solver`
-- `core.analysis.structuralanalysis` → `core.analysis.stiffness_assembly`
-- `core.analysis.structuralanalysis` → `core.analysis.stiffness_assembly`
-- `core.analysis.structuralanalysis` → `core.analysis.unit_guard`
-- `core.analysis.unit_guard` → `core.units`
-- `core.analysis.unit_guard` → `core.units`
-- `core.analysis.validation` → `core.units`
+- `app.commands.visibility` → `app.commands.project_commands`
+- `app.input_bindings` → `app.commands.project_commands`
 - `core.camera` → `logging_config`
 - `core.camera_controller` → `core.input_manager`
 - `core.camera_controller` → `core.input_manager`
 - `core.camera_controller` → `core.input_manager`
-- `core.commands` → `core.commands.base`
-- `core.commands` → `core.commands.base`
-- `core.commands` → `core.commands.bulk_update`
-- `core.commands` → `core.commands.create`
-- `core.commands` → `core.commands.delete`
-- `core.commands` → `core.commands.update`
-- `core.commands.base` → `logging_config`
-- `core.commands.bulk_update` → `core.commands.base`
-- `core.commands.bulk_update` → `logging_config`
-- `core.commands.create` → `core.commands.base`
-- `core.commands.create` → `logging_config`
-- `core.commands.delete` → `core.commands.base`
-- `core.commands.delete` → `logging_config`
-- `core.commands.update` → `core.commands.base`
-- `core.commands.update` → `logging_config`
-- `core.edit.edit_controller` → `core.commands`
-- `core.edit.edit_controller` → `core.commands`
-- `core.edit.edit_controller` → `core.commands`
-- `core.edit.edit_controller` → `core.commands`
-- `core.edit.edit_controller` → `core.commands`
-- `core.edit.edit_controller` → `logging_config`
 - `core.engine` → `core.input_manager`
 - `core.engine` → `core.engine.gl_context`
 - `core.engine` → `core.engine.renderer_pipeline`
@@ -5814,8 +5937,8 @@ Path: `viewport/viewport_panel.py`
 - `core.engine.camera_rig` → `core.camera`
 - `core.engine.gl_context` → `render.shaderprogram`
 - `core.engine.gl_context` → `logging_config`
-- `core.engine.hover_system` → `core.commands.project_commands`
-- `core.engine.plane_mode` → `core.commands.project_commands`
+- `core.engine.hover_system` → `app.commands.project_commands`
+- `core.engine.plane_mode` → `app.commands.project_commands`
 - `core.engine.renderer_pipeline` → `core.mrt`
 - `core.engine.renderer_pipeline` → `render.interactionrenderer`
 - `core.engine.renderer_pipeline` → `render.mathmodelrenderer`
@@ -5825,7 +5948,7 @@ Path: `viewport/viewport_panel.py`
 - `core.engine.tools_registry` → `core.selection_manager`
 - `core.engine.tools_registry` → `core.selection_policy`
 - `core.engine.tools_registry` → `core.marquee_selector`
-- `core.engine.tools_registry` → `core.edit.edit_controller`
+- `core.engine.tools_registry` → `app.commands.edit_controller`
 - `core.engine.tools_registry` → `tools.draw_manager`
 - `core.engine.tools_registry` → `plane.plane_creation_tool`
 - `core.engine.tools_registry` → `render.snapsquare`
@@ -5838,8 +5961,8 @@ Path: `viewport/viewport_panel.py`
 - `core.marquee_selector` → `domain.line`
 - `core.marquee_selector` → `domain.polygon`
 - `core.mrt` → `logging_config`
-- `core.selection_manager` → `core.commands`
-- `core.selection_manager` → `core.commands`
+- `core.selection_manager` → `app.commands`
+- `core.selection_manager` → `app.commands`
 - `core.selection_manager` → `core.selection_policy`
 - `core.selection_policy` → `logging_config`
 - `data.materials_catalog` → `data.enums`
@@ -6091,7 +6214,10 @@ Path: `viewport/viewport_panel.py`
 - `loads.wind_zone_distribution_service` → `domain.definition`
 - `loads.wind_zone_distribution_service` → `domain.definition`
 - `loads.wind_zone_distribution_service` → `logging_config`
+- `main` → `app.cad_app`
+- `main` → `app.cad_window`
 - `main` → `logging_config`
+- `main` → `ui.ui_host`
 - `plane` → `plane.plane`
 - `plane` → `plane.plane`
 - `plane` → `plane.plane`
@@ -6423,9 +6549,11 @@ Path: `viewport/viewport_panel.py`
 - `ui.panels.area_to_frame_panel` → `logging_config`
 - `ui.panels.area_to_frame_panel` → `ui.base.panel_base`
 - `ui.panels.area_to_frame_panel` → `ui.base.panel_base`
+- `ui.panels.command_panel` → `ui.base.panel_base`
+- `ui.panels.command_panel` → `ui.base.panel_base`
 - `ui.panels.debug_panel` → `ui.base.panel_base`
 - `ui.panels.debug_panel` → `ui.base.panel_base`
-- `ui.panels.definition_panel` → `core.commands.project_commands`
+- `ui.panels.definition_panel` → `app.commands.project_commands`
 - `ui.panels.definition_panel` → `data.enums`
 - `ui.panels.definition_panel` → `data.enums`
 - `ui.panels.definition_panel` → `data.enums`
@@ -6456,7 +6584,7 @@ Path: `viewport/viewport_panel.py`
 - `ui.panels.frame_load_panel` → `domain.element`
 - `ui.panels.frame_load_panel` → `ui.base.panel_base`
 - `ui.panels.frame_load_panel` → `ui.base.panel_base`
-- `ui.panels.frame_load_panel` → `core.commands.project_commands`
+- `ui.panels.frame_load_panel` → `app.commands.project_commands`
 - `ui.panels.frame_preview_panel` → `render.base_renderer`
 - `ui.panels.frame_preview_panel` → `render.offscreen_fbo`
 - `ui.panels.frame_preview_panel` → `core.camera`
@@ -6465,7 +6593,7 @@ Path: `viewport/viewport_panel.py`
 - `ui.panels.grid_panel` → `domain.grid`
 - `ui.panels.grid_panel` → `ui.base.panel_base`
 - `ui.panels.grid_panel` → `ui.base.panel_base`
-- `ui.panels.joint_load_panel` → `core.commands.project_commands`
+- `ui.panels.joint_load_panel` → `app.commands.project_commands`
 - `ui.panels.joint_load_panel` → `domain.definition`
 - `ui.panels.joint_load_panel` → `domain.element`
 - `ui.panels.joint_load_panel` → `logging_config`
@@ -6490,12 +6618,12 @@ Path: `viewport/viewport_panel.py`
 - `ui.panels.load_display_panel` → `logging_config`
 - `ui.panels.load_display_panel` → `ui.base.panel_base`
 - `ui.panels.load_display_panel` → `ui.base.panel_base`
-- `ui.panels.load_manager_panel` → `core.commands.project_commands`
+- `ui.panels.load_manager_panel` → `app.commands.project_commands`
 - `ui.panels.load_manager_panel` → `domain.definition`
 - `ui.panels.load_manager_panel` → `logging_config`
 - `ui.panels.load_manager_panel` → `ui.base.panel_base`
 - `ui.panels.load_manager_panel` → `ui.base.panel_base`
-- `ui.panels.material_panel` → `core.commands.project_commands`
+- `ui.panels.material_panel` → `app.commands.project_commands`
 - `ui.panels.material_panel` → `domain.definition`
 - `ui.panels.material_panel` → `data.enums`
 - `ui.panels.material_panel` → `ui.base.panel_base`
@@ -6516,9 +6644,9 @@ Path: `viewport/viewport_panel.py`
 - `ui.panels.polygon_properties_panel` → `domain.definition`
 - `ui.panels.polygon_properties_panel` → `domain.definition`
 - `ui.panels.polygon_properties_panel` → `logging_config`
-- `ui.panels.project_panels` → `core.analysis.run`
-- `ui.panels.project_panels` → `core.analysis.run`
-- `ui.panels.project_panels` → `core.analysis.run`
+- `ui.panels.project_panels` → `app.commands.analysis.run`
+- `ui.panels.project_panels` → `app.commands.analysis.run`
+- `ui.panels.project_panels` → `app.commands.analysis.run`
 - `ui.panels.project_panels` → `logging_config`
 - `ui.panels.project_panels` → `ui.widgets.base_panel`
 - `ui.panels.project_settings_panel` → `ui.widgets.base_panel`
@@ -6577,18 +6705,25 @@ Path: `viewport/viewport_panel.py`
 - `ui.panels.wind_analysis_panel` → `domain.definition`
 - `ui.registry` → `ui.base.panel_base`
 - `ui.registry` → `ui.base.panel_base`
-- `ui.ui_host` → `core.commands.project_commands`
-- `ui.ui_host` → `core.commands.command_queue`
-- `ui.ui_host` → `core.commands.project_commands`
+- `ui.ui_host` → `app.commands.project_commands`
+- `ui.ui_host` → `app.commands.project_commands`
 - `ui.ui_host` → `domain.element`
 - `ui.ui_host` → `domain.element`
 - `ui.ui_host` → `domain.element`
 - `ui.ui_host` → `domain.element`
 - `ui.ui_host` → `domain.polygon`
+- `ui.ui_host` → `inspector`
 - `ui.ui_host` → `logging_config`
+- `ui.ui_host` → `plane.plane_source_dialog`
 - `ui.ui_host` → `ui.actions_registry`
 - `ui.ui_host` → `ui.actions_registry`
 - `ui.ui_host` → `ui.actions_registry`
+- `ui.ui_host` → `ui.base.panel_base`
+- `ui.ui_host` → `ui.registry`
+- `ui.ui_host` → `ui.registry`
+- `ui.ui_host` → `ui.widgets.file_dialog`
+- `ui.ui_host` → `ui.widgets.status_bar`
+- `ui.ui_host` → `ui.widgets.toolbar`
 - `ui.ui_host` → `viewport.viewport_panel`
 - `ui.widgets.plane_2d_loads` → `domain.definition`
 - `ui.widgets.plane_2d_view` → `plane.plane`
@@ -6609,11 +6744,11 @@ Path: `viewport/viewport_panel.py`
 
 ## Inheritance
 
-- `core.commands.base.Command` extends `ABC`
-- `core.commands.bulk_update.BulkUpdateCommand` extends `Command`
-- `core.commands.create.CreateElementCommand` extends `Command`
-- `core.commands.delete.DeleteElementsCommand` extends `Command`
-- `core.commands.update.UpdateElementCommand` extends `Command`
+- `app.commands.base.Command` extends `ABC`
+- `app.commands.bulk_update.BulkUpdateCommand` extends `Command`
+- `app.commands.create.CreateElementCommand` extends `Command`
+- `app.commands.delete.DeleteElementsCommand` extends `Command`
+- `app.commands.update.UpdateElementCommand` extends `Command`
 - `core.selection_policy.SelectionMode` extends `Enum`
 - `core.units.Dimension` extends `Enum`
 - `core.units.UnitSystem` extends `Enum`
@@ -6684,6 +6819,7 @@ Path: `viewport/viewport_panel.py`
 - `structload.windcalc.zone_generator.ZoneKind` extends `Enum`
 - `ui.base.panel_base.Category` extends `StrEnum`
 - `ui.panels.area_to_frame_panel.AreaToFramePanel` extends `PanelBase`
+- `ui.panels.command_panel.CommandPanel` extends `PanelBase`
 - `ui.panels.debug_panel.DebugPanel` extends `PanelBase`
 - `ui.panels.definition_panel.DefinitionPanel` extends `PanelBase`
 - `ui.panels.frame_load_panel.FrameLoadPanel` extends `PanelBase`

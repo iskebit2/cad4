@@ -2,24 +2,32 @@
 from app.commands.registry import command, factory
 from app.commands.result import CommandResult
 from app.commands import project_commands as PC
-
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
 
 @command(PC.HoverChanged)
 def _hover(app, cmd: PC.HoverChanged) -> CommandResult:
-    if app.ui is not None:
-        app.ui.on_hover_changed(cmd.element_id)
-    return CommandResult(handled=True)
-
-
-@command(PC.StartDrawTool)
-def _start_draw(app, cmd: PC.StartDrawTool) -> CommandResult:
+    """Hover durumu değişti. Panel'lere yayınla; UIHost'a dokunma."""
     eng = app.engine
-    if not eng or not eng.draw_mgr:
-        return CommandResult(handled=False)
-    if eng.draw_mgr.is_active:
-        eng.draw_mgr.cancel()
+    if eng is None:
         return CommandResult(handled=True)
-    eng.draw_mgr.start(mode=cmd.mode)
+
+    hover = eng.hover
+    if hover is None:
+        return CommandResult(handled=True)
+
+    # UI panelleri kendi hook'larıyla dinler
+    for entry in app.panel_registry.all():
+        panel = entry.instance
+        if not getattr(panel, "visible", False):
+            continue
+        hook = getattr(panel, "on_hover_changed", None)
+        if callable(hook):
+            try:
+                hook(hover.element_id, hover.element)
+            except Exception:
+                logger.exception("[hover] panel %s hook hatası", entry.name)
+
     return CommandResult(handled=True)
 
 
@@ -65,15 +73,16 @@ def _redo(app, cmd: PC.Redo) -> CommandResult:
 
 @command(PC.Toggle2D)
 def _toggle_2d(app, cmd: PC.Toggle2D) -> CommandResult:
-    app.toggle_2d()
+    app.view_service.toggle_2d()
     return CommandResult(handled=True)
 
 
 @command(PC.ToggleLoadsVisible)
 def _loads(app, cmd: PC.ToggleLoadsVisible) -> CommandResult:
-    current = app.get_loads_visible()
+    vs = app.view_service
+    current = vs.get_loads_visible()
     target = (not current) if cmd.enabled is None else bool(cmd.enabled)
-    app.set_loads_visible(target)
+    vs.set_loads_visible(target)
     return CommandResult(handled=True)
 
 
@@ -112,6 +121,31 @@ def _f_toggle_flag(args: list[str]):
     return PC.ToggleRenderFlag(args[0], value)
 
 
-@factory("start_draw")
-def _f_start_draw(args: list[str]):
-    return PC.StartDrawTool(args[0] if args else "line")
+@command(PC.StartPlane3pt)
+def _start_plane_3pt(app, cmd: PC.StartPlane3pt) -> CommandResult:
+    pdm = getattr(app.engine, "plane_draw_mgr", None) if app.engine else None
+    if pdm is None:
+        return CommandResult(handled=False)
+    if pdm.is_active:
+        pdm.cancel()
+    pdm.start_3pt()
+    return CommandResult(handled=True)
+
+
+@command(PC.StartPlane2ptZ)
+def _start_plane_2pt_z(app, cmd: PC.StartPlane2ptZ) -> CommandResult:
+    pdm = getattr(app.engine, "plane_draw_mgr", None) if app.engine else None
+    if pdm is None:
+        return CommandResult(handled=False)
+    if pdm.is_active:
+        pdm.cancel()
+    pdm.start_2pt_z()
+    return CommandResult(handled=True)
+
+
+@command(PC.ToggleRenderMode)
+def _toggle_render_mode(app, cmd: PC.ToggleRenderMode) -> CommandResult:
+    eng = app.engine
+    if eng and eng.renderer:
+        eng.renderer.toggle_render_mode()
+    return CommandResult(handled=True)

@@ -1,10 +1,17 @@
-# core/commands/project_commands.py
+# app/commands/project_commands.py
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, Union
 
 
 # ---- Tanım container'ları ----
+@dataclass
+class ReplicateSelected:
+    dx: float
+    dy: float
+    dz: float
+    count: int = 1
+
 @dataclass
 class AddDefinition:
     container_attr: str
@@ -96,7 +103,7 @@ class Toggle2D: pass
 
 @dataclass
 class ToggleLoadsVisible:
-    enabled: bool
+    enabled: bool | None = None
 
 
 @dataclass
@@ -131,6 +138,9 @@ class HideElements:
 class ShowEntireModel: pass
 
 @dataclass
+class OpenInspector: pass
+
+@dataclass
 class ToggleRenderFlag:
     flag: str        # "grid", "polygon", "lines", "labels", "wireframe", ...
     value: bool
@@ -153,7 +163,10 @@ class DeleteSelected:
 class StartDrawTool:
     mode: str = "line"
 
-
+@dataclass
+class CommitDrawnElement:
+    element: Any
+    
 @dataclass
 class StartPlaneTool:
     pass
@@ -170,7 +183,7 @@ class Redo:
 
 @dataclass
 class HoverChanged:
-    element_id: int
+    pick_id: int = 0
 
 @dataclass
 class NewProject: pass
@@ -198,4 +211,17 @@ class ImportS2K:
 @dataclass
 class ExportS2K:
     path: str
-    
+
+@dataclass
+class QuitApp: pass
+
+@dataclass
+class StartPlane3pt: pass
+
+@dataclass
+class StartPlane2ptZ: pass
+
+@dataclass
+class ConvertFramesToLinks:
+    link_prop_name: str = "DefaultLink"
+    delete_original: bool = True

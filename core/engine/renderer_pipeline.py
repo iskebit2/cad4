@@ -123,7 +123,7 @@ class RendererPipeline:
         )
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
-        glViewport(0, 0, self.width, self.height)
+        # glViewport(0, 0, self.width, self.height)
 
     # ------------------------------------------------------------------
     def get_element_by_id(self, pick_id: int):

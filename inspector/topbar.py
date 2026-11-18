@@ -70,9 +70,8 @@ class TopBar:
             eng.sel_mgr.redo()
 
     def _on_fit(self):
-        eng = self.app.engine if self.app else None
-        if eng:
-            eng.zoom_extents()
+        if self.app:
+            self.app.view_service.zoom_extents()
 
     def _on_draw_line(self):
         if self.app:

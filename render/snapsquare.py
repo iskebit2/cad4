@@ -14,7 +14,7 @@ logger = CadLogger.get(__name__)
 
 class SnapSquareRenderer:
 
-    SNAP_RADIUS_PX = 10
+    SNAP_RADIUS_PX = 6.5
 
     def __init__(self):
         self.shader = None
@@ -23,17 +23,18 @@ class SnapSquareRenderer:
         self.vbo = None
         self._init_shader()
 
-        self.size = 0.012   # 0.012 → 0.025
+        self.size = 0.012
         self.styles = {
-            "default":  {"color": (0.50, 0.90, 0.00, 1.0), "scale": 0.80},  # sarı
-            "grid":     {"color": (1.00, 0.90, 0.00, 1.0), "scale": 1.00},  # sarı
-            "node":     {"color": (0.20, 0.55, 1.00, 1.0), "scale": 1.25},  # mavi
-            "vertex":   {"color": (0.20, 0.55, 1.00, 1.0), "scale": 1.25},  # mavi
-            "frame":    {"color": (0.20, 0.85, 0.40, 1.0), "scale": 1.15},  # yeşil
-            "link":     {"color": (0.50, 0.85, 0.50, 1.0), "scale": 1.15},  # açık yeşil
-            "area":     {"color": (1.00, 0.50, 0.00, 1.0), "scale": 1.15},  # turuncu
-            "polygon":  {"color": (0.90, 0.30, 0.90, 1.0), "scale": 1.15},  # magenta
-            "line":     {"color": (1.00, 1.00, 1.00, 1.0), "scale": 1.15},  # beyaz
+            "default":  {"color": (0.75, 0.92, 0.35, 0.95), "scale": 0.80, "shape": "square"},
+            "grid":     {"color": (1.00, 0.86, 0.15, 1.00), "scale": 1.00, "shape": "cross"},
+            "node":     {"color": (0.20, 0.72, 1.00, 1.00), "scale": 1.00, "shape": "square_dot"},
+            "vertex":   {"color": (0.20, 0.72, 1.00, 1.00), "scale": 1.00, "shape": "square_dot"},
+            "frame":    {"color": (0.22, 0.92, 0.48, 1.00), "scale": 1.15, "shape": "triangle"},
+            "link":     {"color": (0.45, 0.95, 0.55, 1.00), "scale": 1.15, "shape": "triangle"},
+            "midpoint": {"color": (0.22, 0.92, 0.48, 1.00), "scale": 1.15, "shape": "triangle"},
+            "area":     {"color": (1.00, 0.55, 0.12, 1.00), "scale": 1.10, "shape": "diamond"},
+            "polygon":  {"color": (0.95, 0.35, 0.90, 1.00), "scale": 1.10, "shape": "diamond"},
+            "line":     {"color": (0.95, 0.95, 0.95, 1.00), "scale": 1.00, "shape": "square"},
         }
 
     def _init_shader(self):
@@ -233,38 +234,84 @@ class SnapSquareRenderer:
     # ------------------------------------------------------------------
     # Görsel
     # ------------------------------------------------------------------
+    def _build_shape_segments(self, nx: float, ny: float, dx: float, dy: float, shape: str) -> np.ndarray:
+        """Sembol türüne göre GL_LINES segment çiftleri döndürür."""
+        if shape == "triangle":
+            top = (nx, ny + dy * 1.1)
+            bl = (nx - dx, ny - dy * 0.85)
+            br = (nx + dx, ny - dy * 0.85)
+            pts = [*top, *bl, *bl, *br, *br, *top]
+        elif shape == "diamond":
+            t = (nx, ny + dy * 1.15)
+            r = (nx + dx * 1.15, ny)
+            b = (nx, ny - dy * 1.15)
+            l = (nx - dx * 1.15, ny)
+            pts = [*t, *r, *r, *b, *b, *l, *l, *t]
+        elif shape == "cross":
+            c = 0.85
+            pts = [
+                nx - dx * c, ny - dy * c, nx + dx * c, ny + dy * c,
+                nx - dx * c, ny + dy * c, nx + dx * c, ny - dy * c,
+            ]
+        else:
+            # square veya square_dot
+            pts = [
+                nx - dx, ny - dy, nx + dx, ny - dy,
+                nx + dx, ny - dy, nx + dx, ny + dy,
+                nx + dx, ny + dy, nx - dx, ny + dy,
+                nx - dx, ny + dy, nx - dx, ny - dy,
+            ]
+            if shape == "square_dot":
+                dot_x = dx * 0.22
+                dot_y = dy * 0.22
+                pts.extend([
+                    nx - dot_x, ny, nx + dot_x, ny,
+                    nx, ny - dot_y, nx, ny + dot_y,
+                ])
+        return np.array(pts, dtype=np.float32)
+
     def draw_snap(self, mouse_x, mouse_y, w, h, active=True, snap_type="default"):
-        if not active or not self.shader:
+        if not active or not self.shader or w <= 0 or h <= 0:
             return
 
         if self.vao is None:
             self.vao = glGenVertexArrays(1)
             self.vbo = glGenBuffers(1)
 
+        style = self.styles.get(snap_type, self.styles["default"])
+        half_px = self.SNAP_RADIUS_PX * style["scale"]
+
         nx = (mouse_x / w) * 2.0 - 1.0
         ny = 1.0 - (mouse_y / h) * 2.0
-        asp = w / h
+        dx = (half_px / w) * 2.0
+        dy = (half_px / h) * 2.0
 
-        style = self.styles.get(snap_type, self.styles["default"])
-        s = self.size * style["scale"]
+        vertices = self._build_shape_segments(nx, ny, dx, dy, style.get("shape", "square"))
 
-        vertices = np.array([
-            nx - s / asp, ny - s,
-            nx + s / asp, ny - s,
-            nx + s / asp, ny + s,
-            nx - s / asp, ny + s,
-        ], dtype=np.float32)
-        
         glDisable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glUseProgram(self.shader)
-        glUniform4f(self.u_color_loc, *style["color"])
+
         glBindVertexArray(self.vao)
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
         glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STREAM_DRAW)
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, None)
         glEnableVertexAttribArray(0)
-        glDrawArrays(GL_LINE_LOOP, 0, 4)
+
+        # 1. Geçiş: Koyu kontrast gölge (her arka planda net görünürlük)
+        if self.u_color_loc != -1:
+            glUniform4f(self.u_color_loc, 0.04, 0.05, 0.08, 0.85)
+        glLineWidth(3.5)
+        glDrawArrays(GL_LINES, 0, len(vertices) // 2)
+
+        # 2. Geçiş: Asıl parlak CAD sembol rengi
+        if self.u_color_loc != -1:
+            glUniform4f(self.u_color_loc, *style["color"])
+        glLineWidth(1.8)
+        glDrawArrays(GL_LINES, 0, len(vertices) // 2)
+
+        glLineWidth(1.0)
         glBindVertexArray(0)
         glUseProgram(0)
         glDisable(GL_BLEND)

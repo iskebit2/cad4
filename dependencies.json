@@ -18,17 +18,11 @@
     },
     {
       "source": "app.cad_app",
-      "target": "queue",
-      "type": "import",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
       "scope": "external",
       "line": 5
-    },
-    {
-      "source": "app.cad_app",
-      "target": "threading",
-      "type": "import",
-      "scope": "external",
-      "line": 6
     },
     {
       "source": "app.cad_app",
@@ -36,7 +30,7 @@
       "type": "from",
       "imported_name": "Path",
       "scope": "external",
-      "line": 7
+      "line": 6
     },
     {
       "source": "app.cad_app",
@@ -44,7 +38,7 @@
       "type": "from",
       "imported_name": "TYPE_CHECKING",
       "scope": "external",
-      "line": 8
+      "line": 7
     },
     {
       "source": "app.cad_app",
@@ -52,14 +46,15 @@
       "type": "from",
       "imported_name": "Dict",
       "scope": "external",
-      "line": 8
+      "line": 7
     },
     {
       "source": "app.cad_app",
-      "target": "numpy",
-      "type": "import",
-      "scope": "external",
-      "line": 10
+      "target": "app.commands.command_queue",
+      "type": "from",
+      "imported_name": "CommandQueue",
+      "scope": "internal",
+      "line": 9
     },
     {
       "source": "app.cad_app",
@@ -67,7 +62,7 @@
       "type": "from",
       "imported_name": "UnitSystem",
       "scope": "internal",
-      "line": 12
+      "line": 10
     },
     {
       "source": "app.cad_app",
@@ -75,7 +70,7 @@
       "type": "from",
       "imported_name": "convert_project_units",
       "scope": "internal",
-      "line": 12
+      "line": 10
     },
     {
       "source": "app.cad_app",
@@ -83,15 +78,7 @@
       "type": "from",
       "imported_name": "Section",
       "scope": "internal",
-      "line": 13
-    },
-    {
-      "source": "app.cad_app",
-      "target": "domain.definition",
-      "type": "from",
-      "imported_name": "WindDirectionResult",
-      "scope": "internal",
-      "line": 13
+      "line": 11
     },
     {
       "source": "app.cad_app",
@@ -99,7 +86,7 @@
       "type": "from",
       "imported_name": "Project",
       "scope": "internal",
-      "line": 14
+      "line": 12
     },
     {
       "source": "app.cad_app",
@@ -107,7 +94,15 @@
       "type": "from",
       "imported_name": "ProjectCatalog",
       "scope": "internal",
-      "line": 14
+      "line": 12
+    },
+    {
+      "source": "app.cad_app",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 13
     },
     {
       "source": "app.cad_app",
@@ -115,15 +110,7 @@
       "type": "from",
       "imported_name": "WindManager",
       "scope": "internal",
-      "line": 15
-    },
-    {
-      "source": "app.cad_app",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 17
+      "line": 14
     },
     {
       "source": "app.cad_window",
@@ -132,13 +119,6 @@
       "imported_name": "annotations",
       "scope": "external",
       "line": 2
-    },
-    {
-      "source": "app.cad_window",
-      "target": "time",
-      "type": "import",
-      "scope": "external",
-      "line": 5
     },
     {
       "source": "app.cad_window",
@@ -146,30 +126,14 @@
       "type": "from",
       "imported_name": "Callable",
       "scope": "external",
-      "line": 6
+      "line": 4
     },
     {
       "source": "app.cad_window",
       "target": "glfw",
       "type": "import",
       "scope": "external",
-      "line": 8
-    },
-    {
-      "source": "app.cad_window",
-      "target": "imgui_bundle",
-      "type": "from",
-      "imported_name": "imgui",
-      "scope": "external",
-      "line": 9
-    },
-    {
-      "source": "app.cad_window",
-      "target": "imgui_bundle.python_backends.glfw_backend",
-      "type": "from",
-      "imported_name": "GlfwRenderer",
-      "scope": "external",
-      "line": 10
+      "line": 5
     },
     {
       "source": "app.cad_window",
@@ -177,23 +141,7 @@
       "type": "from",
       "imported_name": "glViewport",
       "scope": "external",
-      "line": 11
-    },
-    {
-      "source": "app.cad_window",
-      "target": "assets.themes",
-      "type": "from",
-      "imported_name": "_load_fonts",
-      "scope": "external",
-      "line": 12
-    },
-    {
-      "source": "app.cad_window",
-      "target": "assets.themes",
-      "type": "from",
-      "imported_name": "_apply_dark_theme",
-      "scope": "external",
-      "line": 12
+      "line": 6
     },
     {
       "source": "app.cad_window",
@@ -201,7 +149,692 @@
       "type": "from",
       "imported_name": "CadLogger",
       "scope": "internal",
+      "line": 7
+    },
+    {
+      "source": "app.commands",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "CommandManager",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands",
+      "target": "app.commands.bulk_update",
+      "type": "from",
+      "imported_name": "BulkUpdateCommand",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands",
+      "target": "app.commands.create",
+      "type": "from",
+      "imported_name": "CreateElementCommand",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands",
+      "target": "app.commands.delete",
+      "type": "from",
+      "imported_name": "DeleteElementsCommand",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands",
+      "target": "app.commands.update",
+      "type": "from",
+      "imported_name": "UpdateElementCommand",
+      "scope": "internal",
+      "line": 6
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "MassAssembly",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "MassContribution",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "build_mass",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.material_takeoff",
+      "type": "from",
+      "imported_name": "compute_takeoff",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.material_takeoff",
+      "type": "from",
+      "imported_name": "takeoff_to_dataframes",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.solver",
+      "type": "from",
+      "imported_name": "ModalResult",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.solver",
+      "type": "from",
+      "imported_name": "StructuralSolver",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "StiffnessAssembly",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "build_stiffness",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "local_stiffness",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "transformation_matrix",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.structuralanalysis",
+      "type": "from",
+      "imported_name": "StructuralAnalysisResult",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "app.commands.analysis",
+      "target": "app.commands.analysis.structuralanalysis",
+      "type": "from",
+      "imported_name": "run_analysis",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "math",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "app.commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "transformation_matrix",
+      "scope": "internal",
+      "line": 10
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "G_M_S2",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "MEGAGRAM",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "domain.definition",
+      "type": "from",
+      "imported_name": "LoadDirection",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.analysis.mass_assembly",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
       "line": 13
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "pandas",
+      "type": "import",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "G_M_S2",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "KG_PER_TON",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Area",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Frame",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "domain.math_model",
+      "type": "from",
+      "imported_name": "MathModel",
+      "scope": "internal",
+      "line": 13
+    },
+    {
+      "source": "app.commands.analysis.material_takeoff",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 14
+    },
+    {
+      "source": "app.commands.analysis.modal_analysis",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.analysis.modal_analysis",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "app.commands.analysis.modal_analysis",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "G_MM_S2",
+      "scope": "internal",
+      "line": 7
+    },
+    {
+      "source": "app.commands.analysis.modal_analysis",
+      "target": "app.commands.analysis.solver",
+      "type": "from",
+      "imported_name": "ModalResult",
+      "scope": "internal",
+      "line": 9
+    },
+    {
+      "source": "app.commands.analysis.run",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "app.commands.analysis.run",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.commands.analysis.run",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.commands.analysis.run",
+      "target": "app.commands.analysis.material_takeoff",
+      "type": "from",
+      "imported_name": "TakeoffResult",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.analysis.run",
+      "target": "app.commands.analysis.material_takeoff",
+      "type": "from",
+      "imported_name": "compute_takeoff",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.analysis.run",
+      "target": "app.commands.analysis.modal_analysis",
+      "type": "from",
+      "imported_name": "SpectralResult",
+      "scope": "internal",
+      "line": 13
+    },
+    {
+      "source": "app.commands.analysis.run",
+      "target": "app.commands.analysis.structuralanalysis",
+      "type": "from",
+      "imported_name": "StructuralAnalysisResult",
+      "scope": "internal",
+      "line": 14
+    },
+    {
+      "source": "app.commands.analysis.run",
+      "target": "app.commands.analysis.structuralanalysis",
+      "type": "from",
+      "imported_name": "run_analysis",
+      "scope": "internal",
+      "line": 14
+    },
+    {
+      "source": "app.commands.analysis.solver",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.analysis.solver",
+      "target": "logging",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "app.commands.analysis.solver",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "app.commands.analysis.solver",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "app.commands.analysis.solver",
+      "target": "scipy.linalg",
+      "type": "from",
+      "imported_name": "eigh",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "app.commands.analysis.solver",
+      "target": "logging",
+      "type": "import",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "app.commands.analysis.spectrum",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.analysis.stiffness_assembly",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 15
+    },
+    {
+      "source": "app.commands.analysis.stiffness_assembly",
+      "target": "math",
+      "type": "import",
+      "scope": "external",
+      "line": 17
+    },
+    {
+      "source": "app.commands.analysis.stiffness_assembly",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 18
+    },
+    {
+      "source": "app.commands.analysis.stiffness_assembly",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 18
+    },
+    {
+      "source": "app.commands.analysis.stiffness_assembly",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 20
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "app.commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "MassAssembly",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "app.commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "build_mass",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "app.commands.analysis.solver",
+      "type": "from",
+      "imported_name": "ModalResult",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "app.commands.analysis.solver",
+      "type": "from",
+      "imported_name": "StructuralSolver",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "app.commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "StiffnessAssembly",
+      "scope": "internal",
+      "line": 13
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "app.commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "build_stiffness",
+      "scope": "internal",
+      "line": 13
+    },
+    {
+      "source": "app.commands.analysis.structuralanalysis",
+      "target": "app.commands.analysis.unit_guard",
+      "type": "from",
+      "imported_name": "ensure_nmm",
+      "scope": "internal",
+      "line": 14
+    },
+    {
+      "source": "app.commands.analysis.unit_guard",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "UnitSystem",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.analysis.unit_guard",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "convert_project_units",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.analysis.validation",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "app.commands.analysis.validation",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.commands.analysis.validation",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "MEGAGRAM",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.base",
+      "target": "abc",
+      "type": "from",
+      "imported_name": "ABC",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.base",
+      "target": "abc",
+      "type": "from",
+      "imported_name": "abstractmethod",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.base",
+      "target": "collections",
+      "type": "from",
+      "imported_name": "deque",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.base",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.bulk_update",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.commands.bulk_update",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "app.commands.bulk_update",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "internal",
+      "line": 13
+    },
+    {
+      "source": "app.commands.bulk_update",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 14
+    },
+    {
+      "source": "app.commands.camera",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.camera",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "internal",
+      "line": 2
     },
     {
       "source": "app.commands.camera",
@@ -209,15 +842,70 @@
       "type": "from",
       "imported_name": "CommandResult",
       "scope": "internal",
-      "line": 2
+      "line": 3
     },
     {
       "source": "app.commands.camera",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands.command_queue",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.command_queue",
+      "target": "queue",
+      "type": "import",
+      "scope": "external",
       "line": 3
+    },
+    {
+      "source": "app.commands.command_queue",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "app.commands.create",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.create",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.create",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.create",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 6
     },
     {
       "source": "app.commands.definitions",
@@ -229,7 +917,7 @@
     },
     {
       "source": "app.commands.definitions",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -244,20 +932,140 @@
       "line": 4
     },
     {
-      "source": "app.commands.elements",
-      "target": "app.commands.result",
+      "source": "app.commands.definitions",
+      "target": "app.commands.registry",
       "type": "from",
-      "imported_name": "CommandResult",
+      "imported_name": "command",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.delete",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.delete",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.edit_controller",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.edit_controller",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "app.commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "BulkUpdateCommand",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "CommandManager",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "CreateElementCommand",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "DeleteElementsCommand",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "UpdateElementCommand",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.edit_controller",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "app.commands.elements",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
       "scope": "internal",
       "line": 2
     },
     {
       "source": "app.commands.elements",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.elements",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.elements",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
-      "line": 3
+      "line": 4
+    },
+    {
+      "source": "app.commands.engine_flags",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.engine_flags",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "internal",
+      "line": 2
     },
     {
       "source": "app.commands.engine_flags",
@@ -265,15 +1073,63 @@
       "type": "from",
       "imported_name": "CommandResult",
       "scope": "internal",
-      "line": 2
+      "line": 3
     },
     {
       "source": "app.commands.engine_flags",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands.file_ops",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.file_ops",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.file_ops",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
       "line": 3
+    },
+    {
+      "source": "app.commands.file_ops",
+      "target": "app.commands.project_commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands.project",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.project",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "internal",
+      "line": 2
     },
     {
       "source": "app.commands.project",
@@ -281,15 +1137,55 @@
       "type": "from",
       "imported_name": "CommandResult",
       "scope": "internal",
-      "line": 2
+      "line": 3
     },
     {
       "source": "app.commands.project",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands.project_commands",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.project_commands",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
       "line": 3
+    },
+    {
+      "source": "app.commands.project_commands",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "app.commands.project_commands",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Literal",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "app.commands.project_commands",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Union",
+      "scope": "external",
+      "line": 4
     },
     {
       "source": "app.commands.registry",
@@ -301,11 +1197,33 @@
     },
     {
       "source": "app.commands.registry",
+      "target": "importlib",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "re",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "app.commands.registry",
       "target": "typing",
       "type": "from",
       "imported_name": "TYPE_CHECKING",
       "scope": "external",
-      "line": 3
+      "line": 6
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 6
     },
     {
       "source": "app.commands.registry",
@@ -313,15 +1231,7 @@
       "type": "from",
       "imported_name": "Callable",
       "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "app.commands.registry",
-      "target": "core.commands.base",
-      "type": "from",
-      "imported_name": "Command",
-      "scope": "internal",
-      "line": 5
+      "line": 6
     },
     {
       "source": "app.commands.registry",
@@ -329,7 +1239,22 @@
       "type": "from",
       "imported_name": "CommandResult",
       "scope": "internal",
-      "line": 6
+      "line": 8
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "dataclasses",
+      "type": "import",
+      "scope": "external",
+      "line": 190
+    },
+    {
+      "source": "app.commands.registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "get_type_hints",
+      "scope": "external",
+      "line": 191
     },
     {
       "source": "app.commands.result",
@@ -348,20 +1273,52 @@
       "line": 3
     },
     {
-      "source": "app.commands.selection",
-      "target": "app.commands.result",
+      "source": "app.commands.result",
+      "target": "typing",
       "type": "from",
-      "imported_name": "CommandResult",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "app.commands.selection",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
       "scope": "internal",
       "line": 2
     },
     {
       "source": "app.commands.selection",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.selection",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "app.commands.selection",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
-      "line": 3
+      "line": 4
+    },
+    {
+      "source": "app.commands.signals",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "internal",
+      "line": 2
     },
     {
       "source": "app.commands.signals",
@@ -369,15 +1326,63 @@
       "type": "from",
       "imported_name": "CommandResult",
       "scope": "internal",
-      "line": 2
+      "line": 3
     },
     {
       "source": "app.commands.signals",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.commands.update",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "app.commands.update",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
       "line": 3
+    },
+    {
+      "source": "app.commands.update",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "app.commands.update",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "internal",
+      "line": 6
+    },
+    {
+      "source": "app.commands.visibility",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "app.commands.visibility",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "internal",
+      "line": 2
     },
     {
       "source": "app.commands.visibility",
@@ -385,15 +1390,339 @@
       "type": "from",
       "imported_name": "CommandResult",
       "scope": "internal",
-      "line": 2
+      "line": 3
     },
     {
       "source": "app.commands.visibility",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "ctypes",
+      "type": "import",
+      "scope": "external",
       "line": 3
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "time",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "collections",
+      "type": "from",
+      "imported_name": "deque",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "glfw",
+      "type": "import",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_ARRAY_BUFFER",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_COLOR_BUFFER_BIT",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_DYNAMIC_DRAW",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_FALSE",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_FLOAT",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_FRAGMENT_SHADER",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_LINES",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_TRIANGLES",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_VERTEX_SHADER",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glAttachShader",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glBindBuffer",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glBindVertexArray",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glBufferData",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glClear",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glClearColor",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glCompileShader",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glCreateProgram",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glCreateShader",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDeleteBuffers",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDeleteProgram",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDeleteShader",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDeleteVertexArrays",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDrawArrays",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glEnableVertexAttribArray",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glGenBuffers",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glGenVertexArrays",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glGetUniformLocation",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glLineWidth",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glLinkProgram",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glShaderSource",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glUniform3f",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glUseProgram",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glVertexAttribPointer",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "app.glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glViewport",
+      "scope": "external",
+      "line": 10
     },
     {
       "source": "app.input_bindings",
@@ -412,568 +1741,11 @@
     },
     {
       "source": "app.input_bindings",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
       "line": 6
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.mass_assembly",
-      "type": "from",
-      "imported_name": "MassAssembly",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.mass_assembly",
-      "type": "from",
-      "imported_name": "MassContribution",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.mass_assembly",
-      "type": "from",
-      "imported_name": "build_mass",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.material_takeoff",
-      "type": "from",
-      "imported_name": "compute_takeoff",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.material_takeoff",
-      "type": "from",
-      "imported_name": "takeoff_to_dataframes",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.solver",
-      "type": "from",
-      "imported_name": "ModalResult",
-      "scope": "internal",
-      "line": 4
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.solver",
-      "type": "from",
-      "imported_name": "StructuralSolver",
-      "scope": "internal",
-      "line": 4
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.stiffness_assembly",
-      "type": "from",
-      "imported_name": "StiffnessAssembly",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.stiffness_assembly",
-      "type": "from",
-      "imported_name": "build_stiffness",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.stiffness_assembly",
-      "type": "from",
-      "imported_name": "local_stiffness",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.stiffness_assembly",
-      "type": "from",
-      "imported_name": "transformation_matrix",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.structuralanalysis",
-      "type": "from",
-      "imported_name": "StructuralAnalysisResult",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.analysis",
-      "target": "core.analysis.structuralanalysis",
-      "type": "from",
-      "imported_name": "run_analysis",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "math",
-      "type": "import",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 6
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "field",
-      "scope": "external",
-      "line": 6
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "numpy",
-      "type": "import",
-      "scope": "external",
-      "line": 8
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "core.analysis.stiffness_assembly",
-      "type": "from",
-      "imported_name": "transformation_matrix",
-      "scope": "internal",
-      "line": 10
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "G_M_S2",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "MEGAGRAM",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "domain.definition",
-      "type": "from",
-      "imported_name": "LoadDirection",
-      "scope": "internal",
-      "line": 12
-    },
-    {
-      "source": "core.analysis.mass_assembly",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 13
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 7
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "field",
-      "scope": "external",
-      "line": 7
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "pandas",
-      "type": "import",
-      "scope": "external",
-      "line": 9
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "G_M_S2",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "KG_PER_TON",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Area",
-      "scope": "internal",
-      "line": 12
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "domain.element",
-      "type": "from",
-      "imported_name": "Frame",
-      "scope": "internal",
-      "line": 12
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "domain.math_model",
-      "type": "from",
-      "imported_name": "MathModel",
-      "scope": "internal",
-      "line": 13
-    },
-    {
-      "source": "core.analysis.material_takeoff",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "core.analysis.modal_analysis",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "core.analysis.modal_analysis",
-      "target": "numpy",
-      "type": "import",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.analysis.modal_analysis",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "G_MM_S2",
-      "scope": "internal",
-      "line": 7
-    },
-    {
-      "source": "core.analysis.modal_analysis",
-      "target": "core.analysis.solver",
-      "type": "from",
-      "imported_name": "ModalResult",
-      "scope": "internal",
-      "line": 9
-    },
-    {
-      "source": "core.analysis.run",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 8
-    },
-    {
-      "source": "core.analysis.run",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 10
-    },
-    {
-      "source": "core.analysis.run",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "field",
-      "scope": "external",
-      "line": 10
-    },
-    {
-      "source": "core.analysis.run",
-      "target": "core.analysis.material_takeoff",
-      "type": "from",
-      "imported_name": "TakeoffResult",
-      "scope": "internal",
-      "line": 12
-    },
-    {
-      "source": "core.analysis.run",
-      "target": "core.analysis.material_takeoff",
-      "type": "from",
-      "imported_name": "compute_takeoff",
-      "scope": "internal",
-      "line": 12
-    },
-    {
-      "source": "core.analysis.run",
-      "target": "core.analysis.modal_analysis",
-      "type": "from",
-      "imported_name": "SpectralResult",
-      "scope": "internal",
-      "line": 13
-    },
-    {
-      "source": "core.analysis.run",
-      "target": "core.analysis.structuralanalysis",
-      "type": "from",
-      "imported_name": "StructuralAnalysisResult",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "core.analysis.run",
-      "target": "core.analysis.structuralanalysis",
-      "type": "from",
-      "imported_name": "run_analysis",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "core.analysis.solver",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "core.analysis.solver",
-      "target": "logging",
-      "type": "import",
-      "scope": "external",
-      "line": 5
-    },
-    {
-      "source": "core.analysis.solver",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 6
-    },
-    {
-      "source": "core.analysis.solver",
-      "target": "numpy",
-      "type": "import",
-      "scope": "external",
-      "line": 8
-    },
-    {
-      "source": "core.analysis.solver",
-      "target": "scipy.linalg",
-      "type": "from",
-      "imported_name": "eigh",
-      "scope": "external",
-      "line": 9
-    },
-    {
-      "source": "core.analysis.solver",
-      "target": "logging",
-      "type": "import",
-      "scope": "external",
-      "line": 14
-    },
-    {
-      "source": "core.analysis.spectrum",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "core.analysis.stiffness_assembly",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 15
-    },
-    {
-      "source": "core.analysis.stiffness_assembly",
-      "target": "math",
-      "type": "import",
-      "scope": "external",
-      "line": 17
-    },
-    {
-      "source": "core.analysis.stiffness_assembly",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 18
-    },
-    {
-      "source": "core.analysis.stiffness_assembly",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "field",
-      "scope": "external",
-      "line": 18
-    },
-    {
-      "source": "core.analysis.stiffness_assembly",
-      "target": "numpy",
-      "type": "import",
-      "scope": "external",
-      "line": 20
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 7
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "field",
-      "scope": "external",
-      "line": 7
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "numpy",
-      "type": "import",
-      "scope": "external",
-      "line": 9
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "core.analysis.mass_assembly",
-      "type": "from",
-      "imported_name": "MassAssembly",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "core.analysis.mass_assembly",
-      "type": "from",
-      "imported_name": "build_mass",
-      "scope": "internal",
-      "line": 11
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "core.analysis.solver",
-      "type": "from",
-      "imported_name": "ModalResult",
-      "scope": "internal",
-      "line": 12
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "core.analysis.solver",
-      "type": "from",
-      "imported_name": "StructuralSolver",
-      "scope": "internal",
-      "line": 12
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "core.analysis.stiffness_assembly",
-      "type": "from",
-      "imported_name": "StiffnessAssembly",
-      "scope": "internal",
-      "line": 13
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "core.analysis.stiffness_assembly",
-      "type": "from",
-      "imported_name": "build_stiffness",
-      "scope": "internal",
-      "line": 13
-    },
-    {
-      "source": "core.analysis.structuralanalysis",
-      "target": "core.analysis.unit_guard",
-      "type": "from",
-      "imported_name": "ensure_nmm",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "core.analysis.unit_guard",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "UnitSystem",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "core.analysis.unit_guard",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "convert_project_units",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "core.analysis.validation",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 8
-    },
-    {
-      "source": "core.analysis.validation",
-      "target": "numpy",
-      "type": "import",
-      "scope": "external",
-      "line": 10
-    },
-    {
-      "source": "core.analysis.validation",
-      "target": "core.units",
-      "type": "from",
-      "imported_name": "MEGAGRAM",
-      "scope": "internal",
-      "line": 12
     },
     {
       "source": "core.camera",
@@ -1051,317 +1823,6 @@
       "imported_name": "MIDDLE",
       "scope": "internal",
       "line": 4
-    },
-    {
-      "source": "core.commands",
-      "target": "core.commands.base",
-      "type": "from",
-      "imported_name": "Command",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "core.commands",
-      "target": "core.commands.base",
-      "type": "from",
-      "imported_name": "CommandManager",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "core.commands",
-      "target": "core.commands.bulk_update",
-      "type": "from",
-      "imported_name": "BulkUpdateCommand",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "core.commands",
-      "target": "core.commands.create",
-      "type": "from",
-      "imported_name": "CreateElementCommand",
-      "scope": "internal",
-      "line": 4
-    },
-    {
-      "source": "core.commands",
-      "target": "core.commands.delete",
-      "type": "from",
-      "imported_name": "DeleteElementsCommand",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.commands",
-      "target": "core.commands.update",
-      "type": "from",
-      "imported_name": "UpdateElementCommand",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "core.commands.base",
-      "target": "abc",
-      "type": "from",
-      "imported_name": "ABC",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "core.commands.base",
-      "target": "abc",
-      "type": "from",
-      "imported_name": "abstractmethod",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "core.commands.base",
-      "target": "collections",
-      "type": "from",
-      "imported_name": "deque",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "core.commands.base",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.commands.bulk_update",
-      "target": "collections.abc",
-      "type": "from",
-      "imported_name": "Callable",
-      "scope": "external",
-      "line": 10
-    },
-    {
-      "source": "core.commands.bulk_update",
-      "target": "typing",
-      "type": "from",
-      "imported_name": "Any",
-      "scope": "external",
-      "line": 11
-    },
-    {
-      "source": "core.commands.bulk_update",
-      "target": "core.commands.base",
-      "type": "from",
-      "imported_name": "Command",
-      "scope": "internal",
-      "line": 13
-    },
-    {
-      "source": "core.commands.bulk_update",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 14
-    },
-    {
-      "source": "core.commands.command_queue",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 7
-    },
-    {
-      "source": "core.commands.command_queue",
-      "target": "queue",
-      "type": "import",
-      "scope": "external",
-      "line": 9
-    },
-    {
-      "source": "core.commands.command_queue",
-      "target": "typing",
-      "type": "from",
-      "imported_name": "TYPE_CHECKING",
-      "scope": "external",
-      "line": 10
-    },
-    {
-      "source": "core.commands.create",
-      "target": "collections.abc",
-      "type": "from",
-      "imported_name": "Callable",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "core.commands.create",
-      "target": "typing",
-      "type": "from",
-      "imported_name": "Any",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "core.commands.create",
-      "target": "core.commands.base",
-      "type": "from",
-      "imported_name": "Command",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.commands.create",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "core.commands.delete",
-      "target": "core.commands.base",
-      "type": "from",
-      "imported_name": "Command",
-      "scope": "internal",
-      "line": 2
-    },
-    {
-      "source": "core.commands.delete",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 3
-    },
-    {
-      "source": "core.commands.project_commands",
-      "target": "__future__",
-      "type": "from",
-      "imported_name": "annotations",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "core.commands.project_commands",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "core.commands.project_commands",
-      "target": "typing",
-      "type": "from",
-      "imported_name": "Any",
-      "scope": "external",
-      "line": 4
-    },
-    {
-      "source": "core.commands.project_commands",
-      "target": "typing",
-      "type": "from",
-      "imported_name": "Literal",
-      "scope": "external",
-      "line": 4
-    },
-    {
-      "source": "core.commands.update",
-      "target": "collections.abc",
-      "type": "from",
-      "imported_name": "Callable",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "core.commands.update",
-      "target": "typing",
-      "type": "from",
-      "imported_name": "Any",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "core.commands.update",
-      "target": "core.commands.base",
-      "type": "from",
-      "imported_name": "Command",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.commands.update",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 6
-    },
-    {
-      "source": "core.edit.edit_controller",
-      "target": "dataclasses",
-      "type": "from",
-      "imported_name": "dataclass",
-      "scope": "external",
-      "line": 2
-    },
-    {
-      "source": "core.edit.edit_controller",
-      "target": "typing",
-      "type": "from",
-      "imported_name": "Any",
-      "scope": "external",
-      "line": 3
-    },
-    {
-      "source": "core.edit.edit_controller",
-      "target": "core.commands",
-      "type": "from",
-      "imported_name": "BulkUpdateCommand",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.edit.edit_controller",
-      "target": "core.commands",
-      "type": "from",
-      "imported_name": "CommandManager",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.edit.edit_controller",
-      "target": "core.commands",
-      "type": "from",
-      "imported_name": "CreateElementCommand",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.edit.edit_controller",
-      "target": "core.commands",
-      "type": "from",
-      "imported_name": "DeleteElementsCommand",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.edit.edit_controller",
-      "target": "core.commands",
-      "type": "from",
-      "imported_name": "UpdateElementCommand",
-      "scope": "internal",
-      "line": 5
-    },
-    {
-      "source": "core.edit.edit_controller",
-      "target": "logging_config",
-      "type": "from",
-      "imported_name": "CadLogger",
-      "scope": "internal",
-      "line": 12
     },
     {
       "source": "core.engine",
@@ -1556,7 +2017,7 @@
     },
     {
       "source": "core.engine.hover_system",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -1580,7 +2041,7 @@
     },
     {
       "source": "core.engine.plane_mode",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -1771,7 +2232,7 @@
     },
     {
       "source": "core.engine.tools_registry",
-      "target": "core.edit.edit_controller",
+      "target": "app.commands.edit_controller",
       "type": "from",
       "imported_name": "EditController",
       "scope": "internal",
@@ -1815,14 +2276,14 @@
       "type": "from",
       "imported_name": "annotations",
       "scope": "external",
-      "line": 3
+      "line": 2
     },
     {
       "source": "core.input_manager",
       "target": "time",
       "type": "import",
       "scope": "external",
-      "line": 5
+      "line": 4
     },
     {
       "source": "core.input_manager",
@@ -1830,7 +2291,7 @@
       "type": "from",
       "imported_name": "dataclass",
       "scope": "external",
-      "line": 6
+      "line": 5
     },
     {
       "source": "core.input_manager",
@@ -1838,7 +2299,7 @@
       "type": "from",
       "imported_name": "field",
       "scope": "external",
-      "line": 6
+      "line": 5
     },
     {
       "source": "core.input_manager",
@@ -1846,14 +2307,14 @@
       "type": "from",
       "imported_name": "Callable",
       "scope": "external",
-      "line": 7
+      "line": 6
     },
     {
       "source": "core.input_manager",
       "target": "glfw",
       "type": "import",
       "scope": "external",
-      "line": 9
+      "line": 8
     },
     {
       "source": "core.input_manager",
@@ -1861,7 +2322,7 @@
       "type": "from",
       "imported_name": "glm",
       "scope": "external",
-      "line": 10
+      "line": 9
     },
     {
       "source": "core.input_manager",
@@ -1869,7 +2330,7 @@
       "type": "from",
       "imported_name": "CadLogger",
       "scope": "internal",
-      "line": 11
+      "line": 10
     },
     {
       "source": "core.marquee_selector",
@@ -1975,7 +2436,7 @@
     },
     {
       "source": "core.selection_manager",
-      "target": "core.commands",
+      "target": "app.commands",
       "type": "from",
       "imported_name": "CommandManager",
       "scope": "internal",
@@ -1983,7 +2444,7 @@
     },
     {
       "source": "core.selection_manager",
-      "target": "core.commands",
+      "target": "app.commands",
       "type": "from",
       "imported_name": "DeleteElementsCommand",
       "scope": "internal",
@@ -4938,24 +5399,89 @@
     },
     {
       "source": "main",
-      "target": "sys",
+      "target": "time",
       "type": "import",
       "scope": "external",
       "line": 4
     },
     {
       "source": "main",
-      "target": "threading",
+      "target": "traceback",
       "type": "import",
       "scope": "external",
       "line": 5
     },
     {
       "source": "main",
-      "target": "traceback",
-      "type": "import",
+      "target": "imgui_bundle",
+      "type": "from",
+      "imported_name": "imgui",
       "scope": "external",
-      "line": 6
+      "line": 7
+    },
+    {
+      "source": "main",
+      "target": "imgui_bundle.python_backends.glfw_backend",
+      "type": "from",
+      "imported_name": "GlfwRenderer",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "main",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_COLOR_BUFFER_BIT",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "main",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_DEPTH_BUFFER_BIT",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "main",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glClear",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "main",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glClearColor",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "main",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glViewport",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "main",
+      "target": "app.cad_app",
+      "type": "from",
+      "imported_name": "CadApp",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "main",
+      "target": "app.cad_window",
+      "type": "from",
+      "imported_name": "CadWindow",
+      "scope": "internal",
+      "line": 12
     },
     {
       "source": "main",
@@ -4963,7 +5489,15 @@
       "type": "from",
       "imported_name": "CadLogger",
       "scope": "internal",
-      "line": 8
+      "line": 13
+    },
+    {
+      "source": "main",
+      "target": "ui.ui_host",
+      "type": "from",
+      "imported_name": "UIHost",
+      "scope": "internal",
+      "line": 14
     },
     {
       "source": "plane",
@@ -10884,6 +11418,53 @@
       "line": 11
     },
     {
+      "source": "ui.panels.command_panel",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "ui.panels.command_panel",
+      "target": "shlex",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "ui.panels.command_panel",
+      "target": "collections",
+      "type": "from",
+      "imported_name": "deque",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "ui.panels.command_panel",
+      "target": "imgui_bundle",
+      "type": "from",
+      "imported_name": "imgui",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "ui.panels.command_panel",
+      "target": "ui.base.panel_base",
+      "type": "from",
+      "imported_name": "Category",
+      "scope": "internal",
+      "line": 9
+    },
+    {
+      "source": "ui.panels.command_panel",
+      "target": "ui.base.panel_base",
+      "type": "from",
+      "imported_name": "PanelBase",
+      "scope": "internal",
+      "line": 9
+    },
+    {
       "source": "ui.panels.debug_panel",
       "target": "__future__",
       "type": "from",
@@ -11018,7 +11599,7 @@
     },
     {
       "source": "ui.panels.definition_panel",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -11289,7 +11870,7 @@
     },
     {
       "source": "ui.panels.frame_load_panel",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -11446,7 +12027,7 @@
     },
     {
       "source": "ui.panels.joint_load_panel",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -11710,7 +12291,7 @@
     },
     {
       "source": "ui.panels.load_manager_panel",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -11766,7 +12347,7 @@
     },
     {
       "source": "ui.panels.material_panel",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -11989,7 +12570,7 @@
     },
     {
       "source": "ui.panels.project_panels",
-      "target": "core.analysis.run",
+      "target": "app.commands.analysis.run",
       "type": "from",
       "imported_name": "AnalysisBundle",
       "scope": "internal",
@@ -11997,7 +12578,7 @@
     },
     {
       "source": "ui.panels.project_panels",
-      "target": "core.analysis.run",
+      "target": "app.commands.analysis.run",
       "type": "from",
       "imported_name": "AnalysisOptions",
       "scope": "internal",
@@ -12005,7 +12586,7 @@
     },
     {
       "source": "ui.panels.project_panels",
-      "target": "core.analysis.run",
+      "target": "app.commands.analysis.run",
       "type": "from",
       "imported_name": "AnalysisService",
       "scope": "internal",
@@ -12727,7 +13308,14 @@
       "type": "from",
       "imported_name": "annotations",
       "scope": "external",
-      "line": 2
+      "line": 1
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "os",
+      "type": "import",
+      "scope": "external",
+      "line": 3
     },
     {
       "source": "ui.ui_host",
@@ -12739,25 +13327,11 @@
     },
     {
       "source": "ui.ui_host",
-      "target": "os",
-      "type": "import",
-      "scope": "external",
-      "line": 6
-    },
-    {
-      "source": "ui.ui_host",
-      "target": "glfw",
-      "type": "import",
-      "scope": "external",
-      "line": 7
-    },
-    {
-      "source": "ui.ui_host",
       "target": "imgui_bundle",
       "type": "from",
       "imported_name": "imgui",
       "scope": "external",
-      "line": 8
+      "line": 6
     },
     {
       "source": "ui.ui_host",
@@ -12765,7 +13339,7 @@
       "type": "from",
       "imported_name": "GL_ARRAY_BUFFER",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12773,7 +13347,7 @@
       "type": "from",
       "imported_name": "GL_BLEND",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12781,7 +13355,7 @@
       "type": "from",
       "imported_name": "GL_COLOR_BUFFER_BIT",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12789,7 +13363,7 @@
       "type": "from",
       "imported_name": "GL_CULL_FACE",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12797,7 +13371,7 @@
       "type": "from",
       "imported_name": "GL_DEPTH_BUFFER_BIT",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12805,7 +13379,7 @@
       "type": "from",
       "imported_name": "GL_DEPTH_TEST",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12813,7 +13387,7 @@
       "type": "from",
       "imported_name": "GL_ELEMENT_ARRAY_BUFFER",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12821,7 +13395,7 @@
       "type": "from",
       "imported_name": "GL_FRAMEBUFFER",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12829,7 +13403,7 @@
       "type": "from",
       "imported_name": "GL_ONE_MINUS_SRC_ALPHA",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12837,7 +13411,7 @@
       "type": "from",
       "imported_name": "GL_SRC_ALPHA",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12845,7 +13419,7 @@
       "type": "from",
       "imported_name": "glBindBuffer",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12853,7 +13427,7 @@
       "type": "from",
       "imported_name": "glBindFramebuffer",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12861,7 +13435,7 @@
       "type": "from",
       "imported_name": "glBindVertexArray",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12869,7 +13443,7 @@
       "type": "from",
       "imported_name": "glBlendFunc",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12877,7 +13451,7 @@
       "type": "from",
       "imported_name": "glClear",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12885,7 +13459,7 @@
       "type": "from",
       "imported_name": "glClearColor",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12893,7 +13467,7 @@
       "type": "from",
       "imported_name": "glDisable",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12901,7 +13475,7 @@
       "type": "from",
       "imported_name": "glEnable",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12909,7 +13483,7 @@
       "type": "from",
       "imported_name": "glUseProgram",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
@@ -12917,11 +13491,27 @@
       "type": "from",
       "imported_name": "glViewport",
       "scope": "external",
-      "line": 9
+      "line": 7
     },
     {
       "source": "ui.ui_host",
-      "target": "core.commands.project_commands",
+      "target": "assets.themes",
+      "type": "from",
+      "imported_name": "_apply_dark_theme",
+      "scope": "external",
+      "line": 15
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "assets.themes",
+      "type": "from",
+      "imported_name": "_load_fonts",
+      "scope": "external",
+      "line": 15
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "project_commands",
       "scope": "internal",
@@ -12929,19 +13519,11 @@
     },
     {
       "source": "ui.ui_host",
-      "target": "core.commands.command_queue",
-      "type": "from",
-      "imported_name": "CommandQueue",
-      "scope": "internal",
-      "line": 17
-    },
-    {
-      "source": "ui.ui_host",
-      "target": "core.commands.project_commands",
+      "target": "app.commands.project_commands",
       "type": "from",
       "imported_name": "RefreshGeometry",
       "scope": "internal",
-      "line": 18
+      "line": 17
     },
     {
       "source": "ui.ui_host",
@@ -12949,7 +13531,7 @@
       "type": "from",
       "imported_name": "Area",
       "scope": "internal",
-      "line": 19
+      "line": 18
     },
     {
       "source": "ui.ui_host",
@@ -12957,7 +13539,7 @@
       "type": "from",
       "imported_name": "Frame",
       "scope": "internal",
-      "line": 19
+      "line": 18
     },
     {
       "source": "ui.ui_host",
@@ -12965,7 +13547,7 @@
       "type": "from",
       "imported_name": "Link",
       "scope": "internal",
-      "line": 19
+      "line": 18
     },
     {
       "source": "ui.ui_host",
@@ -12973,13 +13555,21 @@
       "type": "from",
       "imported_name": "Node",
       "scope": "internal",
-      "line": 19
+      "line": 18
     },
     {
       "source": "ui.ui_host",
       "target": "domain.polygon",
       "type": "from",
       "imported_name": "Polygon",
+      "scope": "internal",
+      "line": 19
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "inspector",
+      "type": "from",
+      "imported_name": "InspectorWindow",
       "scope": "internal",
       "line": 20
     },
@@ -12993,11 +13583,19 @@
     },
     {
       "source": "ui.ui_host",
+      "target": "plane.plane_source_dialog",
+      "type": "from",
+      "imported_name": "PlaneSourceDialog",
+      "scope": "internal",
+      "line": 22
+    },
+    {
+      "source": "ui.ui_host",
       "target": "ui.actions_registry",
       "type": "from",
       "imported_name": "ACTION_SPECS",
       "scope": "internal",
-      "line": 22
+      "line": 23
     },
     {
       "source": "ui.ui_host",
@@ -13005,7 +13603,7 @@
       "type": "from",
       "imported_name": "build_commands",
       "scope": "internal",
-      "line": 22
+      "line": 23
     },
     {
       "source": "ui.ui_host",
@@ -13013,7 +13611,55 @@
       "type": "from",
       "imported_name": "build_panel_states",
       "scope": "internal",
-      "line": 22
+      "line": 23
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.base.panel_base",
+      "type": "from",
+      "imported_name": "CATEGORY_ORDER",
+      "scope": "internal",
+      "line": 24
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.registry",
+      "type": "from",
+      "imported_name": "discover_panels",
+      "scope": "internal",
+      "line": 25
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.registry",
+      "type": "from",
+      "imported_name": "validate",
+      "scope": "internal",
+      "line": 25
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.widgets.file_dialog",
+      "type": "from",
+      "imported_name": "ImGuiFileDialog",
+      "scope": "internal",
+      "line": 26
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.widgets.status_bar",
+      "type": "from",
+      "imported_name": "StatusBar",
+      "scope": "internal",
+      "line": 27
+    },
+    {
+      "source": "ui.ui_host",
+      "target": "ui.widgets.toolbar",
+      "type": "from",
+      "imported_name": "Toolbar",
+      "scope": "internal",
+      "line": 28
     },
     {
       "source": "ui.ui_host",
@@ -13021,7 +13667,7 @@
       "type": "from",
       "imported_name": "ViewportPanel",
       "scope": "internal",
-      "line": 23
+      "line": 29
     },
     {
       "source": "ui.widgets.base_panel",
@@ -13313,6 +13959,22 @@
       "line": 23
     },
     {
+      "source": "ui.widgets.status_bar",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "ui.widgets.status_bar",
+      "target": "imgui_bundle",
+      "type": "from",
+      "imported_name": "imgui",
+      "scope": "external",
+      "line": 3
+    },
+    {
       "source": "ui.widgets.toolbar",
       "target": "__future__",
       "type": "from",
@@ -13538,27 +14200,27 @@
   ],
   "inheritance": [
     {
-      "module": "core.commands.base",
+      "module": "app.commands.base",
       "class": "Command",
       "base": "ABC"
     },
     {
-      "module": "core.commands.bulk_update",
+      "module": "app.commands.bulk_update",
       "class": "BulkUpdateCommand",
       "base": "Command"
     },
     {
-      "module": "core.commands.create",
+      "module": "app.commands.create",
       "class": "CreateElementCommand",
       "base": "Command"
     },
     {
-      "module": "core.commands.delete",
+      "module": "app.commands.delete",
       "class": "DeleteElementsCommand",
       "base": "Command"
     },
     {
-      "module": "core.commands.update",
+      "module": "app.commands.update",
       "class": "UpdateElementCommand",
       "base": "Command"
     },
@@ -13910,6 +14572,11 @@
     {
       "module": "ui.panels.area_to_frame_panel",
       "class": "AreaToFramePanel",
+      "base": "PanelBase"
+    },
+    {
+      "module": "ui.panels.command_panel",
+      "class": "CommandPanel",
       "base": "PanelBase"
     },
     {

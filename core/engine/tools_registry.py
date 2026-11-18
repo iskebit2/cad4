@@ -44,6 +44,7 @@ class ToolsRegistry:
         self.marquee = self._factory_marquee(eng, self.sel_mgr, self.sel_policy)
         self.edit = self._factory_edit(eng)
         self.draw_mgr = self._factory_draw_mgr(eng)
+        eng.input.register(self.draw_mgr)
         self.plane_draw_mgr = self._factory_plane_draw_mgr(eng)
         self.snap = self._factory_snap()
         eng.pipeline.renderer.set_snap(self.snap)

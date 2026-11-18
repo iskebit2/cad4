@@ -1,4 +1,4 @@
-# core/edit/edit_controller.py
+# app/commands/edit_controller.py
 from dataclasses import dataclass
 from typing import Any
 
@@ -9,6 +9,7 @@ from app.commands import (
     DeleteElementsCommand,
     UpdateElementCommand,
 )
+from app.commands.replicate import ReplicateElementsCommand
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -122,9 +123,20 @@ class EditController:
             logger.exception("delete hatası")
             return EditResult(False, message=str(e))
 
+        # Silinen elemanları aktif seçimden çıkar
+        if cmd.deleted and self.engine and self.engine.sel_mgr:
+            deleted_ids = {id(el) for el in cmd.deleted}
+            remaining = [
+                el for el in self.engine.sel_mgr.get_selected()
+                if id(el) not in deleted_ids
+            ]
+            from core.selection_policy import SelectionMode
+            self.engine.sel_mgr.select_multiple(remaining, mode=SelectionMode.REPLACE)
+            self.engine.clear_hover()
+
         msg = f"{len(cmd.deleted)} silindi"
         if cmd.rejected:
-            msg += f", {len(cmd.rejected)} reddedildi"
+            msg += f", {len(cmd.rejected)} reddedildi (bağlı eleman var)"
         return EditResult(True, message=msg)
 
     # ========================================================
@@ -442,3 +454,44 @@ class EditController:
             return self._read_field(element, field)
         except Exception:
             return None
+
+    # ========================================================
+    # REPLICATE (Doğrusal Çoğaltma)
+    # ========================================================
+
+    def replicate(
+        self,
+        elements,
+        dx: float,
+        dy: float,
+        dz: float,
+        count: int = 1,
+        select_created: bool = True,
+    ) -> EditResult:
+        if not elements:
+            return EditResult(False, message="Çoğaltılacak seçili eleman yok")
+
+        if not isinstance(elements, (list, tuple)):
+            elements = [elements]
+
+        try:
+            cmd = ReplicateElementsCommand(
+                self.scene, list(elements), dx=dx, dy=dy, dz=dz, count=count
+            )
+            if not self.commands.execute(cmd):
+                return EditResult(False, message="Çoğaltma başarısız")
+        except Exception as e:
+            logger.exception("replicate hatası")
+            return EditResult(False, message=str(e))
+
+        created = cmd.all_created
+        if select_created and created and self.engine and self.engine.sel_mgr:
+            from core.selection_policy import SelectionMode
+            self.engine.sel_mgr.select_multiple(created, mode=SelectionMode.REPLACE)
+
+        return EditResult(
+            True,
+            element=created,
+            created=True,
+            message=f"{count}x çoğaltıldı ({len(cmd.created_nodes)} node, {len(cmd.created_elements)} eleman)",
+        )

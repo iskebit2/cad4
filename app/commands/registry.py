@@ -66,13 +66,14 @@ class CommandRegistry:
             return
         if name in self._factories:
             prev = self._factories[name]
-            prev_mod = getattr(prev, "__module__", "?")
-            new_mod = getattr(factory, "__module__", "?")
-            if prev_mod != new_mod:
-                self._conflicts.append(
-                    f"factory çakışması: {name!r} "
-                    f"({prev_mod} vs {new_mod})"
-                )
+            if not getattr(prev, "_is_auto", False):
+                prev_mod = getattr(prev, "__module__", "?")
+                new_mod = getattr(factory, "__module__", "?")
+                if prev_mod != new_mod:
+                    self._conflicts.append(
+                        f"factory çakışması: {name!r} "
+                        f"({prev_mod} vs {new_mod})"
+                    )
         self._factories[name] = factory
 
     def list_names(self) -> list[str]:
@@ -245,5 +246,15 @@ def _auto_factory(cmd_type: type) -> tuple[CommandFactory, str]:
             return cmd_type(**kwargs)
         except TypeError:
             return None
-
+    build._is_auto = True  # type: ignore[attr-defined]
     return build, usage
+
+_REGISTRY: "CommandRegistry | None" = None
+
+
+def get_registry() -> CommandRegistry:
+    """Süreç başına tek registry. build_registry() import maliyetini tekrarlamaz."""
+    global _REGISTRY
+    if _REGISTRY is None:
+        _REGISTRY = build_registry()
+    return _REGISTRY

@@ -14,9 +14,11 @@ class HoverSystem:
     THROTTLE = 0.05
     RETRY_ONCE = True
 
-    def __init__(self, pick_pass, command_queue) -> None:
+    def __init__(self, pick_pass, command_queue, resolve_element=None) -> None:
         self.pick_pass = pick_pass
         self.command_queue = command_queue
+        # pick_id → domain element çözümleyici (Engine.pipeline.get_element_by_id)
+        self._resolve_element = resolve_element
         self.element_id: int = 0
         self.element = None
         self.pointer: tuple[str, int, int] | None = None
@@ -25,6 +27,9 @@ class HoverSystem:
         self._last_y = -1
         self._last_time = 0.0
         self._hover_retry = False
+
+    def set_resolver(self, resolve_element) -> None:
+        self._resolve_element = resolve_element
 
     def set_pick_pass(self, pick_pass) -> None:
         self.pick_pass = pick_pass
@@ -91,7 +96,16 @@ class HoverSystem:
             return
         old = self.element_id
         self.element_id = pick_id
-        self.element = None
+        self.element = (
+            self._resolve_element(pick_id)
+            if (pick_id and self._resolve_element)
+            else None
+        )
         if force or old != pick_id:
-            if self.command_queue:
+            # Sadece dinleyici varsa komut üret
+            if self.command_queue and self._has_listeners():
                 self.command_queue.put(PC.HoverChanged(pick_id))
+
+    def _has_listeners(self) -> bool:
+        # Engine, dinleyici varlığını HoverSystem'a bildirir
+        return getattr(self, "_listeners_present", True)

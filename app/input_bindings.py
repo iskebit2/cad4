@@ -18,12 +18,6 @@ def build_bindings(command_queue) -> dict:
         # --- Seçim ---
         glfw.KEY_DELETE: lambda: q.put(PC.DeleteSelected()),
 
-        # # --- Çizim ---
-        # glfw.KEY_D: lambda: q.put(PC.StartDrawTool("line")),
-
-        # # --- Yük görünürlüğü ---
-        # glfw.KEY_L: lambda: q.put(PC.ToggleLoadsVisible()),
-
         # --- Plane ---
         (glfw.KEY_W, glfw.MOD_SHIFT): lambda: q.put(PC.StartPlaneTool()),
 
