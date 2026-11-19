@@ -144,7 +144,10 @@ def _encode(obj: Any) -> Any:
         return {"__tuple__": [_encode(v) for v in obj]}
     if isinstance(obj, (set, frozenset)):
         return {"__set__": [_encode(v) for v in obj]}
-    if dataclasses.is_dataclass(obj):
+    if (
+        dataclasses.is_dataclass(obj)
+        and type(obj) not in CLASS_REGISTRY.values()
+    ):
         data = {"__dataclass__": type(obj).__name__}
         for f in dataclasses.fields(obj):
             data[f.name] = _encode(getattr(obj, f.name))
@@ -185,7 +188,28 @@ def _decode(obj: Any) -> Any:
     if "__dataclass__" in obj:
         cls = DATACLASS_REGISTRY.get(obj["__dataclass__"])
         if not cls:
-            return obj
+            cls = CLASS_REGISTRY.get(obj["__dataclass__"])
+            if cls is None:
+                return obj
+            instance = cls.__new__(cls)
+            instance.is_selected = False
+            decoded = {
+                key: _decode(value)
+                for key, value in obj.items()
+                if key not in ("__dataclass__", "is_selected")
+            }
+            if cls is Node:
+                for axis in ("x", "y", "z"):
+                    legacy_key = axis
+                    storage_key = f"_{axis}"
+                    if storage_key not in decoded:
+                        if legacy_key not in decoded:
+                            raise ValueError(
+                                f"Legacy Node record is missing coordinate {axis!r}"
+                            )
+                        decoded[storage_key] = decoded.pop(legacy_key)
+            instance.__dict__.update(decoded)
+            return instance
         fields = {f.name for f in dataclasses.fields(cls)}
         return cls(**{k: _decode(v) for k, v in obj.items() if k in fields})
     if "__object__" in obj:
@@ -249,7 +273,7 @@ def save_project_file(project, path: Path) -> None:
     }
     u_sys = project.unit_system
     payload = {
-        "version": 8,
+        "version": 9,
         "info": _encode(project.info),
         "general_info": _encode(project.general_info),
         "site_info": _encode(project.site_info),
@@ -273,6 +297,9 @@ def save_project_file(project, path: Path) -> None:
         "auto_seismics": {k: _encode(v) for k, v in project.auto_seismics.items()},
         "mass_source_map": project.mass_source_map,
         "section_cuts": {k: _encode(v) for k, v in project.section_cuts.items()},
+        "constraint_definitions": {
+            k: _encode(v) for k, v in project.constraint_definitions.items()
+        },
         "diaphragms": project.diaphragms,
         "joint_constraints": project.joint_constraints,
         "frame_modifiers": project.frame_modifiers,
@@ -351,6 +378,7 @@ def load_project_file(path: Path):
         ("spectrum_functions", "spectrum_functions"),
         ("response_spectrum_cases", "response_spectrum_cases"),
         ("auto_seismics", "auto_seismics"), ("section_cuts", "section_cuts"),
+        ("constraint_definitions", "constraint_definitions"),
     ):
         setattr(proj, attr, {k: _decode(v) for k, v in payload.get(key, {}).items()})
 
@@ -445,5 +473,8 @@ def load_project_file(path: Path):
     proj.transfer_grid_step = float(payload.get("transfer_grid_step", 0.0))
     proj.transfer_grid_bins = int(payload.get("transfer_grid_bins", 12))
     proj.math_model = math_model
+    proj.math_model.mark_dirty()
+    proj.math_model.refresh_bounds()
     proj.scene.mark_dirty()
+    proj.scene.refresh_bounds()
     return proj

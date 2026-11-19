@@ -31,8 +31,7 @@ class InteractionRenderer:
         self.preview_plane = None
 
     def render(self, engine, w, h, camera=None, viewport_name=None,
-               mouse_pos=None):
-        """Tüm etkileşim ve anlık preview görsellerini çizer."""
+               mouse_pos=None, plane=None, visible_ids=None):
         if not engine:
             return
         camera = camera or engine.cam
@@ -42,40 +41,30 @@ class InteractionRenderer:
                 engine.input.state.mouse_pos.y,
             )
 
-        # 2. Snap (Yakalama) Göstergesi
         if engine.snap and getattr(engine, "hover_visual_enabled", True):
-            self._draw_snap(engine, w, h, camera, mouse_pos)
+            self._draw_snap(engine, w, h, camera, mouse_pos, visible_ids=visible_ids)
 
-        # 3. Çizim Önizlemesi (DrawingPreview)
         if engine.draw_mgr and engine.draw_mgr.is_active:
             mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             engine.draw_mgr.render_preview(mvp, engine.preview_s)
-            
-        # 4. plane cre
+
         tool = getattr(engine, "plane_draw_mgr", None)
         if tool is not None and tool.is_active:
             mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             tool.render(mvp)
 
-        # 5
         if self.preview_plane is not None and camera is not None:
             mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             self._draw_plane_preview(self.preview_plane, mvp)
 
-        # 6. Plane from element preview
         pfe = getattr(engine, "_plane_from_element", None)
         if pfe is not None and pfe.active and pfe.hover_element is not None:
             el = pfe.hover_element
-            # Element'i vurgula (kenar kalınlığı, glow)
             self._draw_element_outline(el, camera, w, h, color=(0.3, 0.9, 0.3, 1.0))
-            # Aday plane'i yarı saydam çiz
-            try:
-                from plane.plane import Plane
-                plane = Plane.from_element(el, frame_local_12=pfe.frame_axis_12)
-                mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
-                self._draw_plane_preview(plane, mvp)   # mevcut metodu kullan
-            except Exception:
-                pass
+            from plane.plane import Plane
+            cand_plane = Plane.from_element(el, frame_local_12=pfe.frame_axis_12)
+            mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
+            self._draw_plane_preview(cand_plane, mvp)
 
     def _draw_element_outline(self, element, camera, w, h, color=(1, 1, 0, 1)):
         """Element'in kenar/vertex noktalarını vurgula."""
@@ -179,14 +168,14 @@ class InteractionRenderer:
             if depth_was_on:
                 glEnable(GL_DEPTH_TEST)
 
-    def _draw_snap(self, engine, w, h, camera, mouse_pos):
+    def _draw_snap(self, engine, w, h, camera, mouse_pos, visible_ids=None):
         snap = engine.snap
         if snap is None or not getattr(engine, "hover_visual_enabled", True):
             return
 
         if self._draw_tool_snap(engine, snap, w, h, camera):
             return
-        if self._draw_hover_snap(engine, snap, w, h, camera, mouse_pos):
+        if self._draw_hover_snap(engine, snap, w, h, camera, mouse_pos, visible_ids=visible_ids):
             return
 
     def _draw_tool_snap(self, engine, snap, w, h, camera) -> bool:
@@ -205,17 +194,15 @@ class InteractionRenderer:
             return True
         return False
 
-    def _draw_hover_snap(self, engine, snap, w, h, camera, mouse_pos) -> bool:
+    def _draw_hover_snap(self, engine, snap, w, h, camera, mouse_pos, visible_ids=None) -> bool:
         if engine.hover_id <= 0 or mouse_pos is None:
             return False
 
-        try:
-            element = engine._find_element(engine.hover_id)
-        except Exception:
-            logger.exception("[SNAP] _find_element exception")
+        element = engine._find_element(engine.hover_id)
+        if element is None:
             return False
 
-        if element is None:
+        if visible_ids is not None and getattr(element, "unique_id", None) not in visible_ids:
             return False
 
         mx, my = mouse_pos
@@ -225,7 +212,7 @@ class InteractionRenderer:
                 snap.draw_snap(screen[0], screen[1], w, h, active=True, snap_type="node")
                 return True
 
-        kind = type(element).__name__.lower()  # "frame", "link", "area", "polygon"
+        kind = type(element).__name__.lower()
         snap.draw_snap(mx, my, w, h, active=True, snap_type=kind)
         return True
 

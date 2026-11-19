@@ -1,9 +1,21 @@
 # app/commands/project_commands.py
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal, Union
 
+@dataclass
+class OpenPanel:
+    name: str
+    kwargs: dict[str, Any] = field(default_factory=dict)
 
+@dataclass
+class ClosePanel:
+    name: str
+
+@dataclass
+class TogglePanel:
+    name: str
+    
 # ---- Tanım container'ları ----
 @dataclass
 class ReplicateSelected:
@@ -225,3 +237,7 @@ class StartPlane2ptZ: pass
 class ConvertFramesToLinks:
     link_prop_name: str = "DefaultLink"
     delete_original: bool = True
+
+@dataclass
+class PropagateGeometryChange:
+    node_uids: list[int] = field(default_factory=list)

@@ -61,56 +61,27 @@ class ViewService:
         if eng.plane_draw_mgr.is_active:
             eng.plane_draw_mgr.cancel()
 
-        viewport_manager = self.app.viewport_manager
-        viewport = viewport_manager.active if viewport_manager is not None else None
+        vm = self.app.viewport_manager
+        viewport = vm.active if vm is not None else None
         project = self.app.project_service.project
         if viewport is None:
-            if eng.plane_mode is not None:
-                eng.plane_mode.toggle(project)
             return
 
+        plane = vm.ensure_viewport_plane(viewport, project)
         camera = viewport.camera
+
         if viewport.is_2d:
-            if not camera.restore_view():
-                camera.set_view_preset("iso_nw")
-            camera.clear_section_filter()
             viewport.is_2d = False
-            viewport.plane = None
+            camera.is_2d = False
+            camera.clear_section_filter()
+            if not camera.restore_view():
+                vm.focus_viewport_on_plane(viewport, plane)
             viewport.invalidate_visible_ids()
             return
 
-        plane = project.active_plane
-        if plane is None:
-            planes = project.grid_planes()
-            plane = next((p for p in planes if p.name == "XY_Z0"), None)
-            if plane is None:
-                plane = next((p for p in planes if p.name.startswith("XY_Z")), None)
-            if plane is not None:
-                project.activate_plane(plane)
-        if plane is None:
-            return
-
-        uc = 0.5 * ((plane.u_min or 0.0) + (plane.u_max or 0.0))
-        vc = 0.5 * ((plane.v_min or 0.0) + (plane.v_max or 0.0))
-        center = plane.to_3d((uc, vc))
-        half_u = 0.5 * abs((plane.u_max or 0.0) - (plane.u_min or 0.0))
-        half_v = 0.5 * abs((plane.v_max or 0.0) - (plane.v_min or 0.0))
-        fit_radius = max(half_u, half_v) * 1.4
-        if fit_radius < 1e-6:
-            bounds = eng.pipeline.fit_view_bounds() if eng.pipeline else None
-            fit_radius = float(bounds.size) if bounds is not None else 1000.0
-
         camera.save_view()
-        camera.look_at_plane(
-            origin=center, u=plane.u, v=plane.v, n=plane.normal,
-            fit_radius=fit_radius,
-        )
-        camera.set_section_filter(
-            normal=plane.normal, origin=plane.origin,
-            min_s=-plane.depth_minus, max_s=plane.depth_plus,
-        )
-        viewport.plane = plane
         viewport.is_2d = True
+        vm.focus_viewport_on_plane(viewport, plane)
         viewport.invalidate_visible_ids()
 
     def activate_plane(self, plane) -> None:

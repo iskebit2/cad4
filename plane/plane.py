@@ -122,7 +122,22 @@ class Plane:
         self.association_status = {k: {} for k in ASSOC_KINDS}
         self._association_revision = 0
         self.pending = {}
+        self.origin = origin
+        self.u_min = None if u_min is None else float(u_min)
+        self.u_max = None if u_max is None else float(u_max)
+        self.v_min = None if v_min is None else float(v_min)
+        self.v_max = None if v_max is None else float(v_max)
 
+    @property
+    def ucs_matrix(self) -> np.ndarray:
+        """4x4 UCS dönüşüm matrisi (Lokal Plane -> Dünya)."""
+        m = np.eye(4, dtype=float)
+        m[:3, 0] = self.u
+        m[:3, 1] = self.v
+        m[:3, 2] = self.normal
+        m[:3, 3] = self.origin
+        return m
+    
     @property
     def x_axis(self): return self.u
 
@@ -710,33 +725,62 @@ class Plane:
     def uv_basis(self):
         return self.u, self.v, self.normal
 
-    def set_bounds(self, u_min, u_max, v_min, v_max, recenter=True):
-        if u_min > u_max: u_min, u_max = u_max, u_min
-        if v_min > v_max: v_min, v_max = v_max, v_min
-        if recenter:
-            uc, vc = 0.5 * (u_min + u_max), 0.5 * (v_min + v_max)
-            if abs(uc) > 1e-12 or abs(vc) > 1e-12:
-                self.origin = self.origin + uc * self.u + vc * self.v
-                u_min -= uc; u_max -= uc
-                v_min -= vc; v_max -= vc
-        self.u_min, self.u_max = float(u_min), float(u_max)
-        self.v_min, self.v_max = float(v_min), float(v_max)
+    def box_corners_3d(self) -> list[np.ndarray]:
+        """Sınır kutusunun alt (-depth_minus) ve üst (+depth_plus) 8 köşesini döndürür."""
+        if None in (self.u_min, self.u_max, self.v_min, self.v_max):
+            return []
+        us = (self.u_min, self.u_max)
+        vs = (self.v_min, self.v_max)
+        ws = (-self.depth_minus, self.depth_plus)
+        return [
+            self.local_to_world((u, v, w))
+            for w in ws
+            for u, v in ((us[0], vs[0]), (us[1], vs[0]), (us[1], vs[1]), (us[0], vs[1]))
+        ]
 
-    def fit_to_math_model(self, math_model, margin_ratio=0.05, min_margin=100.0):
-        us, vs = [], []
+    def set_bounds(self, u_min, u_max, v_min, v_max, recenter: bool = False):
+        if u_min is not None and u_max is not None and u_min > u_max:
+            u_min, u_max = u_max, u_min
+        if v_min is not None and v_max is not None and v_min > v_max:
+            v_min, v_max = v_max, v_min
+        if recenter and None not in (u_min, u_max, v_min, v_max):
+            uc, vc = 0.5 * (u_min + u_max), 0.5 * (v_min + v_max)
+            self.origin = self.origin + uc * self.u + vc * self.v
+            u_min -= uc; u_max -= uc
+            v_min -= vc; v_max -= vc
+        self.u_min = None if u_min is None else float(u_min)
+        self.u_max = None if u_max is None else float(u_max)
+        self.v_min = None if v_min is None else float(v_min)
+        self.v_max = None if v_max is None else float(v_max)
+        self._association_revision += 1
+
+    def clear_bounds(self):
+        self.u_min = self.u_max = self.v_min = self.v_max = None
+        self._association_revision += 1
+
+    def fit_to_math_model(self, math_model, margin_ratio=0.05, min_margin=100.0, include_depth: bool = False):
+        us, vs, ws = [], [], []
         for nd in (math_model.nodes.values() if math_model else ()):
-            u, v = self.to_2d((nd.x, nd.y, nd.z))
-            us.append(u)
-            vs.append(v)
+            loc = self.world_to_local((nd.x, nd.y, nd.z))
+            us.append(loc[0]); vs.append(loc[1]); ws.append(loc[2])
         if not us:
             half = 5000.0
             self.u_min, self.u_max = -half, half
             self.v_min, self.v_max = -half, half
+            if include_depth:
+                self.depth_minus = half
+                self.depth_plus = half
+            self._association_revision += 1
             return
         mu = max(margin_ratio * (max(us) - min(us)), min_margin)
         mv = max(margin_ratio * (max(vs) - min(vs)), min_margin)
         self.u_min, self.u_max = min(us) - mu, max(us) + mu
         self.v_min, self.v_max = min(vs) - mv, max(vs) + mv
+        if include_depth:
+            mw = max(margin_ratio * (max(ws) - min(ws)), min_margin)
+            self.depth_minus = max(0.0, -(min(ws) - mw))
+            self.depth_plus = max(0.0, max(ws) + mw)
+        self._association_revision += 1
         
     def __repr__(self):
         return (f"Plane(id={self.plane_id[:6]}, name={self.name!r}, "

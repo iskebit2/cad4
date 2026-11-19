@@ -120,6 +120,7 @@ class Engine:
                     self.pipeline.interaction.render(
                         self, vp.width, vp.height, camera=vp.camera,
                         viewport_name=vp.name, mouse_pos=pointer,
+                        plane=vp.plane, visible_ids=vp.visible_ids,
                     )
                 finally:
                     glBindFramebuffer(GL_FRAMEBUFFER, 0)
@@ -212,20 +213,38 @@ class Engine:
         from core.engine.ray_cast import screen_ray
         return screen_ray(self.cam, x, y, self.w, self.h)
 
-    def screen_to_world(self, x: float, y: float):
-        from core.engine.ray_cast import screen_to_world
-        plane = self.active_working_plane
-        return screen_to_world(self.cam, x, y, self.w, self.h, plane)
+    def _active_viewport(self):
+        vm = getattr(self, "viewport_manager", None)
+        return vm.active if vm is not None else None
 
-    def update_world_pos(self, x: float, y: float) -> None:
+    def screen_to_world(self, x: float, y: float, vp=None):
+        from core.engine.ray_cast import screen_to_world
+        target_vp = vp or self._active_viewport()
+        cam = target_vp.camera if target_vp is not None else self.cam
+        w = target_vp.width if target_vp is not None else self.w
+        h = target_vp.height if target_vp is not None else self.h
+        plane = getattr(target_vp, "plane", None) if target_vp is not None else self.active_working_plane
+        return screen_to_world(cam, x, y, w, h, plane)
+
+    def update_world_pos(self, x: float, y: float, vp=None) -> None:
         if self.input is None:
             return
-        world = self.screen_to_world(x, y)
+        target_vp = vp or self._active_viewport()
+        world = self.screen_to_world(x, y, vp=target_vp)
         if world is not None:
             self.input.mouse_world_pos = world
             self.input.mouse_world_valid = True
+            plane = getattr(target_vp, "plane", None) if target_vp is not None else None
+            if plane is not None:
+                loc = plane.world_to_local((world.x, world.y, world.z))
+                self.input.mouse_ucs_pos = (float(loc[0]), float(loc[1]), float(loc[2]))
+                self.input.mouse_ucs_name = plane.name
+            else:
+                self.input.mouse_ucs_pos = (float(world.x), float(world.y), float(world.z))
+                self.input.mouse_ucs_name = "Global"
             return
         self.input.mouse_world_valid = False
+        self.input.mouse_ucs_pos = None
 
     # ------------------------------------------------------------------
     # Plane from element

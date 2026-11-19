@@ -32,11 +32,6 @@ class CameraController:
         if button == MIDDLE:
             self._middle_mode = "orbit" if eng.input.is_shift() else "pan"
             return True
-        # if button == RIGHT:
-        #     if eng.hover_id > 0:
-        #         print("button == RIGHT")
-        #         return True
-        #     return False
         if button == LEFT:
             vp = self._active_viewport()
             if eng.marquee:
@@ -46,7 +41,7 @@ class CameraController:
                     viewport_size=(vp.width, vp.height) if vp is not None else None,
                     viewport_name=vp.name if vp is not None else None,
                 )
-                eng.update_world_pos(x, y)
+                eng.update_world_pos(x, y, vp=vp)
                 eng.start_hover_pick(int(x), int(y))
                 return True
         return False
@@ -101,6 +96,7 @@ class CameraController:
             return True
         eng.update_world_pos(x, y)
         vp = self._active_viewport()
+        eng.update_world_pos(x, y, vp=vp)
         if vp is not None:
             eng.start_viewport_hover_pick(vp, int(x), int(y))
         else:

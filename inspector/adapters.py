@@ -1,11 +1,9 @@
 # ui/adapters.py
 from __future__ import annotations
 
-from typing import Any
-
 from data.enums import PolygonType
 from domain.definition import FrameDistributedLoad, AreaUniformToFrameLoad, DistType, LoadDirection
-from ui.helpers.schema import get_path, set_path
+from inspector.schemas import get_path, set_path
 
 MIXED = "__MIXED__"
 
@@ -407,7 +405,7 @@ def line_to_values(line) -> dict:
         "color": list(line.color[:3]) if line.color else [1.0, 1.0, 1.0],
         "width": float(line.width),
         "style": line.style,
-        "visible": bool(line.visible),
+        "visible": bool(line.is_visible),
         "is_column": bool(line.is_column),
         "v1x": float(line.v1.x), "v1y": float(line.v1.y), "v1z": float(line.v1.z),
         "v2x": float(line.v2.x), "v2y": float(line.v2.y), "v2z": float(line.v2.z),

@@ -1,5 +1,61 @@
-2026-11-19 02:25:43 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: right preset=right
-2026-11-19 02:25:54 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
-2026-11-19 02:25:54 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: right
-2026-11-19 02:25:54 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso
-2026-11-19 02:27:15 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: left preset=left
+2026-11-20 02:29:14 [INFO    ] cad.app.cad_window: [CadWindow] Hazır: 1280x800
+2026-11-20 02:29:14 [INFO    ] cad.core.engine.gl_context: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-11-20 02:29:14 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=1, u_mvp=0)
+2026-11-20 02:29:14 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-11-20 02:29:14 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
+2026-11-20 02:29:14 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso plane=None
+2026-11-20 02:29:14 [INFO    ] cad.ui.ui_host: [UIHost] Hazır (8 panel)
+2026-11-20 02:29:49 [INFO    ] cad.tools.s2k.loader: CurrUnits: N, mm, C
+2026-11-20 02:29:49 [INFO    ] cad.tools.s2k.loader: [Parser] 56 tablo parse edildi
+2026-11-20 02:29:50 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = N, mm, C
+2026-11-20 02:29:50 [INFO    ] cad.tools.s2k.loader: [Scene] 24 düğüm, 39 çubuk, 6 alan, 0 bağ
+2026-11-20 02:29:50 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = N, mm, C
+2026-11-20 02:29:50 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
+2026-11-20 02:29:50 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso plane=None
+2026-11-20 02:29:56 [INFO    ] cad.plane.plane: [Plane.refresh_assoc] iso_UCS TOTAL: 5.6 ms
+2026-11-20 02:31:39 [INFO    ] cad.tools.frame_to_link: [Frame→Link] 'DefaultLink' projede yok, DefaultLink oluşturuluyor
+2026-11-20 02:31:39 [INFO    ] cad.tools.frame_to_link: [LinkProp] 'DefaultLink' oluşturuldu
+2026-11-20 02:31:39 [INFO    ] cad.tools.frame_to_link: [Frame→Link] converted=1, failed=0
+2026-11-20 02:32:09 [ERROR   ] cad.app.commands.base: [Cmd] Draw(Polygon) undo hatası: unhashable type: 'Polygon'
+2026-11-20 02:32:13 [ERROR   ] cad.app.commands.base: [Cmd] Draw(Polygon) undo hatası: unhashable type: 'Polygon'
+2026-11-20 02:32:42 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: Plane: XY_Z10000 preset=None plane=XY_Z10000
+2026-11-20 02:32:51 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
+2026-11-20 02:33:18 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: Plane: XY_Z10000
+2026-11-20 02:33:24 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso plane=None
+2026-11-20 02:33:44 [INFO    ] cad.tools.s2k.loader: CurrUnits: N, mm, C
+2026-11-20 02:33:44 [INFO    ] cad.tools.s2k.loader: [Parser] 67 tablo parse edildi
+2026-11-20 02:33:46 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = N, mm, C
+2026-11-20 02:33:48 [INFO    ] cad.tools.s2k.loader: [Scene] 3031 düğüm, 1653 çubuk, 1755 alan, 983 bağ
+2026-11-20 02:33:48 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = N, mm, C
+2026-11-20 02:33:48 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
+2026-11-20 02:33:48 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: iso preset=iso plane=None
+2026-11-20 02:34:17 [INFO    ] cad.plane.plane_manager_panel: [PlaneMgr] Apply: XY_Z0
+2026-11-20 02:34:19 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: iso
+2026-11-20 02:34:20 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: Plane: XY_Z0 preset=None plane=XY_Z0
+2026-11-20 02:37:36 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] remove: Plane: XY_Z0
+2026-11-20 02:39:55 [INFO    ] cad.viewport.viewport_manager: [ViewportManager] create: Plane: XY_Z7100 preset=None plane=XY_Z7100
+2026-11-20 02:40:30 [INFO    ] cad.plane.plane: [Plane.refresh_assoc] XY_Z7100 TOTAL: 417.1 ms
+2026-11-20 02:43:15 [CRITICAL] cad.main: Kritik hata:
+Traceback (most recent call last):
+  File "D:\Program\cad4\ui\base\panel_base.py", line 153, in draw
+    self.draw_content()
+  File "D:\Program\cad4\ui\panels\polygon_properties_panel.py", line 228, in draw_content
+    self._draw_single_polygon_ui(p)
+  File "D:\Program\cad4\ui\panels\polygon_properties_panel.py", line 253, in _draw_single_polygon_ui
+    self._draw_tab_geometry(p)
+  File "D:\Program\cad4\ui\panels\polygon_properties_panel.py", line 329, in _draw_tab_geometry
+    pm = self.app.panels.get("plane_manager", {}).get("instance") if self.app else None
+         ^^^^^^^^^^^^^^^
+AttributeError: 'CadApp' object has no attribute 'panels'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Program\cad4\main.py", line 81, in main
+    ui_host.draw_frame(dt)
+  File "D:\Program\cad4\ui\ui_host.py", line 182, in draw_frame
+    entry.instance.draw()
+  File "D:\Program\cad4\ui\base\panel_base.py", line 155, in draw
+    imgui.end()
+RuntimeError: IM_ASSERT( (0) && "Missing EndTabBar()" )   ---   imgui.cpp:11688
+

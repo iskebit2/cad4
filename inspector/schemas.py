@@ -1,7 +1,63 @@
-# ui/schemas.py
-"""Her element tipi için hazır şemalar."""
-from ui.helpers.schema import Field, Group
+# inspector/schema_bridge.py
+from __future__ import annotations
+from typing import Any, Protocol
+from dataclasses import dataclass, field
 
+
+@dataclass
+class Field:
+    key: str
+    kind: str = "str"
+    label: str | None = None
+    choices: list[str] | None = None
+    editable: bool = True
+    step: float = 0.1
+    format: str = "%.3f"
+    unit: str | None = None
+    item_schema: list[Any] | None = None
+
+
+@dataclass
+class Group:
+    title: str
+    fields: list[Field] = field(default_factory=list)
+    default_open: bool = True
+
+
+def get_path(d: dict, path: str):
+    cur = d
+    for p in path.split("."):
+        if isinstance(cur, dict):
+            cur = cur.get(p)
+        elif isinstance(cur, (list, tuple)) and p.isdigit():
+            cur = cur[int(p)]
+        else:
+            return None
+    return cur
+
+
+def set_path(d: dict, path: str, value):
+    parts = path.split(".")
+    cur = d
+    for i, p in enumerate(parts[:-1]):
+        next_p = parts[i + 1]
+        is_next_int = next_p.isdigit()
+        
+        if isinstance(cur, dict):
+            if p not in cur or cur[p] is None:
+                cur[p] = [] if is_next_int else {}
+            cur = cur[p]
+        elif isinstance(cur, list):
+            idx = int(p)
+            while len(cur) <= idx:
+                cur.append([] if is_next_int else {})
+            cur = cur[idx]
+            
+    last_p = parts[-1]
+    if isinstance(cur, list):
+        cur[int(last_p)] = value
+    elif isinstance(cur, dict):
+        cur[last_p] = value
 
 # ============================================================================
 # NODE
@@ -191,14 +247,14 @@ def link_schema():
 def polygon_schema():
     return [
         Group("Genel", [
-            Field("label", "Etiket", "string"),
-            Field("poly_type", "Tip", "enum",
-                  choices=("GENERIC", "SURFACE", "ZONE",
-                           "SECTION_CUT", "LOAD_AREA")),
-            Field("color", "Renk", "color"),
-            Field("is_visible", "Görünür", "bool"),
-            Field("transfer_dist_type", "Dağıtım", "enum",
-                  choices=("one_way_u1", "one_way_u2", "two_way")),
+            Field("label",      "str",   "Etiket"),
+            Field("poly_type",  "enum",  "Tip",
+                  choices=["GENERIC", "SURFACE", "ZONE",
+                           "SECTION_CUT", "LOAD_AREA"]),
+            Field("color",      "color", "Renk"),
+            Field("is_visible", "bool",  "Görünür"),
+            Field("transfer_dist_type", "enum", "Dağıtım",
+                  choices=["one_way_u1", "one_way_u2", "two_way"]),
         ]),
         Group("Assoc", [
             Field("assoc_auto", "Otomatik Tara", "bool"),
@@ -223,13 +279,13 @@ def polygon_schema():
 def line_schema():
     return [
         Group("Genel", [
-            Field("label", "Etiket", "string"),
-            Field("color", "Renk", "color"),
-            Field("width", "Kalınlık", "float"),
-            Field("style", "Stil", "enum",
-                  choices=("solid", "dashed", "dash_dot")),
-            Field("visible", "Görünür", "bool"),
-            Field("is_column", "Kolon", "bool"),
+            Field("label",   "str",   "Etiket"),
+            Field("color",   "color", "Renk"),
+            Field("width",   "float", "Kalınlık", step=0.5, format="%.2f"),
+            Field("style",   "enum",  "Stil",
+                  choices=["solid", "dashed", "dash_dot"]),
+            Field("visible", "bool",  "Görünür"),
+            Field("is_column", "bool", "Kolon"),
         ]),
         Group("Geometri", [
             Field("v1x", "Başlangıç X", "float"),
@@ -246,30 +302,29 @@ def line_schema():
 def grid_schema():
     return [
         Group("Koordinatlar", [
-            Field("x_coords", "X", "string"),
-            Field("y_coords", "Y", "string"),
-            Field("z_coords", "Z", "string"),
+            Field("x_coords", "str", "X"),
+            Field("y_coords", "str", "Y"),
+            Field("z_coords", "str", "Z"),
         ]),
         Group("Etiketler", [
-            Field("x_labels", "X", "string"),
-            Field("y_labels", "Y", "string"),
-            Field("z_labels", "Z", "string"),
+            Field("x_labels", "str", "X"),
+            Field("y_labels", "str", "Y"),
+            Field("z_labels", "str", "Z"),
         ]),
         Group("Görsel", [
-            Field("show_labels", "Etiket Göster", "bool"),
-            Field("label_position", "Konum", "enum",
-                  choices=("end", "both_ends", "middle")),
-            Field("label_overflow", "Taşma", "float"),
+            Field("show_labels", "bool", "Etiket Göster"),
+            Field("label_position", "enum", "Konum",
+                  choices=["end", "both_ends", "middle"]),
+            Field("label_overflow", "float", "Taşma", step=0.1, format="%.3f"),
         ]),
     ]
-
 
 def plane_schema():
     return [
         Group("Genel", [
-            Field("name", "Ad", "string"),
-            Field("depth_minus", "Derinlik -", "float"),
-            Field("depth_plus", "Derinlik +", "float"),
+            Field("name", "str", "Ad"),
+            Field("depth_minus", "float", "Derinlik -", step=0.1, format="%.3f"),
+            Field("depth_plus",  "float", "Derinlik +", step=0.1, format="%.3f"),
         ]),
     ]
 
@@ -294,7 +349,7 @@ def schema_for(element_type: str):
 def multi_schema_for(elements):
     if not elements:
         return []
-    types = set(getattr(e, "element_type", "?") for e in elements)
+    types = {type(e).__name__ for e in elements}
     if len(types) == 1:
         return schema_for(next(iter(types)))
     return [
@@ -304,3 +359,50 @@ def multi_schema_for(elements):
             Field("color",      "color", "Renk (R,G,B)"),
         ]),
     ]
+
+def schema_for_object(obj):
+    return schema_for(type(obj).__name__)
+
+
+class Catalog(Protocol):
+    def list_sections(self) -> list[str]: ...
+    def get_section(self, name: str) -> Any | None: ...
+    def list_materials(self) -> list[str]: ...
+    def get_material(self, name: str) -> Any | None: ...
+    def list_link_props(self) -> list[str]: ...
+    def list_load_patterns(self) -> list[str]: ...
+
+class CatalogAdapter:
+    """CadApp.section_catalog dict'ini inspector Catalog protokolüne uyarlar."""
+
+    def __init__(self, app):
+        self._app = app
+
+    def _catalog_dict(self) -> dict:
+        return getattr(self._app, "section_catalog", {}) or {}
+
+    def list_sections(self) -> list[str]:
+        return sorted(self._catalog_dict().keys())
+
+    def get_section(self, name: str) -> Any | None:
+        return self._catalog_dict().get(name)
+
+    def list_materials(self) -> list[str]:
+        # material_catalog varsa; yoksa boş
+        cat = getattr(self._app, "material_catalog", None) or {}
+        return sorted(cat.keys())
+
+    def get_material(self, name: str) -> Any | None:
+        cat = getattr(self._app, "material_catalog", None) or {}
+        return cat.get(name)
+
+    def list_link_props(self) -> list[str]:
+        cat = getattr(self._app, "link_prop_catalog", None) or {}
+        return sorted(cat.keys())
+
+    def get_link_prop(self, name: str) -> Any | None:
+        cat = getattr(self._app, "link_prop_catalog", None) or {}
+        return cat.get(name)
+
+    def list_load_patterns(self) -> list[str]:
+        return []

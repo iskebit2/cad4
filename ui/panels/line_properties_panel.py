@@ -17,10 +17,10 @@ class LinePropertiesPanel(BasePanel):
     STYLES = ("solid", "dashed", "dash_dot")
     STYLE_LABELS = ("Düz", "Kesik", "Kesik-nokta")
 
-    def __init__(self):
+    def __init__(self, app=None):
         super().__init__(title="Line", width=self.W, height=self.H,
                          pos_first_use=(900, 440))
-        self.app = None
+        self.app = app
         self.project = None
         self.context = None
         self._selected_ids: set[int] = set()

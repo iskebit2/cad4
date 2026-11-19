@@ -62,12 +62,8 @@ class SnapSquareRenderer:
         glUseProgram(0)
 
     # ------------------------------------------------------------------
-    def find_snap(self, engine, x, y, magnetic=False, cam=None, viewport_size=None):
-        logger.info("[FIND_SNAP] ENTER magnetic=%s cam=%s size=%s math_model=%s nodes=%d",
-                 magnetic, bool(cam), viewport_size,
-                 engine.math_model,
-                 len(engine.math_model.nodes) if engine.math_model else 0)
-        
+    def find_snap(self, engine, x, y, magnetic=False, cam=None, viewport_size=None,
+                  plane=None, visible_ids=None):
         if magnetic:
             finders = (
                 (self._find_node, "node"),
@@ -85,38 +81,42 @@ class SnapSquareRenderer:
             )
 
         for finder, kind in finders:
-            logger.info("[FIND_SNAP] calling %s.%s", finder.__self__.__class__.__name__, finder.__name__)
-            try:
-                # Her finder'a isteğe bağlı cam ve viewport_size parametrelerini iletiyoruz
-                result = finder(engine, x, y, cam=cam, viewport_size=viewport_size)
-                logger.info("[FIND_SNAP] result=%s kind=%s", result, kind)
-            except Exception as e:
-                logger.info("[FIND_SNAP] %s exception: %s", kind, e)
-                result = None
-            
+            result = finder(
+                engine, x, y,
+                cam=cam,
+                viewport_size=viewport_size,
+                plane=plane,
+                visible_ids=visible_ids,
+            )
             if result is not None:
-                is_snap = (kind in ("node", "grid"))
+                is_snap = kind in ("node", "grid")
                 return result, is_snap, kind
         return None, False, "default"
 
-    def _find_node(self, engine, x, y, cam=None, viewport_size=None):
+    @staticmethod
+    def _is_visible_in_viewport(el, visible_ids) -> bool:
+        if not getattr(el, "is_visible", True):
+            return False
+        if visible_ids is not None and getattr(el, "unique_id", None) not in visible_ids:
+            return False
+        return True
+
+    def _find_node(self, engine, x, y, cam=None, viewport_size=None,
+                   plane=None, visible_ids=None):
         scene = engine.math_model
         target_cam = cam if cam is not None else engine.cam
         if not scene or not target_cam:
             return None
-            
-        # Viewport çözünürlüğü verilmediyse engine boyutlarını kullan
+
         w = viewport_size[0] if viewport_size else engine.w
         h = viewport_size[1] if viewport_size else engine.h
-
         mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
-        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
+
         best_node, best_d2 = None, self.SNAP_RADIUS_PX ** 2
         for node in scene.nodes.values():
-            if not node.is_visible:
+            if not self._is_visible_in_viewport(node, visible_ids):
                 continue
             p = self._project_pt_with_size(target_cam, mvp, node.x, node.y, node.z, w, h)
-            
             if p is None:
                 continue
             d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
@@ -142,32 +142,9 @@ class SnapSquareRenderer:
         py = (1.0 - ndc_y) * 0.5 * h
         return px, py
 
-    def _find_frame(self, engine, x, y):
-        math_model = engine.math_model
-        cam = engine.cam
-        if not math_model or not cam:
-            return None
-        mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
-        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
-        for frame in math_model.frames.values():
-            if not frame.is_visible:
-                continue
-            n0, n1 = frame.node_i, frame.node_j
-            p0 = self._project_pt(engine, mvp, n0.x, n0.y, n0.z)
-            p1 = self._project_pt(engine, mvp, n1.x, n1.y, n1.z)
-            if p0 is None or p1 is None:
-                continue
-            d2, mid = self._dist_to_segment((x, y), p0, p1)
-            if d2 < best_d2:
-                best_d2 = d2
-                # Orta nokta dünya koordinatı
-                mx = (n0.x + n1.x) * 0.5
-                my = (n0.y + n1.y) * 0.5
-                mz = (n0.z + n1.z) * 0.5
-                best = Vertex(mx, my, mz, label=getattr(frame, "label", ""))
-        return best
 
-    def _find_grid_snap(self, engine, x, y, cam=None, viewport_size=None):
+    def _find_grid_snap(self, engine, x, y, cam=None, viewport_size=None,
+                        plane=None, visible_ids=None):
         target_cam = cam if cam is not None else engine.cam
         if target_cam is None:
             return None
@@ -177,20 +154,7 @@ class SnapSquareRenderer:
         if grid is None:
             return None
 
-        # ★ Aktif çalışma düzlemi varsa o düzlemdeki kesişimler
-        plane = getattr(project, "active_plane", None)
-        candidates = []
-        try:
-            if plane is not None:
-                axis = ("x", "y", "z")[int(np.argmax(np.abs(plane.normal)))]
-                level = float(np.dot(plane.normal, plane.origin))
-                candidates = grid.snap_points_on_plane(axis, level) or []
-            else:
-                candidates = grid.snap_points() or []
-        except Exception as e:
-            logger.warning("[GRID_SNAP] snap_points hatası: %s", e)
-            return None
-
+        candidates = self._grid_candidates_for_plane(grid, plane)
         if not candidates:
             return None
 
@@ -199,11 +163,7 @@ class SnapSquareRenderer:
         mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
         best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
         for c in candidates:
-            # c tuple/list olabilir (x, y, z) veya Vertex olabilir
-            if hasattr(c, "x"):
-                cx, cy, cz = c.x, c.y, c.z
-            else:
-                cx, cy, cz = float(c[0]), float(c[1]), float(c[2])
+            cx, cy, cz = (c.x, c.y, c.z) if hasattr(c, "x") else (float(c[0]), float(c[1]), float(c[2]))
             p = self._project_pt_with_size(target_cam, mvp, cx, cy, cz, w, h)
             if p is None:
                 continue
@@ -215,13 +175,168 @@ class SnapSquareRenderer:
             return None
         return Vertex(best[0], best[1], best[2])
 
-    def _project_pt(self, engine, mvp, x, y, z):
-        w, h = engine.w, engine.h
-        clip = mvp * glm.vec4(x, y, z, 1.0)
-        if clip.w <= 1e-9:
+    @staticmethod
+    def _grid_candidates_for_plane(grid, plane) -> list:
+        if plane is None:
+            return grid.snap_points() or []
+
+        n = np.asarray(plane.normal, dtype=float)
+        abs_n = np.abs(n)
+        max_ax = int(np.argmax(abs_n))
+        if abs_n[max_ax] > 0.999:
+            axis_name = ("x", "y", "z")[max_ax]
+            level = float(np.dot(n, plane.origin))
+            pts = grid.snap_points_on_plane(axis_name, level) or []
+            if pts:
+                return [p for p in pts if plane.bounds_contains_uv(*plane.to_2d(p))]
+
+        xs = sorted(set(getattr(grid, "x_coords", []) or []))
+        ys = sorted(set(getattr(grid, "y_coords", []) or []))
+        zs = sorted(set(getattr(grid, "z_coords", []) or [0.0]))
+        if not xs or not ys:
+            return []
+
+        base_pts = [(gx, gy, gz) for gx in xs for gy in ys for gz in zs]
+        projected = []
+        seen = set()
+        for pt in base_pts:
+            if abs(plane.distance(pt)) > max(plane.depth_minus, plane.depth_plus, 1e-3):
+                continue
+            p_on = plane.project(pt)
+            u, v = plane.to_2d(p_on)
+            if not plane.bounds_contains_uv(u, v):
+                continue
+            key = (round(float(p_on[0]), 4), round(float(p_on[1]), 4), round(float(p_on[2]), 4))
+            if key not in seen:
+                seen.add(key)
+                projected.append((float(p_on[0]), float(p_on[1]), float(p_on[2])))
+        return projected
+    
+    def _find_frame(self, engine, x, y, cam=None, viewport_size=None,
+                    plane=None, visible_ids=None):
+        math_model = engine.math_model
+        target_cam = cam if cam is not None else engine.cam
+        if not math_model or not target_cam:
             return None
-        ndc = glm.vec3(clip) / clip.w
-        return (ndc.x + 1.0) * w * 0.5, (1.0 - ndc.y) * h * 0.5
+        w = viewport_size[0] if viewport_size else engine.w
+        h = viewport_size[1] if viewport_size else engine.h
+        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
+        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
+        for frame in math_model.frames.values():
+            if not self._is_visible_in_viewport(frame, visible_ids):
+                continue
+            n0, n1 = frame.node_i, frame.node_j
+            p0 = self._project_pt_with_size(target_cam, mvp, n0.x, n0.y, n0.z, w, h)
+            p1 = self._project_pt_with_size(target_cam, mvp, n1.x, n1.y, n1.z, w, h)
+            if p0 is None or p1 is None:
+                continue
+            d2, _ = self._dist_to_segment((x, y), p0, p1)
+            if d2 < best_d2:
+                best_d2 = d2
+                mx = (n0.x + n1.x) * 0.5
+                my = (n0.y + n1.y) * 0.5
+                mz = (n0.z + n1.z) * 0.5
+                best = Vertex(mx, my, mz, label=getattr(frame, "label", ""))
+        return best
+
+    def _find_link(self, engine, x, y, cam=None, viewport_size=None,
+                   plane=None, visible_ids=None):
+        math_model = engine.math_model
+        target_cam = cam if cam is not None else engine.cam
+        if not math_model or not target_cam:
+            return None
+        w = viewport_size[0] if viewport_size else engine.w
+        h = viewport_size[1] if viewport_size else engine.h
+        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
+        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
+        for link in getattr(math_model, "links", {}).values():
+            if not self._is_visible_in_viewport(link, visible_ids):
+                continue
+            n0, n1 = link.node_i, link.node_j
+            p0 = self._project_pt_with_size(target_cam, mvp, n0.x, n0.y, n0.z, w, h)
+            p1 = self._project_pt_with_size(target_cam, mvp, n1.x, n1.y, n1.z, w, h)
+            if p0 is None or p1 is None:
+                continue
+            d2, _ = self._dist_to_segment((x, y), p0, p1)
+            if d2 < best_d2:
+                best_d2 = d2
+                best = Vertex((n0.x + n1.x) * 0.5, (n0.y + n1.y) * 0.5, (n0.z + n1.z) * 0.5)
+        return best
+
+    def _find_area(self, engine, x, y, cam=None, viewport_size=None,
+                   plane=None, visible_ids=None):
+        math_model = engine.math_model
+        target_cam = cam if cam is not None else engine.cam
+        if not math_model or not target_cam:
+            return None
+        w = viewport_size[0] if viewport_size else engine.w
+        h = viewport_size[1] if viewport_size else engine.h
+        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
+        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
+        for area in getattr(math_model, "areas", {}).values():
+            if not self._is_visible_in_viewport(area, visible_ids):
+                continue
+            nodes = getattr(area, "nodes", [])
+            if not nodes:
+                continue
+            cx = sum(n.x for n in nodes) / len(nodes)
+            cy = sum(n.y for n in nodes) / len(nodes)
+            cz = sum(n.z for n in nodes) / len(nodes)
+            p = self._project_pt_with_size(target_cam, mvp, cx, cy, cz, w, h)
+            if p is None:
+                continue
+            d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
+            if d2 < best_d2:
+                best_d2 = d2
+                best = Vertex(cx, cy, cz)
+        return best
+
+    def _find_polygon(self, engine, x, y, cam=None, viewport_size=None,
+                      plane=None, visible_ids=None):
+        math_model = engine.math_model
+        target_cam = cam if cam is not None else engine.cam
+        if not math_model or not target_cam:
+            return None
+        w = viewport_size[0] if viewport_size else engine.w
+        h = viewport_size[1] if viewport_size else engine.h
+        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
+        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
+        for poly in math_model.polygons.values():
+            if not self._is_visible_in_viewport(poly, visible_ids):
+                continue
+            cx, cy, cz = poly.centroid()
+            p = self._project_pt_with_size(target_cam, mvp, cx, cy, cz, w, h)
+            if p is None:
+                continue
+            d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
+            if d2 < best_d2:
+                best_d2 = d2
+                best = Vertex(cx, cy, cz)
+        return best
+
+    def _find_line(self, engine, x, y, cam=None, viewport_size=None,
+                   plane=None, visible_ids=None):
+        scene = engine.scene
+        target_cam = cam if cam is not None else engine.cam
+        if not scene or not target_cam:
+            return None
+        w = viewport_size[0] if viewport_size else engine.w
+        h = viewport_size[1] if viewport_size else engine.h
+        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
+        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
+        for line in getattr(scene, "lines", {}).values():
+            if not self._is_visible_in_viewport(line, visible_ids):
+                continue
+            v1, v2 = line.v1, line.v2
+            p0 = self._project_pt_with_size(target_cam, mvp, v1.x, v1.y, v1.z, w, h)
+            p1 = self._project_pt_with_size(target_cam, mvp, v2.x, v2.y, v2.z, w, h)
+            if p0 is None or p1 is None:
+                continue
+            d2, _ = self._dist_to_segment((x, y), p0, p1)
+            if d2 < best_d2:
+                best_d2 = d2
+                best = Vertex((v1.x + v2.x) * 0.5, (v1.y + v2.y) * 0.5, (v1.z + v2.z) * 0.5)
+        return best
 
     @staticmethod
     def _vertex_from_node(node) -> Vertex:
@@ -317,25 +432,7 @@ class SnapSquareRenderer:
         glDisable(GL_BLEND)
         glEnable(GL_DEPTH_TEST)
 
-    def _find_polygon(self, engine, x, y):
-        math_model = engine.math_model
-        cam = engine.cam
-        if not math_model or not cam:
-            return None
-        mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
-        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
-        for poly in math_model.polygons.values():
-            if not getattr(poly, "is_visible", True):
-                continue
-            cx, cy, cz = poly.centroid()
-            p = self._project_pt(engine, mvp, cx, cy, cz)
-            if p is None:
-                continue
-            d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
-            if d2 < best_d2:
-                best_d2 = d2
-                best = Vertex(cx, cy, cz)
-        return best
+    
 
     @staticmethod
     def _dist_to_segment(p, a, b):
@@ -408,3 +505,12 @@ class SnapSquareRenderer:
         glUseProgram(0)
         glDisable(GL_BLEND)
         glEnable(GL_DEPTH_TEST)
+
+
+    def _project_pt(self, engine, mvp, x, y, z):
+            w, h = engine.w, engine.h
+            clip = mvp * glm.vec4(x, y, z, 1.0)
+            if clip.w <= 1e-9:
+                return None
+            ndc = glm.vec3(clip) / clip.w
+            return (ndc.x + 1.0) * w * 0.5, (1.0 - ndc.y) * h * 0.5

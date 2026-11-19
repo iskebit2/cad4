@@ -14,7 +14,7 @@ from datetime import datetime
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 OUTPUT_MAP = PROJECT_ROOT / "project_map.json"
-OUTPUT_DEPS = PROJECT_ROOT / "dependencies.json"
+OUTPUT_DEPS = PROJECT_ROOT / "project_dependencies.json"
 OUTPUT_CONTEXT = PROJECT_ROOT / "PROJECT_CONTEXT.md"
 
 BLACKLIST = {

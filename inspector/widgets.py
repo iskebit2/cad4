@@ -8,8 +8,67 @@ from imgui_bundle import imgui
 
 from domain.definition import AreaSection, LinkProp, Material, Restraint, Section
 from domain.vertex import Vertex
-from inspector.fields import common_value, is_mixed, set_value_all
 
+_SKIP = frozenset({
+    "element_type", "unique_id", "pick_id", "needs_update",
+    "show_axes_override", "connected", "dof_indices", "loads",
+    "is_selected", "source_node_id",
+    "node_i", "node_j", "nodes", "dist_loads",
+})
+
+MIXED = "__MIXED__"
+
+def inspector_fields(obj) -> list[tuple[str, Any]]:
+    if obj is None:
+        return []
+    out = []
+    for name in dir(obj):
+        if name.startswith("_") or name in _SKIP:
+            continue
+        try:
+            value = getattr(obj, name)
+        except AttributeError:
+            continue
+        if callable(value):
+            continue
+        out.append((name, value))
+    return out
+
+
+class _Mixed:
+    def __repr__(self):
+        return "<MIXED>"
+
+
+_MIXED = _Mixed()
+
+
+def common_value(objects: list, key: str):
+    if not objects:
+        return _MIXED
+    try:
+        first = getattr(objects[0], key, _MIXED)
+    except AttributeError:
+        return _MIXED
+    for o in objects[1:]:
+        try:
+            if getattr(o, key, _MIXED) != first:
+                return _MIXED
+        except AttributeError:
+            return _MIXED
+    return first
+
+
+def set_value_all(objects: list, key: str, value):
+    for o in objects:
+        try:
+            setattr(o, key, value)
+        except AttributeError:
+            pass
+
+
+def is_mixed(v) -> bool:
+    return v is _MIXED
 
 def draw_field_row(objects: list, key: str, catalog) -> bool:
     value = common_value(objects, key)
@@ -453,3 +512,207 @@ def _domain_field_items(element) -> list[tuple[str, Any]]:
         return list(vars(element).items())
     except TypeError:
         return []
+
+# inspector/widgets.py
+
+def draw_schema_field(controller, field, catalog) -> bool:
+    """Şemadaki tek bir alanı draft üzerinden render eder."""
+    from inspector.adapters import MIXED
+    from inspector.schemas import get_path
+
+    key = field.key
+    value = get_path(controller.draft_values(), key)
+    mixed = value is MIXED
+
+    imgui.table_next_row()
+    imgui.table_set_column_index(0)
+    imgui.align_text_to_frame_padding()
+    label = field.label or key
+    if field.unit:
+        label = f"{label} {field.unit}"
+    imgui.text(label)
+
+    imgui.table_set_column_index(1)
+    imgui.set_next_item_width(-1)
+    imgui.push_id(key)
+    try:
+        changed, new_value = _dispatch_schema(controller, field, value,
+                                              mixed, catalog)
+    finally:
+        imgui.pop_id()
+
+    if changed:
+        controller.set_draft_value(key, new_value)
+        return True
+    return False
+
+
+def _dispatch_schema(controller, field, value, mixed, catalog):
+    kind = field.kind
+
+    if kind == "bool":
+        v = False if mixed else bool(value)
+        c, nv = imgui.checkbox("##v", v)
+        return c, bool(nv)
+
+    if kind == "int":
+        v = 0 if mixed else int(value or 0)
+        c, nv = imgui.input_int("##v", v)
+        return c, int(nv)
+
+    if kind == "float":
+        v = 0.0 if mixed else float(value or 0.0)
+        c, nv = imgui.input_float("##v", v, step=field.step,
+                                   format=field.format)
+        return c, float(nv)
+
+    if kind == "str":
+        v = "" if mixed else str(value or "")
+        c, nv = imgui.input_text("##v", v)
+        return c, str(nv)
+
+    if kind == "color":
+        rgb = list(value[:3]) if (value and len(value) >= 3) else [0.5]*3
+        c, nv = imgui.color_edit3("##v", [float(x) for x in rgb])
+        if not c:
+            return False, None
+        # orijinal alpha koru
+        old = controller.draft_values().get("color")
+        alpha = old[3] if old and len(old) > 3 else 1.0
+        return True, [*nv, alpha]
+
+    if kind == "enum":
+        choices = list(field.choices or [])
+        idx = 0
+        if not mixed and value is not None:
+            try:
+                idx = choices.index(str(value))
+            except ValueError:
+                idx = 0
+        c, ni = imgui.combo("##v", idx, choices)
+        if c and 0 <= ni < len(choices):
+            return True, choices[ni]
+        return False, None
+
+    if kind == "info":
+        imgui.text_disabled(str(value) if value not in (None, MIXED) else "—")
+        return False, None
+
+    if kind == "section_ref":
+        if catalog is None:
+            imgui.text_disabled("(catalog yok)")
+            return False, None
+        names = catalog.list_sections()
+        cur = getattr(value, "name", "") if value else ""
+        idx = names.index(cur) if cur in names else 0
+        if not names:
+            imgui.text_disabled("(section yok)")
+            return False, None
+        c, ni = imgui.combo("##v", idx, names)
+        if c and 0 <= ni < len(names):
+            return True, catalog.get_section(names[ni])
+        return False, None
+
+    if kind == "material_ref":
+        if catalog is None:
+            imgui.text_disabled("(catalog yok)")
+            return False, None
+        names = catalog.list_materials()
+        if not names:
+            imgui.text_disabled("(material yok)")
+            return False, None
+        cur = getattr(value, "name", "") if value else ""
+        idx = names.index(cur) if cur in names else 0
+        c, ni = imgui.combo("##v", idx, names)
+        if c and 0 <= ni < len(names):
+            return True, catalog.get_material(names[ni])
+        return False, None
+
+    if kind == "link_prop_ref":
+        if catalog is None:
+            imgui.text_disabled("(catalog yok)")
+            return False, None
+        names = catalog.list_link_props()
+        if not names:
+            imgui.text_disabled("(link prop yok)")
+            return False, None
+        cur = getattr(value, "name", "") if value else ""
+        idx = names.index(cur) if cur in names else 0
+        c, ni = imgui.combo("##v", idx, names)
+        if c and 0 <= ni < len(names):
+            return True, catalog.get_link_prop(names[ni])
+        return False, None
+
+    if kind == "string_select":
+        # basit text input (gerekirse catalog listesinden combo'ya çevrilebilir)
+        v = "" if mixed else str(value or "")
+        c, nv = imgui.input_text("##v", v)
+        return c, str(nv)
+
+    if kind == "list_object":
+        return _draw_list_object(controller, field, value, mixed, catalog)
+
+    if kind == "list":
+        items = value if isinstance(value, (list, tuple)) else []
+        imgui.text_disabled(f"({len(items)})")
+        for it in list(items)[:30]:
+            imgui.bullet_text(str(it))
+        return False, None
+
+    imgui.text_disabled(repr(value)[:80] if value is not None else "—")
+    return False, None
+
+
+def _draw_list_object(controller, field, value, mixed, catalog):
+    """Frame.dist_load_sets_list gibi item_schema'lı listeler."""
+    items = list(value) if isinstance(value, list) else []
+    changed = False
+    new_items = [dict(it) if isinstance(it, dict) else it for it in items]
+
+    if imgui.button(f"+ {field.label or field.key}"):
+        new_items.append(_blank_item(field))
+        changed = True
+    imgui.same_line()
+    imgui.text_disabled(f"({len(new_items)})")
+
+    item_schema = field.item_schema or []
+    for i, it in enumerate(new_items):
+        imgui.push_id(f"{field.key}_{i}")
+        try:
+            header = f"{i}: {it.get('pattern_name', '?')}##item"
+            open_ = imgui.collapsing_header(header)
+            if open_:
+                imgui.indent(12)
+                for sub in item_schema:
+                    sub_val = it.get(sub.key)
+                    sub_changed, sub_new = _dispatch_schema(
+                        controller, sub, sub_val, False, catalog,
+                    )
+                    if sub_changed:
+                        it[sub.key] = sub_new
+                        changed = True
+                imgui.unindent(12)
+            if imgui.button(f"Sil##{i}"):
+                new_items.pop(i)
+                changed = True
+                break
+        finally:
+            imgui.pop_id()
+
+    return changed, new_items if changed else None
+
+
+def _blank_item(field):
+    item = {}
+    for sub in (field.item_schema or []):
+        if sub.kind == "bool":
+            item[sub.key] = False
+        elif sub.kind in ("int",):
+            item[sub.key] = 0
+        elif sub.kind in ("float",):
+            item[sub.key] = 0.0
+        elif sub.kind == "enum" and sub.choices:
+            item[sub.key] = sub.choices[0]
+        else:
+            item[sub.key] = ""
+    return item

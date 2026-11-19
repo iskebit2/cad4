@@ -15,8 +15,9 @@ SRC_ELEMENT = "element"
 
 class PlaneSourceDialog:
 
-    def __init__(self, app):
-        self.app = app
+    def __init__(self, app_or_host):
+        # UIHost veya CadApp geçilse de gerçek CadApp'a ulaş
+        self.app = getattr(app_or_host, "app", app_or_host)
         self.visible = False
         self.source = SRC_3PT
         self.frame_axis_12 = False
@@ -114,7 +115,7 @@ class PlaneSourceDialog:
             plane.fit_to_math_model(eng.math_model)
             proj.add_plane(plane)
 
-            pm = self.app.panels.get("plane_manager", {}).get("instance")
+            pm = self.app.panel_registry.instance("plane_manager")
             if pm is not None:
                 pm._selected_name = plane.name
                 pm.visible = True

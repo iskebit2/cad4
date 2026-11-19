@@ -1,0 +1,2473 @@
+{
+  "project": "app",
+  "dependencies": [
+    {
+      "source": "cad_app",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "cad_app",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "cad_app",
+      "target": "pathlib",
+      "type": "from",
+      "imported_name": "Path",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "cad_app",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "cad_app",
+      "target": "app.commands.command_queue",
+      "type": "from",
+      "imported_name": "CommandQueue",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "cad_app",
+      "target": "app.services.panel_registry",
+      "type": "from",
+      "imported_name": "PanelRegistry",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "cad_app",
+      "target": "app.services.project_service",
+      "type": "from",
+      "imported_name": "ProjectService",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "cad_app",
+      "target": "app.services.view_service",
+      "type": "from",
+      "imported_name": "ViewService",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "cad_app",
+      "target": "app.services.visibility_service",
+      "type": "from",
+      "imported_name": "VisibilityService",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "cad_app",
+      "target": "app.services.wind_service",
+      "type": "from",
+      "imported_name": "WindService",
+      "scope": "external",
+      "line": 13
+    },
+    {
+      "source": "cad_app",
+      "target": "app.commands.edit_controller",
+      "type": "from",
+      "imported_name": "EditController",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "cad_app",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 15
+    },
+    {
+      "source": "cad_app",
+      "target": "tools.wind_manager",
+      "type": "from",
+      "imported_name": "WindManager",
+      "scope": "external",
+      "line": 16
+    },
+    {
+      "source": "cad_window",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "cad_window",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "cad_window",
+      "target": "glfw",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "cad_window",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glViewport",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "cad_window",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "CommandManager",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands",
+      "target": "app.commands.bulk_update",
+      "type": "from",
+      "imported_name": "BulkUpdateCommand",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands",
+      "target": "app.commands.create",
+      "type": "from",
+      "imported_name": "CreateElementCommand",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands",
+      "target": "app.commands.delete",
+      "type": "from",
+      "imported_name": "DeleteElementsCommand",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands",
+      "target": "app.commands.update",
+      "type": "from",
+      "imported_name": "UpdateElementCommand",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands",
+      "target": "app.commands.replicate",
+      "type": "from",
+      "imported_name": "ReplicateElementsCommand",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "MassAssembly",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "MassContribution",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "build_mass",
+      "scope": "internal",
+      "line": 2
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.material_takeoff",
+      "type": "from",
+      "imported_name": "compute_takeoff",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.material_takeoff",
+      "type": "from",
+      "imported_name": "takeoff_to_dataframes",
+      "scope": "internal",
+      "line": 3
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.solver",
+      "type": "from",
+      "imported_name": "ModalResult",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.solver",
+      "type": "from",
+      "imported_name": "StructuralSolver",
+      "scope": "internal",
+      "line": 4
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "StiffnessAssembly",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "build_stiffness",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "local_stiffness",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "transformation_matrix",
+      "scope": "internal",
+      "line": 5
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.structuralanalysis",
+      "type": "from",
+      "imported_name": "StructuralAnalysisResult",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "commands.analysis",
+      "target": "commands.analysis.structuralanalysis",
+      "type": "from",
+      "imported_name": "run_analysis",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "math",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "app.commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "transformation_matrix",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "G_M_S2",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "MEGAGRAM",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "domain.definition",
+      "type": "from",
+      "imported_name": "LoadDirection",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "commands.analysis.mass_assembly",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 13
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "pandas",
+      "type": "import",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "G_M_S2",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "KG_PER_TON",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Area",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Frame",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "domain.math_model",
+      "type": "from",
+      "imported_name": "MathModel",
+      "scope": "external",
+      "line": 13
+    },
+    {
+      "source": "commands.analysis.material_takeoff",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "commands.analysis.modal_analysis",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.analysis.modal_analysis",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.analysis.modal_analysis",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "G_MM_S2",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.analysis.modal_analysis",
+      "target": "commands.analysis.solver",
+      "type": "from",
+      "imported_name": "ModalResult",
+      "scope": "internal",
+      "line": 9
+    },
+    {
+      "source": "commands.analysis.run",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.analysis.run",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "commands.analysis.run",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "commands.analysis.run",
+      "target": "app.commands.analysis.material_takeoff",
+      "type": "from",
+      "imported_name": "TakeoffResult",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "commands.analysis.run",
+      "target": "app.commands.analysis.material_takeoff",
+      "type": "from",
+      "imported_name": "compute_takeoff",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "commands.analysis.run",
+      "target": "app.commands.analysis.modal_analysis",
+      "type": "from",
+      "imported_name": "SpectralResult",
+      "scope": "external",
+      "line": 13
+    },
+    {
+      "source": "commands.analysis.run",
+      "target": "app.commands.analysis.structuralanalysis",
+      "type": "from",
+      "imported_name": "StructuralAnalysisResult",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "commands.analysis.run",
+      "target": "app.commands.analysis.structuralanalysis",
+      "type": "from",
+      "imported_name": "run_analysis",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "commands.analysis.solver",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.analysis.solver",
+      "target": "logging",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.analysis.solver",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.analysis.solver",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.analysis.solver",
+      "target": "scipy.linalg",
+      "type": "from",
+      "imported_name": "eigh",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "commands.analysis.solver",
+      "target": "logging",
+      "type": "import",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "commands.analysis.spectrum",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.analysis.stiffness_assembly",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 15
+    },
+    {
+      "source": "commands.analysis.stiffness_assembly",
+      "target": "math",
+      "type": "import",
+      "scope": "external",
+      "line": 17
+    },
+    {
+      "source": "commands.analysis.stiffness_assembly",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 18
+    },
+    {
+      "source": "commands.analysis.stiffness_assembly",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 18
+    },
+    {
+      "source": "commands.analysis.stiffness_assembly",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 20
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "MassAssembly",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "commands.analysis.mass_assembly",
+      "type": "from",
+      "imported_name": "build_mass",
+      "scope": "internal",
+      "line": 11
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "commands.analysis.solver",
+      "type": "from",
+      "imported_name": "ModalResult",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "commands.analysis.solver",
+      "type": "from",
+      "imported_name": "StructuralSolver",
+      "scope": "internal",
+      "line": 12
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "StiffnessAssembly",
+      "scope": "internal",
+      "line": 13
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "commands.analysis.stiffness_assembly",
+      "type": "from",
+      "imported_name": "build_stiffness",
+      "scope": "internal",
+      "line": 13
+    },
+    {
+      "source": "commands.analysis.structuralanalysis",
+      "target": "app.commands.analysis.unit_guard",
+      "type": "from",
+      "imported_name": "ensure_nmm",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "commands.analysis.unit_guard",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "UnitSystem",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.analysis.unit_guard",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "convert_project_units",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.analysis.validation",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.analysis.validation",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "commands.analysis.validation",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "MEGAGRAM",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "commands.base",
+      "target": "abc",
+      "type": "from",
+      "imported_name": "ABC",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.base",
+      "target": "abc",
+      "type": "from",
+      "imported_name": "abstractmethod",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.base",
+      "target": "collections",
+      "type": "from",
+      "imported_name": "deque",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.base",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.bulk_update",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "commands.bulk_update",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "commands.bulk_update",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "external",
+      "line": 13
+    },
+    {
+      "source": "commands.bulk_update",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "commands.camera",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.camera",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.camera",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.camera",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.command_queue",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.command_queue",
+      "target": "queue",
+      "type": "import",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.command_queue",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.create",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.create",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.create",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.create",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.definitions",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.definitions",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.definitions",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.definitions",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.delete",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.delete",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.draw",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.draw",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.draw",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.draw",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.draw",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.draw",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.draw",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "commands.draw",
+      "target": "domain.line",
+      "type": "from",
+      "imported_name": "Line",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "commands.draw",
+      "target": "domain.polygon",
+      "type": "from",
+      "imported_name": "Polygon",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "BulkUpdateCommand",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "CommandManager",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "CreateElementCommand",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "DeleteElementsCommand",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "UpdateElementCommand",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "app.commands.replicate",
+      "type": "from",
+      "imported_name": "ReplicateElementsCommand",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "commands.edit_controller",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 13
+    },
+    {
+      "source": "commands.elements",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.elements",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.elements",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.elements",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.elements",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.elements",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.elements",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "commands.elements",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "commands.engine_flags",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.engine_flags",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.engine_flags",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.engine_flags",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.engine_flags",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.file_ops",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.file_ops",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.file_ops",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.file_ops",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.geometry_ops",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.geometry_ops",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.geometry_ops",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.geometry_ops",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.inspector",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "commands.inspector",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.inspector",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.panels",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.panels",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.panels",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.panels",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.panels",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.project",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.project",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.project",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.project",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.project_commands",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.project_commands",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.project_commands",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.project_commands",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.project_commands",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Literal",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.project_commands",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Union",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.registry",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.registry",
+      "target": "importlib",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.registry",
+      "target": "re",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.registry",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.registry",
+      "target": "dataclasses",
+      "type": "import",
+      "scope": "external",
+      "line": 191
+    },
+    {
+      "source": "commands.registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "get_type_hints",
+      "scope": "external",
+      "line": 192
+    },
+    {
+      "source": "commands.replicate",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.replicate",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.replicate",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.replicate",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Area",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.replicate",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Frame",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.replicate",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Link",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.replicate",
+      "target": "domain.element",
+      "type": "from",
+      "imported_name": "Node",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "commands.replicate",
+      "target": "domain.polygon",
+      "type": "from",
+      "imported_name": "Polygon",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "commands.replicate",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "commands.result",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.result",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.result",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.selection",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.selection",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.selection",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.selection",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.signals",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.signals",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.signals",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "commands.update",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.update",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.update",
+      "target": "app.commands.base",
+      "type": "from",
+      "imported_name": "Command",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "commands.update",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "commands.visibility",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "command",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.visibility",
+      "target": "app.commands.registry",
+      "type": "from",
+      "imported_name": "factory",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "commands.visibility",
+      "target": "app.commands.result",
+      "type": "from",
+      "imported_name": "CommandResult",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "commands.visibility",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "ctypes",
+      "type": "import",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "time",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "collections",
+      "type": "from",
+      "imported_name": "deque",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "collections.abc",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "glfw",
+      "type": "import",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "numpy",
+      "type": "import",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_ARRAY_BUFFER",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_COLOR_BUFFER_BIT",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_DYNAMIC_DRAW",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_FALSE",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_FLOAT",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_FRAGMENT_SHADER",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_LINES",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_TRIANGLES",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "GL_VERTEX_SHADER",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glAttachShader",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glBindBuffer",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glBindVertexArray",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glBufferData",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glClear",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glClearColor",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glCompileShader",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glCreateProgram",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glCreateShader",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDeleteBuffers",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDeleteProgram",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDeleteShader",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDeleteVertexArrays",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glDrawArrays",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glEnableVertexAttribArray",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glGenBuffers",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glGenVertexArrays",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glGetUniformLocation",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glLineWidth",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glLinkProgram",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glShaderSource",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glUniform3f",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glUseProgram",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glVertexAttribPointer",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "glfw_debug_overlay",
+      "target": "OpenGL.GL",
+      "type": "from",
+      "imported_name": "glViewport",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "input_bindings",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "input_bindings",
+      "target": "glfw",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "input_bindings",
+      "target": "app.commands",
+      "type": "from",
+      "imported_name": "project_commands",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "project_mapper",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 1
+    },
+    {
+      "source": "project_mapper",
+      "target": "ast",
+      "type": "import",
+      "scope": "external",
+      "line": 3
+    },
+    {
+      "source": "project_mapper",
+      "target": "json",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "project_mapper",
+      "target": "os",
+      "type": "import",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "project_mapper",
+      "target": "pathlib",
+      "type": "from",
+      "imported_name": "Path",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "project_mapper",
+      "target": "datetime",
+      "type": "from",
+      "imported_name": "datetime",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "inspector.window",
+      "type": "from",
+      "imported_name": "InspectorWindow",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "ui.panels.command_panel",
+      "type": "from",
+      "imported_name": "CommandPanel",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "ui.panels.grid_panel",
+      "type": "from",
+      "imported_name": "GridPanel",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "ui.panels.line_properties_panel",
+      "type": "from",
+      "imported_name": "LinePropertiesPanel",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "plane.plane_manager_panel",
+      "type": "from",
+      "imported_name": "PlaneManagerPanel",
+      "scope": "external",
+      "line": 11
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "ui.panels.polygon_properties_panel",
+      "type": "from",
+      "imported_name": "PolygonPropertiesPanel",
+      "scope": "external",
+      "line": 12
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "ui.panels.s2k_panel",
+      "type": "from",
+      "imported_name": "S2KPanel",
+      "scope": "external",
+      "line": 13
+    },
+    {
+      "source": "services.panel_registry",
+      "target": "ui.panels.wind_analysis_panel",
+      "type": "from",
+      "imported_name": "WindAnalysisPanel",
+      "scope": "external",
+      "line": 14
+    },
+    {
+      "source": "services.project_service",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "services.project_service",
+      "target": "os",
+      "type": "import",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "services.project_service",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "services.project_service",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "services.project_service",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "services.project_service",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "UnitSystem",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "services.project_service",
+      "target": "core.units",
+      "type": "from",
+      "imported_name": "convert_project_units",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "services.project_service",
+      "target": "domain.project",
+      "type": "from",
+      "imported_name": "Project",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "services.project_service",
+      "target": "domain.project",
+      "type": "from",
+      "imported_name": "ProjectCatalog",
+      "scope": "external",
+      "line": 9
+    },
+    {
+      "source": "services.project_service",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 10
+    },
+    {
+      "source": "services.toolbar_builder",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "services.toolbar_builder",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "services.toolbar_builder",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "services.toolbar_builder",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Callable",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "services.toolbar_builder",
+      "target": "app.services.panel_registry",
+      "type": "from",
+      "imported_name": "PanelRegistry",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "services.toolbar_builder",
+      "target": "app.services.panel_registry",
+      "type": "from",
+      "imported_name": "PanelEntry",
+      "scope": "external",
+      "line": 7
+    },
+    {
+      "source": "services.toolbar_builder",
+      "target": "app.services.toolbar_specs",
+      "type": "from",
+      "imported_name": "CommandSpec",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "services.toolbar_builder",
+      "target": "app.services.toolbar_specs",
+      "type": "from",
+      "imported_name": "default_commands",
+      "scope": "external",
+      "line": 8
+    },
+    {
+      "source": "services.toolbar_specs",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "services.toolbar_specs",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "dataclass",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "services.toolbar_specs",
+      "target": "dataclasses",
+      "type": "from",
+      "imported_name": "field",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "services.toolbar_specs",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "Any",
+      "scope": "external",
+      "line": 5
+    },
+    {
+      "source": "services.view_service",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "services.view_service",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "services.view_service",
+      "target": "logging_config",
+      "type": "from",
+      "imported_name": "CadLogger",
+      "scope": "external",
+      "line": 6
+    },
+    {
+      "source": "services.visibility_service",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "services.visibility_service",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    },
+    {
+      "source": "services.wind_service",
+      "target": "__future__",
+      "type": "from",
+      "imported_name": "annotations",
+      "scope": "external",
+      "line": 2
+    },
+    {
+      "source": "services.wind_service",
+      "target": "typing",
+      "type": "from",
+      "imported_name": "TYPE_CHECKING",
+      "scope": "external",
+      "line": 4
+    }
+  ],
+  "inheritance": [
+    {
+      "module": "commands.base",
+      "class": "Command",
+      "base": "ABC"
+    },
+    {
+      "module": "commands.bulk_update",
+      "class": "BulkUpdateCommand",
+      "base": "Command"
+    },
+    {
+      "module": "commands.create",
+      "class": "CreateElementCommand",
+      "base": "Command"
+    },
+    {
+      "module": "commands.delete",
+      "class": "DeleteElementsCommand",
+      "base": "Command"
+    },
+    {
+      "module": "commands.draw",
+      "class": "AddDrawnElementCommand",
+      "base": "Command"
+    },
+    {
+      "module": "commands.replicate",
+      "class": "ReplicateElementsCommand",
+      "base": "Command"
+    },
+    {
+      "module": "commands.update",
+      "class": "UpdateElementCommand",
+      "base": "Command"
+    }
+  ]
+}

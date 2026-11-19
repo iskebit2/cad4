@@ -64,6 +64,21 @@ class DrawManager:
         self._finalize_polygon(Polygon(nodes=list(self.points), label=""))
 
     # ------------------------------------------------------------------
+    def _active_vp(self):
+        vm = getattr(self.engine, "viewport_manager", None)
+        return vm.active if vm is not None else None
+
+    def _point_on_active_plane(self, x: float, y: float, vp=None) -> Vertex | None:
+        target_vp = vp or self._active_vp()
+        world = self.engine.screen_to_world(x, y, vp=target_vp)
+        if world is None:
+            return None
+        plane = getattr(target_vp, "plane", None) if target_vp is not None else None
+        if plane is not None:
+            on_p = plane.project((world.x, world.y, world.z))
+            return Vertex(float(on_p[0]), float(on_p[1]), float(on_p[2]))
+        return Vertex(float(world.x), float(world.y), float(world.z))
+
     def on_mouse_move(self, x, y):
         if not self.is_active:
             return
@@ -72,37 +87,51 @@ class DrawManager:
             return
         self._last_move = now
 
-        # ★ Aktif viewport bilgisi
         eng = self.engine
-        vm = getattr(eng, "viewport_manager", None)
-        active_vp = vm.get(vm.active_name) if vm and getattr(vm, "active_name", None) else None
+        active_vp = self._active_vp()
         cam = active_vp.camera if active_vp else eng.cam
         size = (active_vp.width, active_vp.height) if active_vp else (eng.w, eng.h)
+        plane = getattr(active_vp, "plane", None) if active_vp else None
+        visible_ids = getattr(active_vp, "visible_ids", None) if active_vp else None
 
         target, is_snap, snap_type = eng.snap.find_snap(
-            eng, x, y, magnetic=True, cam=cam, viewport_size=size,
+            eng, x, y,
+            magnetic=True,
+            cam=cam,
+            viewport_size=size,
+            plane=plane,
+            visible_ids=visible_ids,
         )
         self.hover_node = target
         self.hover_is_snap = is_snap
         self.hover_snap_type = snap_type
-        # mouse_world — plane için screen_to_world gerekli, şimdilik aynı
-        self.mouse_world_pos = eng.screen_to_world(x, y)
+        self.mouse_world_pos = self._point_on_active_plane(x, y, vp=active_vp)
+        eng.update_world_pos(x, y, vp=active_vp)
 
     def on_mouse_click(self, x, y) -> bool:
         if not self.is_active:
             return False
 
         eng = self.engine
-        vm = getattr(eng, "viewport_manager", None)
-        active_vp = vm.get(vm.active_name) if vm and getattr(vm, "active_name", None) else None
+        active_vp = self._active_vp()
         cam = active_vp.camera if active_vp else eng.cam
         size = (active_vp.width, active_vp.height) if active_vp else (eng.w, eng.h)
+        plane = getattr(active_vp, "plane", None) if active_vp else None
+        visible_ids = getattr(active_vp, "visible_ids", None) if active_vp else None
 
         target, _, _ = eng.snap.find_snap(
-            eng, x, y, magnetic=True, cam=cam, viewport_size=size,
+            eng, x, y,
+            magnetic=True,
+            cam=cam,
+            viewport_size=size,
+            plane=plane,
+            visible_ids=visible_ids,
         )
         if target is None:
+            target = self._point_on_active_plane(x, y, vp=active_vp)
+        if target is None:
             return True
+
         if self.mode == "line":
             return self._click_line(target)
 
@@ -155,13 +184,8 @@ class DrawManager:
         if len(self.points) < 2:
             self.cancel()
             return
-        p1, p2 = self.points[0], self.points[1]
-        corners = [
-            Vertex(p1.x, p1.y, p1.z),
-            Vertex(p2.x, p1.y, p1.z),
-            Vertex(p2.x, p2.y, p2.z),
-            Vertex(p1.x, p2.y, p2.z),
-        ]
+        corners_xyz = self._ucs_rectangle_corners(self.points[0], self.points[1])
+        corners = [Vertex(x, y, z) for x, y, z in corners_xyz]
         self._finalize_polygon(Polygon(nodes=corners, label=""))
 
     def _polygon_from_inside(self, start):
@@ -342,11 +366,7 @@ class DrawManager:
 
             if self.hover_is_snap and self.hover_node is not None:
                 hn = self.hover_node
-                s = 80.0
-                verts = np.array([
-                    hn.x - s, hn.y, hn.z, hn.x + s, hn.y, hn.z,
-                    hn.x, hn.y - s, hn.z, hn.x, hn.y + s, hn.z,
-                ], np.float32)
+                verts = self._crosshair_verts((hn.x, hn.y, hn.z), 80.0)
                 self._upload_draw(color_loc, verts, GL_LINES, 4, (0.2, 1.0, 0.2, 1.0))
 
             glBindVertexArray(0)
@@ -377,11 +397,7 @@ class DrawManager:
             self._upload_draw(color_loc, verts, GL_LINES, 2, (1.0, 1.0, 0.0, 0.9))
         if n >= 1:
             p = self.points[0]
-            s = 40.0
-            verts = np.array([
-                p.x - s, p.y, p.z, p.x + s, p.y, p.z,
-                p.x, p.y - s, p.z, p.x, p.y + s, p.z,
-            ], np.float32)
+            verts = self._crosshair_verts((p.x, p.y, p.z), 40.0)
             self._upload_draw(color_loc, verts, GL_LINES, 4, (0.5, 1.0, 0.5, 1.0))
 
     def _render_polygon_preview(self, color_loc):
@@ -418,20 +434,57 @@ class DrawManager:
         ).reshape(-1)
         self._upload_draw(color_loc, verts, mode, len(points), color)
 
+    def _ucs_rectangle_corners(self, p1: Vertex, p2: Vertex) -> list[tuple[float, float, float]]:
+        vp = self._active_vp()
+        plane = getattr(vp, "plane", None) if vp is not None else None
+        if plane is None:
+            return [
+                (p1.x, p1.y, p1.z),
+                (p2.x, p1.y, p1.z),
+                (p2.x, p2.y, p2.z),
+                (p1.x, p2.y, p2.z),
+            ]
+        l1 = plane.world_to_local((p1.x, p1.y, p1.z))
+        l2 = plane.world_to_local((p2.x, p2.y, p2.z))
+        w_mid = 0.5 * (float(l1[2]) + float(l2[2]))
+        c0 = plane.local_to_world((float(l1[0]), float(l1[1]), w_mid))
+        c1 = plane.local_to_world((float(l2[0]), float(l1[1]), w_mid))
+        c2 = plane.local_to_world((float(l2[0]), float(l2[1]), w_mid))
+        c3 = plane.local_to_world((float(l1[0]), float(l2[1]), w_mid))
+        return [
+            (float(c0[0]), float(c0[1]), float(c0[2])),
+            (float(c1[0]), float(c1[1]), float(c1[2])),
+            (float(c2[0]), float(c2[1]), float(c2[2])),
+            (float(c3[0]), float(c3[1]), float(c3[2])),
+        ]
+    
     def _draw_rectangle_preview(self, color_loc):
         p1 = self.points[0]
         p2 = self._preview_endpoint()
         if p2 is None:
             return
-        c0 = (p1.x, p1.y, p1.z)
-        c1 = (p2.x, p1.y, p1.z)
-        c2 = (p2.x, p2.y, p2.z)
-        c3 = (p1.x, p2.y, p1.z)
+        c0, c1, c2, c3 = self._ucs_rectangle_corners(p1, p2)
         fill = np.array([*c0, *c1, *c2, *c0, *c2, *c3], np.float32)
         self._upload_draw(color_loc, fill, GL_TRIANGLES, 6, (0.8, 0.5, 0.9, 0.25))
         edges = np.array([*c0, *c1, *c1, *c2, *c2, *c3, *c3, *c0], np.float32)
         self._upload_draw(color_loc, edges, GL_LINES, 8, (1.0, 0.9, 0.4, 0.9))
 
+    def _crosshair_verts(self, center_xyz: tuple[float, float, float], size: float) -> np.ndarray:
+        vp = self._active_vp()
+        plane = getattr(vp, "plane", None) if vp is not None else None
+        cx, cy, cz = center_xyz
+        if plane is None:
+            return np.array([
+                cx - size, cy, cz, cx + size, cy, cz,
+                cx, cy - size, cz, cx, cy + size, cz,
+            ], np.float32)
+        c = np.array([cx, cy, cz], dtype=float)
+        u_a = c - plane.u * size
+        u_b = c + plane.u * size
+        v_a = c - plane.v * size
+        v_b = c + plane.v * size
+        return np.array([*u_a, *u_b, *v_a, *v_b], np.float32)
+    
     def _upload_draw(self, color_loc, verts, mode, count, color):
         glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts, GL_STREAM_DRAW)
         glUniform4f(color_loc, *color)

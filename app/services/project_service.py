@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from core.units import UnitSystem, convert_project_units
@@ -44,45 +45,41 @@ class ProjectService:
         return self.state.model_text
 
     # ---- yazma ----
-    def replace(
-        self,
-        project: Project,
-        *,
-        path: str | None = None,
-        model_text: str | None = None,
-    ) -> None:
-        """Projeyi değiştir; UI reset + engine senkronu + kamera odaklama."""
+    def replace(self, project: Project, *, path: str | None = None, model_text: str | None = None) -> None:
         if self.app.ui is not None:
             self.app.ui.reset_all()
 
         self.state.project = project
         self.catalog = ProjectCatalog(project)
-        if path is not None:
-            self.state.file_path = path
+        self.state.file_path = path
         if model_text is not None:
             self.state.model_text = model_text
 
         eng = self.app.engine
-        if eng is None or project.scene is None:
-            self._notify_ui()
-            return
+        if eng is not None and project.scene is not None:
+            project.math_model.refresh_bounds()
+            project.scene.refresh_bounds()
+            eng.set_scene(project)
+            eng.update_geo(project)
 
-        eng.set_scene(project)
-        eng.update_geo(project)
+            if eng.grid and project.scene.grid:
+                eng.grid.set_grid(project.scene.grid)
+                eng.grid.mark_dirty()
 
-        if eng.grid and project.scene.grid:
-            eng.grid.set_grid(project.scene.grid)
-            eng.grid.mark_dirty()
-        if eng.sel_mgr:
-            eng.sel_mgr.clear()
+            if eng.sel_mgr:
+                eng.sel_mgr.clear()
 
-        self._fit_viewports()
+            self._fit_viewports()
+            eng.fit_view()
+
         self._notify_ui()
 
     def new(self) -> None:
         self.replace(Project(), path=None, model_text="MODEL: YENİ SAHNE")
 
     def load(self, path: str) -> None:
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"Proje dosyası bulunamadı: {path}")
         proj = Project.load(path)
         self.replace(proj, path=path,
                      model_text=f"MODEL: {os.path.basename(path)}")
@@ -93,9 +90,13 @@ class ProjectService:
                 eng.sel_mgr.clear()
 
     def save(self, path: str) -> None:
-        self.state.project.save(path)
-        self.state.file_path = path
-        self.state.model_text = f"MODEL: {os.path.basename(path)}"
+        target = Path(path)
+        if target.suffix != ".cd4":
+            target = target.with_suffix(".cd4")
+        target_path = str(target)
+        self.state.project.save(target_path)
+        self.state.file_path = target_path
+        self.state.model_text = f"MODEL: {os.path.basename(target_path)}"
 
     def save_current(self) -> bool:
         """True = kaydedildi, False = yol yok (UI dialog açmalı)."""

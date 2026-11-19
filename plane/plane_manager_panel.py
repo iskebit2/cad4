@@ -17,8 +17,8 @@ class PlaneManagerPanel(BasePanel):
     PANEL_W = 620
     PANEL_H = 700
 
-    def __init__(self):
-        self.app = None
+    def __init__(self, app=None):
+        self.app = app
         self.visible = False
         self._selected_name: str | None = None
         self._preview_plane: Plane | None = None
@@ -449,46 +449,14 @@ class PlaneManagerPanel(BasePanel):
 
     def _open_plane_viewport(self, plane: Plane | None):
         """Seçili plane için yeni viewport açar (bağımsız kamera + section filter)."""
-        if plane is None:
+        if plane is None or self.app is None:
             return
-        app = self.app
-        if app is None or getattr(app, "viewport_manager", None) is None:
-            logger.info("[PlaneMgr] viewport_manager yok")
+        ui = getattr(self.app, "ui", None)
+        if ui is None:
+            logger.warning("[PlaneMgr] UIHost hazır değil")
             return
 
-        
-
-        base_name = f"Plane: {plane.name}"
-        name = app.viewport_manager.next_name(base_name)
-
-        vp = app.viewport_manager.create_viewport(
-            name=name, width=800, height=600,
-        )
-
-        # Kamera: plane'e dik bakış (orthographic)
-        uc = 0.5 * ((plane.u_min or 0.0) + (plane.u_max or 0.0))
-        vc = 0.5 * ((plane.v_min or 0.0) + (plane.v_max or 0.0))
-        center = plane.to_3d((uc, vc))
-        half_u = 0.5 * abs((plane.u_max or 0.0) - (plane.u_min or 0.0))
-        half_v = 0.5 * abs((plane.v_max or 0.0) - (plane.v_min or 0.0))
-        fit_radius = max(half_u, half_v) * 1.4
-        if fit_radius < 1e-6:
-            eng = self._engine()
-            bounds = eng._combined_bounds() if eng else None
-            fit_radius = float(bounds.size) if bounds else 1000.0
-
-        vp.camera.look_at_plane(
-            origin=center,
-            u=plane.u, v=plane.v, n=plane.normal,
-            fit_radius=fit_radius,
-        )
-        vp.plane = plane
-        vp.is_2d = True   # ★ Kamera 2D → flag de 2D
-
-        panel = ViewportPanel(app, name, app.viewport_manager, preset=None)
-        
-        app._viewport_panels.append(panel)
-        logger.info("[PlaneMgr] viewport açıldı: %s", name)
+        ui.open_plane_viewport(plane)
 
     # ------------------------------------------------------------------
     def _do_delete(self, name: str):

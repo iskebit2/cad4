@@ -42,7 +42,7 @@ class CadApp:
         self.project_service = ProjectService(self)
         self.view_service = ViewService(self)
         self.visibility_service = VisibilityService(self)
-        self.panel_registry = PanelRegistry()
+        self.panel_registry = PanelRegistry(self)
         self.wind_service = WindService(self)
 
         self.edit_controller: EditController | None = None
@@ -102,6 +102,8 @@ class CadApp:
 
     def attach_ui(self, ui_host: "UIHost") -> None:
         self._ui_host = ui_host
+        if self.engine is not None and self.engine.sel_mgr is not None:
+            self.engine.sel_mgr.on_selection_changed = ui_host.on_selection_changed
         if self.engine is not None:
             ui_host.on_engine_ready()
 

@@ -9,6 +9,7 @@ from app.commands import project_commands as PC
 def build_bindings(command_queue) -> dict:
     q = command_queue
     return {
+        glfw.KEY_F1: lambda: q.put(PC.TogglePanel("command_panel")),
         # --- Kamera / projeksiyon ---
         glfw.KEY_F2: lambda: q.put(PC.Toggle2D()),
         glfw.KEY_F3: lambda: q.put(PC.ToggleRenderMode()),

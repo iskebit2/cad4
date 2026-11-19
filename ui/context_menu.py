@@ -158,6 +158,12 @@ class ContextMenuManager:
         imgui.text_disabled(header)
         imgui.separator()
 
+        # En üstte doğrudan Inspector tetikleyici (sağ tık anında eleman zaten seçilmiş durumda)
+        if imgui.menu_item_simple("Özellikler (Inspector)", "F3"):
+            self.app.put_command(PC.OpenInspector())
+        imgui.separator()
+
+        # Eleman tipine özel eylemler
         if isinstance(el, Node):
             self._draw_node_actions(selected)
             imgui.separator()
@@ -166,15 +172,7 @@ class ContextMenuManager:
                 self.app.put_command(PC.ConvertFramesToLinks())
             imgui.separator()
 
-        if imgui.begin_menu("Hızlı Çoğalt (Replicate)"):
-            if imgui.menu_item_simple("+Z Yönünde (+3.0 m)"):
-                self.app.put_command(PC.ReplicateSelected(0.0, 0.0, 3.0, count=1))
-            if imgui.menu_item_simple("+X Yönünde (+5.0 m)"):
-                self.app.put_command(PC.ReplicateSelected(5.0, 0.0, 0.0, count=1))
-            if imgui.menu_item_simple("+Y Yönünde (+5.0 m)"):
-                self.app.put_command(PC.ReplicateSelected(0.0, 5.0, 0.0, count=1))
-            imgui.end_menu()
-
+        # Görünürlük
         uids = [getattr(e, "unique_id", None) for e in selected if getattr(e, "unique_id", None) is not None]
         if uids:
             if imgui.menu_item_simple("Sadece Seçilileri Göster"):
@@ -210,7 +208,20 @@ class ContextMenuManager:
     def _draw_viewport_empty_menu(self) -> None:
         imgui.text_disabled("Sahne")
         imgui.separator()
-
+        vm = self.app.viewport_manager
+        active_vp = vm.active if vm else None
+        if active_vp is not None:
+            p_label = active_vp.plane.name if active_vp.plane else "Düzlem Yok"
+            imgui.text_disabled(f"Görünüm: {active_vp.name} ({p_label})")
+            if imgui.menu_item_simple("View & Plane Sınırları / Filtre..."):
+                if self.app.ui and getattr(self.app.ui, "view_plane_dialog", None):
+                    self.app.ui.view_plane_dialog.open(viewport_name=active_vp.name)
+            if active_vp.plane is not None and imgui.menu_item_simple("Düzlem Sınırlarını Modele Sığdır"):
+                eng = self.app.engine
+                active_vp.plane.fit_to_math_model(eng.math_model if eng else None, include_depth=True)
+                vm.sync_plane(active_vp.plane, refocus=True)
+            imgui.separator()
+            
         if imgui.begin_menu("Çizim Başlat"):
             if imgui.menu_item_simple("Çizgi (Line)"):
                 self.app.put_command(PC.StartDrawTool(mode="line"))

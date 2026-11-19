@@ -6,7 +6,10 @@ from app.commands import project_commands as PC
 
 @command(PC.ReplaceProject)
 def _replace(app, cmd: PC.ReplaceProject) -> CommandResult:
-    app.project_service.replace(cmd.project)
+    if cmd.label:
+        app.project_service.replace(cmd.project, path="", model_text=cmd.label)
+    else:
+        app.project_service.replace(cmd.project)
     return CommandResult(project_dirty=True, handled=True)
 
 

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
 
 import pandas as pd
 from imgui_bundle import imgui
 
+from app.commands import project_commands as PC
 from domain.project import Project
 from logging_config import CadLogger
 from tools.s2k import LoadContext, S2KLoader, S2KParser
@@ -43,13 +43,7 @@ class S2KPanel(PanelBase):
     MODE_IMPORT = "import"
     MODE_EXPORT = "export"
 
-    def __init__(
-        self,
-        app=None,
-        on_import_complete: Callable[[Project], None] | None = None,
-        get_project: Callable[[], Project | None] | None = None,
-        get_selected_elements: Callable[[], list] | None = None,
-    ):
+    def __init__(self, app=None):
         super().__init__(app=app)
         self.width = 780
         self.height = 640
@@ -58,10 +52,6 @@ class S2KPanel(PanelBase):
         self.mode = self.MODE_IMPORT
 
         self.file_dialog = ImGuiFileDialog()
-
-        self.on_import_complete = on_import_complete
-        self.get_project = get_project
-        self.get_selected_elements = get_selected_elements
 
         # --- IMPORT ---
         self.import_path: str | None = None
@@ -79,16 +69,6 @@ class S2KPanel(PanelBase):
 
         # --- LOG ---
         self.log_messages: list[str] = []
-
-    # ------------------------------------------------------------------
-    # Context — callback'leri bağla
-    # ------------------------------------------------------------------
-    def _on_context_ready(self):
-        if self.app is None:
-            return
-        self.on_import_complete = self.app.on_s2k_import_complete
-        self.get_project = lambda: self.app.current_project
-        self.get_selected_elements = self.app.get_selected
 
     # ------------------------------------------------------------------
     # PUBLIC
@@ -198,15 +178,12 @@ class S2KPanel(PanelBase):
         scn = new_project.math_model
         self._log_info(f"✓ {len(scn.frames)} çubuk, {len(scn.nodes)} düğüm")
 
-        if not callable(self.on_import_complete):
-            self._log_error("Callback bağlı değil.")
+        if self.app is None:
+            self._log_error("Uygulama bağlantısı hazır değil.")
             return
-        try:
-            self.on_import_complete(new_project)
-            self._log_info("İçe aktarma tamamlandı.")
-        except Exception:
-            logger.exception("[Import] callback hatası")
-            self._log_error("Callback sırasında hata oluştu.")
+        label = f"MODEL: {os.path.basename(self.import_path or '')}"
+        self.app.put_command(PC.ReplaceProject(new_project, label=label))
+        self._log_info("İçe aktarma komutu kuyruğa eklendi.")
 
     def _run_handlers(self) -> LoadContext:
         """Seçili tabloları sıralı + kalan router ile ctx'ye aktar."""
@@ -254,14 +231,12 @@ class S2KPanel(PanelBase):
         self._log_info(f"Export yolu: {file_path}")
 
     def _resolve_project(self) -> Project | None:
-        if callable(self.get_project):
-            return self.get_project()
-        return None
+        return getattr(self.app, "current_project", None)
 
     def _resolve_selected(self) -> list:
-        if callable(self.get_selected_elements):
-            return list(self.get_selected_elements() or [])
-        return []
+        engine = getattr(self.app, "engine", None)
+        selection = getattr(engine, "sel_mgr", None)
+        return list(selection.get_selected()) if selection is not None else []
 
     def _build_export_text(self) -> bool:
         project = self._resolve_project()

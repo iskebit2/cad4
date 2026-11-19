@@ -1,3 +1,4 @@
+# ui/widgets/status_bar.py
 from __future__ import annotations
 
 from imgui_bundle import imgui
@@ -7,11 +8,31 @@ def _v4(r: float, g: float, b: float, a: float = 1.0):
     return imgui.ImVec4(r, g, b, a)
 
 
+def _format_selection(selected: list) -> str:
+    if not selected:
+        return "Seçim: Yok"
+    if len(selected) == 1:
+        el = selected[0]
+        kind = type(el).__name__
+        uid = getattr(el, "unique_id", "?")
+        label = getattr(el, "label", "")
+        suffix = f" ({label})" if label else ""
+        return f"Seçim: {kind} #{uid}{suffix}"
+
+    counts: dict[str, int] = {}
+    for el in selected:
+        kind = type(el).__name__
+        counts[kind] = counts.get(kind, 0) + 1
+    summary = ", ".join(f"{cnt} {k}" for k, cnt in counts.items())
+    return f"Seçim: {len(selected)} eleman ({summary})"
+
+
 class StatusBar:
     def __init__(self, height: float = 26.0) -> None:
         self.height = height
         self.last_key_text: str = "-"
         self.last_event_text: str = "Komut bekleniyor..."
+        self.selection_text: str = "Seçim: Yok"
 
     def notify_key(self, key: int, action: int, mods: int) -> None:
         if action == 1:
@@ -21,6 +42,9 @@ class StatusBar:
     def notify_command(self, text: str) -> None:
         self.last_event_text = text
 
+    def notify_selection(self, selected: list) -> None:
+        self.selection_text = _format_selection(selected)
+
     def draw(
         self,
         engine_connected: bool,
@@ -29,6 +53,8 @@ class StatusBar:
         mouse_buttons: dict[int, bool],
         modifiers: int,
         fps: float,
+        ucs_name: str = "Global",
+        ucs_pos: tuple[float, float, float] | None = None,
     ) -> None:
         viewport = imgui.get_main_viewport()
         bar_pos = imgui.ImVec2(viewport.pos.x, viewport.pos.y + viewport.size.y - self.height)
@@ -66,6 +92,13 @@ class StatusBar:
             imgui.text_disabled("|")
             imgui.same_line(spacing=14)
 
+            sel_color = _v4(0.40, 0.85, 1.00) if self.selection_text != "Seçim: Yok" else _v4(0.60, 0.64, 0.72)
+            imgui.text_colored(sel_color, self.selection_text)
+
+            imgui.same_line(spacing=14)
+            imgui.text_disabled("|")
+            imgui.same_line(spacing=14)
+
             mx, my = mouse_pos
             b_l = "L" if mouse_buttons.get(0) else "-"
             b_m = "M" if mouse_buttons.get(2) else "-"
@@ -75,6 +108,12 @@ class StatusBar:
             imgui.same_line(spacing=14)
             imgui.text_disabled("|")
             imgui.same_line(spacing=14)
+
+            if ucs_pos is not None:
+                ux, uy, uz = ucs_pos
+                imgui.text_colored(_v4(0.55, 0.90, 0.75), f"{ucs_name}: ({ux:8.1f}, {uy:8.1f}, {uz:6.1f})")
+            else:
+                imgui.text_disabled(f"{ucs_name}: (-, -, -)")
 
             mod_list = []
             if modifiers & 1:

@@ -1,16 +1,19 @@
 # inspector/window.py
+from __future__ import annotations
+
 from typing import Any
 
 from imgui_bundle import imgui
 
 from core.selection_policy import SelectionMode
 from inspector.controller import InspectorController
-from inspector.fields import inspector_fields
+from inspector.schemas import CatalogAdapter
 from inspector.topbar import TopBar
 from inspector.widgets import (
     _col, _copy_to_clipboard, _element_label, _matches,
-    _parse_filter, _scene_groups, _unique_id, draw_field_row,
+    _parse_filter, _scene_groups, _unique_id, draw_schema_field,
 )
+from ui.base.panel_base import Category
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
@@ -18,97 +21,191 @@ logger = CadLogger.get(__name__)
 
 class InspectorWindow:
 
+    __abstract__ = False
+    panel_name = "inspector_panel"
+    title = "Inspector"
+    category = Category.MANAGEMENT
+    quick = True
+    menu_label = "Inspector"
+    icon = "log-in"
+    shortcut = "F10"
+    context = ()
+
     LEFT_PANEL_MIN = 140.0
     LEFT_PANEL_MAX = 260.0
 
-    def __init__(self, scene=None, catalog=None, standalone=False):
-        self.scene = scene
-        self.math_model = scene
-        self.catalog = catalog
-        self.controller = InspectorController(scene=scene, catalog=catalog)
-
-        self.visible = False
+    # ------------------------------------------------------------------
+    # Kurulum
+    # ------------------------------------------------------------------
+    def __init__(self, app=None, *, standalone: bool = False):
+        self.app = app
         self.standalone = standalone
+        self.visible = False
         self._first_open = True
+        self._syncing = False
 
+        # UI state
         self._left_width = 180.0
         self._left_open = True
         self._tree_open_groups: set = set()
         self._tree_filter = ""
         self._scroll_to_id = None
 
-        self.app = None
+        # Tüm bağımlılıklar app üzerinden
+        self.controller = InspectorController(on_applied=self._on_applied)
+        self._bind_app()
+
         self.topbar = TopBar(self)
 
     # ------------------------------------------------------------------
-    def set_context(self, ctx: dict):
-        for k, v in ctx.items():
-            setattr(self, k, v)
-        self.controller.scene = getattr(self, "math_model", None)
+    # app binding
+    # ------------------------------------------------------------------
+    def _bind_app(self) -> None:
+        """app'ten scene/catalog/selection'ı çek ve controller'a bağla."""
+        app = self.app
+        if app is None:
+            return
+        self.controller.scene = self._resolve_math_model()
+        self.controller.catalog = self._resolve_catalog()
 
-    def open(self):
+    def _resolve_project(self):
+        ps = getattr(self.app, "project_service", None) if self.app else None
+        return getattr(ps, "project", None) if ps else None
+
+    def _resolve_math_model(self):
+        project = self._resolve_project()
+        if project is None:
+            return None
+        return getattr(project, "math_model", None) or getattr(project, "scene", None)
+
+    def _resolve_scene(self):
+        project = self._resolve_project()
+        return getattr(project, "scene", None) if project else None
+
+    def _resolve_catalog(self):
+        """app.section_catalog dict → Catalog protokolü (adapter)."""
+        app = self.app
+        if app is None:
+            return None
+        # 1) app zaten protokol implement eden bir catalog sunuyorsa onu kullan
+        cat = getattr(app, "catalog", None)
+        if cat is not None and hasattr(cat, "list_sections"):
+            return cat
+        # 2) ui_host tarafından atanmış adapter varsa onu koru
+        existing = getattr(self.controller, "catalog", None)
+        if existing is not None and hasattr(existing, "list_sections"):
+            return existing
+        # 3) section_catalog dict → adapter
+        raw = getattr(app, "section_catalog", None)
+        if raw is None:
+            return None
+        if hasattr(raw, "list_sections"):
+            return raw
+        return CatalogAdapter(app)
+
+    def _resolve_selection(self) -> list:
+        engine = getattr(self.app, "engine", None) if self.app else None
+        sel_mgr = getattr(engine, "sel_mgr", None) if engine else None
+        if sel_mgr is None:
+            return []
+        getter = getattr(sel_mgr, "get_selected", None)
+        if callable(getter):
+            try:
+                return list(getter())
+            except Exception:
+                return []
+        return list(getattr(sel_mgr, "selected", set()) or set())
+
+    # ------------------------------------------------------------------
+    # Panel API (registry & command layer uyumu)
+    # ------------------------------------------------------------------
+    def set_context(self, ctx: dict) -> None:
+        """Registry panel örneği olarak açılırken app context'ini alır."""
+        if "app" in ctx and ctx["app"] is not None:
+            self.app = ctx["app"]
+            self._bind_app()
+        self.controller.scene = self._resolve_math_model()
+
+    def open(self) -> None:
         self.visible = True
         self._first_open = True
+        self._bind_app()
+        # Seçimi sel_mgr'den tazele
+        self.set_selection(self._resolve_selection())
 
-    def close(self):
+    def close(self) -> None:
         self.visible = False
 
-    def toggle(self):
-        self.visible = not self.visible
+    def toggle(self) -> None:
+        if self.visible:
+            self.close()
+        else:
+            self.open()
 
-    def set_scene(self, scene):
-        self.scene = scene
-        self.math_model = scene
-        self.controller.scene = scene
-        self._tree_filter = ""
-        self._tree_open_groups.clear()
-        self._scroll_to_id = None
-        self.set_selection([])
-        self.refresh()
-
-    def set_project(self, project):
-        self.scene = project.scene
-        self.math_model = project.math_model
-        self.controller.scene = project.math_model
-        self._tree_filter = ""
-        self._tree_open_groups.clear()
-        self._scroll_to_id = None
-        self.set_selection([])
-        self.refresh()
-
-    def set_catalog(self, catalog):
-        self.catalog = catalog
+    # ------------------------------------------------------------------
+    # Dış bildirimler
+    # ------------------------------------------------------------------
+    def set_catalog(self, catalog) -> None:
         self.controller.catalog = catalog
 
-    def set_selection(self, elements: list):
+    def set_project(self, project) -> None:
+        """UIHost.on_project_changed → proje değişti."""
+        self._bind_app()
+        # controller.load_values() yeni seçim üzerinden çağrılır
+        # (set_selection zaten _sync_scene_selection guard'lı)
+        self.set_selection([])
+
+    def on_selection_changed(self, selected: list) -> None:
+        """UIHost.on_selection_changed → engine'den gelen seçim."""
+        if getattr(self, "_syncing", False):
+            return
+        self._apply_selection_locally(list(selected or []))
+
+    def set_selection(self, elements: list) -> None:
+        """Programatik seçim (registry/command'dan)."""
         elements = list(elements or [])
+        self._apply_selection_locally(elements)
+        self._sync_scene_selection(elements)
+
+    # ------------------------------------------------------------------
+    # İç seçim yönetimi
+    # ------------------------------------------------------------------
+    def _apply_selection_locally(self, elements: list) -> None:
         self.controller.set_selection(elements)
         for el in elements:
             self._tree_open_groups.add(type(el).__name__)
         self._scroll_to_id = _unique_id(elements[0]) if elements else None
-        self._sync_scene_selection(elements)
 
-    def _sync_scene_selection(self, elements):
-        app = getattr(self, "app", None)
-        sel_mgr = getattr(getattr(app, "engine", None), "sel_mgr", None) if app else None
-        if sel_mgr is None:
+    def _sync_scene_selection(self, elements: list) -> None:
+        sel_mgr = self._sel_mgr()
+        if sel_mgr is None or self._syncing:
             return
-        current = set(getattr(sel_mgr, "selected", set()) or set())
-        target = {_unique_id(e) for e in (elements or [])}
+        current = {_unique_id(e) for e in self._resolve_selection()}
+        target = {_unique_id(e) for e in elements}
         if current == target:
             return
-        if not elements:
-            sel_mgr.clear()
-        elif len(elements) == 1:
-            sel_mgr.select(elements[0], additive=False)
-        else:
-            sel_mgr.select_multiple(elements, mode=SelectionMode.REPLACE)
+        self._syncing = True
+        try:
+            if not elements:
+                sel_mgr.clear()
+            elif len(elements) == 1:
+                sel_mgr.select(elements[0], additive=False)
+            else:
+                sel_mgr.select_multiple(elements, mode=SelectionMode.REPLACE)
+        finally:
+            self._syncing = False
 
-    def refresh(self):
-        self.controller.refresh_from_scene()
+    def _sel_mgr(self):
+        engine = getattr(self.app, "engine", None) if self.app else None
+        return getattr(engine, "sel_mgr", None) if engine else None
+
+    def refresh(self) -> None:
+        self._bind_app()
 
     # ------------------------------------------------------------------
-    def draw(self):
+    # Draw
+    # ------------------------------------------------------------------
+    def draw(self) -> None:
         if not self.visible:
             return
         if self._first_open and not self.standalone:
@@ -127,7 +224,7 @@ class InspectorWindow:
         finally:
             imgui.end()
 
-    def _draw_body(self):
+    def _draw_body(self) -> None:
         self.topbar.draw()
         imgui.separator()
 
@@ -151,11 +248,15 @@ class InspectorWindow:
             imgui.end_child()
 
     # ------------------------------------------------------------------
-    def _draw_tree(self):
+    # Ağaç
+    # ------------------------------------------------------------------
+    def _draw_tree(self) -> None:
         imgui.text_disabled("Elements")
         imgui.separator()
 
-        if self.scene is None:
+        scene = self._resolve_scene()
+        math_model = self._resolve_math_model()
+        if scene is None:
             imgui.text_colored(_col(0.6, 0.4, 0.4), "scene yok")
             return
 
@@ -181,28 +282,24 @@ class InspectorWindow:
         flt = (self._tree_filter or "").strip().lower()
 
         if imgui.is_item_focused() and imgui.is_key_pressed(imgui.Key.enter):
-            self._select_first_match(flt)
+            self._select_first_match(flt, scene, math_model)
 
-        self._draw_filtered_groups(flt, bool(flt))
+        self._draw_filtered_groups(flt, bool(flt), scene, math_model)
 
-    def _select_first_match(self, flt: str):
+    def _select_first_match(self, flt: str, scene, math_model) -> None:
         type_hint, id_hint, text_hint = _parse_filter(flt)
-        for type_name, elements in _scene_groups(
-            self.scene, self.math_model,
-        ):
+        for type_name, elements in _scene_groups(scene, math_model):
             if type_hint and type_name.lower() != type_hint:
                 continue
             for el in elements:
                 if _matches(el, type_name, text_hint, id_hint):
-                    self.set_selection([el])
+                    self._select_via_scene(el)
                     return
 
-    def _draw_filtered_groups(self, flt: str, force_open: bool):
+    def _draw_filtered_groups(self, flt, force_open, scene, math_model) -> None:
         type_hint, id_hint, text_hint = _parse_filter(flt)
 
-        for type_name, elements in _scene_groups(
-            self.scene, self.math_model,
-        ):
+        for type_name, elements in _scene_groups(scene, math_model):
             if type_hint and type_name.lower() != type_hint:
                 continue
             if not elements:
@@ -223,9 +320,7 @@ class InspectorWindow:
             for el in filtered[:200]:
                 label = _element_label(el)
                 is_selected = el in self.controller.objects
-                clicked = imgui.selectable(
-                    f"{label}##tree_{id(el)}", is_selected,
-                )[0]
+                clicked = imgui.selectable(f"{label}##tree_{id(el)}", is_selected)[0]
 
                 if imgui.begin_popup_context_item(f"ctx_{id(el)}"):
                     if imgui.menu_item("Sahneye odakla")[0]:
@@ -249,27 +344,30 @@ class InspectorWindow:
                                     f"...ve {len(filtered) - 200} tane daha")
             imgui.unindent(12)
 
-    def _select_via_scene(self, el):
+    def _select_via_scene(self, el) -> None:
         if el is None or not hasattr(el, "unique_id"):
             return
-        app = getattr(self, "app", None)
-        sel_mgr = getattr(getattr(app, "engine", None), "sel_mgr", None) if app else None
-        if sel_mgr and hasattr(sel_mgr, "select_only"):
+        sel_mgr = self._sel_mgr()
+        if sel_mgr is not None and hasattr(sel_mgr, "select_only"):
             sel_mgr.select_only(el)
             return
         self.set_selection([el])
 
-    def _focus_in_scene(self, el):
-        app = getattr(self, "app", None)
+    def _focus_in_scene(self, el) -> None:
+        app = self.app
         if app is None:
             return
         if hasattr(app, "focus_element"):
             app.focus_element(el)
-        elif getattr(app, "engine", None) and app.engine.sel_mgr:
-            app.engine.sel_mgr.select_only(el)
+        else:
+            sel_mgr = self._sel_mgr()
+            if sel_mgr is not None:
+                sel_mgr.select_only(el)
 
     # ------------------------------------------------------------------
-    def _draw_form(self):
+    # Form
+    # ------------------------------------------------------------------
+    def _draw_form(self) -> None:
         c = self.controller
 
         if not c.objects:
@@ -296,27 +394,33 @@ class InspectorWindow:
             imgui.text_disabled(_element_label(act[0]))
         else:
             imgui.text_colored(_col(0.8, 0.8, 0.4), f"{t} × {len(act)}")
-
+        if c.is_dirty():
+            imgui.same_line()
+            imgui.text_colored(_col(1.0, 0.75, 0.3), "●")
         imgui.separator()
 
-        fields = inspector_fields(act[0])
-        if not fields:
-            imgui.text_disabled("(görünür alan yok)")
+        groups = c.schema()
+        if not groups:
+            imgui.text_disabled("(şema yok)")
             return
 
         table_flags = (imgui.TableFlags_.sizing_stretch_prop
                        | imgui.TableFlags_.borders_inner_h
                        | imgui.TableFlags_.no_saved_settings)
-        if imgui.begin_table("##props", 2, table_flags):
-            imgui.table_setup_column("Key",
-                                       imgui.TableColumnFlags_.width_fixed, 130.0)
-            imgui.table_setup_column("Value",
-                                       imgui.TableColumnFlags_.width_stretch)
-            for key, _ in fields:
-                draw_field_row(act, key, self.catalog)
-            imgui.end_table()
+        for gi, grp in enumerate(groups):
+            if grp.default_open:
+                imgui.set_next_item_open(True, imgui.Cond_.once)
+            if imgui.collapsing_header(f"{grp.title}##grp_{gi}"):
+                if imgui.begin_table(f"##grp_{gi}", 2, table_flags):
+                    imgui.table_setup_column(
+                        "Key", imgui.TableColumnFlags_.width_fixed, 130.0)
+                    imgui.table_setup_column(
+                        "Value", imgui.TableColumnFlags_.width_stretch)
+                    for f in grp.fields:
+                        draw_schema_field(c, f, self.controller.catalog)
+                    imgui.end_table()
 
-    def _draw_type_selector(self, c):
+    def _draw_type_selector(self, c) -> None:
         counts = c.type_counts
         types = sorted(counts.keys())
 
@@ -335,11 +439,23 @@ class InspectorWindow:
                 for t in types:
                     if imgui.selectable(f"{t}  ({counts[t]})")[0]:
                         c.set_filter_type(t)
+                        c.load_values()
                         imgui.close_current_popup()
                 imgui.end_popup()
         else:
             changed, new_idx = imgui.combo("##type_filter", cur_idx, labels)
             if changed and 0 <= new_idx < len(types):
                 c.set_filter_type(types[new_idx])
+                c.load_values()
 
         imgui.separator()
+
+    def _on_applied(self, payload: dict) -> None:
+        app = self.app
+        if app is None:
+            return
+        from app.commands import project_commands as PC
+        node_uids = payload.get("node_uids", [])
+        if node_uids:
+            app.command_queue.put(PC.PropagateGeometryChange(node_uids=node_uids))
+        app.command_queue.put(PC.RefreshGeometry())

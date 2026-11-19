@@ -2,161 +2,234 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
+from app.commands import project_commands as PC
 from ui.base.panel_base import Category
 
 if TYPE_CHECKING:
-    from app.cad_app import CadApp
     from ui.ui_host import UIHost
 
 
 @dataclass(frozen=True)
 class ActionSpec:
     name: str
-    title: str
-    category: Category
+    category: Category | str
     menu_label: str
-    icon: str | None = None
+    shortcut: str = ""
+    icon: str = ""
     quick: bool = False
-    shortcut: str | None = None
-    scope: str = "host"         # "host" | "panel" | "custom"  ("app" kaldırıldı)
-    method: str | None = None
-    args: tuple = ()
-    state: str | None = None    # panel_states anahtarı (None → name)
+    # Komut fabrikası veya UIHost modal diyalog adı
+    command_factory: Callable[[], Any] | None = None
+    host_dialog: str | None = None
+    state_fn: Callable[[Any], bool] | None = None
 
 
 ACTION_SPECS: list[ActionSpec] = [
-    # --- File ---
-    ActionSpec("new_project", "New Project", Category.FILE, "New",
-               icon="file-plus", shortcut="CTRL+N", method="new_project"),
-    ActionSpec("open", "Open Project", Category.FILE, "Open...",
-               icon="folder", shortcut="CTRL+O", method="open_open_dialog"),
-    ActionSpec("save", "Save Project", Category.FILE, "Save",
-               icon="save", quick=True, shortcut="CTRL+S", method="quick_save"),
-    ActionSpec("save_as", "Save As", Category.FILE, "Save As...",
-               icon="save", shortcut="SHIFT+CTRL+S", method="open_save_dialog"),
-    ActionSpec("close_app", "Exit", Category.FILE, "Exit",
-               icon="x", method="close_app"),
+    # --- FILE ---
+    ActionSpec(
+        name="new_project",
+        category=Category.FILE,
+        menu_label="Yeni Proje",
+        shortcut="Ctrl+N",
+        icon="new",
+        quick=True,
+        command_factory=lambda: PC.NewProject(),
+    ),
+    ActionSpec(
+        name="open_project",
+        category=Category.FILE,
+        menu_label="Proje Aç...",
+        shortcut="Ctrl+O",
+        icon="open",
+        quick=True,
+        host_dialog="open_open_dialog",
+    ),
+    ActionSpec(
+        name="save_project",
+        category=Category.FILE,
+        menu_label="Kaydet",
+        shortcut="Ctrl+S",
+        icon="save",
+        quick=True,
+        command_factory=lambda: PC.SaveProject(),
+    ),
+    ActionSpec(
+        name="save_project_as",
+        category=Category.FILE,
+        menu_label="Farklı Kaydet...",
+        shortcut="Ctrl+Shift+S",
+        host_dialog="open_save_dialog",
+    ),
+    ActionSpec(
+        name="s2k_import",
+        category=Category.FILE,
+        menu_label="SAP2000 (.s2k) İçe Aktar...",
+        command_factory=lambda: PC.OpenPanel("s2k_panel", {"mode": "import"}),
+    ),
+    ActionSpec(
+        name="s2k_export",
+        category=Category.FILE,
+        menu_label="SAP2000 (.s2k) Dışa Aktar...",
+        command_factory=lambda: PC.OpenPanel("s2k_panel", {"mode": "export"}),
+    ),
+    ActionSpec(
+        name="quit",
+        category=Category.FILE,
+        menu_label="Çıkış",
+        shortcut="Alt+F4",
+        command_factory=lambda: PC.QuitApp(),
+    ),
 
-    # --- Draw ---
-    ActionSpec("draw_line", "Draw Line", Category.DRAW, "Line",
-               icon="edit", method="toggle_draw", args=("line",)),
-    ActionSpec("draw_poly", "Draw Polygon", Category.DRAW, "Polygon (D)",
-               icon="edit", shortcut="D", method="toggle_draw", args=("poly",)),
-    ActionSpec("draw_plane", "Draw Plane", Category.DRAW, "Plane (Shift+W)",
-               icon="grid", shortcut="SHIFT+W", method="toggle_plane"),
-    ActionSpec("plane_3pt", "Plane (3pt)", Category.DRAW, "Plane 3pt",
-               icon="grid", method="start_plane_3pt"),
-    ActionSpec("plane_2pt_z", "Plane (2pt Z)", Category.DRAW, "Plane 2pt Z",
-               icon="grid", method="start_plane_2pt_z"),
-    ActionSpec("plane_from_element", "Plane (Element)", Category.DRAW, "Plane from Element",
-               icon="grid", method="open_plane_source_dialog"),
+    # --- EDIT ---
+    ActionSpec(
+        name="undo",
+        category=Category.EDIT,
+        menu_label="Geri Al",
+        shortcut="Ctrl+Z",
+        icon="undo",
+        quick=True,
+        command_factory=lambda: PC.Undo(),
+    ),
+    ActionSpec(
+        name="redo",
+        category=Category.EDIT,
+        menu_label="Yinele",
+        shortcut="Ctrl+Y",
+        icon="redo",
+        quick=True,
+        command_factory=lambda: PC.Redo(),
+    ),
+    ActionSpec(
+        name="delete_selected",
+        category=Category.EDIT,
+        menu_label="Seçilileri Sil",
+        shortcut="Del",
+        icon="delete",
+        command_factory=lambda: PC.DeleteSelected(),
+    ),
 
-    # --- View: ortografik/izo viewport'lar ---
-    *[
-        ActionSpec(f"vp_{preset}", preset.title(), Category.VIEW, preset.title(),
-                   icon="x", method="open_viewport", args=(preset,),
-                   state=f"vp_{preset}_open")
-        for preset in ("iso", "top", "bottom", "front", "back", "left", "right",
-                       "iso_sw", "iso_se", "iso_ne", "iso_nw")
-    ],
-    ActionSpec("vp_close_all", "Close All", Category.VIEW, "Close All",
-               icon="x", method="close_all_viewports"),
-    ActionSpec("open_inspector", "Inspector", Category.VIEW, "Inspector",
-               icon="edit", method="open_inspector"),
+    # --- DRAW / MODEL ---
+    ActionSpec(
+        name="draw_line",
+        category=Category.DRAW,
+        menu_label="Çizgi Çiz",
+        shortcut="D",
+        icon="line",
+        quick=True,
+        command_factory=lambda: PC.StartDrawTool("line"),
+        state_fn=lambda app: bool(app.engine and app.engine.draw_mgr and app.engine.draw_mgr.is_active),
+    ),
+    ActionSpec(
+        name="draw_poly",
+        category=Category.DRAW,
+        menu_label="Poligon Çiz",
+        shortcut="P",
+        icon="polygon",
+        quick=True,
+        command_factory=lambda: PC.StartDrawTool("sequential"),
+    ),
+    ActionSpec(
+        name="draw_plane_3pt",
+        category=Category.DRAW,
+        menu_label="3 Nokta ile Düzlem",
+        command_factory=lambda: PC.StartPlane3pt(),
+    ),
+    ActionSpec(
+        name="draw_plane_2pt_z",
+        category=Category.DRAW,
+        menu_label="2 Nokta + Z Düzlem",
+        command_factory=lambda: PC.StartPlane2ptZ(),
+    ),
+    ActionSpec(
+        name="plane_from_source",
+        category=Category.DRAW,
+        menu_label="Eleman/Grid'den Düzlem...",
+        host_dialog="open_plane_source_dialog",
+    ),
 
-    # --- View: görünürlük / render ---
-    ActionSpec("toggle_view_2d", "2D Toggle", Category.VIEW, "2D Plane",
-               method="toggle_view_2d"),
-    ActionSpec("render_mode", "Render Mode", Category.VIEW, "Toggle Render Mode",
-               method="toggle_render_mode"),
-    ActionSpec("local_axes", "Local Axes", Category.VIEW, "Local Axes",
-               method="toggle_local_axes"),
-    ActionSpec("toggle_loads_vis", "Toggle Loads", Category.VIEW, "Show Loads",
-               method="toggle_loads"),
-
-    # --- Edit ---
-    ActionSpec("convert_to_link", "Convert to Link", Category.EDIT, "Convert Frames → Links",
-               method="convert_frames_to_link", args=("DefaultLink",)),
-
-    # --- Import / Export ---
-    ActionSpec("s2k_import", "S2K Import", Category.FILE, "S2K Import...",
-               method="open_s2k_import"),
-    ActionSpec("s2k_export", "S2K Export", Category.FILE, "S2K Export...",
-               method="open_s2k_export"),
+    # --- VIEW ---
+    ActionSpec(
+        name="fit_view",
+        category=Category.VIEW,
+        menu_label="Tüm Modeli Sığdır",
+        shortcut="F",
+        icon="fit",
+        quick=True,
+        command_factory=lambda: PC.ShowEntireModel(),
+    ),
+    ActionSpec(
+        name="toggle_2d",
+        category=Category.VIEW,
+        menu_label="2D / 3D Geçişi",
+        shortcut="F2",
+        icon="2d",
+        quick=True,
+        command_factory=lambda: PC.Toggle2D(),
+        state_fn=lambda app: bool(
+            app.engine and app.engine.renderer and app.engine.renderer.projection == "plane_2d"
+        ),
+    ),
+    ActionSpec(
+        name="toggle_render_mode",
+        category=Category.VIEW,
+        menu_label="Render Modu (Shaded/Simple)",
+        shortcut="F4",
+        command_factory=lambda: PC.ToggleRenderMode(),
+    ),
+    ActionSpec(
+        name="toggle_loads",
+        category=Category.VIEW,
+        menu_label="Yükleri Göster/Gizle",
+        command_factory=lambda: PC.ToggleLoadsVisible(None),
+        state_fn=lambda app: bool(app.view_service.get_loads_visible()),
+    ),
+    ActionSpec(
+        name="toggle_local_axes",
+        category=Category.VIEW,
+        menu_label="Yerel Eksenleri Göster/Gizle",
+        command_factory=lambda: PC.ToggleLocalAxes(),
+        state_fn=lambda app: bool(
+            app.engine and app.engine.scene and app.engine.scene.show_local_axes
+        ),
+    ),
+    ActionSpec(
+        name="open_inspector",
+        category=Category.VIEW,
+        menu_label="Inspector",
+        shortcut="F3",
+        command_factory=lambda: PC.OpenInspector(),
+    ),
 ]
 
 
 def build_commands(host: "UIHost") -> dict[str, Callable]:
-    """ActionSpec listesinden runtime dispatch tablosu üret."""
-    app: CadApp = host.app
-    cmds: dict[str, Callable] = {}
+    """
+    Toolbar tıklamalarını doğrudan app.command_queue'ya bağlar.
+    Yalnızca ImGui file/modal diyalogları UIHost üzerinden açılır.
+    """
+    cq = host.app.command_queue
+    cmds: dict[str, Callable] = {
+        "on_unit_change": lambda unit: cq.put(PC.SetUnitSystem(unit)),
+    }
 
     for spec in ACTION_SPECS:
-        if spec.scope == "host":
-            target: Any = host
-        elif spec.scope == "panel":
-            target = host.get_panel(spec.method or spec.name)
-            if target is None:
-                continue
-        else:
-            continue
-
-        method_name = spec.method or spec.name
-        fn = getattr(target, method_name, None)
-        if not callable(fn):
-            continue
-
-        if spec.args:
-            cmds[spec.name] = (lambda f=fn, a=spec.args: f(*a))
-        else:
-            cmds[spec.name] = fn
-
-    # Panel toggle komutları — PanelRegistry üzerinden
-    for entry in app.panel_registry.all():
-        cmds[entry.name] = (lambda n=entry.name: host.toggle_panel(n))
+        if spec.command_factory is not None:
+            factory = spec.command_factory
+            cmds[spec.name] = lambda f=factory: cq.put(f())
+        elif spec.host_dialog is not None:
+            dialog_fn = getattr(host, spec.host_dialog, None)
+            if callable(dialog_fn):
+                cmds[spec.name] = dialog_fn
 
     return cmds
 
 
 def build_panel_states(host: "UIHost") -> dict[str, Callable[[], bool]]:
-    """Panel görünürlük ve aksiyon aktiflik durumları."""
-    app: CadApp = host.app
-    eng = getattr(app, "engine", None)
-    mgr = getattr(eng, "draw_mgr", None) if eng else None
-    vs = app.view_service
-
-    def _draw_mode_is(mode_name: str) -> bool:
-        return bool(mgr and mgr.is_active and getattr(mgr, "mode", None) == mode_name)
-
-    def _active_view_is_2d() -> bool:
-        viewport_manager = app.viewport_manager
-        viewport = viewport_manager.active if viewport_manager is not None else None
-        if viewport is not None:
-            return bool(viewport.is_2d)
-        return bool(eng and eng.plane_mode and eng.plane_mode.is_2d)
-
-    states: dict[str, Callable[[], bool]] = {
-        "draw_line": lambda: _draw_mode_is("line"),
-        "draw_poly": lambda: _draw_mode_is("sequential"),
-        "draw_plane": lambda: bool(eng and eng.plane_draw_mgr and eng.plane_draw_mgr.is_active),
-        "local_axes": lambda: bool(eng and eng.scene and eng.scene.show_local_axes),
-        "toggle_loads_vis": vs.get_loads_visible,                       # ✅ servis
-        "toggle_view_2d": _active_view_is_2d,
+    """Toolbar aktif buton ve menü checkmark durumlarını üretir."""
+    app = host.app
+    return {
+        spec.name: (lambda fn=spec.state_fn: bool(fn(app)))
+        for spec in ACTION_SPECS
+        if spec.state_fn is not None
     }
-
-    for preset in ("iso", "top", "bottom", "front", "back", "left", "right",
-                   "iso_sw", "iso_se", "iso_ne", "iso_nw"):
-        states[f"vp_{preset}_open"] = (
-            lambda p=preset: bool(
-                app.viewport_manager and app.viewport_manager.get(p)
-            )
-        )
-
-    # Panel durumları — PanelRegistry üzerinden
-    for entry in app.panel_registry.all():
-        inst = entry.instance
-        states[entry.name] = (lambda i=inst: getattr(i, "visible", False))
-
-    return states

@@ -8,25 +8,26 @@ import OpenGL.GL as gl
 from PIL import Image
 
 from assets.icons_base64 import ICON_DATA
+# _ICONS dosya yolu map'i artık gerekmiyor — ICON_DATA anahtar bazlı.
 
 
 class IconManager:
     def __init__(self) -> None:
         self._textures: dict[str, tuple[int, int, int]] = {}
         self._failed: set[str] = set()
-        # print(f"[IconManager] {len(ICON_DATA)} ikon mevcut: {list(ICON_DATA.keys())[:5]}...")
 
-    def get_texture(self, icon_name):
-        if not icon_name:
-            return None
-        if icon_name in self._failed:
+    def has(self, icon_name: str) -> bool:
+        return icon_name in ICON_DATA
+
+    def get_texture(self, icon_name: str | None):
+        if not icon_name or icon_name in self._failed:
             return None
         if icon_name not in ICON_DATA:
-            # print(f"[IconManager] '{icon_name}' ICON_DATA'da YOK. Mevcut: {list(ICON_DATA.keys())}")
             self._failed.add(icon_name)
             return None
-        if icon_name in self._textures:
-            return self._textures[icon_name]
+        cached = self._textures.get(icon_name)
+        if cached is not None:
+            return cached
         try:
             img_data = base64.b64decode(ICON_DATA[icon_name])
             img = Image.open(BytesIO(img_data)).convert("RGBA")
@@ -43,8 +44,10 @@ class IconManager:
             )
             gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
-            self._textures[icon_name] = (tex_id, w, h)
-            return self._textures[icon_name]
+            entry = (tex_id, w, h)
+            self._textures[icon_name] = entry
+            return entry
         except Exception as e:
-            print(f"[IconManager Error] Failed to load icon '{icon_name}': {e}")
+            print(f"[IconManager] '{icon_name}' yüklenemedi: {e}")
+            self._failed.add(icon_name)
             return None
