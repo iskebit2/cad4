@@ -82,6 +82,21 @@ class AddFrame:
     label: str = ""
 
 
+@dataclass
+class AddArea:
+    node_uids: list[int]
+    thickness: float = 0.0
+    label: str = ""
+
+
+@dataclass
+class AddLink:
+    node_i_uid: int
+    node_j_uid: int
+    prop_name: str = "LINK1"
+    label: str = ""
+
+
 # ---- Proje seviyesi ----
 @dataclass
 class ReplaceProject:

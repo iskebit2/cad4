@@ -1,6 +1,8 @@
 # app/commands/elements.py
 from __future__ import annotations
 
+import math
+
 from app.commands import project_commands as PC
 from app.commands.meta import CommandMeta
 from app.commands.registry import command, factory
@@ -155,6 +157,64 @@ def _add_frame(app, cmd: PC.AddFrame) -> CommandResult:
         label=cmd.label,
     )
     model.add_frame(f)
+    return CommandResult(geometry_dirty=True)
+
+
+@command(PC.AddArea)
+def _add_area(app, cmd: PC.AddArea) -> CommandResult:
+    from domain.element import Area
+
+    model = app.current_project.math_model
+    if len(cmd.node_uids) < 3 or len(set(cmd.node_uids)) != len(cmd.node_uids):
+        return CommandResult(
+            handled=False,
+            message="Area için en az üç farklı node gerekli.",
+            level="warn",
+        )
+    if not math.isfinite(cmd.thickness) or cmd.thickness < 0:
+        return CommandResult(
+            handled=False,
+            message="Area kalınlığı sonlu ve negatif olmayan bir değer olmalı.",
+            level="warn",
+        )
+
+    nodes = []
+    for uid in cmd.node_uids:
+        node = model.nodes.get(uid)
+        if node is None:
+            return CommandResult(
+                handled=False,
+                message=f"Area node bulunamadı: {uid}",
+                level="warn",
+            )
+        nodes.append(node)
+
+    area = Area(nodes=nodes, _thickness_val=cmd.thickness, label=cmd.label)
+    model.add_area(area)
+    return CommandResult(geometry_dirty=True)
+
+
+@command(PC.AddLink)
+def _add_link(app, cmd: PC.AddLink) -> CommandResult:
+    from domain.element import Link
+
+    model = app.current_project.math_model
+    node_i = model.nodes.get(cmd.node_i_uid)
+    node_j = model.nodes.get(cmd.node_j_uid)
+    if node_i is None or node_j is None:
+        return CommandResult(
+            handled=False,
+            message="Link uç node'larından biri bulunamadı.",
+            level="warn",
+        )
+
+    link = Link(
+        node_i=node_i,
+        node_j=node_j,
+        propname=cmd.prop_name,
+        label=cmd.label,
+    )
+    model.add_link(link)
     return CommandResult(geometry_dirty=True)
 
 
