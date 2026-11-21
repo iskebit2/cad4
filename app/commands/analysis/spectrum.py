@@ -1,4 +1,4 @@
-# core/analysis/spectrum.py
+# app/commands/analysis\spectrum.py
 """TBDY 2018 spektrum ve spektral analiz."""
 from logging_config import CadLogger
 

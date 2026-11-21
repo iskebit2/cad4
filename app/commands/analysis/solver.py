@@ -1,36 +1,28 @@
-# core/analysis/solver.py
-
+# app/commands/analysis\solver.py
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.linalg import eigh
+from scipy.linalg import cho_factor, cho_solve, eigh
 
-logger = logging.getLogger(__name__)
-
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 @dataclass
 class ModalResult:
-    frequencies: np.ndarray            # (n_modes,) Hz
-    periods: np.ndarray                # (n_modes,) s
-    mode_shapes: np.ndarray            # (n_free_dofs, n_modes)
-    modal_dofs: np.ndarray             # (n_free_dofs,) global DOF endeksleri
+    frequencies: np.ndarray
+    periods: np.ndarray
+    mode_shapes: np.ndarray
+    modal_dofs: np.ndarray
 
-    modal_mass: np.ndarray             # (n_modes,) genelleştirilmiş kütle
-    participation_factor_x: np.ndarray # (n_modes,)
+    modal_mass: np.ndarray
+    participation_factor_x: np.ndarray
     participation_factor_y: np.ndarray
     participation_factor_z: np.ndarray
-    effective_mass_x: np.ndarray       # (n_modes,) kg
+    effective_mass_x: np.ndarray
     effective_mass_y: np.ndarray
     effective_mass_z: np.ndarray
 
-    total_mass_x: float = 0.0          # kg
+    total_mass_x: float = 0.0
     total_mass_y: float = 0.0
     total_mass_z: float = 0.0
 
@@ -41,12 +33,11 @@ class ModalResult:
     def n_modes(self) -> int:
         return len(self.periods)
 
-def perform_guyan_condensation(K, M, master_indices, slave_indices):
-    # Matrisleri dense formata çevir
-    K = K.toarray() if hasattr(K, 'toarray') else K
-    M = M.toarray() if hasattr(M, 'toarray') else M
 
-    # Bloklara ayır
+def perform_guyan_condensation(K, M, master_indices, slave_indices):
+    K = K.toarray() if hasattr(K, "toarray") else np.asarray(K, dtype=float)
+    M = M.toarray() if hasattr(M, "toarray") else np.asarray(M, dtype=float)
+
     K_mm = K[np.ix_(master_indices, master_indices)]
     K_ms = K[np.ix_(master_indices, slave_indices)]
     K_sm = K[np.ix_(slave_indices, master_indices)]
@@ -57,26 +48,19 @@ def perform_guyan_condensation(K, M, master_indices, slave_indices):
     M_sm = M[np.ix_(slave_indices, master_indices)]
     M_ss = M[np.ix_(slave_indices, slave_indices)]
 
-    # T_s matrisini çöz: K_ss * T_s = -K_sm -> T_s = -inv(K_ss) * K_sm
-    try:
-        T_s = -np.linalg.solve(K_ss, K_sm)
-    except np.linalg.LinAlgError:
-        # Tekil matris riskine karşı küçük bir ridge (regularization) eklenebilir
-        K_ss_reg = K_ss + 1e-10 * np.eye(K_ss.shape[0])
-        T_s = -np.linalg.solve(K_ss_reg, K_sm)
+    if K_ss.shape[0] > 0 and np.linalg.cond(K_ss) > 1e14:
+        K_ss = K_ss + 1e-10 * np.eye(K_ss.shape[0])
 
-    # İndirgenmiş (reduced) Stiffness Matrisi: K_red = K_mm + K_ms * T_s
+    T_s = -np.linalg.solve(K_ss, K_sm)
+
     K_red = K_mm + K_ms @ T_s
-
-    # İndirgenmiş (reduced) Mass Matrisi (Consistent mass dönüşümü):
-    # M_red = M_mm + M_ms*T_s + T_s^T*M_sm + T_s^T*M_ss*T_s
     M_red = M_mm + (M_ms @ T_s) + (T_s.T @ M_sm) + (T_s.T @ M_ss @ T_s)
 
-    # Simetriyi garantiye alalım
     K_red = 0.5 * (K_red + K_red.T)
     M_red = 0.5 * (M_red + M_red.T)
 
     return K_red, M_red
+
 
 class StructuralSolver:
     ROT_MASS_SCALE: float = 1e-6
@@ -87,14 +71,32 @@ class StructuralSolver:
         self,
         K_global: np.ndarray,
         M_global: np.ndarray,
-        fixed_dofs,
-        num_dofs: int,
+        fixed_dofs=None,
+        num_dofs: int | None = None,
+        dof_map: dict[str, int] | None = None,
+        nodes: dict | None = None,
     ):
         self.K = np.asarray(K_global, dtype=float)
         self.M = np.asarray(M_global, dtype=float)
-        self.fixed_dofs = {int(d) for d in fixed_dofs if d is not None}
-        self.num_dofs = int(num_dofs)
+        self.num_dofs = int(num_dofs) if num_dofs is not None else int(self.K.shape[0])
+        self.dof_map = dict(dof_map) if dof_map is not None else {}
 
+        resolved_fixed: set[int] = set()
+        if fixed_dofs is not None:
+            resolved_fixed.update(int(d) for d in fixed_dofs if d is not None)
+        elif nodes is not None:
+            for n_key, node in nodes.items():
+                dofs = getattr(node, "dof_indices", None)
+                if not dofs and n_key in self.dof_map:
+                    base = self.dof_map[n_key]
+                    dofs = [base + i for i in range(6)]
+                r = getattr(node, "restraint", None)
+                if dofs and r is not None:
+                    for i, name in enumerate(("ux", "uy", "uz", "rx", "ry", "rz")):
+                        if getattr(r, name, False) and i < len(dofs) and dofs[i] is not None:
+                            resolved_fixed.add(int(dofs[i]))
+
+        self.fixed_dofs = resolved_fixed
         all_dofs = set(range(self.num_dofs))
         self.free_dofs = np.array(sorted(all_dofs - self.fixed_dofs), dtype=int)
 
@@ -107,65 +109,54 @@ class StructuralSolver:
         if len(slave) == 0:
             return K_red[np.ix_(master, master)], M_red[np.ix_(master, master)]
 
-        K_red_cond, M_red_cond = perform_guyan_condensation(K_red, M_red, master, slave)
-        return K_red_cond, M_red_cond
+        return perform_guyan_condensation(K_red, M_red, master, slave)
 
     def _reduced(self) -> tuple[np.ndarray, np.ndarray]:
         idx = np.ix_(self.free_dofs, self.free_dofs)
         return self.K[idx], self.M[idx]
 
-    def static_solve(self, F: np.ndarray) -> np.ndarray:
-        K_red, _ = self._reduced()
-        F_red = np.asarray(F, dtype=float)[self.free_dofs]
-        U_red = np.linalg.solve(K_red, F_red)
+    def static_solve(self, F: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        F_vec = np.asarray(F, dtype=float)
+        U = np.zeros(self.num_dofs, dtype=float)
 
-        U = np.zeros(self.num_dofs)
-        U[self.free_dofs] = U_red
-        return U
+        if self.free_dofs.size > 0:
+            K_red, _ = self._reduced()
+            F_red = F_vec[self.free_dofs]
+            U[self.free_dofs] = np.linalg.solve(K_red, F_red)
+
+        R = self.K @ U - F_vec
+        if self.free_dofs.size > 0:
+            R[self.free_dofs] = 0.0
+
+        return U, R
 
     def modal_solve(
         self,
         n_modes: int = 10,
-        debug: bool = True,
         use_condensation: bool = True,
     ) -> ModalResult:
         K_red, M_red = self._reduced()
 
         dof_types = self.free_dofs % 6
-        trans_idx = np.where(dof_types < 3)[0]  # Öteleme (Master / a)
-        rot_idx = np.where(dof_types >= 3)[0]    # Rotasyon (Slave / b)
-
-        if debug:
-            print("\n--- Guyan / Kütlesiz DOF Analizi ---")
-            print(f"Toplam serbest DOF: {len(self.free_dofs)}")
-            print(f"Öteleme (kütleli) DOF sayısı: {len(trans_idx)}")
-            print(f"Rotasyon (kütlesiz) DOF sayısı: {len(rot_idx)}")
-            print(f"Kondensasyon: {'AKTİF (Guyan)' if use_condensation else 'KAPALI (Full)'}")
+        trans_idx = np.where(dof_types < 3)[0]
+        rot_idx = np.where(dof_types >= 3)[0]
 
         G: np.ndarray | None = None
 
-        # ==============================================================
-        # DAL 1: GUYAN STATİK KONDENSASYONU (Optimize Edilmiş Fonksiyon)
-        # ==============================================================
         if use_condensation and len(rot_idx) > 0:
-            # Güncel ve kararlı harici kondensasyon alt fonksiyonunu çağırıyoruz
             K_cond, M_cond = perform_guyan_condensation(K_red, M_red, trans_idx, rot_idx)
 
-            # Kinematik ilişki matrisi T_s (G) geri kazanım adımları için hesaplanır
             K_bb = K_red[np.ix_(rot_idx, rot_idx)]
             K_ba = K_red[np.ix_(rot_idx, trans_idx)]
-            try:
-                from scipy.linalg import cho_factor, cho_solve
+            if np.linalg.cond(K_bb) > 1e14:
+                K_bb = K_bb + 1e-10 * np.eye(K_bb.shape[0])
+
+            eigvals_bb = np.linalg.eigvalsh(K_bb)
+            if eigvals_bb.size > 0 and eigvals_bb[0] > 0.0:
                 c, low = cho_factor(K_bb, lower=True, check_finite=False)
                 G = cho_solve((c, low), -K_ba, check_finite=False)
-            except (np.linalg.LinAlgError, ValueError):
-                # K_bb tekil veya kötü koşullu ise regularization ekleyerek kararlı çözüm sağlarız
-                K_bb_reg = K_bb + 1e-10 * np.eye(K_bb.shape[0])
-                try:
-                    c, low = cho_factor(K_bb_reg, lower=True, check_finite=False)
-                    G = cho_solve((c, low), -K_ba, check_finite=False)
-                except Exception:
-                    G, *_ = np.linalg.lstsq(K_bb_reg, -K_ba, rcond=None)
+            else:
+                G, *_ = np.linalg.lstsq(K_bb, -K_ba, rcond=None)
 
             eigenvalues, vectors_a = eigh(K_cond, M_cond)
             eigenvalues = np.maximum(eigenvalues, 0.0)
@@ -187,8 +178,7 @@ class StructuralSolver:
             frequencies = frequencies[:count]
             periods = periods[:count]
 
-            # Tam DOF uzayına geri dönüştürme (Öteleme + Rotasyon = G @ vectors_a)
-            full_vectors = np.zeros((len(self.free_dofs), count))
+            full_vectors = np.zeros((len(self.free_dofs), count), dtype=float)
             full_vectors[trans_idx, :] = vectors_a
             if G is not None:
                 full_vectors[rot_idx, :] = G @ vectors_a
@@ -199,10 +189,6 @@ class StructuralSolver:
             total_mass_x, total_mass_y, total_mass_z = self._total_masses_condensed(
                 M_cond, trans_idx, rot_idx, G, self.free_dofs,
             )
-
-        # ==============================================================
-        # DAL 2: FULL DOF ÇÖZÜMÜ
-        # ==============================================================
         else:
             M_eff = self._build_effective_mass(M_red)
             eigenvalues, full_vectors = eigh(K_red, M_eff)
@@ -328,7 +314,7 @@ class StructuralSolver:
         for i in range(3):
             r_i = r_cond[i]
             totals.append(float(r_i @ M_cond @ r_i))
-        return tuple(totals)  # type: ignore
+        return totals[0], totals[1], totals[2]
 
     def _participation(
         self,

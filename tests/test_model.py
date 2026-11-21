@@ -200,3 +200,8 @@ def build_structure(app=None):
 
 proj= build_structure()
 print(proj)
+
+from app.commands.analysis.solve_static import run_static_analysis
+results = run_static_analysis(proj)
+
+print(results)

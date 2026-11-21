@@ -1,4 +1,4 @@
-
+# app/commands/analysis\__init__.py
 from .mass_assembly import MassAssembly, MassContribution, build_mass
 from .material_takeoff import compute_takeoff, takeoff_to_dataframes
 from .solver import ModalResult, StructuralSolver

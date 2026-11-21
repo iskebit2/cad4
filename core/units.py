@@ -258,6 +258,9 @@ def _convert_grid_lines(project, from_sys, to_sys) -> int:
 # ============================================================================
 # PROJE DÖNÜŞÜMÜ
 # ============================================================================
+def ensure_nmm(project, *, reason: str = "analysis") -> int:
+    return convert_project_units(project, UnitSystem.N_MM, reason=reason)
+
 def convert_project_units(
     project, target: UnitSystem, *, reason: str = "",
 ) -> int:

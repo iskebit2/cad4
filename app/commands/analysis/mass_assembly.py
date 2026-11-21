@@ -1,4 +1,4 @@
-# core/analysis/mass_assembly.py
+# app/commands/analysis\mass_assembly.py
 
 from __future__ import annotations
 

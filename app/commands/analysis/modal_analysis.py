@@ -1,4 +1,4 @@
-# core/analysis/modal_analysis.py
+# app/commands/analysis\modal_analysis.py
 
 from dataclasses import dataclass
 

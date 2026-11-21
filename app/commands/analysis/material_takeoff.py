@@ -1,9 +1,5 @@
-# core/analysis/material_takeoff.py
-"""
-Malzeme metrajı — ElementWeight ve özet tablolar.
+# app/commands/analysis\material_takeoff.py
 
-Birim sözleşmesi: units.py (kg, mm, N, MPa, kg/mm³).
-"""
 from dataclasses import dataclass, field
 
 import pandas as pd
