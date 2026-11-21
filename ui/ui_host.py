@@ -1,4 +1,3 @@
-# ui/ui_host.py
 from __future__ import annotations
 
 import os
@@ -6,22 +5,23 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from imgui_bundle import imgui
 
+from app.services.panel_registry import PanelSpec
+from app.services.toolbar_builder import ToolbarBuilder
+from app.settings.categories import Category
+from app.settings.layout_store import LayoutStore
+from app.settings.shortcut_store import ShortcutStore
 from assets.themes import _apply_dark_theme, _load_fonts
 from inspector import InspectorWindow
 from inspector.schemas import CatalogAdapter
 from logging_config import CadLogger
-from plane.plane import Plane
-from plane.plane_source_dialog import PlaneSourceDialog
-from ui.base.panel_base import CATEGORY_ORDER
 from ui.context_menu import ContextMenuManager
 from ui.context_resolvers import resolve_context
 from ui.widgets.file_dialog import ImGuiFileDialog
 from ui.widgets.status_bar import StatusBar
 from ui.widgets.toolbar import Toolbar
-from app.services.toolbar_specs import default_commands
 from app.commands import project_commands as PC
 from viewport.viewport_panel import ViewportPanel
-
+from ui.widgets.viewport_view_dialog import ViewportViewDialog
 
 if TYPE_CHECKING:
     from app.cad_app import CadApp
@@ -30,14 +30,12 @@ logger = CadLogger.get(__name__)
 
 
 class UIHost:
-    """Saf ImGui orkestratörü. GLFW, OpenGL ve domain iş mantığı bilmez."""
-
     def __init__(self, app: "CadApp"):
         self.app = app
         self.toolbar: Toolbar | None = None
         self.status_bar = StatusBar()
         self.file_dialog: ImGuiFileDialog | None = None
-        self.plane_source_dialog: PlaneSourceDialog | None = None
+        self.viewport_view_dialog: ViewportViewDialog | None = None
         self.inspector: InspectorWindow | None = None
         self.context_menu = ContextMenuManager(self.app)
 
@@ -54,60 +52,73 @@ class UIHost:
         _load_fonts(font_size=16)
         _apply_dark_theme()
 
+    
     def on_engine_ready(self) -> None:
-        reg = self.app.panel_registry
+        app = self.app
+        if app.engine is not None and app.engine.input is not None:
+            io = imgui.get_io()
+            app.engine.input.set_capture_callbacks(
+                mouse_fn=lambda: bool(io.want_capture_mouse),
+                keyboard_fn=lambda: bool(io.want_text_input),
+            )
+
+        reg = app.panel_registry
 
         self.file_dialog = ImGuiFileDialog()
-        self.plane_source_dialog = PlaneSourceDialog(self)
+        self.viewport_view_dialog = ViewportViewDialog(app)
 
-        # Inspector — panel registry'den instance al, yoksa app ile kur
-        self.inspector = reg.instance("inspector_panel")
-        if not isinstance(self.inspector, InspectorWindow):
-            self.inspector = InspectorWindow(app=self.app)
-            from app.services.panel_registry import PanelEntry
-            reg.register(PanelEntry(
-                instance=self.inspector,
+        inspector_spec = reg.get("inspector_panel")
+        if inspector_spec is None:
+            inspector_spec = PanelSpec(
+                cls=InspectorWindow,
                 name="inspector_panel",
                 title="Inspector",
-                category="Management",
+                category=Category.MANAGEMENT,
                 quick=True,
                 shortcut="F10",
                 menu_label="Inspector",
-                icon="log-in",
-                context=["app"],
-            ))
+                icon="inspector_panel",
+                context=("app",),
+            )
+            inspector = InspectorWindow(app=app)
+            reg.register(inspector_spec, inspector)
         else:
-            # registry'den geldiyse app'i bağla
-            self.inspector.app = self.app
-            self.inspector._bind_app()
+            inspector = reg.instance("inspector_panel")
 
-        # catalog adapter (dict → protokol)
-        from inspector.schemas import CatalogAdapter
-        self.inspector.set_catalog(CatalogAdapter(self.app))
-
-        # İlk açılışta seçim boş, proje bağlı
+        self.inspector = inspector
+        self.inspector.set_catalog(CatalogAdapter(app))
         self.inspector.set_selection([])
 
-        # Toolbar
-        self.toolbar = Toolbar(
-            put_command=self.app.put_command,
+        shortcut_store = getattr(app, "shortcut_store", None) or ShortcutStore()
+        app.shortcut_store = shortcut_store
+
+        builder = ToolbarBuilder(
+            cmd_registry=app.command_registry,
             panel_registry=reg,
-            extra_commands=default_commands(),
+            layout_store=LayoutStore(),
+            shortcut_store=shortcut_store,
+        )
+
+        self.toolbar = Toolbar(
+            put_command=app.put_command,
+            builder=builder,
             app_getter=lambda: self.app,
+            extra_menus=[self._build_view_menu()],
         )
 
         self._ensure_default_viewport()
         self._initialized = True
-        logger.info("[UIHost] Hazır (%d panel)", len(reg.all()))
+
+        logger.info(
+            "[UIHost] Hazır (%d panel)",
+            len(reg.all()),
+        )
 
     def shutdown(self) -> None:
         self._viewport_panels.clear()
         self._last_active_viewport_name = None
         self._initialized = False
 
-    # ------------------------------------------------------------------
-    # MODAL DİYALOGLAR (ImGui pencere kararları)
-    # ------------------------------------------------------------------
     def open_open_dialog(self, on_select: Callable[[str], None]) -> None:
         if self.file_dialog is not None:
             self.file_dialog.open(
@@ -129,12 +140,7 @@ class UIHost:
                 on_select=on_select,
             )
 
-    def open_plane_source_dialog(self) -> None:
-        if self.plane_source_dialog is not None:
-            self.plane_source_dialog.open()
-
     def prepare_panel(self, name: str, panel: Any) -> None:
-        """Paneli açılmadan önce güncel uygulama bağlamıyla hazırlar."""
         entry = self.app.panel_registry.get(name)
         if entry is None:
             return
@@ -143,9 +149,6 @@ class UIHost:
         if callable(setter):
             setter(context)
 
-    # ------------------------------------------------------------------
-    # ÇİZİM DÖNGÜSÜ
-    # ------------------------------------------------------------------
     def notify_key(self, key: int, action: int, mods: int) -> None:
         self.status_bar.notify_key(key, action, mods)
 
@@ -172,17 +175,17 @@ class UIHost:
         self._draw_marquee_overlays()
         if self.file_dialog is not None:
             self.file_dialog.draw()
-
+        if self.viewport_view_dialog is not None:
+            self.viewport_view_dialog.draw()
+            
         for vp_panel in list(self._viewport_panels):
             vp_panel.draw()
 
-        for entry in self.app.panel_registry.visible():
-            if entry.instance is self.inspector:
+        for spec, panel in self.app.panel_registry.visible_instances():
+            if panel is self.inspector:
                 continue
-            entry.instance.draw()
+            panel.draw()
 
-        if self.plane_source_dialog is not None:
-            self.plane_source_dialog.draw()
         if self.inspector is not None:
             self.inspector.draw()
 
@@ -193,10 +196,7 @@ class UIHost:
         is_drawing = bool(eng and eng.draw_mgr and eng.draw_mgr.is_active)
         app_status = "Çizim Aktif" if is_drawing else self.status_bar.last_event_text
 
-        vm = self.app.viewport_manager
-        active_vp = vm.active if vm is not None else None
-        active_plane = getattr(active_vp, "plane", None) if active_vp is not None else None
-        ucs_name = active_plane.name if active_plane is not None else "Global"
+        ucs_name = getattr(eng.input, "mouse_ucs_name", "Global") if (eng and eng.input) else "Global"
         ucs_pos = getattr(eng.input, "mouse_ucs_pos", None) if (eng and eng.input) else None
 
         self.status_bar.draw(
@@ -212,10 +212,11 @@ class UIHost:
 
     def _draw_dock_space(self) -> None:
         viewport = imgui.get_main_viewport()
-        work_pos = imgui.ImVec2(viewport.work_pos.x, viewport.work_pos.y)
+        quick_h = self.toolbar._quick_bar_height if self.toolbar is not None else 0.0
+        work_pos = imgui.ImVec2(viewport.work_pos.x, viewport.work_pos.y + quick_h)
         work_size = imgui.ImVec2(
             viewport.work_size.x,
-            max(1.0, viewport.work_size.y - self.status_bar.height),
+            max(1.0, viewport.work_size.y - quick_h - self.status_bar.height),
         )
         imgui.set_next_window_pos(work_pos)
         imgui.set_next_window_size(work_size)
@@ -238,9 +239,6 @@ class UIHost:
         self.context_menu.render()
         imgui.end()
 
-    # ------------------------------------------------------------------
-    # VIEWPORT PENCERELERİ & FARE YÖNLENDİRME
-    # ------------------------------------------------------------------
     def toggle_view_2d(self) -> None:
         self.command_queue.put(PC.Toggle2D())
 
@@ -248,35 +246,28 @@ class UIHost:
         vm = self.app.viewport_manager
         if vm is None:
             return
-        vp = vm.get("iso")
-        if vp is None:
-            vp = vm.create_viewport(name="iso", width=1200, height=800, preset="iso")
-        vm.ensure_viewport_plane(vp, self.app.current_project)
+        if vm.get("iso") is None:
+            vm.create_viewport(name="iso", width=1200, height=800, preset="iso")
         if not any(p.viewport_name == "iso" for p in self._viewport_panels):
             self._viewport_panels.append(ViewportPanel(self, "iso", vm))
 
+    def open_viewport_on_plane(self, name_hint: str, ucs, volume, is_2d: bool = True):
+        vm = self.app.viewport_manager
+        if vm is None:
+            return None
+        name = vm.next_name(name_hint)
+        vp = vm.create_viewport(name=name, ucs=ucs, volume=volume, is_2d=is_2d)
+        self._viewport_panels.append(ViewportPanel(self, name, vm))
+        return vp
+    
     def open_viewport(self, preset: str):
         vm = self.app.viewport_manager
         if vm is None:
             return None
         name = vm.next_name(preset)
         vp = vm.create_viewport(name=name, width=800, height=600, preset=preset)
-        vm.ensure_viewport_plane(vp, self.app.current_project)
         self._viewport_panels.append(ViewportPanel(self, name, vm))
         return vp
-
-    def open_plane_viewport(self, plane, is_2d: bool = True):
-        vm = self.app.viewport_manager
-        if vm is None or plane is None:
-            return None
-        name = vm.next_name(f"Plane: {plane.name}")
-        vp = vm.create_viewport(
-            name=name, width=800, height=600,
-            plane=plane, is_2d=is_2d,
-        )
-        self._viewport_panels.append(ViewportPanel(self, name, vm))
-        return vp
-
 
     def close_all_viewports(self) -> None:
         vm = self.app.viewport_manager
@@ -398,9 +389,6 @@ class UIHost:
         draw_list.add_rect_filled(p0, p1, imgui.get_color_u32(fill_color))
         draw_list.add_rect(p0, p1, imgui.get_color_u32(border_color))
 
-    # ------------------------------------------------------------------
-    # PROJE / SEÇİM BİLDİRİMLERİ (Sadece kendi ImGui bileşenleri için)
-    # ------------------------------------------------------------------
     def on_project_changed(self) -> None:
         if self.inspector is not None:
             self.inspector.set_catalog(CatalogAdapter(self.app))
@@ -412,7 +400,7 @@ class UIHost:
         if self.inspector is not None:
             self.inspector.set_selection(selected)
         for entry in self.app.panel_registry.all():
-            callback = getattr(entry.instance, "on_selection_changed", None)
+            callback = getattr(entry, "on_selection_changed", None)
             if callable(callback):
                 callback(selected)
 
@@ -420,17 +408,72 @@ class UIHost:
         if self._is_resetting:
             return
         self._is_resetting = True
-        try:
-            for entry in self.app.panel_registry.all():
-                panel = entry.instance
-                panel.visible = False
-                panel._preview_snapshot = None
-                panel._original = None
-                panel.draft = None
-                panel._dirty = False
+        for spec, panel in self.app.panel_registry.visible_instances():
+        
+            panel.visible = False
+            panel._preview_snapshot = None
+            panel._original = None
+            panel.draft = None
+            panel._dirty = False
 
-            self.close_all_viewports()
-            self._ensure_default_viewport()
-            self.app.command_queue.put(PC.ClearSelection())
-        finally:
-            self._is_resetting = False
+        self.close_all_viewports()
+        self._ensure_default_viewport()
+        self.app.command_queue.put(PC.ClearSelection())
+        self._is_resetting = False
+
+    def _build_view_menu(self) -> tuple[str, Callable[[], None]]:
+        app = self.app
+
+        def _draw() -> None:
+            eng = app.engine
+            if eng is None:
+                imgui.text_disabled("Engine hazır değil")
+                return
+
+            imgui.text_disabled("GÖRÜNÜRLÜK")
+            imgui.separator()
+            for label, key in (
+                ("Scene", "scene"),
+                ("Grid", "grid"),
+                ("Polygon", "polygon"),
+                ("Lines", "lines"),
+                ("Labels", "labels"),
+                ("Interaction", "interaction"),
+            ):
+                self._toggle_row(label, key, bool(eng.show.get(key, True)))
+
+            imgui.separator()
+            imgui.text_disabled("YÜK")
+            imgui.separator()
+            self._toggle_row("Loads", "loads", app.visibility_service.get_loads_visible())
+            self._toggle_row("Wind Zones", "zones", bool(eng.show.get("zones", True)))
+
+            imgui.separator()
+            imgui.text_disabled("EKSEN")
+            imgui.separator()
+            self._toggle_row("Global Axis", "global_axis", bool(eng.show.get("global_axis", True)))
+            self._toggle_row("Local Axes", "local_axes", bool(eng.scene and eng.scene.show_local_axes))
+
+            imgui.separator()
+            imgui.text_disabled("RENDER MODU")
+            imgui.separator()
+            mode = eng.renderer.get_render_mode() if eng.renderer else "shaded"
+            for m, lbl in (("shaded", "Shaded"), ("simple", "Simple")):
+                if imgui.radio_button(lbl, mode == m):
+                    app.put_command(PC.SetRenderMode(m))
+                    app.put_command(PC.RefreshGeometry())
+
+        return ("View", _draw)
+
+    def _toggle_row(self, label: str, key: str, current: bool) -> None:
+        changed, new_val = imgui.checkbox(f"##{key}", current)
+        imgui.same_line()
+        imgui.text(label)
+        if not changed:
+            return
+        if key == "local_axes":
+            self.app.put_command(PC.ToggleLocalAxes())
+        elif key == "loads":
+            self.app.put_command(PC.ToggleLoadsVisible(new_val))
+        else:
+            self.app.put_command(PC.ToggleRenderFlag(key, new_val))

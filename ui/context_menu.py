@@ -211,17 +211,20 @@ class ContextMenuManager:
         vm = self.app.viewport_manager
         active_vp = vm.active if vm else None
         if active_vp is not None:
-            p_label = active_vp.plane.name if active_vp.plane else "Düzlem Yok"
-            imgui.text_disabled(f"Görünüm: {active_vp.name} ({p_label})")
-            if imgui.menu_item_simple("View & Plane Sınırları / Filtre..."):
-                if self.app.ui and getattr(self.app.ui, "view_plane_dialog", None):
-                    self.app.ui.view_plane_dialog.open(viewport_name=active_vp.name)
-            if active_vp.plane is not None and imgui.menu_item_simple("Düzlem Sınırlarını Modele Sığdır"):
+            imgui.text_disabled(f"Görünüm: {active_vp.name}")
+            if imgui.menu_item_simple("UCS, Sınırlar & Filtre..."):
+                if self.app.ui and self.app.ui.viewport_view_dialog is not None:
+                    self.app.ui.viewport_view_dialog.open(viewport_name=active_vp.name)
+            if imgui.menu_item_simple("Sınırları Modele Sığdır"):
                 eng = self.app.engine
-                active_vp.plane.fit_to_math_model(eng.math_model if eng else None, include_depth=True)
-                vm.sync_plane(active_vp.plane, refocus=True)
+                active_vp.fit_volume_to_model(eng.math_model if eng else None, include_depth=True)
+                bounds = eng._combined_bounds() if eng else None
+                active_vp.focus_on_volume(
+                    fallback_center=bounds.center if bounds is not None else None,
+                    fallback_radius=float(bounds.size) if bounds is not None else 2000.0,
+                )
             imgui.separator()
-            
+
         if imgui.begin_menu("Çizim Başlat"):
             if imgui.menu_item_simple("Çizgi (Line)"):
                 self.app.put_command(PC.StartDrawTool(mode="line"))

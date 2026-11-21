@@ -47,7 +47,7 @@ class MockApp(MockObject):
         self.current_project = Project()
 
 import ui.panels as panels_package
-from ui.registry import discover_panels
+from ui.helpers.registry import discover_panels
 
 
 # --------------------------------------------------
@@ -109,7 +109,10 @@ def select_panel(spec):
     active_panel = spec.cls(app=app)
     active_panel.open()
 
+for spec in specs:
+    print(spec)
 
+print(spec.__dict__)
 # --------------------------------------------------
 # Main loop
 # --------------------------------------------------
@@ -131,7 +134,7 @@ while not glfw.window_should_close(window):
 
     for spec in specs:
         selected = active_spec == spec
-
+        
         if imgui.selectable(
             f"{spec.title}##{spec.name}",
             selected

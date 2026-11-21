@@ -1,8 +1,0 @@
-Kritik Başlangıç Hatası:
-Traceback (most recent call last):
-  File "d:\Program\cad4\main.py", line 122, in main
-    _run_full_app()
-  File "d:\Program\cad4\main.py", line 80, in _run_full_app
-    window = CadWindow(use_imgui=True)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: CadWindow.__init__() got an unexpected keyword argument 'use_imgui'

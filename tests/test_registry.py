@@ -1,5 +1,5 @@
 # tests/test_registry.py
-from ui.registry import discover_panels
+from ui.helpers.registry import discover_panels
 import ui.panels as pkg
 
 specs = discover_panels(pkg)

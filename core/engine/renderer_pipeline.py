@@ -1,33 +1,29 @@
-# core/engine/renderer_pipeline.py
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 from OpenGL.GL import (
     GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER,
     glBindFramebuffer, glDrawBuffer, glViewport,
 )
 
 from core.mrt import MRTFramebuffer
+from domain.bounds import Bounds3D
+from geometry.geometry_processor import GeometryProcessor
 from render.interactionrenderer import InteractionRenderer
 from render.mathmodelrenderer import MathModelRenderer
 from render.scenerenderer import SceneRenderer
-from geometry.geometry_processor import GeometryProcessor
-from logging_config import CadLogger
 
 if TYPE_CHECKING:
     from core.engine.camera_rig import CameraRig
     from domain.project import Project
     from viewport.viewport import Viewport
 
-logger = CadLogger.get(__name__)
-
 
 class RendererPipeline:
-    """MRT + SceneRenderer + pick_pass. Interaction Engine.render_viewport'ta."""
 
-    def __init__(self, width: int, height: int,
-                 shaders: dict, snap_renderer) -> None:
+    def __init__(self, width: int, height: int, shaders: dict) -> None:
         self.width = max(1, int(width))
         self.height = max(1, int(height))
         self.shaders = shaders
@@ -39,7 +35,6 @@ class RendererPipeline:
         self.renderer = None
         self.presentation = None
         self.interaction = None
-        self.snap = snap_renderer
         self.pick_pass = None
 
         self._build()
@@ -62,11 +57,9 @@ class RendererPipeline:
         )
         self.pick_pass = self.renderer.pick_pass
         self.pick_pass.set_main_fbo(self.mrt.fbo)
-        self.renderer.set_snap(self.snap)
         self.presentation = self.renderer.presentation_renderer
         self.interaction = InteractionRenderer(overlay_shader=s["2d_overlay"])
 
-    # ------------------------------------------------------------------
     def resize(self, width: int, height: int) -> None:
         self.width = max(1, int(width))
         self.height = max(1, int(height))
@@ -100,8 +93,8 @@ class RendererPipeline:
             wind_results=project.loads.wind_results,
         )
 
-    def render(self, vp: "Viewport", camera_rig: "CameraRig") -> None:
-        """Sadece scene render + blit. Interaction Engine'de çağrılır."""
+    def render(self, vp: "Viewport", camera_rig: "CameraRig",
+               engine=None, pointer=None, draw_interaction: bool = True) -> None:
         if not self.renderer or not self.mrt:
             return
 
@@ -112,7 +105,8 @@ class RendererPipeline:
 
         self.renderer.render(
             vp.camera, vp.fbo.fbo, force_id_pass=True,
-            viewport_name=vp.name, plane=vp.plane, visible_ids=vp.visible_ids,
+            viewport_name=vp.name, plane=None, visible_ids=vp.visible_ids,
+            viewport_size=(vp.width, vp.height),
         )
 
         self.mrt.blit_to(
@@ -122,20 +116,21 @@ class RendererPipeline:
             source_w=vp.width, source_h=vp.height,
         )
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0)
-        # glViewport(0, 0, self.width, self.height)
+        if draw_interaction and self.interaction is not None and engine is not None:
+            glBindFramebuffer(GL_FRAMEBUFFER, vp.fbo.fbo)
+            glViewport(0, 0, vp.width, vp.height)
+            self.interaction.render(
+                engine, vp.width, vp.height, camera=vp.camera,
+                viewport_name=vp.name, mouse_pos=pointer,
+                plane=None, visible_ids=vp.visible_ids,
+            )
 
-    # ------------------------------------------------------------------
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+
     def get_element_by_id(self, pick_id: int):
         if self.renderer is None:
             return None
         return self.renderer.get_element_from_id(pick_id)
-
-    def in_section(self, element, camera, plane) -> bool:
-        mmr = self.math_model_renderer
-        if mmr is None:
-            return True
-        return mmr._element_in_section(element, camera, plane)
 
     def iter_render_elements(self):
         mmr = self.math_model_renderer
@@ -153,8 +148,6 @@ class RendererPipeline:
         return self.presentation.grid if self.presentation else None
 
     def fit_view_bounds(self):
-        from domain.bounds import Bounds3D
-        import numpy as np
         items = [b for b in (
             self.scene.bounds if self.scene else None,
             self.math_model.bounds if self.math_model else None,

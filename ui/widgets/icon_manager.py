@@ -20,6 +20,7 @@ class IconManager:
         return icon_name in ICON_DATA
 
     def get_texture(self, icon_name: str | None):
+        
         if not icon_name or icon_name in self._failed:
             return None
         if icon_name not in ICON_DATA:

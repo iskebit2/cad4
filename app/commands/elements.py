@@ -1,16 +1,25 @@
 # app/commands/elements.py
+from __future__ import annotations
+
+from app.commands import project_commands as PC
+from app.commands.meta import CommandMeta
 from app.commands.registry import command, factory
 from app.commands.result import CommandResult
-from app.commands import project_commands as PC
+from app.settings.categories import Category
 
 
-# app/commands/elements.py (DeleteSelected ve DeleteElements işleyicileri)
-from app.commands.registry import command, factory
-from app.commands.result import CommandResult
-from app.commands import project_commands as PC
-
-
-@command(PC.DeleteSelected)
+@command(
+    PC.DeleteSelected,
+    CommandMeta(
+        label="Seçilileri Sil",
+        icon="delete_selected",
+        category=Category.EDIT,
+        default_shortcut="Delete",
+        quick=True,
+        tooltip="Seçili elemanları sil",
+        visible_in_ui=True,
+    ),
+)
 def _delete_selected(app, cmd: PC.DeleteSelected) -> CommandResult:
     eng = app.engine
     ctrl = app.edit_controller
@@ -28,6 +37,7 @@ def _delete_selected(app, cmd: PC.DeleteSelected) -> CommandResult:
         message=res.message,
         level="info" if res.ok else "warn",
     )
+
 
 @command(PC.ReplicateSelected)
 def _replicate_selected(app, cmd: PC.ReplicateSelected) -> CommandResult:
@@ -59,16 +69,24 @@ def _replicate_selected(app, cmd: PC.ReplicateSelected) -> CommandResult:
 def _f_replicate(args: list[str]):
     if len(args) < 3 or len(args) > 4:
         return None
-    try:
-        dx = float(args[0])
-        dy = float(args[1])
-        dz = float(args[2])
-        count = int(args[3]) if len(args) == 4 else 1
-    except ValueError:
+    if not all(_is_float(a) for a in args[:3]):
         return None
+    if len(args) == 4 and not args[3].lstrip("-").isdigit():
+        return None
+    dx, dy, dz = float(args[0]), float(args[1]), float(args[2])
+    count = int(args[3]) if len(args) == 4 else 1
     if count < 1:
         return None
     return PC.ReplicateSelected(dx=dx, dy=dy, dz=dz, count=count)
+
+
+def _is_float(text: str) -> bool:
+    s = text.strip()
+    if s.startswith(("+", "-")):
+        s = s[1:]
+    parts = s.split(".")
+    return len(parts) <= 2 and any(p.isdigit() for p in parts) and all(p.isdigit() or p == "" for p in parts)
+
 
 @command(PC.DeleteElements)
 def _delete(app, cmd: PC.DeleteElements) -> CommandResult:
@@ -92,6 +110,7 @@ def _delete(app, cmd: PC.DeleteElements) -> CommandResult:
         level="info" if res.ok else "warn",
     )
 
+
 @command(PC.UpdateElementFields)
 def _update_fields(app, cmd: PC.UpdateElementFields) -> CommandResult:
     el = app.current_project.math_model.get_element_by_unique_id(cmd.element_uid)
@@ -102,8 +121,6 @@ def _update_fields(app, cmd: PC.UpdateElementFields) -> CommandResult:
     if hasattr(el, "mark_dirty"):
         el.mark_dirty()
     return CommandResult(geometry_dirty=True)
-
-
 
 
 @command(PC.AddNode)
@@ -143,12 +160,9 @@ def _add_frame(app, cmd: PC.AddFrame) -> CommandResult:
 
 @factory("add_node")
 def _f_add_node(args: list[str]):
-    if len(args) < 3:
+    if len(args) < 3 or not all(_is_float(a) for a in args[:3]):
         return None
-    try:
-        x, y, z = float(args[0]), float(args[1]), float(args[2])
-    except ValueError:
-        return None
+    x, y, z = float(args[0]), float(args[1]), float(args[2])
     label = args[3] if len(args) > 3 else ""
     return PC.AddNode(x, y, z, label=label)
 
@@ -157,7 +171,18 @@ def _f_add_node(args: list[str]):
 def _f_delete_selected(args: list[str]):
     return PC.DeleteSelected()
 
-@command(PC.ConvertFramesToLinks)
+
+@command(
+    PC.ConvertFramesToLinks,
+    CommandMeta(
+        label="Çubukları Link'e Dönüştür",
+        icon="convert_frames_to_links",
+        category=Category.CONVERT,
+        quick=False,
+        tooltip="Seçili frame elemanlarını link elemanına dönüştür",
+        visible_in_ui=True,
+    ),
+)
 def _convert_frames_to_links(app, cmd: PC.ConvertFramesToLinks) -> CommandResult:
     from domain.element import Frame
     from tools import frame_to_link
@@ -179,7 +204,6 @@ def _convert_frames_to_links(app, cmd: PC.ConvertFramesToLinks) -> CommandResult
         delete_original=cmd.delete_original,
     )
 
-    # Görünürlük filtresini senkronla
     if app.visibility_service.show_only_ids is not None:
         removed = {f.unique_id for f in frames}
         app.visibility_service.show_only_ids -= removed
@@ -192,6 +216,8 @@ def _convert_frames_to_links(app, cmd: PC.ConvertFramesToLinks) -> CommandResult
 
     n = len(report.get("new_links", []))
     return CommandResult(
-        geometry_dirty=True, handled=True,
-        message=f"{n} link oluşturuldu", level="success",
+        geometry_dirty=True,
+        handled=True,
+        message=f"{n} link oluşturuldu",
+        level="success",
     )

@@ -1,217 +1,227 @@
 # app/services/panel_registry.py
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
+import inspect
+import logging
 
-from inspector.window import InspectorWindow
-from ui.panels.command_panel import CommandPanel
-from ui.panels.grid_panel import GridPanel
-from ui.panels.line_properties_panel import LinePropertiesPanel
-from plane.plane_manager_panel import PlaneManagerPanel
-from ui.panels.polygon_properties_panel import PolygonPropertiesPanel
-from ui.panels.s2k_panel import S2KPanel
-from ui.panels.wind_analysis_panel import WindAnalysisPanel
+from typing import Any, Callable
 
-if TYPE_CHECKING:
-    from app.cad_app import CadApp
+from app.settings.categories import Category
+from ui.helpers.panel_specs import PANELS, PanelSpec
 
 
-@dataclass
-class PanelSpec:
-    cls: type
-    name: str
-    title: str
-    category: str
-    quick: bool = False
-    shortcut: str = ""
-    menu_label: str = ""
-    icon: str = ""
-    context: list[str] = field(default_factory=list)
-
-
-# ==============================================================================
-# ELLE KONTROL EDİLEN PANEL LİSTESİ (Sıra = Menü ve Quick-Bar Sırası)
-# ==============================================================================
-PANELS: dict[int, PanelSpec] = {
-    1: PanelSpec(
-        cls=CommandPanel,
-        name="command_panel",
-        title="Komut Satırı",
-        category="Management",
-        quick=True,
-        shortcut="F1",
-        menu_label="Komut Satırı",
-        icon="⌨",
-    ),
-    2: PanelSpec(
-        cls=GridPanel,
-        name="grid",
-        title="Grid Ayarları",
-        category="View",
-        quick=True,
-        menu_label="Grid",
-        icon="grid",                 # değişti
-        context=["project", "scene"],
-    ),
-    3: PanelSpec(
-        cls=PlaneManagerPanel,
-        name="plane_manager",
-        title="Çalışma Düzlemleri",
-        category="View",
-        quick=True,
-        menu_label="Düzlemler",
-        icon="plane-draw",           # eklendi
-        context=["project", "engine"],
-    ),
-    4: PanelSpec(
-        cls=LinePropertiesPanel,
-        name="line_properties",
-        title="Çubuk Özellikleri",
-        category="Draw",
-        menu_label="Çubuk Özellikleri",
-        context=["project", "selection_frames"],
-    ),
-    5: PanelSpec(
-        cls=PolygonPropertiesPanel,
-        name="polygon_properties",
-        title="Alan / Poligon Özellikleri",
-        category="Draw",
-        menu_label="Poligon Özellikleri",
-        context=["project", "selection_polygons"],
-    ),
-    6: PanelSpec(
-        cls=WindAnalysisPanel,
-        name="wind",
-        title="Rüzgar Analizi",
-        category="Loads",
-        quick=True,
-        menu_label="Rüzgar Analizi",
-        icon="wind",                 # eklendi
-        context=["project", "wind_analysis_ref"],
-    ),
-    7: PanelSpec(
-        cls=S2KPanel,
-        name="s2k_panel",
-        title="SAP2000 (.s2k)",
-        category="File",
-        menu_label="SAP2000 Import/Export",
-        icon="s2k",                  # eklendi
-        context=["project"],
-    ),
-    8: PanelSpec(
-        cls=InspectorWindow,
-        name="inspector_panel",
-        title="Inspector",
-        category="Management",
-        quick=True,
-        shortcut="F10",
-        menu_label="Inspector",
-        icon="log-in",
-        context=["project", "scene", "app"],
-    ),
-}
-
-
-@dataclass
-class PanelEntry:
-    instance: Any
-    name: str
-    title: str
-    category: str
-    quick: bool = False
-    shortcut: str = ""
-    menu_label: str = ""
-    icon: str = ""
-    context: list[str] = field(default_factory=list)
+logger = logging.getLogger(__name__)
 
 
 class PanelRegistry:
-    """PANELS sözlüğündeki tanımları örnekler ve UI/Command katmanlarına sunar."""
+    """Panel tanımlarını ve çalışma zamanı örneklerini yönetir."""
 
-    def __init__(self, app: "CadApp | None" = None) -> None:
-        self._by_name: dict[str, PanelEntry] = {}
-        self._by_category: dict[str, list[str]] = {}
+    def __init__(self, app=None) -> None:
+        self.app = app
+
+        # Statik panel tanımları
+        self._by_name: dict[str, PanelSpec] = {}
+
+        # Runtime panel nesneleri
+        self._instances: dict[str, Any] = {}
+
+        # Kategori indeksleri
+        self._by_category: dict[Category | str, list[str]] = {}
+
         if app is not None:
-            self.load_from_specs(app, PANELS)
+            self.load_from_specs(PANELS)
 
-    def load_from_specs(self, app: "CadApp", specs: dict[int, PanelSpec]) -> None:
-        for idx in sorted(specs.keys()):
-            spec = specs[idx]
-            instance = spec.cls(app=app)
-            self.register(PanelEntry(
-                instance=instance,
-                name=spec.name,
-                title=spec.title,
-                category=str(spec.category),
-                quick=spec.quick,
-                shortcut=spec.shortcut,
-                menu_label=spec.menu_label or spec.title,
-                icon=spec.icon,
-                context=list(spec.context),
-            ))
+    # ---------------------------------------------------------
+    # Initialization
+    # ---------------------------------------------------------
 
-    def register(self, entry: PanelEntry) -> None:
-        if not entry.menu_label:
-            entry.menu_label = entry.title
-        previous = self._by_name.get(entry.name)
+    def _create_instance(self, cls: type) -> Any:
+        """Constructor imzasına uygun şekilde panel oluşturur."""
+
+        signature = inspect.signature(cls)
+        params = signature.parameters
+
+        app_param = params.get("app")
+
+        if app_param is not None:
+            if app_param.kind == inspect.Parameter.POSITIONAL_ONLY:
+                return cls(self.app)
+
+            return cls(app=self.app)
+
+        if any(
+            param.kind == inspect.Parameter.VAR_KEYWORD
+            for param in params.values()
+        ):
+            return cls(app=self.app)
+
+        return cls()
+
+    def load_from_specs(
+        self,
+        specs: dict[int, PanelSpec],
+    ) -> None:
+        for idx, spec in sorted(specs.items()):
+            try:
+                instance = self._create_instance(spec.cls)
+                self.register(spec, instance)
+
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Panel oluşturulamadı: "
+                    f"id={idx}, name={spec.name}, "
+                    f"class={spec.cls.__qualname__}"
+                ) from exc
+
+    # ---------------------------------------------------------
+    # Registration
+    # ---------------------------------------------------------
+
+    @staticmethod
+    def _normalize_category(
+        category: Category | str,
+    ) -> Category | str:
+        if isinstance(category, Category):
+            return category
+
+        try:
+            return Category(category)
+        except ValueError:
+            return category
+
+    def register(
+        self,
+        spec: PanelSpec,
+        instance: Any | None = None,
+    ) -> None:
+        """Panel tanımını ve varsa runtime nesnesini kaydeder."""
+
+        name = spec.name
+
+        previous = self._by_name.get(name)
+
+        # Eski kategori indeksinden çıkar
         if previous is not None:
-            previous_names = self._by_category.get(previous.category, [])
-            if entry.name in previous_names:
-                previous_names.remove(entry.name)
-        self._by_name[entry.name] = entry
-        cat_list = self._by_category.setdefault(entry.category, [])
-        if entry.name not in cat_list:
-            cat_list.append(entry.name)
+            old_category = self._normalize_category(previous.category)
+            names = self._by_category.get(old_category, [])
 
-    def get(self, name: str) -> PanelEntry | None:
+            if name in names:
+                names.remove(name)
+
+        # Yeni tanım
+        self._by_name[name] = spec
+
+        category = self._normalize_category(spec.category)
+
+        names = self._by_category.setdefault(category, [])
+
+        if name not in names:
+            names.append(name)
+
+        # Runtime nesnesi
+        if instance is not None:
+            self._instances[name] = instance
+
+    # ---------------------------------------------------------
+    # Lookup
+    # ---------------------------------------------------------
+
+    def get(self, name: str) -> PanelSpec | None:
         return self._by_name.get(name)
 
     def instance(self, name: str) -> Any | None:
-        entry = self._by_name.get(name)
-        return entry.instance if entry else None
+        return self._instances.get(name)
 
-    def all(self) -> list[PanelEntry]:
+    def get_instance(self, name: str) -> Any | None:
+        return self.instance(name)
+
+    def all(self) -> list[PanelSpec]:
         return list(self._by_name.values())
 
-    def visible(self) -> list[PanelEntry]:
+    def all_instances(self) -> list[tuple[PanelSpec, Any]]:
         return [
-            e for e in self._by_name.values()
-            if getattr(e.instance, "visible", False)
+            (spec, self._instances[name])
+            for name, spec in self._by_name.items()
+            if name in self._instances
         ]
 
+    # ---------------------------------------------------------
+    # Visibility
+    # ---------------------------------------------------------
+
     def is_visible(self, name: str) -> bool:
-        inst = self.instance(name)
-        return bool(getattr(inst, "visible", False)) if inst is not None else False
+        instance = self.instance(name)
 
-    def categories(self) -> dict[str, list[str]]:
-        return {k: list(v) for k, v in self._by_category.items()}
+        return bool(
+            getattr(instance, "visible", False)
+        ) if instance is not None else False
 
-    # --- Toolbar Bağlantı Köprüleri ---
+    def visible(self) -> list[PanelSpec]:
+        return [
+            spec
+            for name, spec in self._by_name.items()
+            if self.is_visible(name)
+        ]
 
-    def toolbar_specs(self) -> list[PanelEntry]:
-        return list(self._by_name.values())
+    def visible_instances(self) -> list[tuple[PanelSpec, Any]]:
+        return [
+            (spec, instance)
+            for spec, instance in self.all_instances()
+            if getattr(instance, "visible", False)
+        ]
 
-    def toolbar_commands(self, put_command: Callable[[Any], None]) -> dict[str, Callable[[], None]]:
-        from app.commands import project_commands as PC
+    # ---------------------------------------------------------
+    # Categories
+    # ---------------------------------------------------------
+
+    def categories(self) -> dict[Category | str, list[str]]:
         return {
-            name: (lambda n=name: put_command(PC.TogglePanel(n)))
+            category: list(names)
+            for category, names in self._by_category.items()
+        }
+
+    def by_category(
+        self,
+        category: Category | str,
+    ) -> list[PanelSpec]:
+        category = self._normalize_category(category)
+
+        return [
+            self._by_name[name]
+            for name in self._by_category.get(category, [])
+            if name in self._by_name
+        ]
+
+    # ---------------------------------------------------------
+    # Toolbar
+    # ---------------------------------------------------------
+
+    def toolbar_specs(self) -> list[PanelSpec]:
+        return self.all()
+
+    def toolbar_commands(
+        self,
+        put_command: Callable[[Any], None],
+    ) -> dict[str, Callable[[], None]]:
+        from app.commands import project_commands as PC
+
+        return {
+            name: (
+                lambda n=name: put_command(PC.TogglePanel(n))
+            )
             for name in self._by_name
         }
 
     def toolbar_states(self) -> dict[str, Callable[[], bool]]:
         return {
-            name: (lambda n=name: self.is_visible(n))
+            name: (
+                lambda n=name: self.is_visible(n)
+            )
             for name in self._by_name
         }
 
-    # def load_from_specs(self, app, specs):
-    #     for idx in sorted(specs.keys()):
-    #         spec = specs[idx]
-    #         try:
-    #             instance = spec.cls(app=app)
-    #         except TypeError:
-    #             # app parametresini kabul etmeyen paneller için
-    #             instance = spec.cls()
-    #             instance.set_context({"app": app})
-            # self.register(PanelEntry(...))
+
+
+
+

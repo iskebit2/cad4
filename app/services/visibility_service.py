@@ -1,4 +1,3 @@
-# app/services/visibility_service.py
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -8,8 +7,6 @@ if TYPE_CHECKING:
 
 
 class VisibilityService:
-    """show_only / hide / show_all — filtre state'i burada tutulur."""
-
     def __init__(self, app: "CadApp"):
         self.app = app
         self.show_only_ids: set[int] | None = None
@@ -62,6 +59,27 @@ class VisibilityService:
                     el.is_visible = True
                 elif hasattr(el, "visible"):
                     el.visible = True
+
+    def get_loads_visible(self) -> bool:
+        eng = self.app.engine
+        pres = getattr(eng, "presentation_renderer", None) if eng is not None else None
+        loads = getattr(pres, "loads", None)
+        return bool(loads and loads.enabled)
+
+    def set_loads_visible(self, enabled: bool) -> None:
+        eng = self.app.engine
+        pres = getattr(eng, "presentation_renderer", None) if eng is not None else None
+        loads = getattr(pres, "loads", None)
+        if loads is None:
+            return
+        loads.enabled = bool(enabled)
+        if enabled and eng is not None and eng.math_model is not None:
+            pres.update_loads(eng.math_model, camera_scale=1.0, scene_size=1.0)
+
+    def toggle_loads_visible(self, enabled: bool | None = None) -> bool:
+        target = (not self.get_loads_visible()) if enabled is None else bool(enabled)
+        self.set_loads_visible(target)
+        return target
 
     def _model(self):
         eng = self.app.engine

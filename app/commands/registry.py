@@ -6,6 +6,25 @@ import re
 from typing import TYPE_CHECKING, Any, Callable
 
 from app.commands.result import CommandResult
+from app.commands.meta import CommandMeta
+
+_HANDLERS: list[tuple[type, CommandHandler]] = []
+_FACTORIES: list[tuple[str, CommandFactory]] = []
+_METAS: list[tuple[type, CommandMeta]] = []
+
+
+def command(cmd_type: type, meta: CommandMeta | None = None):
+    if not isinstance(cmd_type, type):
+        raise TypeError(f"@command beklediği: type, aldığı: {type(cmd_type).__name__}")
+
+    def decorator(handler: CommandHandler) -> CommandHandler:
+        if not callable(handler):
+            raise TypeError(f"@command handler callable değil: {handler!r}")
+        _HANDLERS.append((cmd_type, handler))
+        if meta is not None:
+            _METAS.append((cmd_type, meta))
+        return handler
+    return decorator
 
 if TYPE_CHECKING:
     from app.cad_app import CadApp
@@ -37,8 +56,41 @@ class CommandRegistry:
     def __init__(self) -> None:
         self._handlers: dict[type, CommandHandler] = {}
         self._factories: dict[str, CommandFactory] = {}
+        self._metas: dict[type, CommandMeta] = {}
         self._conflicts: list[str] = []
         self._usages: dict[str, str] = {}
+
+    def register_meta(self, cmd_type: type, meta: CommandMeta) -> None:
+        self._metas[cmd_type] = meta
+
+    def get_meta(self, cmd_type: type) -> CommandMeta | None:
+        return self._metas.get(cmd_type)
+
+    def get_meta_by_name(self, name: str) -> CommandMeta | None:
+        for cmd_type in self._handlers:
+            if _snake(cmd_type.__name__) == name:
+                return self._metas.get(cmd_type)
+        return None
+
+    def all_meta(self) -> list[tuple[str, type, CommandMeta]]:
+        out: list[tuple[str, type, CommandMeta]] = []
+        for cmd_type in self._handlers:
+            name = _snake(cmd_type.__name__)
+            meta = self._metas.get(cmd_type) or _default_meta(cmd_type)
+            out.append((name, cmd_type, meta))
+        out.sort(key=lambda t: t[0])
+        return out
+
+    def build_instance(self, cmd_id: str) -> Any | None:
+        cmd_type = next(
+            (t for t in self._handlers if _snake(t.__name__) == cmd_id), None
+        )
+        if cmd_type is None:
+            return None
+        meta = self._metas.get(cmd_type)
+        if meta is not None and meta.factory is not None:
+            return meta.factory()
+        return self.build_by_name(cmd_id, [])
         
     def register(self, cmd_type: type, handler: CommandHandler) -> None:
         if cmd_type in self._handlers:
@@ -109,28 +161,6 @@ class CommandRegistry:
         return list(self._conflicts)
 
 
-# ---------------------------------------------------------------------------
-# Global kayıt havuzu
-# ---------------------------------------------------------------------------
-
-_HANDLERS: list[tuple[type, CommandHandler]] = []
-_FACTORIES: list[tuple[str, CommandFactory]] = []
-
-
-def command(cmd_type: type) -> Callable[[CommandHandler], CommandHandler]:
-    if not isinstance(cmd_type, type):
-        raise TypeError(
-            f"@command beklediği: type, aldığı: {type(cmd_type).__name__}"
-        )
-
-    def decorator(handler: CommandHandler) -> CommandHandler:
-        if not callable(handler):
-            raise TypeError(f"@command handler callable değil: {handler!r}")
-        _HANDLERS.append((cmd_type, handler))
-        return handler
-    return decorator
-
-
 def factory(name: str) -> Callable[[CommandFactory], CommandFactory]:
     if not _FACTORY_NAME_RE.match(name):
         raise ValueError(
@@ -175,6 +205,8 @@ def build_registry() -> CommandRegistry:
     _import_command_modules()
 
     reg = CommandRegistry()
+    for cmd_type, meta in _METAS:
+        reg.register_meta(cmd_type, meta)
     for cmd_type, handler in _HANDLERS:
         reg.register(cmd_type, handler)
     for name, fn in _FACTORIES:
@@ -187,6 +219,16 @@ def build_registry() -> CommandRegistry:
             log.warning("[registry] %s", c)
 
     return reg
+
+def _default_meta(cmd_type: type) -> CommandMeta:
+    name = _snake(cmd_type.__name__)
+    return CommandMeta(
+        label=cmd_type.__name__,
+        icon="",
+        category="Tools",
+        tooltip=cmd_type.__name__,
+        visible_in_ui=False,
+    )
 
 import dataclasses
 from typing import get_type_hints

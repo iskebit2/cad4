@@ -47,7 +47,6 @@ class ToolsRegistry:
         eng.input.register(self.draw_mgr)
         self.plane_draw_mgr = self._factory_plane_draw_mgr(eng)
         self.snap = self._factory_snap()
-        eng.pipeline.renderer.set_snap(self.snap)
 
     def tick(self) -> None:
         pass

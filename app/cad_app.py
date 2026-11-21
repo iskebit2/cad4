@@ -83,18 +83,26 @@ class CadApp:
     # YAŞAM DÖNGÜSÜ
     # ------------------------------------------------------------------
     def init_engine(self) -> None:
-        from app.input_bindings import build_bindings
         from core.engine import Engine
         from viewport.viewport_manager import ViewportManager
+        from app.input_bindings import apply_shortcuts
+        from app.settings.shortcut_store import ShortcutStore
 
         self.engine = Engine(self.width, self.height, self.command_queue)
         self.engine.init_gl()
 
-        for key, action in build_bindings(self.command_queue).items():
-            if isinstance(key, tuple):
-                self.engine.input.bind(key[0], key[1], action)
-            else:
-                self.engine.input.bind(key, 0, action)
+        if not hasattr(self, "shortcut_store") or self.shortcut_store is None:
+            self.shortcut_store = ShortcutStore()
+
+        dropped = apply_shortcuts(
+            self.engine.input,
+            self.command_queue,
+            self.command_registry,
+            self.shortcut_store,
+            
+        )
+        for cmd_id in dropped:
+            logger.warning("[shortcuts] geçersiz kombinasyon, atlandı: %s", cmd_id)
 
         self.viewport_manager = ViewportManager(self.engine)
         self.engine.viewport_manager = self.viewport_manager

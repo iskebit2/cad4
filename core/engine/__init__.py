@@ -58,15 +58,12 @@ class Engine:
     # ------------------------------------------------------------------
     def init_gl(self) -> None:
         self.gl.init()
-        snap = SnapSquareRenderer()
-        self.pipeline = RendererPipeline(self.w, self.h, self.gl.shaders, snap)
+        self.pipeline = RendererPipeline(self.w, self.h, self.gl.shaders)
         self.tools = ToolsRegistry(self)
         self.tools.build()
-        self.pipeline.renderer.set_snap(self.tools.snap)
         self.pipeline.renderer.set_engine(self)
         self.plane_mode = PlaneMode(self.camera_rig, self.pipeline, self.command_queue)
 
-        # ✅ resolver: pick_id → element
         self.hover = HoverSystem(
             self.pipeline.pick_pass,
             self.command_queue,
@@ -99,35 +96,28 @@ class Engine:
             self.pipeline.renderer.projection = "plane_2d"
             if self.pipeline.math_model_renderer:
                 self.pipeline.math_model_renderer.projection = "plane_2d"
-        try:
-            self.pipeline.render(vp, self.camera_rig)
 
-            pointer = None
-            if self.hover is not None and self.hover.pointer is not None:
-                if self.hover.pointer[0] == vp.name:
-                    pointer = self.hover.pointer[1:]
-            if pointer is None and self.input is not None:
-                pointer = (
-                    int(self.input.state.mouse_pos.x),
-                    int(self.input.state.mouse_pos.y),
-                )
+        pointer = None
+        if self.hover is not None and self.hover.pointer is not None:
+            if self.hover.pointer[0] == vp.name:
+                pointer = self.hover.pointer[1:]
+        if pointer is None and self.input is not None:
+            pointer = (
+                int(self.input.state.mouse_pos.x),
+                int(self.input.state.mouse_pos.y),
+            )
 
-            if self.show.get("interaction", True) and self.pipeline.interaction:
-                from OpenGL.GL import GL_FRAMEBUFFER, glBindFramebuffer, glViewport
-                glBindFramebuffer(GL_FRAMEBUFFER, vp.fbo.fbo)
-                glViewport(0, 0, vp.width, vp.height)
-                try:
-                    self.pipeline.interaction.render(
-                        self, vp.width, vp.height, camera=vp.camera,
-                        viewport_name=vp.name, mouse_pos=pointer,
-                        plane=vp.plane, visible_ids=vp.visible_ids,
-                    )
-                finally:
-                    glBindFramebuffer(GL_FRAMEBUFFER, 0)
-        finally:
-            self.pipeline.renderer.projection = prev_proj
-            if self.pipeline.math_model_renderer:
-                self.pipeline.math_model_renderer.projection = prev_proj
+        self.pipeline.render(
+            vp,
+            self.camera_rig,
+            engine=self,
+            pointer=pointer,
+            draw_interaction=bool(self.show.get("interaction", True)),
+        )
+
+        self.pipeline.renderer.projection = prev_proj
+        if self.pipeline.math_model_renderer:
+            self.pipeline.math_model_renderer.projection = prev_proj
 
     def tick(self) -> None:
         if self.hover is not None and self.hover._pending:

@@ -1,4 +1,3 @@
-# render/scenerenderer.py
 from __future__ import annotations
 
 from pyglm import glm
@@ -35,16 +34,10 @@ class SceneRenderer:
     def set_engine(self, engine):
         self.engine = engine
         self.presentation_renderer.set_engine(engine)
-        if self.math_model_renderer:
-            self.math_model_renderer.set_engine(engine)
 
     def set_cam(self, camera):
         if self.math_model_renderer:
             self.math_model_renderer.set_cam(camera)
-
-    def set_snap(self, snap):
-        if self.math_model_renderer:
-            self.math_model_renderer.set_snap(snap)
 
     def resize(self, width, height):
         if self.math_model_renderer:
@@ -85,15 +78,18 @@ class SceneRenderer:
         )
 
     def render(self, camera, target_fbo=0, force_id_pass=False,
-               viewport_name=None, plane=None, visible_ids=None):
+               viewport_name=None, plane=None, visible_ids=None,
+               viewport_size=None):
         if not self.engine:
             if self.math_model_renderer:
                 self.math_model_renderer.render(
-                    camera, target_fbo, force_id_pass=force_id_pass, plane=plane,
+                    camera, target_fbo, force_id_pass=force_id_pass,
+                    plane=plane, visible_ids=visible_ids,
                 )
             return
 
         engine = self.engine
+        vw, vh = viewport_size if viewport_size is not None else (engine.w, engine.h)
         if engine.show.get("presentation_any", True) and engine.scene is not None:
             model = (
                 self.math_model_renderer.model_mat
@@ -101,7 +97,7 @@ class SceneRenderer:
             )
             self.presentation_renderer.render_scene_visuals(
                 camera, model,
-                engine.scene, engine.math_model, engine.w, engine.h,
+                engine.scene, engine.math_model, vw, vh,
                 engine.show, engine.active_wind_vector,
             )
 
@@ -111,8 +107,10 @@ class SceneRenderer:
         base.show["polygon"] = engine.show.get("polygon", True)
         base.show["lines"] = engine.show.get("lines", True)
         if engine.show.get("scene", True):
-            base.render(camera, target_fbo, force_id_pass=force_id_pass,
-                        plane=plane, visible_ids=visible_ids)
+            base.render(
+                camera, target_fbo, force_id_pass=force_id_pass,
+                plane=plane, visible_ids=visible_ids,
+            )
 
     def render_scene_visuals(self, *args, **kwargs):
         return self.presentation_renderer.render_scene_visuals(*args, **kwargs)

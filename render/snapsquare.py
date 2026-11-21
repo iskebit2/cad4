@@ -1,67 +1,15 @@
-# render/snapsquare.py
 from __future__ import annotations
 
 import numpy as np
-from OpenGL.GL import *
-from OpenGL.GL.shaders import compileProgram, compileShader
 from pyglm import glm
 
 from domain.vertex import Vertex
-from logging_config import CadLogger
-
-logger = CadLogger.get(__name__)
 
 
 class SnapSquareRenderer:
 
     SNAP_RADIUS_PX = 6.5
 
-    def __init__(self):
-        self.shader = None
-        self.u_color_loc = -1
-        self.vao = None
-        self.vbo = None
-        self._init_shader()
-
-        self.size = 0.012
-        self.styles = {
-            "default":  {"color": (0.75, 0.92, 0.35, 0.95), "scale": 0.80, "shape": "square"},
-            "grid":     {"color": (1.00, 0.86, 0.15, 1.00), "scale": 1.00, "shape": "cross"},
-            "node":     {"color": (0.20, 0.72, 1.00, 1.00), "scale": 1.00, "shape": "square_dot"},
-            "vertex":   {"color": (0.20, 0.72, 1.00, 1.00), "scale": 1.00, "shape": "square_dot"},
-            "frame":    {"color": (0.22, 0.92, 0.48, 1.00), "scale": 1.15, "shape": "triangle"},
-            "link":     {"color": (0.45, 0.95, 0.55, 1.00), "scale": 1.15, "shape": "triangle"},
-            "midpoint": {"color": (0.22, 0.92, 0.48, 1.00), "scale": 1.15, "shape": "triangle"},
-            "area":     {"color": (1.00, 0.55, 0.12, 1.00), "scale": 1.10, "shape": "diamond"},
-            "polygon":  {"color": (0.95, 0.35, 0.90, 1.00), "scale": 1.10, "shape": "diamond"},
-            "line":     {"color": (0.95, 0.95, 0.95, 1.00), "scale": 1.00, "shape": "square"},
-        }
-
-    def _init_shader(self):
-        vertex_src = """
-        #version 330 core
-        layout(location = 0) in vec2 aPos;
-        void main() {
-            gl_Position = vec4(aPos, 0.0, 1.0);
-        }
-        """
-        frag_src = """
-        #version 330 core
-        uniform vec4 uColor;
-        out vec4 fCol;
-        void main() {
-            fCol = uColor;
-        }
-        """
-        self.shader = compileProgram(
-            compileShader(vertex_src, GL_VERTEX_SHADER),
-            compileShader(frag_src, GL_FRAGMENT_SHADER),
-        )
-        glUseProgram(self.shader)
-        self.u_color_loc = glGetUniformLocation(self.shader, "uColor")
-        glUseProgram(0)
-
-    # ------------------------------------------------------------------
     def find_snap(self, engine, x, y, magnetic=False, cam=None, viewport_size=None,
                   plane=None, visible_ids=None):
         if magnetic:
@@ -75,22 +23,23 @@ class SnapSquareRenderer:
                 (self._find_grid_snap, "grid"),
                 (self._find_frame, "frame"),
                 (self._find_link, "link"),
+                (self._find_line, "line"),
                 (self._find_area, "area"),
                 (self._find_polygon, "polygon"),
-                (self._find_line, "line"),
             )
 
         for finder, kind in finders:
-            result = finder(
+            result, resolved_kind = finder(
                 engine, x, y,
                 cam=cam,
                 viewport_size=viewport_size,
                 plane=plane,
                 visible_ids=visible_ids,
+                default_kind=kind,
             )
             if result is not None:
-                is_snap = kind in ("node", "grid")
-                return result, is_snap, kind
+                is_snap = resolved_kind in ("node", "grid", "midpoint")
+                return result, is_snap, resolved_kind
         return None, False, "default"
 
     @staticmethod
@@ -101,12 +50,38 @@ class SnapSquareRenderer:
             return False
         return True
 
+    @staticmethod
+    def _project_pt_with_size(mvp, x, y, z, w, h):
+        v4 = mvp * glm.vec4(x, y, z, 1.0)
+        if abs(v4.w) < 1e-12:
+            return None
+        ndc_x = v4.x / v4.w
+        ndc_y = v4.y / v4.w
+        ndc_z = v4.z / v4.w
+        if ndc_z < -1.0 or ndc_z > 1.0:
+            return None
+        return (ndc_x + 1.0) * 0.5 * w, (1.0 - ndc_y) * 0.5 * h
+
+    @staticmethod
+    def _dist_to_segment(p, a, b):
+        px, py = p
+        ax, ay = a
+        bx, by = b
+        dx, dy = bx - ax, by - ay
+        denom = dx * dx + dy * dy
+        if denom < 1e-12:
+            return (px - ax) ** 2 + (py - ay) ** 2, 0.0
+        t = ((px - ax) * dx + (py - ay) * dy) / denom
+        t = max(0.0, min(1.0, t))
+        cx, cy = ax + t * dx, ay + t * dy
+        return (px - cx) ** 2 + (py - cy) ** 2, t
+
     def _find_node(self, engine, x, y, cam=None, viewport_size=None,
-                   plane=None, visible_ids=None):
+                   plane=None, visible_ids=None, default_kind="node"):
         scene = engine.math_model
         target_cam = cam if cam is not None else engine.cam
         if not scene or not target_cam:
-            return None
+            return None, default_kind
 
         w = viewport_size[0] if viewport_size else engine.w
         h = viewport_size[1] if viewport_size else engine.h
@@ -116,7 +91,7 @@ class SnapSquareRenderer:
         for node in scene.nodes.values():
             if not self._is_visible_in_viewport(node, visible_ids):
                 continue
-            p = self._project_pt_with_size(target_cam, mvp, node.x, node.y, node.z, w, h)
+            p = self._project_pt_with_size(mvp, node.x, node.y, node.z, w, h)
             if p is None:
                 continue
             d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
@@ -124,39 +99,23 @@ class SnapSquareRenderer:
                 best_d2 = d2
                 best_node = node
         if best_node is None:
-            return None
-        return self._vertex_from_node(best_node)
-
-    def _project_pt_with_size(self, cam, mvp, x, y, z, w, h):
-        """Kamera ve viewport özel boyutlarına göre 3D noktayı 2D ekran pikseline projeksiyon yapar."""
-        v4 = mvp * glm.vec4(x, y, z, 1.0)
-        if abs(v4.w) < 1e-12:
-            return None
-        ndc_x = v4.x / v4.w
-        ndc_y = v4.y / v4.w
-        ndc_z = v4.z / v4.w
-        if ndc_z < -1.0 or ndc_z > 1.0:
-            return None
-        # Ekran piksel koordinatlarına dönüştür
-        px = (ndc_x + 1.0) * 0.5 * w
-        py = (1.0 - ndc_y) * 0.5 * h
-        return px, py
-
+            return None, default_kind
+        return self._vertex_from_node(best_node), default_kind
 
     def _find_grid_snap(self, engine, x, y, cam=None, viewport_size=None,
-                        plane=None, visible_ids=None):
+                        plane=None, visible_ids=None, default_kind="grid"):
         target_cam = cam if cam is not None else engine.cam
         if target_cam is None:
-            return None
+            return None, default_kind
 
         project = getattr(engine, "project", None)
         grid = getattr(project, "grid", None) if project else None
         if grid is None:
-            return None
+            return None, default_kind
 
         candidates = self._grid_candidates_for_plane(grid, plane)
         if not candidates:
-            return None
+            return None, default_kind
 
         w = viewport_size[0] if viewport_size else engine.w
         h = viewport_size[1] if viewport_size else engine.h
@@ -164,7 +123,7 @@ class SnapSquareRenderer:
         best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
         for c in candidates:
             cx, cy, cz = (c.x, c.y, c.z) if hasattr(c, "x") else (float(c[0]), float(c[1]), float(c[2]))
-            p = self._project_pt_with_size(target_cam, mvp, cx, cy, cz, w, h)
+            p = self._project_pt_with_size(mvp, cx, cy, cz, w, h)
             if p is None:
                 continue
             d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
@@ -172,8 +131,8 @@ class SnapSquareRenderer:
                 best_d2 = d2
                 best = (cx, cy, cz)
         if best is None:
-            return None
-        return Vertex(best[0], best[1], best[2])
+            return None, default_kind
+        return Vertex(best[0], best[1], best[2]), default_kind
 
     @staticmethod
     def _grid_candidates_for_plane(grid, plane) -> list:
@@ -196,79 +155,101 @@ class SnapSquareRenderer:
         if not xs or not ys:
             return []
 
-        base_pts = [(gx, gy, gz) for gx in xs for gy in ys for gz in zs]
+        depth_tol = max(plane.depth_minus, plane.depth_plus, 1e-3)
         projected = []
         seen = set()
-        for pt in base_pts:
-            if abs(plane.distance(pt)) > max(plane.depth_minus, plane.depth_plus, 1e-3):
-                continue
-            p_on = plane.project(pt)
-            u, v = plane.to_2d(p_on)
-            if not plane.bounds_contains_uv(u, v):
-                continue
-            key = (round(float(p_on[0]), 4), round(float(p_on[1]), 4), round(float(p_on[2]), 4))
-            if key not in seen:
-                seen.add(key)
-                projected.append((float(p_on[0]), float(p_on[1]), float(p_on[2])))
+        for gx in xs:
+            for gy in ys:
+                for gz in zs:
+                    pt = (gx, gy, gz)
+                    if abs(plane.distance(pt)) > depth_tol:
+                        continue
+                    p_on = plane.project(pt)
+                    u, v = plane.to_2d(p_on)
+                    if not plane.bounds_contains_uv(u, v):
+                        continue
+                    key = (round(float(p_on[0]), 4), round(float(p_on[1]), 4), round(float(p_on[2]), 4))
+                    if key not in seen:
+                        seen.add(key)
+                        projected.append((float(p_on[0]), float(p_on[1]), float(p_on[2])))
         return projected
-    
+
+    def _find_segment_collection(self, items, get_endpoints, x, y, target_cam, w, h,
+                                 visible_ids, default_kind):
+        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
+        best, best_d2, best_kind = None, self.SNAP_RADIUS_PX ** 2, default_kind
+        for item in items:
+            if not self._is_visible_in_viewport(item, visible_ids):
+                continue
+            a, b = get_endpoints(item)
+            if a is None or b is None:
+                continue
+            p0 = self._project_pt_with_size(mvp, a.x, a.y, a.z, w, h)
+            p1 = self._project_pt_with_size(mvp, b.x, b.y, b.z, w, h)
+            if p0 is None or p1 is None:
+                continue
+            d2, t = self._dist_to_segment((x, y), p0, p1)
+            if d2 < best_d2:
+                best_d2 = d2
+                if abs(t - 0.5) < 0.08:
+                    t = 0.5
+                    best_kind = "midpoint"
+                else:
+                    best_kind = default_kind
+                wx = a.x + t * (b.x - a.x)
+                wy = a.y + t * (b.y - a.y)
+                wz = a.z + t * (b.z - a.z)
+                best = Vertex(wx, wy, wz, label=getattr(item, "label", ""))
+        return best, best_kind
+
     def _find_frame(self, engine, x, y, cam=None, viewport_size=None,
-                    plane=None, visible_ids=None):
+                    plane=None, visible_ids=None, default_kind="frame"):
         math_model = engine.math_model
         target_cam = cam if cam is not None else engine.cam
         if not math_model or not target_cam:
-            return None
+            return None, default_kind
         w = viewport_size[0] if viewport_size else engine.w
         h = viewport_size[1] if viewport_size else engine.h
-        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
-        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
-        for frame in math_model.frames.values():
-            if not self._is_visible_in_viewport(frame, visible_ids):
-                continue
-            n0, n1 = frame.node_i, frame.node_j
-            p0 = self._project_pt_with_size(target_cam, mvp, n0.x, n0.y, n0.z, w, h)
-            p1 = self._project_pt_with_size(target_cam, mvp, n1.x, n1.y, n1.z, w, h)
-            if p0 is None or p1 is None:
-                continue
-            d2, _ = self._dist_to_segment((x, y), p0, p1)
-            if d2 < best_d2:
-                best_d2 = d2
-                mx = (n0.x + n1.x) * 0.5
-                my = (n0.y + n1.y) * 0.5
-                mz = (n0.z + n1.z) * 0.5
-                best = Vertex(mx, my, mz, label=getattr(frame, "label", ""))
-        return best
+        return self._find_segment_collection(
+            math_model.frames.values(),
+            lambda f: (f.node_i, f.node_j),
+            x, y, target_cam, w, h, visible_ids, default_kind,
+        )
 
     def _find_link(self, engine, x, y, cam=None, viewport_size=None,
-                   plane=None, visible_ids=None):
+                   plane=None, visible_ids=None, default_kind="link"):
         math_model = engine.math_model
         target_cam = cam if cam is not None else engine.cam
         if not math_model or not target_cam:
-            return None
+            return None, default_kind
         w = viewport_size[0] if viewport_size else engine.w
         h = viewport_size[1] if viewport_size else engine.h
-        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
-        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
-        for link in getattr(math_model, "links", {}).values():
-            if not self._is_visible_in_viewport(link, visible_ids):
-                continue
-            n0, n1 = link.node_i, link.node_j
-            p0 = self._project_pt_with_size(target_cam, mvp, n0.x, n0.y, n0.z, w, h)
-            p1 = self._project_pt_with_size(target_cam, mvp, n1.x, n1.y, n1.z, w, h)
-            if p0 is None or p1 is None:
-                continue
-            d2, _ = self._dist_to_segment((x, y), p0, p1)
-            if d2 < best_d2:
-                best_d2 = d2
-                best = Vertex((n0.x + n1.x) * 0.5, (n0.y + n1.y) * 0.5, (n0.z + n1.z) * 0.5)
-        return best
+        return self._find_segment_collection(
+            getattr(math_model, "links", {}).values(),
+            lambda lk: (lk.node_i, lk.node_j),
+            x, y, target_cam, w, h, visible_ids, default_kind,
+        )
 
-    def _find_area(self, engine, x, y, cam=None, viewport_size=None,
-                   plane=None, visible_ids=None):
+    def _find_line(self, engine, x, y, cam=None, viewport_size=None,
+                   plane=None, visible_ids=None, default_kind="line"):
         math_model = engine.math_model
         target_cam = cam if cam is not None else engine.cam
         if not math_model or not target_cam:
-            return None
+            return None, default_kind
+        w = viewport_size[0] if viewport_size else engine.w
+        h = viewport_size[1] if viewport_size else engine.h
+        return self._find_segment_collection(
+            getattr(math_model, "lines", {}).values(),
+            lambda ln: (ln.v1, ln.v2),
+            x, y, target_cam, w, h, visible_ids, default_kind,
+        )
+
+    def _find_area(self, engine, x, y, cam=None, viewport_size=None,
+                   plane=None, visible_ids=None, default_kind="area"):
+        math_model = engine.math_model
+        target_cam = cam if cam is not None else engine.cam
+        if not math_model or not target_cam:
+            return None, default_kind
         w = viewport_size[0] if viewport_size else engine.w
         h = viewport_size[1] if viewport_size else engine.h
         mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
@@ -282,21 +263,21 @@ class SnapSquareRenderer:
             cx = sum(n.x for n in nodes) / len(nodes)
             cy = sum(n.y for n in nodes) / len(nodes)
             cz = sum(n.z for n in nodes) / len(nodes)
-            p = self._project_pt_with_size(target_cam, mvp, cx, cy, cz, w, h)
+            p = self._project_pt_with_size(mvp, cx, cy, cz, w, h)
             if p is None:
                 continue
             d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
             if d2 < best_d2:
                 best_d2 = d2
                 best = Vertex(cx, cy, cz)
-        return best
+        return best, default_kind
 
     def _find_polygon(self, engine, x, y, cam=None, viewport_size=None,
-                      plane=None, visible_ids=None):
+                      plane=None, visible_ids=None, default_kind="polygon"):
         math_model = engine.math_model
         target_cam = cam if cam is not None else engine.cam
         if not math_model or not target_cam:
-            return None
+            return None, default_kind
         w = viewport_size[0] if viewport_size else engine.w
         h = viewport_size[1] if viewport_size else engine.h
         mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
@@ -305,38 +286,14 @@ class SnapSquareRenderer:
             if not self._is_visible_in_viewport(poly, visible_ids):
                 continue
             cx, cy, cz = poly.centroid()
-            p = self._project_pt_with_size(target_cam, mvp, cx, cy, cz, w, h)
+            p = self._project_pt_with_size(mvp, cx, cy, cz, w, h)
             if p is None:
                 continue
             d2 = (p[0] - x) ** 2 + (p[1] - y) ** 2
             if d2 < best_d2:
                 best_d2 = d2
                 best = Vertex(cx, cy, cz)
-        return best
-
-    def _find_line(self, engine, x, y, cam=None, viewport_size=None,
-                   plane=None, visible_ids=None):
-        scene = engine.scene
-        target_cam = cam if cam is not None else engine.cam
-        if not scene or not target_cam:
-            return None
-        w = viewport_size[0] if viewport_size else engine.w
-        h = viewport_size[1] if viewport_size else engine.h
-        mvp = target_cam.get_projection_matrix() @ target_cam.get_view_matrix()
-        best, best_d2 = None, self.SNAP_RADIUS_PX ** 2
-        for line in getattr(scene, "lines", {}).values():
-            if not self._is_visible_in_viewport(line, visible_ids):
-                continue
-            v1, v2 = line.v1, line.v2
-            p0 = self._project_pt_with_size(target_cam, mvp, v1.x, v1.y, v1.z, w, h)
-            p1 = self._project_pt_with_size(target_cam, mvp, v2.x, v2.y, v2.z, w, h)
-            if p0 is None or p1 is None:
-                continue
-            d2, _ = self._dist_to_segment((x, y), p0, p1)
-            if d2 < best_d2:
-                best_d2 = d2
-                best = Vertex((v1.x + v2.x) * 0.5, (v1.y + v2.y) * 0.5, (v1.z + v2.z) * 0.5)
-        return best
+        return best, default_kind
 
     @staticmethod
     def _vertex_from_node(node) -> Vertex:
@@ -346,171 +303,5 @@ class SnapSquareRenderer:
             source_node_id=getattr(node, "unique_id", None),
         )
 
-    # ------------------------------------------------------------------
-    # Görsel
-    # ------------------------------------------------------------------
-    def _build_shape_segments(self, nx: float, ny: float, dx: float, dy: float, shape: str) -> np.ndarray:
-        """Sembol türüne göre GL_LINES segment çiftleri döndürür."""
-        if shape == "triangle":
-            top = (nx, ny + dy * 1.1)
-            bl = (nx - dx, ny - dy * 0.85)
-            br = (nx + dx, ny - dy * 0.85)
-            pts = [*top, *bl, *bl, *br, *br, *top]
-        elif shape == "diamond":
-            t = (nx, ny + dy * 1.15)
-            r = (nx + dx * 1.15, ny)
-            b = (nx, ny - dy * 1.15)
-            l = (nx - dx * 1.15, ny)
-            pts = [*t, *r, *r, *b, *b, *l, *l, *t]
-        elif shape == "cross":
-            c = 0.85
-            pts = [
-                nx - dx * c, ny - dy * c, nx + dx * c, ny + dy * c,
-                nx - dx * c, ny + dy * c, nx + dx * c, ny - dy * c,
-            ]
-        else:
-            # square veya square_dot
-            pts = [
-                nx - dx, ny - dy, nx + dx, ny - dy,
-                nx + dx, ny - dy, nx + dx, ny + dy,
-                nx + dx, ny + dy, nx - dx, ny + dy,
-                nx - dx, ny + dy, nx - dx, ny - dy,
-            ]
-            if shape == "square_dot":
-                dot_x = dx * 0.22
-                dot_y = dy * 0.22
-                pts.extend([
-                    nx - dot_x, ny, nx + dot_x, ny,
-                    nx, ny - dot_y, nx, ny + dot_y,
-                ])
-        return np.array(pts, dtype=np.float32)
-
-    def draw_snap(self, mouse_x, mouse_y, w, h, active=True, snap_type="default"):
-        if not active or not self.shader or w <= 0 or h <= 0:
-            return
-
-        if self.vao is None:
-            self.vao = glGenVertexArrays(1)
-            self.vbo = glGenBuffers(1)
-
-        style = self.styles.get(snap_type, self.styles["default"])
-        half_px = self.SNAP_RADIUS_PX * style["scale"]
-
-        nx = (mouse_x / w) * 2.0 - 1.0
-        ny = 1.0 - (mouse_y / h) * 2.0
-        dx = (half_px / w) * 2.0
-        dy = (half_px / h) * 2.0
-
-        vertices = self._build_shape_segments(nx, ny, dx, dy, style.get("shape", "square"))
-
-        glDisable(GL_DEPTH_TEST)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glUseProgram(self.shader)
-
-        glBindVertexArray(self.vao)
-        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
-        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STREAM_DRAW)
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, None)
-        glEnableVertexAttribArray(0)
-
-        # 1. Geçiş: Koyu kontrast gölge (her arka planda net görünürlük)
-        if self.u_color_loc != -1:
-            glUniform4f(self.u_color_loc, 0.04, 0.05, 0.08, 0.85)
-        glLineWidth(3.5)
-        glDrawArrays(GL_LINES, 0, len(vertices) // 2)
-
-        # 2. Geçiş: Asıl parlak CAD sembol rengi
-        if self.u_color_loc != -1:
-            glUniform4f(self.u_color_loc, *style["color"])
-        glLineWidth(1.8)
-        glDrawArrays(GL_LINES, 0, len(vertices) // 2)
-
-        glLineWidth(1.0)
-        glBindVertexArray(0)
-        glUseProgram(0)
-        glDisable(GL_BLEND)
-        glEnable(GL_DEPTH_TEST)
-
-    
-
-    @staticmethod
-    def _dist_to_segment(p, a, b):
-        px, py = p
-        ax, ay = a
-        bx, by = b
-        dx, dy = bx - ax, by - ay
-        if abs(dx) < 1e-9 and abs(dy) < 1e-9:
-            return (px - ax)**2 + (py - ay)**2, (ax, ay)
-        t = ((px - ax) * dx + (py - ay) * dy) / (dx*dx + dy*dy)
-        t = max(0.0, min(1.0, t))
-        cx, cy = ax + t*dx, ay + t*dy
-        return (px - cx)**2 + (py - cy)**2, (cx, cy)
-
     def cleanup(self):
-        if self.shader and glIsProgram(self.shader):
-            glDeleteProgram(self.shader)
-            self.shader = None
-        if self.vao and glIsVertexArray(self.vao):
-            glDeleteVertexArrays(1, [self.vao])
-            self.vao = None
-        if self.vbo and glIsBuffer(self.vbo):
-            glDeleteBuffers(1, [self.vbo])
-            self.vbo = None
-
-    def draw_at_world_pos(self, engine, x, y, z, w, h, snap_type="default", active=True):
-        if not active or not self.shader:
-            return
-
-        if self.vao is None:
-            self.vao = glGenVertexArrays(1)
-            self.vbo = glGenBuffers(1)
-
-        cam = engine.cam
-        if not cam:
-            return
-        mvp = cam.get_projection_matrix() @ cam.get_view_matrix()
-        
-        # 3D dünya koordinatını ekran koordinatına (pixel) projekte et
-        p = self._project_pt(engine, mvp, x, y, z)
-        if p is None:
-            return
-
-        mouse_x, mouse_y = p[0], p[1]
-        nx = (mouse_x / w) * 2.0 - 1.0
-        ny = 1.0 - (mouse_y / h) * 2.0
-        asp = w / h
-
-        style = self.styles.get(snap_type, self.styles["default"])
-        s = self.size * style["scale"]
-
-        vertices = np.array([
-            nx - s / asp, ny - s,
-            nx + s / asp, ny - s,
-            nx + s / asp, ny + s,
-            nx - s / asp, ny + s,
-        ], dtype=np.float32)
-
-        glDisable(GL_DEPTH_TEST)
-        glEnable(GL_BLEND)
-        glUseProgram(self.shader)
-        glUniform4f(self.u_color_loc, *style["color"])
-        glBindVertexArray(self.vao)
-        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
-        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STREAM_DRAW)
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, None)
-        glEnableVertexAttribArray(0)
-        glDrawArrays(GL_LINE_LOOP, 0, 4)
-        glBindVertexArray(0)
-        glUseProgram(0)
-        glDisable(GL_BLEND)
-        glEnable(GL_DEPTH_TEST)
-
-
-    def _project_pt(self, engine, mvp, x, y, z):
-            w, h = engine.w, engine.h
-            clip = mvp * glm.vec4(x, y, z, 1.0)
-            if clip.w <= 1e-9:
-                return None
-            ndc = glm.vec3(clip) / clip.w
-            return (ndc.x + 1.0) * w * 0.5, (1.0 - ndc.y) * h * 0.5
+        pass

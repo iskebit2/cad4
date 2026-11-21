@@ -1,0 +1,18 @@
+{
+  "toggle_panel command_panel": "F1",
+  "toggle_2d": "F2",
+  "toggle_render_mode": "F4",
+  "toggle_panel view_filter": "F6",
+  "toggle_panel inspector_panel": "F10",
+  "toggle_panel s2k_panel": "F11",
+  "new_project": "Ctrl+N",
+  "open_project": "Ctrl+O",
+  "save_project": "Ctrl+S",
+  "save_project_as": "Ctrl+Shift+S",
+  "close_project": "Ctrl+W",
+  "undo": "Ctrl+Z",
+  "redo": "Ctrl+Y",
+  "delete_selected": "Delete",
+  "toggle_panel grid": "Ctrl+G",
+  "fit_view": "F"
+}

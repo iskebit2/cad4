@@ -2,25 +2,15 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from enum import StrEnum
+
 from typing import Any
 
 from imgui_bundle import imgui
+from app.settings.categories import Category
 from ui.helpers.apply_bar import draw_apply_bar
 
 
-class Category(StrEnum):
-    FILE = "File"
-    EDIT = "Edit"
-    DRAW = "Draw"
-    VIEW = "View"
-    LOADS = "Loads"
-    MANAGEMENT = "Management"
-    TOOLS = "Tools"
-    DEBUG = "Debug"
 
-
-CATEGORY_ORDER: tuple[Category, ...] = tuple(Category)
 
 
 class PanelBase:
@@ -280,7 +270,7 @@ class PanelBase:
         self._dirty = True
 
     def queue(self):
-        return self.app.ui.command_queue
+        return self.app.command_queue
 
     def _apply_preview(self, active: bool) -> None:
         flags = self.preview_flags

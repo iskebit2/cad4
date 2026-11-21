@@ -7,9 +7,6 @@ from typing import Callable
 
 import glfw
 from pyglm import glm
-from logging_config import CadLogger
-
-logger = CadLogger.get(__name__)
 
 LEFT = 0
 RIGHT = 1
@@ -32,8 +29,7 @@ class InputState:
 
 
 class InputManager:
-
-    def __init__(self):
+    def __init__(self) -> None:
         self.state = InputState()
         self._handlers: list = []
         self._fallback = None
@@ -72,6 +68,13 @@ class InputManager:
     def bind(self, key: int, mods: int, action: Callable) -> None:
         self._bindings[(key, mods)] = action
 
+    def clear_bindings(self) -> None:
+        self._bindings.clear()
+
+    def has_binding(self, key: int, mods: int) -> bool:
+        clean_mods = mods & (glfw.MOD_SHIFT | glfw.MOD_CONTROL | glfw.MOD_ALT | glfw.MOD_SUPER)
+        return (key, clean_mods) in self._bindings
+
     def is_shift(self) -> bool:
         return bool(self.state.modifiers & glfw.MOD_SHIFT)
 
@@ -81,9 +84,6 @@ class InputManager:
     def is_alt(self) -> bool:
         return bool(self.state.modifiers & glfw.MOD_ALT)
 
-    # ------------------------------------------------------------------
-    # GLFW / UI EVENT GİRİŞLERİ
-    # ------------------------------------------------------------------
     def on_mouse_button(self, button: int, action: int, mods: int) -> None:
         if self._is_mouse_captured():
             return
@@ -133,35 +133,38 @@ class InputManager:
         clean_mods = mods & (glfw.MOD_SHIFT | glfw.MOD_CONTROL | glfw.MOD_ALT | glfw.MOD_SUPER)
         self.state.modifiers = clean_mods
 
-        if action in (glfw.PRESS, glfw.REPEAT):
-            self.state.keys[key] = True
-
-            if key == glfw.KEY_ESCAPE and self._global_escape is not None:
-                if self._global_escape():
-                    return
-
-            if self._is_keyboard_captured():
-                return
-
-            if self.dispatch_key(key, clean_mods):
-                return
-
-            if action == glfw.PRESS:
-                bound = self._bindings.get((key, clean_mods))
-                if bound is not None:
-                    bound()
-                    return
-        elif action == glfw.RELEASE:
+        if action == glfw.RELEASE:
             self.state.keys[key] = False
+            return
+
+        if action not in (glfw.PRESS, glfw.REPEAT):
+            return
+
+        self.state.keys[key] = True
+
+        if key == glfw.KEY_ESCAPE and self._global_escape is not None:
+            if self._global_escape():
+                return
+
+        if self._is_keyboard_captured():
+            is_function_key = glfw.KEY_F1 <= key <= glfw.KEY_F25
+            has_command_mod = bool(clean_mods & (glfw.MOD_CONTROL | glfw.MOD_ALT | glfw.MOD_SUPER))
+            if not (is_function_key or has_command_mod) or not self.has_binding(key, clean_mods):
+                return
+
+        if self.dispatch_key(key, clean_mods):
+            return
+
+        if action == glfw.PRESS:
+            bound = self._bindings.get((key, clean_mods))
+            if bound is not None:
+                bound()
 
     def on_scroll(self, delta: float) -> None:
         if self._is_mouse_captured():
             return
         self.dispatch_scroll(delta)
 
-    # ------------------------------------------------------------------
-    # DISPATCHER
-    # ------------------------------------------------------------------
     def _check_double_click(self, button: int, x: float, y: float) -> bool:
         if button not in (LEFT, RIGHT, MIDDLE):
             return False
@@ -179,12 +182,8 @@ class InputManager:
         self._context_pick_handler = handler
 
     def dispatch_click(self, x: float, y: float, button: int) -> bool:
-        if self._context_pick_handler is not None:
-            try:
-                if self._context_pick_handler(x, y, button):
-                    return True
-            except Exception:
-                logger.exception("[CTX_PICK] handler hatası")
+        if self._context_pick_handler is not None and self._context_pick_handler(x, y, button):
+            return True
 
         for h in self._handlers:
             if not getattr(h, "is_active", False):
@@ -251,39 +250,3 @@ class InputManager:
         if self._fallback and hasattr(self._fallback, "handle_double_click"):
             return bool(self._fallback.handle_double_click(x, y, button))
         return False
-
-    def has_binding(self, key: int, mods: int) -> bool:
-        clean_mods = mods & (glfw.MOD_SHIFT | glfw.MOD_CONTROL | glfw.MOD_ALT | glfw.MOD_SUPER)
-        return (key, clean_mods) in self._bindings or (key, 0) in self._bindings
-
-    def on_key(self, key: int, action: int, mods: int) -> None:
-        clean_mods = mods & (glfw.MOD_SHIFT | glfw.MOD_CONTROL | glfw.MOD_ALT | glfw.MOD_SUPER)
-        self.state.modifiers = clean_mods
-
-        if action == glfw.RELEASE:
-            self.state.keys[key] = False
-            return
-
-        if action not in (glfw.PRESS, glfw.REPEAT):
-            return
-
-        self.state.keys[key] = True
-
-        # 1. ESC her zaman global iptal tetikler
-        if key == glfw.KEY_ESCAPE and self._global_escape is not None:
-            if self._global_escape():
-                return
-
-        # 2. ImGui'de bir metin kutusuna yazı yazılıyorsa harfleri yut (Ctrl/F-tuşları hariç)
-        if self._is_keyboard_captured() and not self.has_binding(key, clean_mods):
-            return
-
-        # 3. Önce aktif araçlara (DrawManager, PlaneTool vb.) sor
-        if self.dispatch_key(key, clean_mods):
-            return
-
-        # 4. Araç kullanmadıysa app/input_bindings.py kısayolunu çalıştır
-        if action == glfw.PRESS:
-            bound = self._bindings.get((key, clean_mods))
-            if bound is not None:
-                bound()

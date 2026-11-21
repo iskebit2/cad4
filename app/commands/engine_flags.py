@@ -1,32 +1,24 @@
 # app/commands/engine_flags.py
+from __future__ import annotations
+
+from app.commands import project_commands as PC
+from app.commands.meta import CommandMeta
 from app.commands.registry import command, factory
 from app.commands.result import CommandResult
-from app.commands import project_commands as PC
-from logging_config import CadLogger
-logger = CadLogger.get(__name__)
+from app.settings.categories import Category
+
 
 @command(PC.HoverChanged)
 def _hover(app, cmd: PC.HoverChanged) -> CommandResult:
-    """Hover durumu değişti. Panel'lere yayınla; UIHost'a dokunma."""
     eng = app.engine
-    if eng is None:
+    if eng is None or eng.hover is None:
         return CommandResult(handled=True)
 
     hover = eng.hover
-    if hover is None:
-        return CommandResult(handled=True)
-
-    # UI panelleri kendi hook'larıyla dinler
-    for entry in app.panel_registry.all():
-        panel = entry.instance
-        if not getattr(panel, "visible", False):
-            continue
+    for _spec, panel in app.panel_registry.visible_instances():
         hook = getattr(panel, "on_hover_changed", None)
         if callable(hook):
-            try:
-                hook(hover.element_id, hover.element)
-            except Exception:
-                logger.exception("[hover] panel %s hook hatası", entry.name)
+            hook(hover.element_id, hover.element)
 
     return CommandResult(handled=True)
 
@@ -43,7 +35,18 @@ def _start_plane(app, cmd: PC.StartPlaneTool) -> CommandResult:
     return CommandResult(handled=True)
 
 
-@command(PC.Undo)
+@command(
+    PC.Undo,
+    CommandMeta(
+        label="Geri Al",
+        icon="undo",
+        category=Category.EDIT,
+        default_shortcut="Ctrl+Z",
+        quick=True,
+        tooltip="Son işlemi geri al",
+        visible_in_ui=True,
+    ),
+)
 def _undo(app, cmd: PC.Undo) -> CommandResult:
     ctrl = getattr(app, "edit_controller", None)
     if ctrl is None:
@@ -57,7 +60,18 @@ def _undo(app, cmd: PC.Undo) -> CommandResult:
     )
 
 
-@command(PC.Redo)
+@command(
+    PC.Redo,
+    CommandMeta(
+        label="Yinele",
+        icon="redo",
+        category=Category.EDIT,
+        default_shortcut="Ctrl+Y",
+        quick=True,
+        tooltip="Geri alınan işlemi yinele",
+        visible_in_ui=True,
+    ),
+)
 def _redo(app, cmd: PC.Redo) -> CommandResult:
     ctrl = getattr(app, "edit_controller", None)
     if ctrl is None:
@@ -71,22 +85,38 @@ def _redo(app, cmd: PC.Redo) -> CommandResult:
     )
 
 
-@command(PC.Toggle2D)
+@command(
+    PC.Toggle2D,
+    CommandMeta(
+        label="2D / 3D Geçişi",
+        icon="toggle2_d",
+        category=Category.VIEW,
+        default_shortcut="F2",
+        quick=True,
+        tooltip="2D düzlem ve 3D görünüm arasında geçiş yap",
+        visible_in_ui=True,
+        check_state=lambda app: bool(
+            app and app.viewport_manager and app.viewport_manager.active and app.viewport_manager.active.is_2d
+        ),
+    ),
+)
 def _toggle_2d(app, cmd: PC.Toggle2D) -> CommandResult:
     app.view_service.toggle_2d()
     return CommandResult(handled=True)
 
 
-@command(PC.ToggleLoadsVisible)
-def _loads(app, cmd: PC.ToggleLoadsVisible) -> CommandResult:
-    vs = app.view_service
-    current = vs.get_loads_visible()
-    target = (not current) if cmd.enabled is None else bool(cmd.enabled)
-    vs.set_loads_visible(target)
-    return CommandResult(handled=True)
-
-
-@command(PC.ToggleLocalAxes)
+@command(
+    PC.ToggleLocalAxes,
+    CommandMeta(
+        label="Yerel Eksenler",
+        icon="toggle_local_axes",
+        category=Category.VIEW,
+        quick=False,
+        tooltip="Eleman yerel eksenlerini göster/gizle",
+        visible_in_ui=True,
+        check_state=lambda app: bool(app and app.engine and app.engine.scene and app.engine.scene.show_local_axes),
+    ),
+)
 def _local_axes(app, cmd: PC.ToggleLocalAxes) -> CommandResult:
     eng = app.engine
     if eng and eng.scene:
@@ -121,7 +151,17 @@ def _f_toggle_flag(args: list[str]):
     return PC.ToggleRenderFlag(args[0], value)
 
 
-@command(PC.StartPlane3pt)
+@command(
+    PC.StartPlane3pt,
+    CommandMeta(
+        label="3 Nokta ile Düzlem",
+        icon="start_plane3pt",
+        category=Category.DRAW,
+        quick=False,
+        tooltip="3 nokta seçerek çalışma düzlemi oluştur",
+        visible_in_ui=True,
+    ),
+)
 def _start_plane_3pt(app, cmd: PC.StartPlane3pt) -> CommandResult:
     pdm = getattr(app.engine, "plane_draw_mgr", None) if app.engine else None
     if pdm is None:
@@ -132,7 +172,17 @@ def _start_plane_3pt(app, cmd: PC.StartPlane3pt) -> CommandResult:
     return CommandResult(handled=True)
 
 
-@command(PC.StartPlane2ptZ)
+@command(
+    PC.StartPlane2ptZ,
+    CommandMeta(
+        label="2 Nokta + Z Düzlem",
+        icon="start_plane2pt_z",
+        category=Category.DRAW,
+        quick=False,
+        tooltip="2 nokta ve Z ekseni ile dikey çalışma düzlemi oluştur",
+        visible_in_ui=True,
+    ),
+)
 def _start_plane_2pt_z(app, cmd: PC.StartPlane2ptZ) -> CommandResult:
     pdm = getattr(app.engine, "plane_draw_mgr", None) if app.engine else None
     if pdm is None:
@@ -143,7 +193,18 @@ def _start_plane_2pt_z(app, cmd: PC.StartPlane2ptZ) -> CommandResult:
     return CommandResult(handled=True)
 
 
-@command(PC.ToggleRenderMode)
+@command(
+    PC.ToggleRenderMode,
+    CommandMeta(
+        label="Render Modu (Shaded/Simple)",
+        icon="toggle_render_mode",
+        category=Category.VIEW,
+        default_shortcut="F4",
+        quick=False,
+        tooltip="Shaded ve Simple çizim modları arasında geçiş yap",
+        visible_in_ui=True,
+    ),
+)
 def _toggle_render_mode(app, cmd: PC.ToggleRenderMode) -> CommandResult:
     eng = app.engine
     if eng and eng.renderer:

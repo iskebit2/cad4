@@ -101,3 +101,23 @@ def _f_hide(args):
 @factory("show_all")
 def _f_show_all(args):
     return PC.ShowEntireModel()
+
+@command(PC.ToggleLoadsVisible)
+def _toggle_loads_visible(app, cmd: PC.ToggleLoadsVisible) -> CommandResult:
+    state = app.visibility_service.toggle_loads_visible(cmd.enabled)
+    return CommandResult(
+        handled=True,
+        message=f"Yük görünürlüğü: {'Açık' if state else 'Kapalı'}",
+    )
+
+
+@factory("loads_visible")
+def _f_loads_visible(args: list[str]):
+    if not args:
+        return PC.ToggleLoadsVisible(None)
+    val = args[0].lower()
+    if val in ("1", "true", "on", "acik", "açık"):
+        return PC.ToggleLoadsVisible(True)
+    if val in ("0", "false", "off", "kapali", "kapalı"):
+        return PC.ToggleLoadsVisible(False)
+    return None

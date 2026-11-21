@@ -1,0 +1,95 @@
+{
+  "category_order": [
+    "File",
+    "Edit",
+    "View",
+    "Draw",
+    "Loads",
+    "Management",
+    "Tools",
+    "Debug",
+    "Convert"
+  ],
+  "category_labels": {
+    "File": "Dosya",
+    "Edit": "Düzen",
+    "View": "Görünüm",
+    "Draw": "Çizim",
+    "Loads": "Yükler",
+    "Management": "Yönetim",
+    "Tools": "Araçlar",
+    "Debug": "Hata Ayıklama",
+    "Convert": "Dönüştür"
+  },
+  "item_order": {
+    "File": [
+      "new_project",
+      "open_project",
+      "save_project",
+      "save_project_as",
+      "s2k_panel",
+      "close_project",
+      "quit_app"
+    ],
+    "Edit": [
+      "undo",
+      "redo",
+      "delete_selected"
+    ],
+    "View": [
+      "fit_view",
+      "zoom_extents",
+      "toggle_2d",
+      "toggle_render_mode",
+      "grid",
+      "load_display",
+      "view_filter",
+      "visibility",
+      "selection"
+    ],
+    "Draw": [
+      "start_draw_tool",
+      "start_plane_3pt",
+      "start_plane_2pt_z"
+    ],
+    "Loads": [
+      "load_manager",
+      "joint_load",
+      "frame_load",
+      "load_assign",
+      "area_to_frame",
+      "wind"
+    ],
+    "Management": [
+      "command_panel",
+      "inspector_panel",
+      "definition",
+      "material_panel",
+      "polygon_properties",
+      "report",
+      "test_panel"
+    ],
+    "Debug": [
+      "debug_panel"
+    ],
+    "Convert": [
+      "convert_frames_to_links"
+    ]
+  },
+  "hidden": [],
+  "quick_override": {
+    "new_project": true,
+    "open_project": true,
+    "save_project": true,
+    "undo": true,
+    "redo": true,
+    "command_panel": true,
+    "inspector_panel": true,
+    "grid": true,
+    "load_display": true,
+    "load_manager": true,
+    "report": true,
+    "s2k_panel": true,
+    "wind": true
+  }
+}

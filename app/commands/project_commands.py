@@ -241,3 +241,17 @@ class ConvertFramesToLinks:
 @dataclass
 class PropagateGeometryChange:
     node_uids: list[int] = field(default_factory=list)
+
+@dataclass
+class ReloadToolbarLayout:
+    pass
+
+
+@dataclass
+class ResetToolbarLayout:
+    pass
+
+
+@dataclass
+class SaveToolbarLayout:
+    pass

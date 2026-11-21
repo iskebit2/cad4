@@ -18,7 +18,7 @@ load_manager = LoadManager(material_weights=MATERIAL_WEIGHTS)
 # RAPOR PANELİ (ReportDataFrame + Word Export)
 # ============================================================
 
-class RaporPaneli(BoxLayout):
+class ReportPanel(BoxLayout):
     """
     ReportDataFrame kullanarak yük raporu oluşturur.
     - test kodundaki create_report_tables() mantığıyla çalışır
@@ -27,6 +27,7 @@ class RaporPaneli(BoxLayout):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        
         self.orientation = "vertical"
         self.spacing = dp(6)
         self.padding = dp(6)
@@ -364,6 +365,6 @@ class RaporPaneli(BoxLayout):
     # ==========================================================
     def _debug_df_yazdir(self, instance):
         for i, df in enumerate(self._tables, 1):
-            #print(f"\n===== Tablo {i}: {df.custom_title} =====")
-            #print(df.to_string())
-            #print(f"Shape: {df.shape}, Columns: {list(df.columns)}")
+            print(f"\n===== Tablo {i}: {df.custom_title} =====")
+            print(df.to_string())
+            print(f"Shape: {df.shape}, Columns: {list(df.columns)}")
