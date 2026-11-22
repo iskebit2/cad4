@@ -2,6 +2,7 @@
 from __future__ import annotations
 import math
 from dataclasses import dataclass, field
+from typing import Any
 from pyglm import glm
 from core.id_manager import IDManager
 from core.units import Dimension
@@ -320,7 +321,7 @@ class Frame(Element):
         return glm.mat3(e1, e2, e3)
 
 
-@dataclass
+@dataclass(init=False)
 class Area(Element):
     __unit_schema__ = {
         "thick_over": Dimension.LENGTH,
@@ -344,11 +345,82 @@ class Area(Element):
     uniform_to_frame_loads: list = field(default_factory=list)
     wind_pressures: list = field(default_factory=list)
 
+    def __init__(
+        self,
+        nodes: list[Node] | None = None,
+        thickness: float | None = None,
+        label: str = "",
+        *,
+        is_selected: bool = False,
+        is_visible: bool = True,
+        needs_update: bool = True,
+        color: list | None = None,
+        show_axes_override: bool | None = None,
+        unique_id: int | None = None,
+        pick_id: int = 0,
+        element_type: str = "Area",
+        _thickness_val: float = 0.0,
+        material: any = None,
+        section_name: str = "",
+        area_section: D.AreaSection | None = None,
+        mat_prop: str = "",
+        thick_over: float | None = None,
+        offset_over: float | None = None,
+        gravity_loads: list | None = None,
+        ref_temp: float | None = None,
+        strain_loads: list | None = None,
+        surface_pressures: list | None = None,
+        temp_loads: list | None = None,
+        uniform_loads: list | None = None,
+        uniform_to_frame_loads: list | None = None,
+        wind_pressures: list | None = None,
+    ) -> None:
+        self.nodes = list(nodes) if nodes is not None else []
+        self._thickness_val = float(_thickness_val)
+        self.material = material
+        self.section_name = section_name
+        self.area_section = area_section
+        self.mat_prop = mat_prop
+        self.thick_over = thick_over
+        self.offset_over = offset_over
+        self.gravity_loads = gravity_loads if gravity_loads is not None else []
+        self.ref_temp = ref_temp
+        self.strain_loads = strain_loads if strain_loads is not None else []
+        self.surface_pressures = (
+            surface_pressures if surface_pressures is not None else []
+        )
+        self.temp_loads = temp_loads if temp_loads is not None else []
+        self.uniform_loads = uniform_loads if uniform_loads is not None else []
+        self.uniform_to_frame_loads = (
+            uniform_to_frame_loads
+            if uniform_to_frame_loads is not None else []
+        )
+        self.wind_pressures = wind_pressures if wind_pressures is not None else []
+
+        element_kwargs: dict[str, Any] = {
+            "label": label,
+            "is_selected": is_selected,
+            "is_visible": is_visible,
+            "needs_update": needs_update,
+            "color": color,
+            "show_axes_override": show_axes_override,
+            "pick_id": pick_id,
+            "element_type": element_type,
+        }
+        if unique_id is not None:
+            element_kwargs["unique_id"] = unique_id
+        super().__init__(**element_kwargs)
+
+        if thickness is not None:
+            if thick_over is None:
+                self.thickness = thickness
+            else:
+                self._thickness_val = float(thickness)
+
     def __post_init__(self):
         super().__post_init__()
         self.element_type = "Area"
         self.nodes = list(self.nodes)
-        # self._thickness_val = float(self.thickness)
 
     @property
     def thickness(self) -> float:

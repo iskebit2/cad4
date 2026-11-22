@@ -1,0 +1,6 @@
+2026-11-22 03:25:50 [INFO    ] cad.app.cad_window: [CadWindow] Hazır: 1280x800
+2026-11-22 03:25:50 [INFO    ] cad.core.engine.gl_context: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-11-22 03:25:50 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=1, u_mvp=0)
+2026-11-22 03:25:50 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-11-22 03:25:51 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
+2026-11-22 03:25:51 [INFO    ] cad.ui.ui_host: [UIHost] Hazır (21 panel)

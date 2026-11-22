@@ -175,7 +175,7 @@ class SelectionPanel(PanelBase):
             selected = self.selection_manager.get_selected() if self.selection_manager else []
             if selected:
                 uids = [e.unique_id for e in selected]
-                ui.command_queue.put(PC.ShowOnly(uids))
+                app.command_queue.put(PC.ShowOnly(uids))
             else:
                 ui.command_queue.put(PC.ShowOnly(None))
         if show_only:

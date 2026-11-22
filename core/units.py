@@ -1,15 +1,5 @@
 # core/units.py
-"""
-Birim sistemi — tek doğruluk kaynağı.
 
-Model her zaman `project.unit_system`'de. `convert_project_units` ile dönüşür.
-Builder `float` — birim bilmez. Render `render_scale` ile kanonik mm'ye çevirir.
-
-Import stratejisi:
-    S2K import sırasında DEĞER DEĞİŞTİRİLMEZ. `project.unit_system` S2K'nın
-    CurrUnits'ine ayarlanır; dönüşüm gerektiğinde (solver öncesi, UI birim
-    değişimi) `convert_project_units` ayrıca çağrılır.
-"""
 from __future__ import annotations
 
 import logging
@@ -28,10 +18,10 @@ G_MM_S2 = 9806.65
 KG_PER_TON = 1000.0
 MEGAGRAM = 1000.0
 
-DENSITY_STEEL = 7.85e-6
-DENSITY_CONCRETE = 2.50e-6
-DENSITY_ALUMINUM = 2.70e-6
-DENSITY_TIMBER = 0.60e-6
+DENSITY_STEEL = 7.85e-9
+DENSITY_CONCRETE = 2.50e-9
+DENSITY_ALUMINUM = 2.70e-9
+DENSITY_TIMBER = 0.60e-9
 
 
 # ============================================================================
@@ -271,6 +261,12 @@ def convert_project_units(
 
     n = _walk_convert(project, from_sys, target)
     n += _convert_grid_lines(project, from_sys, target)
+    math_model = getattr(project, "math_model", None)
+    if math_model is not None:
+        for poly in getattr(math_model, "polygons", {}).values():
+            if getattr(poly, "zone_children_by_direction", None):
+                poly.zone_children_by_direction.clear()
+                poly.show_zones_direction = None
     project.unit_system = target
     project.ui_dirty = True
 

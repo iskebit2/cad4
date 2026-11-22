@@ -1,14 +1,20 @@
-# domain/vertex.py
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
 
 from core.id_manager import IDManager
+from core.units import Dimension
 
 
 @dataclass
 class Vertex:
+    __unit_schema__ = {
+        "x": Dimension.LENGTH,
+        "y": Dimension.LENGTH,
+        "z": Dimension.LENGTH,
+    }
+
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0

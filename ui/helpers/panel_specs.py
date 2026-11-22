@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from app.settings.categories import Category
+from ui.panels.analysis_panel import AnalysisManagerPanel
 from ui.panels.area_to_frame_panel import AreaToFramePanel
 from ui.panels.command_panel import CommandPanel
 from ui.panels.debug_panel import DebugPanel
@@ -33,6 +34,7 @@ class PanelSpec:
     menu_label: str = ""
     icon: str = ""
     context: tuple[str, ...] = ()
+    order: int = 0
 
 
 # ==============================================================================
@@ -40,6 +42,18 @@ class PanelSpec:
 # ==============================================================================
 
 PANELS: dict[int, PanelSpec] = {
+    0: PanelSpec(
+            cls=AnalysisManagerPanel,
+            name="analysis_panel",
+            title="Analysis Manager",
+            category=Category.MANAGEMENT,
+            quick=True,
+            menu_label="Analysis Manager",
+            icon="command_panel",
+            shortcut="F1",
+            order = 100
+        ),
+
     1: PanelSpec(
         cls=CommandPanel,
         name="command_panel",

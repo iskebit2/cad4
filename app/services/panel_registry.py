@@ -95,13 +95,10 @@ class PanelRegistry:
         spec: PanelSpec,
         instance: Any | None = None,
     ) -> None:
-        """Panel tanımını ve varsa runtime nesnesini kaydeder."""
-
         name = spec.name
 
         previous = self._by_name.get(name)
 
-        # Eski kategori indeksinden çıkar
         if previous is not None:
             old_category = self._normalize_category(previous.category)
             names = self._by_category.get(old_category, [])
@@ -109,17 +106,16 @@ class PanelRegistry:
             if name in names:
                 names.remove(name)
 
-        # Yeni tanım
         self._by_name[name] = spec
 
         category = self._normalize_category(spec.category)
-
         names = self._by_category.setdefault(category, [])
 
         if name not in names:
             names.append(name)
 
-        # Runtime nesnesi
+        names.sort(key=lambda n: self._by_name[n].order)
+
         if instance is not None:
             self._instances[name] = instance
 

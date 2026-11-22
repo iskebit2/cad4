@@ -413,17 +413,24 @@ LOAD_TRANSFER_POLYGON_TYPES = frozenset({
 })
 
 ENUM_REGISTRY: dict[str, type[Enum]] = {
+    "ConstraintType": ConstraintType,
     "MatType": MatType,
     "SectionType": SectionType,
     "LinkPropType": LinkPropType,
     "ElementType": ElementType,
     "ObjType": ObjType,
-    "LoadType": LoadType,
-    "LoadDirection": LoadDirection,
-    "SpectrumSourceType": SpectrumSourceType,
     "LoadPatternType": LoadPatternType,
     "LoadCaseType": LoadCaseType,
     "ComboType": ComboType,
+    "GridPlane": GridPlane,
+    "SectionCutDefinedBy": SectionCutDefinedBy,
+    "SectionCutResultType": SectionCutResultType,
+    "PropAreaType": PropAreaType,
+    "PropType": PropType,
+    "SymType": SymType,
+    "SpectrumSourceType": SpectrumSourceType,
+    "LoadType": LoadType,
+    "LoadDirection": LoadDirection,
     "DistType": DistType,
     "PolygonType": PolygonType,
 }

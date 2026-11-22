@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.commands import project_commands as PC
+from app.commands.registry import factory
 from core.units import UnitSystem
 from data.serializer import load_project_file, save_project_file
 from domain.definition import (
@@ -347,23 +349,74 @@ class Project:
     def sync_grid_from_s2k_lines(self, grid_lines: list[dict]) -> None:
         if not grid_lines:
             return
-        xs, ys, zs = [], [], []
+
+        from core.units import Dimension, UnitSystem, convert_value
+
+        buckets: dict[str, dict[float, str]] = {"X": {}, "Y": {}, "Z": {}}
         for gl in grid_lines:
             direction = str(gl.get("axis_dir", gl.get("line_type", "X"))).upper()
             v = float(gl.get("ordinate", 0.0))
+            lbl = str(
+                gl.get("grid_id")
+                or gl.get("label")
+                or gl.get("name")
+                or ""
+            ).strip()
             if "X" in direction:
-                xs.append(v)
+                key = "X"
             elif "Y" in direction or "V" in direction:
-                ys.append(v)
+                key = "Y"
             elif "Z" in direction:
-                zs.append(v)
+                key = "Z"
+            else:
+                continue
+            if v not in buckets[key] or (lbl and not buckets[key][v]):
+                buckets[key][v] = lbl
+
+        def _extract(axis_key: str) -> tuple[list[float], list[str]]:
+            items = sorted(buckets[axis_key].items(), key=lambda kv: kv[0])
+            coords = [c for c, _ in items]
+            labels = [
+                lbl if lbl else f"{axis_key}{i + 1}"
+                for i, (_, lbl) in enumerate(items)
+            ]
+            return coords, labels
+
+        xs, x_labels = _extract("X")
+        ys, y_labels = _extract("Y")
+        zs, z_labels = _extract("Z")
+
+        target_unit = self.unit_system
+        bubble_offset = convert_value(
+            Dimension.LENGTH, 1000.0, UnitSystem.N_MM, target_unit,
+        )
+        label_overflow = convert_value(
+            Dimension.LENGTH, 200.0, UnitSystem.N_MM, target_unit,
+        )
+
         self.scene.grid = Grid(
-            x_coords=sorted(set(xs)), y_coords=sorted(set(ys)),
-            z_coords=sorted(set(zs)),
+            x_coords=xs,
+            y_coords=ys,
+            z_coords=zs,
+            x_labels=x_labels,
+            y_labels=y_labels,
+            z_labels=z_labels,
+            bubble_offset=bubble_offset,
+            label_overflow=label_overflow,
         )
         self.scene.mark_dirty()
         self.invalidate_grid_planes()
 
+    @factory("set_unit")
+    def _f_set_unit(args):
+        if not args:
+            return None
+        from core.units import UnitSystem
+        raw = " ".join(args).strip()
+        key = raw.upper()
+        if key in UnitSystem.__members__:
+            return PC.SetUnitSystem(UnitSystem[key])
+        return PC.SetUnitSystem(UnitSystem.from_sap(raw))
     # ------------------------------------------------------------------
     def _migrate_materials(self):
         pass

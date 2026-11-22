@@ -189,7 +189,7 @@ def _add_area(app, cmd: PC.AddArea) -> CommandResult:
             )
         nodes.append(node)
 
-    area = Area(nodes=nodes, _thickness_val=cmd.thickness, label=cmd.label)
+    area = Area(nodes=nodes, thickness=cmd.thickness, label=cmd.label)
     model.add_area(area)
     return CommandResult(geometry_dirty=True)
 

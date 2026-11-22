@@ -132,16 +132,26 @@ class ProjectService:
         if eng is None:
             return
         p = self.state.project
+        p.math_model.units = p.unit_system.value
+        p.scene.units = p.unit_system.value
+        p.invalidate_grid_planes()
+        for el in p.math_model.all_elements.values():
+            if hasattr(el, "mark_dirty"):
+                el.mark_dirty()
         if eng.grid and p.grid:
             eng.grid.set_grid(p.grid)
             eng.grid.mark_dirty()
         if eng.math_model:
             eng.math_model.mark_dirty()
             eng.math_model.refresh_bounds()
-            if eng.renderer:
-                eng.renderer.update_geo(eng.math_model)
         if eng.scene:
+            eng.scene.mark_dirty()
             eng.scene.refresh_bounds()
+        eng.update_geo(p)
+        if eng.math_model:
+            eng.math_model.clear_dirty()
+        if self.app.viewport_manager is not None:
+            self.app.viewport_manager.invalidate_all()
         self._fit_viewports()
         eng.fit_view()
 

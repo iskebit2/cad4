@@ -11,7 +11,7 @@ from app.commands.analysis.solve_static import StaticCaseResult, solve_static_ca
 from app.commands.analysis.solver import ModalResult, StructuralSolver
 from app.commands.analysis.stiffness_assembly import StiffnessAssembly, build_stiffness
 from app.commands.analysis.unit_guard import ensure_nmm
-from app.commands.analysis.validation import validate_model
+from app.commands.analysis.validation import validate_model, validate_stiffness
 
 
 @dataclass
@@ -137,6 +137,11 @@ def run_analysis(
         + list(stiff_asm.warnings)
     )
 
+    stiff_warns = validate_stiffness(stiff_asm, fixed_dofs=fixed_dofs, check_rank=True)
+    warnings.extend(stiff_warns)
+    # opsiyonel: tekil sistemde erken dur
+    if any("tekil" in w.lower() for w in stiff_warns):
+        print("[Stiffness] Tekil sistem tespit edildi, çözüm riskli.")
     solver = StructuralSolver(
         K_global=stiff_asm.K_global,
         M_global=mass_asm.M_global,

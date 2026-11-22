@@ -34,6 +34,18 @@ class GridPanel(PanelBase):
         self._draft: dict | None = None
         self._obl: dict = self._blank_oblique()
         self._plane_index: dict[str, int] = {"XY": 0, "XZ": 0, "YZ": 0}
+        self._last_unit = None
+
+        from core.units import unit_change_event
+        unit_change_event.subscribe(self._on_unit_event)
+
+    def _on_unit_event(self, from_sys, to_sys, reason: str = "") -> None:
+        self.on_unit_changed()
+
+    def on_unit_changed(self) -> None:
+        self._last_unit = self.length_unit
+        self._obl = self._blank_oblique()
+        self._reset_draft()
 
     def _refresh_draft(self) -> None:
         self.draft = None
@@ -59,31 +71,55 @@ class GridPanel(PanelBase):
         super().open(**kw)
         self._reset_draft()
 
+    def _blank_oblique(self) -> dict:
+        from core.units import Dimension, UnitSystem, convert_value
+        p = getattr(self.app, "current_project", None)
+        target = p.unit_system if p is not None else UnitSystem.N_MM
+        span = convert_value(Dimension.LENGTH, 10000.0, UnitSystem.N_MM, target)
+        return {"name": "", "x1": 0.0, "y1": 0.0, "x2": span, "y2": span}
+
+    @staticmethod
+    def _paired_sorted(coords: list[float], labels: list[str], prefix: str) -> tuple[list[float], list[str]]:
+        paired: dict[float, str] = {}
+        for i, c in enumerate(coords):
+            lbl = labels[i].strip() if i < len(labels) and labels[i] else ""
+            if c not in paired or (lbl and not paired[c]):
+                paired[c] = lbl
+        ordered = sorted(paired.items(), key=lambda kv: kv[0])
+        out_c = [c for c, _ in ordered]
+        out_l = [lbl if lbl else f"{prefix}{i + 1}" for i, (_, lbl) in enumerate(ordered)]
+        return out_c, out_l
+
     def _reset_draft(self) -> None:
         g = self.grid
-        self._draft = None if g is None else {
-            "xs": ", ".join(self._f(v) for v in sorted(set(g.x_coords))),
-            "ys": ", ".join(self._f(v) for v in sorted(set(g.y_coords))),
-            "zs": ", ".join(self._f(v) for v in sorted(set(g.z_coords))),
-            "xn": ", ".join(g.x_labels),
-            "yn": ", ".join(g.y_labels),
-            "zn": ", ".join(g.z_labels),
-            "boundary": "; ".join(f"{x:g},{y:g}" for x, y in g.boundary_coords),
+        if g is None:
+            self._draft = None
+            return
+        xs, xn = self._paired_sorted(g.x_coords, g.x_labels, "X")
+        ys, yn = self._paired_sorted(g.y_coords, g.y_labels, "Y")
+        zs, zn = self._paired_sorted(g.z_coords, g.z_labels, "Z")
+        self._draft = {
+            "xs": ", ".join(self._f(v) for v in xs),
+            "ys": ", ".join(self._f(v) for v in ys),
+            "zs": ", ".join(self._f(v) for v in zs),
+            "xn": ", ".join(xn),
+            "yn": ", ".join(yn),
+            "zn": ", ".join(zn),
+            "boundary": "; ".join(f"{self._f(x)},{self._f(y)}" for x, y in g.boundary_coords),
             "show_labels": g.show_labels,
             "label_pos": g.label_position,
             "overflow": g.label_overflow,
         }
-
-    @staticmethod
-    def _blank_oblique() -> dict:
-        return {"name": "", "x1": 0.0, "y1": 0.0, "x2": 10000.0, "y2": 10000.0}
 
     def draw_content(self) -> None:
         g = self.grid
         if g is None:
             imgui.text_colored(imgui.ImVec4(0.95, 0.3, 0.3, 1.0), "Aktif grid yok")
             return
-        if self._draft is None:
+        cur_unit = self.length_unit
+        if self._draft is None or self._last_unit != cur_unit:
+            self._last_unit = cur_unit
+            self._obl = self._blank_oblique()
             self._reset_draft()
 
         if imgui.collapsing_header("Ortogonal Akslar", imgui.TreeNodeFlags_.default_open):
@@ -125,18 +161,22 @@ class GridPanel(PanelBase):
         if g is None:
             return
         d = self._draft
-        xs = self._floats(d["xs"])
-        ys = self._floats(d["ys"])
-        zs = self._floats(d["zs"])
-        if not xs or not ys:
+        raw_xs = self._floats(d["xs"])
+        raw_ys = self._floats(d["ys"])
+        raw_zs = self._floats(d["zs"])
+        if not raw_xs or not raw_ys:
             return
+        xs, xn = self._paired_sorted(raw_xs, self._strs(d["xn"]), "X")
+        ys, yn = self._paired_sorted(raw_ys, self._strs(d["yn"]), "Y")
+        zs, zn = self._paired_sorted(raw_zs, self._strs(d["zn"]), "Z")
         g.x_coords = xs
         g.y_coords = ys
         g.z_coords = zs
-        g.x_labels = self._strs(d["xn"])
-        g.y_labels = self._strs(d["yn"])
-        g.z_labels = self._strs(d["zn"])
+        g.x_labels = xn
+        g.y_labels = yn
+        g.z_labels = zn
         g.boundary_coords = self._pairs(d["boundary"])
+        self._reset_draft()
         self._commit()
 
     def _oblique_section(self) -> None:

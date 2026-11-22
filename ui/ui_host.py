@@ -199,7 +199,7 @@ class UIHost:
         ucs_name = getattr(eng.input, "mouse_ucs_name", "Global") if (eng and eng.input) else "Global"
         ucs_pos = getattr(eng.input, "mouse_ucs_pos", None) if (eng and eng.input) else None
 
-        self.status_bar.draw(
+        self.status_bar.draw(app = self.app,
             engine_connected=(eng is not None),
             app_status=app_status,
             mouse_pos=(inp.mouse_pos.x, inp.mouse_pos.y) if inp else (0.0, 0.0),
@@ -208,6 +208,8 @@ class UIHost:
             fps=(1.0 / dt) if dt > 0 else 0.0,
             ucs_name=ucs_name,
             ucs_pos=ucs_pos,
+            current_unit=ps.project.unit_system,
+            on_unit_selected=lambda unit: self.app.put_command(PC.SetUnitSystem(unit)),
         )
 
     def _draw_dock_space(self) -> None:
@@ -240,7 +242,8 @@ class UIHost:
         imgui.end()
 
     def toggle_view_2d(self) -> None:
-        self.command_queue.put(PC.Toggle2D())
+        self.app.command_queue.put(PC.Toggle2D())
+        
 
     def _ensure_default_viewport(self) -> None:
         vm = self.app.viewport_manager
@@ -390,10 +393,28 @@ class UIHost:
         draw_list.add_rect(p0, p1, imgui.get_color_u32(border_color))
 
     def on_project_changed(self) -> None:
-        if self.inspector is not None:
-            self.inspector.set_catalog(CatalogAdapter(self.app))
         if self._initialized:
             self._ensure_default_viewport()
+        grid_panel = self.get_panel("grid")
+        if grid_panel is not None and hasattr(grid_panel, "on_unit_changed"):
+            grid_panel.on_unit_changed()
+
+    def on_unit_changed(self) -> None:
+        if self.inspector is not None:
+            self.inspector.set_catalog(CatalogAdapter(self.app))
+        grid_panel = self.get_panel("grid")
+        if grid_panel is not None and hasattr(grid_panel, "on_unit_changed"):
+            grid_panel.on_unit_changed()
+
+    def get_panel(self, name: str):
+        reg = getattr(self.app, "panel_registry", None)
+        if reg is not None:
+            return reg.instance(name)
+        panels = getattr(self.app, "panels", None)
+        if isinstance(panels, dict):
+            entry = panels.get(name)
+            return entry.get("instance") if isinstance(entry, dict) else None
+        return None
 
     def on_selection_changed(self, selected: list) -> None:
         self.status_bar.notify_selection(selected)

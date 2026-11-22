@@ -1,5 +1,5 @@
-# ui/project_panels.py
-# ui/project_panels.py (AnalysisManagerPanel kısmı)
+# ui/panels/project_panels.py
+
 
 from __future__ import annotations
 

@@ -442,8 +442,11 @@ def build_stiffness(
 
     if validate:
         from app.commands.analysis.validation import validate_stiffness
-        errs = validate_stiffness(asm)
-        asm.warnings.extend(errs)
+        # fixed_dofs henüz elimizde olmayabilir → caller (run_analysis) sağlar
+        # İlk aşamada yalnızca global K'yı kontrol et:
+        for e in validate_stiffness(asm, fixed_dofs=None, check_rank=False):
+            asm.warnings.append(e)
+            print("[Stiffness] %s", e)
 
     return asm
 

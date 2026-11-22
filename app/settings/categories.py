@@ -24,15 +24,15 @@ CATEGORY_ORDER: tuple[Category, ...] = tuple(Category)
 
 # Kullanıcı arayüzünde gösterilecek etiketler
 CATEGORY_LABELS: dict[Category, str] = {
-    Category.FILE: "Dosya",
-    Category.EDIT: "Düzen",
-    Category.VIEW: "Görünüm",
-    Category.DRAW: "Çizim",
-    Category.LOADS: "Yükler",
-    Category.MANAGEMENT: "Yönetim",
-    Category.TOOLS: "Araçlar",
-    Category.DEBUG: "Hata Ayıklama",
-    Category.CONVERT: "Dönüştür",
+    Category.FILE: "File",
+    Category.EDIT: "Edit",
+    Category.VIEW: "View",
+    Category.DRAW: "Draw",
+    Category.LOADS: "Loads",
+    Category.MANAGEMENT: "Management",
+    Category.TOOLS: "Tools",
+    Category.DEBUG: "Debug",
+    Category.CONVERT: "Convert",
 }
 
 

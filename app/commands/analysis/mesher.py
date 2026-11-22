@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from domain.definition import FrameDistributedLoad, LoadSegment
 from domain.element import Area, Frame, Link, Node
 
+_DEFAULT_MESH_MAX_LENGTH = 1000.0  # mm
 
 @dataclass
 class SolverMesh:
@@ -133,14 +134,14 @@ def _frame_station_ratios(
     ratios: list[float] = [0.0, 1.0]
 
     n_segments = 1
-    if frame.auto_mesh:
-        if frame.mesh_num_segments >= 2:
-            n_segments = int(frame.mesh_num_segments)
-        elif frame.mesh_max_length > 0.0:
-            n_segments = max(1, math.ceil(L / float(frame.mesh_max_length)))
+    if frame.auto_mesh and frame.mesh_num_segments >= 2:
+        n_segments = int(frame.mesh_num_segments)
+    elif frame.auto_mesh and frame.mesh_max_length > 0.0:
+        n_segments = max(1, math.ceil(L / float(frame.mesh_max_length)))
     elif frame.station_type == "MaxStaSpcg" and frame.max_sta_spcg and frame.max_sta_spcg > 0.0:
         n_segments = max(1, math.ceil(L / float(frame.max_sta_spcg)))
     else:
+        # auto_mesh=True + paramsız da buraya düşer → min_num_sta fallback
         sta = int(frame.min_num_sta) if frame.min_num_sta and frame.min_num_sta >= 2 else 2
         n_segments = max(1, sta - 1)
 

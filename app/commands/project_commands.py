@@ -80,6 +80,9 @@ class AddFrame:
     section_name: str
     rotation_deg: float = 0.0
     label: str = ""
+    auto_mesh: bool = False          # Frame default'uyla aynı
+    station_type: str = "MinNumSta"  # ← opsiyonel parametre
+    min_num_sta: int = 3
 
 
 @dataclass

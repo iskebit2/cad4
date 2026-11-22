@@ -131,21 +131,18 @@ def _distributed_load_mass_kg(load, frame_length: float) -> float:
 def local_consistent_mass(
     A: float, L: float, rho: float, J: float, I33: float, I22: float
 ) -> np.ndarray:
-    """3D Çubuk 12x12 Lokal Tutarlı (Consistent) Kütle Matrisi."""
     m = rho * A * L
     m_mat = np.zeros((12, 12), dtype=float)
 
     if L <= 0 or m <= 0:
         return m_mat
 
-    # 1. Eksenel (UX: 0, 6)
     axial = (m / 6.0) * np.array([[2.0, 1.0], [1.0, 2.0]])
     m_mat[0, 0] = axial[0, 0]
     m_mat[0, 6] = axial[0, 1]
     m_mat[6, 0] = axial[1, 0]
     m_mat[6, 6] = axial[1, 1]
 
-    # 2. Burulma (RX: 3, 9)
     m_t = m * (J / A) if A > 0 else m
     torsion = (m_t / 6.0) * np.array([[2.0, 1.0], [1.0, 2.0]])
     m_mat[3, 3] = torsion[0, 0]
@@ -153,7 +150,6 @@ def local_consistent_mass(
     m_mat[9, 3] = torsion[1, 0]
     m_mat[9, 9] = torsion[1, 1]
 
-    # 3. Eğilme Yönü 1 (UY: 1, RZ: 5)
     beam_m1 = (m / 420.0) * np.array([
         [156.0,  22.0 * L,   54.0, -13.0 * L],
         [22.0 * L, 4.0 * L**2, 13.0 * L, -3.0 * L**2],
@@ -165,7 +161,6 @@ def local_consistent_mass(
         for c_i, ci in enumerate(idx1):
             m_mat[ri, ci] += beam_m1[r_i, c_i]
 
-    # 4. Eğilme Yönü 2 (UZ: 2, RY: 4)
     beam_m2 = (m / 420.0) * np.array([
         [156.0, -22.0 * L,   54.0,  13.0 * L],
         [-22.0 * L, 4.0 * L**2, -13.0 * L, -3.0 * L**2],
@@ -328,29 +323,25 @@ def build_mass(
             continue
 
         params = sec.profile_params or {}
-        try:
-            A = float(params.get("Area", 0.0))
-            J = float(params.get("J", 0.0))
-            I33 = float(params.get("I33", 0.0))
-            I22 = float(params.get("I22", 0.0))
-        except (TypeError, ValueError):
-            continue
+        A = float(params.get("Area", 0.0))
+        J = float(params.get("J", 0.0))
+        I33 = float(params.get("I33", 0.0))
+        I22 = float(params.get("I22", 0.0))
 
         L = frame.get_length()
         rho = float(getattr(mat, "density", 0.0))
         if A <= 0 or L <= 0 or rho <= 0:
             continue
 
-        m_kg = A * L * rho
+        m_ton = A * L * rho
+        m_kg = m_ton * MEGAGRAM
 
-        # node_masses'a yarı yarıya yaz
         ki = node_key_map.get(getattr(frame.node_i, "unique_id", None))
         kj = node_key_map.get(getattr(frame.node_j, "unique_id", None))
         _add(ki, m_kg / 2.0)
         _add(kj, m_kg / 2.0)
         _contrib("frame_self", frame.unique_id, frame.label, "", m_kg)
 
-        # Consistent mass → M
         dofs_i = getattr(frame.node_i, "dof_indices", None)
         dofs_j = getattr(frame.node_j, "dof_indices", None)
         if not dofs_i or not dofs_j:
@@ -358,18 +349,15 @@ def build_mass(
 
         p1 = (frame.node_i.x, frame.node_i.y, frame.node_i.z)
         p2 = (frame.node_j.x, frame.node_j.y, frame.node_j.z)
-        try:
-            T, _ = transformation_matrix(
-                p1, p2, getattr(frame, "rotation_deg", 0.0) or 0.0
-            )
-            m_loc = local_consistent_mass(
-                A=A, L=L, rho=rho, J=J, I33=I33, I22=I22
-            )
-            m_glob_ton = (T.T @ m_loc @ T) / MEGAGRAM
-            dofs = list(dofs_i) + list(dofs_j)
-            M[np.ix_(dofs, dofs)] += m_glob_ton
-        except Exception as e:
-            warnings.append(f"Frame {frame.label} consistent kütle hatası: {e}")
+        T, _ = transformation_matrix(
+            p1, p2, getattr(frame, "rotation_deg", 0.0) or 0.0
+        )
+        m_loc = local_consistent_mass(
+            A=A, L=L, rho=rho, J=J, I33=I33, I22=I22
+        )
+        m_glob_ton = T.T @ m_loc @ T
+        dofs = list(dofs_i) + list(dofs_j)
+        M[np.ix_(dofs, dofs)] += m_glob_ton
 
     # ==================================================================
     # 2) FRAME YAYILI YÜKLER — lumped
@@ -426,17 +414,17 @@ def build_mass(
         if geom_A <= 0 or rho <= 0:
             continue
 
-        m_kg = geom_A * thickness * rho
+        m_ton = geom_A * thickness * rho
+        m_kg = m_ton * MEGAGRAM
         per_node = m_kg / n_nodes
         for nd in nodes:
             _add(node_key_map.get(getattr(nd, "unique_id", None)), per_node)
         _contrib("area_self", area.unique_id, area.label, "", m_kg)
 
-        # Consistent mass → M (triangülasyon)
         for i in range(1, n_nodes - 1):
             tri_nodes = [nodes[0], nodes[i], nodes[i + 1]]
-            m_tri_glob = triangle_consistent_mass_3d(tri_nodes, thickness, mat)
-            if m_tri_glob.size == 0:
+            m_tri_ton = triangle_consistent_mass_3d(tri_nodes, thickness, mat)
+            if m_tri_ton.size == 0:
                 continue
 
             tri_dofs: list[int] = []
@@ -450,7 +438,6 @@ def build_mass(
             if not ok or len(tri_dofs) != 18:
                 continue
 
-            m_tri_ton = m_tri_glob / MEGAGRAM
             M[np.ix_(tri_dofs, tri_dofs)] += m_tri_ton
 
     # ==================================================================

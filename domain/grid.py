@@ -81,6 +81,7 @@ class Grid:
         "x_coords": Dimension.LENGTH,
         "y_coords": Dimension.LENGTH,
         "z_coords": Dimension.LENGTH,
+        "boundary_coords": Dimension.LENGTH,
         "bubble_offset": Dimension.LENGTH,
         "label_overflow": Dimension.LENGTH,
     }
