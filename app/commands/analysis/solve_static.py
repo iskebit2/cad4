@@ -5,6 +5,11 @@ import math
 from dataclasses import dataclass, field
 
 import numpy as np
+from app.commands.analysis.frame_resolver import (
+    frame_load_direction_vector,
+    resolve_frame_kinematics,
+    resolve_section,
+)
 
 from app.commands.analysis.mesher import SolverMesh, build_solver_mesh
 from app.commands.analysis.stiffness_assembly import transformation_matrix
@@ -20,6 +25,10 @@ from domain.definition import (
 )
 from domain.element import Area, Frame, Node
 
+from logging_config import CadLogger
+logger = CadLogger.get(__name__)
+
+
 _GRAVITY_MM_S2 = 9806.65
 
 
@@ -31,7 +40,9 @@ class StaticCaseResult:
     applied_forces: np.ndarray
     node_displacements: dict[str, np.ndarray] = field(default_factory=dict)
     node_reactions: dict[str, np.ndarray] = field(default_factory=dict)
-
+    sum_F: np.ndarray = field(default_factory=lambda: np.zeros(6))
+    sum_R: np.ndarray = field(default_factory=lambda: np.zeros(6))
+    sum_M_about_origin: np.ndarray = field(default_factory=lambda: np.zeros(3))
 
 def _node_dof_base(dof_map: dict[str, int], node: Node) -> int | None:
     return dof_map.get(f"N_{node.unique_id}")
@@ -68,74 +79,6 @@ def _apply_release_mask(f_loc: np.ndarray, release_i: dict | None, release_j: di
             f_loc[idx] = 0.0
         if _is_released(release_j, keys):
             f_loc[6 + idx] = 0.0
-
-
-def _direction_vector(
-    frame: Frame,
-    R: np.ndarray,
-    coord_sys: str,
-    load_dir: str,
-    direction: LoadDirection | None,
-) -> tuple[np.ndarray, float]:
-    L = frame.get_length()
-    if L <= 1e-12:
-        return np.zeros(3, dtype=float), 0.0
-
-    e1 = R[0]
-    e2 = R[1]
-    e3 = R[2]
-    proj_xy = math.hypot(float(e1[0]), float(e1[1]))
-    proj_xz = math.hypot(float(e1[0]), float(e1[2]))
-    proj_yz = math.hypot(float(e1[1]), float(e1[2]))
-
-    if direction is not None:
-        if direction == LoadDirection.LOCAL_1:
-            return e1, 1.0
-        if direction == LoadDirection.LOCAL_2:
-            return e2, 1.0
-        if direction == LoadDirection.LOCAL_3:
-            return e3, 1.0
-        if direction == LoadDirection.GLOBAL_X:
-            return np.array([1.0, 0.0, 0.0]), 1.0
-        if direction == LoadDirection.GLOBAL_Y:
-            return np.array([0.0, 1.0, 0.0]), 1.0
-        if direction == LoadDirection.GLOBAL_Z:
-            return np.array([0.0, 0.0, 1.0]), 1.0
-        if direction == LoadDirection.PROJECTED_X:
-            return np.array([1.0, 0.0, 0.0]), proj_yz
-        if direction == LoadDirection.PROJECTED_Y:
-            return np.array([0.0, 1.0, 0.0]), proj_xz
-        if direction == LoadDirection.PROJECTED_Z:
-            return np.array([0.0, 0.0, 1.0]), proj_xy
-
-    cs = str(coord_sys or "GLOBAL").strip().upper()
-    ld = str(load_dir or "").strip().upper()
-
-    if cs == "LOCAL":
-        if ld in ("1", "X"):
-            return e1, 1.0
-        if ld in ("2", "Y"):
-            return e2, 1.0
-        if ld in ("3", "Z"):
-            return e3, 1.0
-        return e2, 1.0
-
-    if ld in ("1", "4", "X", "UX", "FX"):
-        return np.array([1.0, 0.0, 0.0]), 1.0
-    if ld in ("2", "5", "Y", "UY", "FY"):
-        return np.array([0.0, 1.0, 0.0]), 1.0
-    if ld in ("3", "6", "Z", "UZ", "FZ"):
-        return np.array([0.0, 0.0, 1.0]), 1.0
-    if ld in ("7", "PX"):
-        return np.array([1.0, 0.0, 0.0]), proj_yz
-    if ld in ("8", "PY"):
-        return np.array([0.0, 1.0, 0.0]), proj_xz
-    if ld in ("9", "PZ"):
-        return np.array([0.0, 0.0, 1.0]), proj_xy
-    if ld in ("10", "GRAV", "GRAVITY"):
-        return np.array([0.0, 0.0, -1.0]), 1.0
-
-    return np.array([0.0, 0.0, -1.0]), 1.0
 
 
 def _trapezoidal_fef_transverse(a: float, b: float, q1: float, q2: float, L: float) -> tuple[float, float, float, float]:
@@ -211,35 +154,55 @@ def _add_uniform_local_vector_fef(f_loc: np.ndarray, q_loc: np.ndarray, L: float
 
 
 def _assemble_frame_distributed_load(
-    f_loc: np.ndarray,
+    F: np.ndarray,
     frame: Frame,
-    R: np.ndarray,
-    L: float,
     dload: FrameDistributedLoad,
+    base_i: int,
+    base_j: int,
     scale: float,
 ) -> None:
-    if L <= 1e-12 or not dload.segments:
+    if not dload.segments:
         return
 
-    dir_vec, proj_factor = _direction_vector(
-        frame, R, dload.coord_sys, dload.load_dir, dload.direction
+    sec_res = resolve_section(getattr(frame, "section", None), getattr(frame, "modifiers", None))
+    kin = resolve_frame_kinematics(frame, sec_res)
+    if kin.L_axis <= 1e-12 or kin.L_clear <= 1e-12:
+        return
+
+    dir_vec, proj_factor = frame_load_direction_vector(
+        kin.R_axis, kin.L_axis, dload.coord_sys, dload.load_dir, dload.direction
     )
     if proj_factor == 0.0:
         return
 
-    local_dir = R @ (dir_vec * proj_factor)
+    local_dir = kin.R_axis @ (dir_vec * proj_factor)
     is_moment = str(dload.force_or_moment or "Force").strip().lower().startswith("m")
 
+    L_axis = kin.L_axis
+    L_clear = kin.L_clear
+    x0_clear = kin.eff_off_i
+
+    f_loc_clear = np.zeros(12, dtype=float)
+
     for seg in dload.segments:
-        x1 = float(seg.x1) * L if dload.is_relative else float(seg.x1)
-        x2 = float(seg.x2) * L if dload.is_relative else float(seg.x2)
-        a = max(0.0, min(L, x1))
-        b = max(0.0, min(L, x2))
+        x1 = float(seg.x1) * L_axis if dload.is_relative else float(seg.x1)
+        x2 = float(seg.x2) * L_axis if dload.is_relative else float(seg.x2)
+        a_full = max(0.0, min(L_axis, x1))
+        b_full = max(0.0, min(L_axis, x2))
+        if b_full <= a_full + 1e-12:
+            continue
+
+        a = max(0.0, min(L_clear, a_full - x0_clear))
+        b = max(0.0, min(L_clear, b_full - x0_clear))
         if b <= a + 1e-12:
             continue
 
-        q1 = float(seg.q1) * scale
-        q2 = float(seg.q2) * scale
+        t_a = (a + x0_clear - a_full) / (b_full - a_full)
+        t_b = (b + x0_clear - a_full) / (b_full - a_full)
+        q1_raw = float(seg.q1) * scale
+        q2_raw = float(seg.q2) * scale
+        q1 = q1_raw + (q2_raw - q1_raw) * t_a
+        q2 = q1_raw + (q2_raw - q1_raw) * t_b
 
         if is_moment:
             for comp in range(3):
@@ -247,31 +210,47 @@ def _assemble_frame_distributed_load(
                 qc2 = q2 * float(local_dir[comp])
                 if abs(qc1) <= 1e-15 and abs(qc2) <= 1e-15:
                     continue
-                mi, mj = _trapezoidal_fef_axial(a, b, qc1, qc2, L)
-                f_loc[3 + comp] += mi
-                f_loc[9 + comp] += mj
+                mi, mj = _trapezoidal_fef_axial(a, b, qc1, qc2, L_clear)
+                f_loc_clear[3 + comp] += mi
+                f_loc_clear[9 + comp] += mj
         else:
             qx1, qx2 = q1 * float(local_dir[0]), q2 * float(local_dir[0])
             if abs(qx1) > 1e-15 or abs(qx2) > 1e-15:
-                fi1, fj1 = _trapezoidal_fef_axial(a, b, qx1, qx2, L)
-                f_loc[0] += fi1
-                f_loc[6] += fj1
+                fi1, fj1 = _trapezoidal_fef_axial(a, b, qx1, qx2, L_clear)
+                f_loc_clear[0] += fi1
+                f_loc_clear[6] += fj1
 
             qy1, qy2 = q1 * float(local_dir[1]), q2 * float(local_dir[1])
             if abs(qy1) > 1e-15 or abs(qy2) > 1e-15:
-                ri2, mi3, rj2, mj3 = _trapezoidal_fef_transverse(a, b, qy1, qy2, L)
-                f_loc[1] += ri2
-                f_loc[5] += mi3
-                f_loc[7] += rj2
-                f_loc[11] += mj3
+                ri2, mi3, rj2, mj3 = _trapezoidal_fef_transverse(a, b, qy1, qy2, L_clear)
+                f_loc_clear[1] += ri2
+                f_loc_clear[5] += mi3
+                f_loc_clear[7] += rj2
+                f_loc_clear[11] += mj3
 
             qz1, qz2 = q1 * float(local_dir[2]), q2 * float(local_dir[2])
             if abs(qz1) > 1e-15 or abs(qz2) > 1e-15:
-                ri3, mi2, rj3, mj2 = _trapezoidal_fef_transverse(a, b, qz1, qz2, L)
-                f_loc[2] += ri3
-                f_loc[4] -= mi2
-                f_loc[8] += rj3
-                f_loc[10] -= mj2
+                ri3, mi2, rj3, mj2 = _trapezoidal_fef_transverse(a, b, qz1, qz2, L_clear)
+                f_loc_clear[2] += ri3
+                f_loc_clear[4] -= mi2
+                f_loc_clear[8] += rj3
+                f_loc_clear[10] -= mj2
+
+    rel_i = frame.release_i or {}
+    for idx, keys in enumerate((("R1", "u1"), ("U2", "u2"), ("U3", "u3"), ("R4", "r1"), ("R2", "r2"), ("R3", "r3"))):
+        if any(rel_i.get(k, False) for k in keys):
+            f_loc_clear[idx] = 0.0
+
+    rel_j = frame.release_j or {}
+    for idx, keys in enumerate((("R1", "u1"), ("U2", "u2"), ("U3", "u3"), ("R4", "r1"), ("R2", "r2"), ("R3", "r3"))):
+        if any(rel_j.get(k, False) for k in keys):
+            f_loc_clear[6 + idx] = 0.0
+
+    f_node_loc = kin.T_ecc.T @ (kin.H.T @ f_loc_clear)
+    f_glob = kin.T_axis.T @ f_node_loc
+
+    F[base_i : base_i + 6] += f_glob[:6]
+    F[base_j : base_j + 6] += f_glob[6:12]
 
 
 def _area_local_axes(nodes: list[Node]) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
@@ -483,7 +462,8 @@ def assemble_pattern_load_vector(
                 _add_point_load_to_dof(F, base, p_load, scale)
 
     for frame in mesh.frames.values():
-        ni, nj = frame.node_i, frame.node_j
+        ni = getattr(frame, "node_i", None)
+        nj = getattr(frame, "node_j", None)
         if ni is None or nj is None:
             continue
         base_i = _node_dof_base(dof_map, ni)
@@ -491,47 +471,66 @@ def assemble_pattern_load_vector(
         if base_i is None or base_j is None:
             continue
 
-        L = frame.get_length()
-        if L <= 1e-12:
+        sec_res = resolve_section(getattr(frame, "section", None), getattr(frame, "modifiers", None))
+        kin = resolve_frame_kinematics(frame, sec_res)
+        if kin.L_axis <= 1e-12 or kin.L_clear <= 1e-12:
             continue
 
-        T, L = transformation_matrix(
-            (ni.x, ni.y, ni.z),
-            (nj.x, nj.y, nj.z),
-            getattr(frame, "rotation_deg", 0.0) or 0.0,
-        )
-        R = T[:3, :3]
-
-        f_loc = np.zeros(12, dtype=float)
-
-        for dload in frame.dist_loads:
+        for dload in getattr(frame, "dist_loads", None) or []:
             if dload.pattern_name == pattern_name:
-                _assemble_frame_distributed_load(f_loc, frame, R, L, dload, scale)
+                _assemble_frame_distributed_load(F, frame, dload, base_i, base_j, scale)
 
-        sec = getattr(frame, "section", None)
-        mat = getattr(sec, "material", None) if sec is not None else None
-        area_val = float(sec.profile_params.get("Area", 0.0)) if sec is not None else 0.0
-        density = float(getattr(mat, "density", 0.0)) if mat is not None else 0.0
-        w_line = density * area_val * _GRAVITY_MM_S2
+        if sec_res is not None and sec_res.weight_per_len > 0.0:
+            w_line = sec_res.weight_per_len
+            L_clear = kin.L_clear
+            f_grav_clear = np.zeros(12, dtype=float)
 
-        for gload in getattr(frame, "gravity_loads", None) or []:
-            if gload.pattern_name == pattern_name and w_line > 0.0:
-                g_glob = np.array(
-                    [float(gload.multiplier_x), float(gload.multiplier_y), float(gload.multiplier_z)],
-                    dtype=float,
-                )
-                q_loc = (scale * w_line) * (R @ g_glob)
-                _add_uniform_local_vector_fef(f_loc, q_loc, L)
+            for gload in getattr(frame, "gravity_loads", None) or []:
+                if gload.pattern_name == pattern_name:
+                    g_glob = np.array(
+                        [float(gload.multiplier_x), float(gload.multiplier_y), float(gload.multiplier_z)],
+                        dtype=float,
+                    )
+                    q_loc = (scale * w_line) * (kin.R_axis @ g_glob)
+                    f_grav_clear[0] += 0.5 * q_loc[0] * L_clear
+                    f_grav_clear[6] += 0.5 * q_loc[0] * L_clear
+                    f_grav_clear[1] += 0.5 * q_loc[1] * L_clear
+                    f_grav_clear[7] += 0.5 * q_loc[1] * L_clear
+                    f_grav_clear[5] += q_loc[1] * (L_clear * L_clear) / 12.0
+                    f_grav_clear[11] -= q_loc[1] * (L_clear * L_clear) / 12.0
+                    f_grav_clear[2] += 0.5 * q_loc[2] * L_clear
+                    f_grav_clear[8] += 0.5 * q_loc[2] * L_clear
+                    f_grav_clear[4] -= q_loc[2] * (L_clear * L_clear) / 12.0
+                    f_grav_clear[10] += q_loc[2] * (L_clear * L_clear) / 12.0
 
-        if sw_mult != 0.0 and w_line > 0.0:
-            q_loc = (scale * sw_mult * w_line) * (R @ np.array([0.0, 0.0, -1.0]))
-            _add_uniform_local_vector_fef(f_loc, q_loc, L)
+            if sw_mult != 0.0:
+                q_loc = (scale * sw_mult * w_line) * (kin.R_axis @ np.array([0.0, 0.0, -1.0]))
+                f_grav_clear[0] += 0.5 * q_loc[0] * L_clear
+                f_grav_clear[6] += 0.5 * q_loc[0] * L_clear
+                f_grav_clear[1] += 0.5 * q_loc[1] * L_clear
+                f_grav_clear[7] += 0.5 * q_loc[1] * L_clear
+                f_grav_clear[5] += q_loc[1] * (L_clear * L_clear) / 12.0
+                f_grav_clear[11] -= q_loc[1] * (L_clear * L_clear) / 12.0
+                f_grav_clear[2] += 0.5 * q_loc[2] * L_clear
+                f_grav_clear[8] += 0.5 * q_loc[2] * L_clear
+                f_grav_clear[4] -= q_loc[2] * (L_clear * L_clear) / 12.0
+                f_grav_clear[10] += q_loc[2] * (L_clear * L_clear) / 12.0
 
-        if np.any(f_loc != 0.0):
-            _apply_release_mask(f_loc, frame.release_i, frame.release_j)
-            f_glob = T.T @ f_loc
-            F[base_i : base_i + 6] += f_glob[:6]
-            F[base_j : base_j + 6] += f_glob[6:12]
+            if np.any(f_grav_clear != 0.0):
+                rel_i = frame.release_i or {}
+                for idx, keys in enumerate((("R1", "u1"), ("U2", "u2"), ("U3", "u3"), ("R4", "r1"), ("R2", "r2"), ("R3", "r3"))):
+                    if any(rel_i.get(k, False) for k in keys):
+                        f_grav_clear[idx] = 0.0
+
+                rel_j = frame.release_j or {}
+                for idx, keys in enumerate((("R1", "u1"), ("U2", "u2"), ("U3", "u3"), ("R4", "r1"), ("R2", "r2"), ("R3", "r3"))):
+                    if any(rel_j.get(k, False) for k in keys):
+                        f_grav_clear[6 + idx] = 0.0
+
+                f_node_loc = kin.T_ecc.T @ (kin.H.T @ f_grav_clear)
+                f_glob = kin.T_axis.T @ f_node_loc
+                F[base_i : base_i + 6] += f_glob[:6]
+                F[base_j : base_j + 6] += f_glob[6:12]
 
     for area in mesh.areas.values():
         _assemble_area_loads(F, dof_map, area, pattern_name, scale, sw_mult)
@@ -562,42 +561,32 @@ def _assemble_accel_load_vector(
     return -float(scale) * (M_global @ r)
 
 
-def assemble_load_case_vector(
-    project,
-    mesh: SolverMesh,
-    dof_map: dict[str, int],
-    num_dofs: int,
-    load_case: LoadCase,
-    M_global: np.ndarray | None = None,
-) -> np.ndarray:
+def assemble_load_case_vector(project, mesh, dof_map, num_dofs, load_case, M_global=None):
     F = np.zeros(num_dofs, dtype=float)
     patterns = getattr(project, "load_patterns", None) or {}
-
-    assignments: list[StaticLoadAssignment] = getattr(load_case, "static_assignments", None) or []
+    logger.info("[load_case] case=%r patterns=%d dof_map=%d mesh_frames=%d",
+                getattr(load_case, "name", "?"), len(patterns), len(dof_map),
+                len(mesh.frames) if hasattr(mesh, "frames") else -1)
+    assignments = getattr(load_case, "static_assignments", None) or []
+    logger.info("[load_case] assignments=%d", len(assignments))
     for item in assignments:
         ltype = str(item.load_type or "Load pattern").strip().lower()
         sf = float(item.load_sf)
+        logger.info("[load_case] item: ltype=%r sf=%.3f name=%r pat=%s",
+                    ltype, sf, item.load_name,
+                    patterns.get(item.load_name) is not None)
         if sf == 0.0:
             continue
-
         if ltype in ("load pattern", "pattern", "load"):
             pat = patterns.get(item.load_name)
+            n_before = np.count_nonzero(np.abs(F) > 1e-9)
             F += assemble_pattern_load_vector(
-                mesh=mesh,
-                dof_map=dof_map,
-                num_dofs=num_dofs,
-                pattern_name=item.load_name,
-                pattern=pat,
-                scale=sf,
+                mesh=mesh, dof_map=dof_map, num_dofs=num_dofs,
+                pattern_name=item.load_name, pattern=pat, scale=sf,
             )
-        elif ltype in ("accel", "acceleration") and M_global is not None:
-            F += _assemble_accel_load_vector(
-                M_global=M_global,
-                num_dofs=num_dofs,
-                accel_dir=item.load_name,
-                scale=sf,
-            )
-
+            n_after = np.count_nonzero(np.abs(F) > 1e-9)
+            logger.info("[load_case] after pattern: nonzero %d -> %d, |F|=%.3e",
+                        n_before, n_after, np.linalg.norm(F))
     return F
 
 
@@ -623,15 +612,45 @@ def solve_static_case(
         load_case=load_case,
         M_global=M_global,
     )
-
+    logger.info("[solve_static_case] %s: |F|=%.6e, nonzero=%d, free_dofs=%d, num_dofs=%d",
+                case_name, np.linalg.norm(F), np.count_nonzero(np.abs(F) > 1e-9),
+                solver.free_dofs.size, solver.num_dofs)
     U, R = solver.static_solve(F)
-
+    logger.info("[solve_static_case] %s: |U|=%.6e, |R|=%.6e",
+                case_name, np.linalg.norm(U), np.linalg.norm(R))
     node_disp: dict[str, np.ndarray] = {}
     node_reac: dict[str, np.ndarray] = {}
+    node_coords: dict[str, np.ndarray] = {}
     for n_key, base in dof_map.items():
         node_disp[n_key] = U[base : base + 6].copy()
         node_reac[n_key] = R[base : base + 6].copy()
+        node = mesh.nodes.get(n_key)
+        if node:
+            node_coords[n_key] = (node.x, node.y, node.z)
 
+    # GLOBAL DENGE
+    sum_F = np.array([np.sum(F[i::6]) for i in range(6)])
+    sum_R = np.array([np.sum(R[i::6]) for i in range(6)])
+
+    # Moment dengesi: her düğüm için r × F ve r × R
+    sum_M_about_origin = np.zeros(3)
+    for n_key, base in dof_map.items():
+        if n_key not in node_coords:
+            continue
+        x, y, z = node_coords[n_key]
+        # Dış kuvvetlerin momenti
+        fx, fy, fz = F[base], F[base+1], F[base+2]
+        mx, my, mz = F[base+3], F[base+4], F[base+5]
+        sum_M_about_origin[0] += mx + y*fz - z*fy
+        sum_M_about_origin[1] += my + z*fx - x*fz
+        sum_M_about_origin[2] += mz + x*fy - y*fx
+        # Reaksiyonların momenti
+        rx, ry, rz = R[base], R[base+1], R[base+2]
+        rmx, rmy, rmz = R[base+3], R[base+4], R[base+5]
+        sum_M_about_origin[0] += rmx + y*rz - z*ry
+        sum_M_about_origin[1] += rmy + z*rx - x*rz
+        sum_M_about_origin[2] += rmz + x*ry - y*rx
+    
     return StaticCaseResult(
         case_name=case_name,
         displacements=U,
@@ -639,20 +658,16 @@ def solve_static_case(
         applied_forces=F,
         node_displacements=node_disp,
         node_reactions=node_reac,
+        sum_F=sum_F,
+        sum_R=sum_R,
+        sum_M_about_origin=sum_M_about_origin,
     )
 
 
-def run_static_analysis(
-    project,
-    case_names: list[str] | None = None,
-    *,
-    n_live: float = 0.3,
-    validate: bool = True,
-    use_shear_deform: bool = True,
-) -> dict[str, StaticCaseResult]:
+def run_static_analysis(project, case_names=None, *, n_live=0.3, validate=True, use_shear_deform=True):
     from app.commands.analysis.mass_assembly import build_mass
     from app.commands.analysis.solver import StructuralSolver
-    from app.commands.analysis.stiffness_assembly import build_stiffness
+    from app.commands.analysis.stiffness_assembly import build_stiffness, ensure_dof_indices
 
     convert_project_units(project, UnitSystem.N_MM, reason="static_analysis")
     model = project.math_model
@@ -661,18 +676,15 @@ def run_static_analysis(
 
     mesh = build_solver_mesh(model)
     mass_asm = build_mass(mesh, project, n_live=n_live, validate=validate)
-    stiff_asm = build_stiffness(
-        mesh,
-        project,
-        validate=validate,
-        use_shear_deform=use_shear_deform,
-    )
+    stiff_asm = build_stiffness(mesh, project, validate=validate, use_shear_deform=use_shear_deform)
 
-    dof_map = {
-        n_key: int(node.dof_indices[0])
-        for n_key, node in mesh.nodes.items()
-        if getattr(node, "dof_indices", None)
-    }
+    # 🔥 KRİTİK DÜZELTME: dof_map'i ensure_dof_indices ile GARANTİLE
+    dof_map = ensure_dof_indices(mesh)
+    if len(dof_map) != len(mesh.nodes):
+        raise RuntimeError(
+            f"dof_map boş/eksik: mesh.nodes={len(mesh.nodes)}, dof_map={len(dof_map)}. "
+            f"build_stiffness dof_indices'i siliyor olabilir."
+        )
 
     solver = StructuralSolver(
         K_global=stiff_asm.K_global,
@@ -683,13 +695,8 @@ def run_static_analysis(
     )
 
     all_cases = getattr(project, "load_cases", None) or {}
-    targets = case_names if case_names is not None else [
-        cname for cname, lc in all_cases.items()
-        if getattr(lc, "run_case", True)
-        and str(getattr(lc, "case_type", "LinStatic")).lower() in ("linstatic", "linearstatic")
-    ]
-
-    results: dict[str, StaticCaseResult] = {}
+    targets = case_names if case_names is not None else [...]
+    results = {}
     for cname in targets:
         results[cname] = solve_static_case(project, solver, mesh, cname)
     return results

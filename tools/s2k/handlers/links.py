@@ -112,10 +112,6 @@ def handle_link_props(ctx: LoadContext, df: pd.DataFrame) -> None:
 # 02 - LINEAR
 # ============================================================================
 def handle_link_props_linear(ctx: LoadContext, df: pd.DataFrame) -> None:
-    """LINK PROPERTIES 02 - LINEAR.
-
-    Kolonlar: LinkProp, Ke1..Ke6, Ce1..Ce6  (K1/Stiff1, C1/Damp1 alias)
-    """
     if df is None or df.empty:
         return
 
@@ -126,9 +122,20 @@ def handle_link_props_linear(ctx: LoadContext, df: pd.DataFrame) -> None:
 
         prop = ctx.link_props.setdefault(name, LinkPropLinear(name=name))
         if not isinstance(prop, LinkPropLinear):
-            logger.info(
-                "[LinkProp] '%s' LinkPropLinear değil, atlanıyor", name,
-            )
+            continue
+
+        dof_raw = row.get("DOF")
+        if dof_raw is not None and str(dof_raw).strip().upper() in _DOF_ORDER:
+            dof = str(dof_raw).strip().upper()
+            prop.DOF[dof] = True
+            if row.get("Fixed") is not None:
+                prop.Fixed[dof] = _pick_bool(row, "Fixed", False)
+            if dof.startswith("U"):
+                prop.Ke[dof] = _safe_float(row, "TransKE", _safe_float(row, "KE", 0.0))
+                prop.Ce[dof] = _safe_float(row, "TransCE", _safe_float(row, "CE", 0.0))
+            else:
+                prop.Ke[dof] = _safe_float(row, "RotKE", _safe_float(row, "KE", 0.0))
+                prop.Ce[dof] = _safe_float(row, "RotCE", _safe_float(row, "CE", 0.0))
             continue
 
         for i, dof in enumerate(_DOF_ORDER, start=1):

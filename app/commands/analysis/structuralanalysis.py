@@ -9,7 +9,7 @@ from app.commands.analysis.mass_assembly import MassAssembly, build_mass
 from app.commands.analysis.mesher import SolverMesh, build_solver_mesh
 from app.commands.analysis.solve_static import StaticCaseResult, solve_static_case
 from app.commands.analysis.solver import ModalResult, StructuralSolver
-from app.commands.analysis.stiffness_assembly import StiffnessAssembly, build_stiffness
+from app.commands.analysis.stiffness_assembly import StiffnessAssembly, build_stiffness, ensure_dof_indices
 from app.commands.analysis.unit_guard import ensure_nmm
 from app.commands.analysis.validation import validate_model, validate_stiffness
 
@@ -117,19 +117,23 @@ def run_analysis(
 
     model = getattr(project, "math_model", None) or scene
     pre_report = validate_model(model, project, strict=validate)
-    solver_mesh = build_solver_mesh(model)
+    mesh = build_solver_mesh(model)
 
-    mass_asm = build_mass(solver_mesh, project, n_live=n_live, validate=validate)
-    stiff_asm = build_stiffness(
-        solver_mesh,
-        project,
-        validate=validate,
-        use_shear_deform=use_shear_deform,
-    )
+    mass_asm = build_mass(mesh, project, n_live=n_live, validate=validate)
+    stiff_asm = build_stiffness(mesh, project, validate=validate, use_shear_deform=use_shear_deform)
 
-    fixed_dofs = _collect_fixed_dofs(solver_mesh)
-    if not fixed_dofs:
-        stiff_asm.warnings.append("Mesnetli DOF yok — analiz tekil kalabilir")
+    dof_map = ensure_dof_indices(mesh)
+    fixed_dofs: set[int] = set()
+    for n_key, node in mesh.nodes.items():
+        base = dof_map.get(n_key)
+        if base is None:
+            continue
+        restraint = getattr(node, "restraint", None)
+        if restraint is None:
+            continue
+        for i, name in enumerate(("ux", "uy", "uz", "rx", "ry", "rz")):
+            if getattr(restraint, name, False):
+                fixed_dofs.add(base + i)
 
     warnings = (
         list(pre_report.warnings)
@@ -139,23 +143,15 @@ def run_analysis(
 
     stiff_warns = validate_stiffness(stiff_asm, fixed_dofs=fixed_dofs, check_rank=True)
     warnings.extend(stiff_warns)
-    # opsiyonel: tekil sistemde erken dur
-    if any("tekil" in w.lower() for w in stiff_warns):
-        print("[Stiffness] Tekil sistem tespit edildi, çözüm riskli.")
+
     solver = StructuralSolver(
         K_global=stiff_asm.K_global,
         M_global=mass_asm.M_global,
-        fixed_dofs=fixed_dofs,
         num_dofs=mass_asm.num_dofs,
+        dof_map=dof_map,
+        fixed_dofs=fixed_dofs,
+        nodes=mesh.nodes,
     )
-    if not hasattr(solver, "dof_map"):
-        solver.dof_map = {
-            n_key: int(node.dof_indices[0])
-            for n_key, node in solver_mesh.nodes.items()
-            if getattr(node, "dof_indices", None)
-        }
-    if not hasattr(solver, "M"):
-        solver.M = mass_asm.M_global
 
     static_results: dict[str, StaticCaseResult] = {}
     if run_static:
@@ -165,7 +161,7 @@ def run_analysis(
             if getattr(lc, "run_case", True) and str(getattr(lc, "case_type", "LinStatic")).lower() in ("linstatic", "linearstatic")
         ]
         for cname in targets:
-            static_results[cname] = solve_static_case(project, solver, solver_mesh, cname)
+            static_results[cname] = solve_static_case(project, solver, mesh, cname)
 
     modal: ModalResult | None = None
     if run_modal:
@@ -188,8 +184,8 @@ def run_analysis(
     return StructuralAnalysisResult(
         mass=mass_asm,
         stiffness=stiff_asm,
-        fixed_dofs=fixed_dofs,
-        mesh=solver_mesh,
+        fixed_dofs=sorted(fixed_dofs),
+        mesh=mesh,
         modal=modal,
         spectral=spectral,
         static_results=static_results,

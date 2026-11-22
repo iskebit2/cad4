@@ -4,7 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve, eigh
+from scipy import sparse
+from scipy.sparse.linalg import eigsh, splu
 
 
 @dataclass
@@ -34,34 +35,6 @@ class ModalResult:
         return len(self.periods)
 
 
-def perform_guyan_condensation(K, M, master_indices, slave_indices):
-    K = K.toarray() if hasattr(K, "toarray") else np.asarray(K, dtype=float)
-    M = M.toarray() if hasattr(M, "toarray") else np.asarray(M, dtype=float)
-
-    K_mm = K[np.ix_(master_indices, master_indices)]
-    K_ms = K[np.ix_(master_indices, slave_indices)]
-    K_sm = K[np.ix_(slave_indices, master_indices)]
-    K_ss = K[np.ix_(slave_indices, slave_indices)]
-
-    M_mm = M[np.ix_(master_indices, master_indices)]
-    M_ms = M[np.ix_(master_indices, slave_indices)]
-    M_sm = M[np.ix_(slave_indices, master_indices)]
-    M_ss = M[np.ix_(slave_indices, slave_indices)]
-
-    if K_ss.shape[0] > 0 and np.linalg.cond(K_ss) > 1e14:
-        K_ss = K_ss + 1e-10 * np.eye(K_ss.shape[0])
-
-    T_s = -np.linalg.solve(K_ss, K_sm)
-
-    K_red = K_mm + K_ms @ T_s
-    M_red = M_mm + (M_ms @ T_s) + (T_s.T @ M_sm) + (T_s.T @ M_ss @ T_s)
-
-    K_red = 0.5 * (K_red + K_red.T)
-    M_red = 0.5 * (M_red + M_red.T)
-
-    return K_red, M_red
-
-
 class StructuralSolver:
     ROT_MASS_SCALE: float = 1e-6
     MIN_MASS: float = 1e-9
@@ -69,17 +42,28 @@ class StructuralSolver:
 
     def __init__(
         self,
-        K_global: np.ndarray,
-        M_global: np.ndarray,
+        K_global,
+        M_global,
         fixed_dofs=None,
         num_dofs: int | None = None,
         dof_map: dict[str, int] | None = None,
         nodes: dict | None = None,
     ):
-        self.K = np.asarray(K_global, dtype=float)
-        self.M = np.asarray(M_global, dtype=float)
+        self.K = K_global.tocsc() if sparse.issparse(K_global) else sparse.csc_matrix(np.asarray(K_global, dtype=float))
+        self.M = M_global.tocsc() if sparse.issparse(M_global) else sparse.csc_matrix(np.asarray(M_global, dtype=float))
         self.num_dofs = int(num_dofs) if num_dofs is not None else int(self.K.shape[0])
         self.dof_map = dict(dof_map) if dof_map is not None else {}
+        if not self.dof_map and nodes is not None:
+            self.dof_map = {
+                n_key: int(node.dof_indices[0])
+                for n_key, node in nodes.items()
+                if getattr(node, "dof_indices", None)
+            }
+        if len(self.dof_map) == 0 and self.num_dofs > 0:
+            raise RuntimeError(
+                f"dof_map boş! num_dofs={self.num_dofs}. "
+                f"Node'larda dof_indices atanmamış."
+            )
 
         resolved_fixed: set[int] = set()
         if fixed_dofs is not None:
@@ -98,31 +82,26 @@ class StructuralSolver:
 
         self.fixed_dofs = resolved_fixed
         all_dofs = set(range(self.num_dofs))
-        self.free_dofs = np.array(sorted(all_dofs - self.fixed_dofs), dtype=int)
+        self.free_dofs = np.array(sorted(all_dofs - self.fixed_dofs), dtype=np.intp)
+        self._lu_cache = None
 
-    def _guyan_reduced(self):
-        K_red, M_red = self._reduced()
-        m_diag = np.diag(M_red)
-        master = np.where(m_diag > 1e-9)[0]
-        slave = np.where(m_diag <= 1e-9)[0]
+    def _reduced(self) -> tuple[sparse.csc_matrix, sparse.csc_matrix]:
+        idx = self.free_dofs
+        return self.K[idx, :][:, idx].tocsc(), self.M[idx, :][:, idx].tocsc()
 
-        if len(slave) == 0:
-            return K_red[np.ix_(master, master)], M_red[np.ix_(master, master)]
-
-        return perform_guyan_condensation(K_red, M_red, master, slave)
-
-    def _reduced(self) -> tuple[np.ndarray, np.ndarray]:
-        idx = np.ix_(self.free_dofs, self.free_dofs)
-        return self.K[idx], self.M[idx]
+    def _get_lu(self):
+        if self._lu_cache is None and self.free_dofs.size > 0:
+            K_red, _ = self._reduced()
+            self._lu_cache = splu(K_red)
+        return self._lu_cache
 
     def static_solve(self, F: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         F_vec = np.asarray(F, dtype=float)
         U = np.zeros(self.num_dofs, dtype=float)
 
         if self.free_dofs.size > 0:
-            K_red, _ = self._reduced()
-            F_red = F_vec[self.free_dofs]
-            U[self.free_dofs] = np.linalg.solve(K_red, F_red)
+            lu = self._get_lu()
+            U[self.free_dofs] = lu.solve(F_vec[self.free_dofs])
 
         R = self.K @ U - F_vec
         if self.free_dofs.size > 0:
@@ -136,87 +115,65 @@ class StructuralSolver:
         use_condensation: bool = True,
     ) -> ModalResult:
         K_red, M_red = self._reduced()
-
-        dof_types = self.free_dofs % 6
-        trans_idx = np.where(dof_types < 3)[0]
-        rot_idx = np.where(dof_types >= 3)[0]
-
-        G: np.ndarray | None = None
-
-        if use_condensation and len(rot_idx) > 0:
-            K_cond, M_cond = perform_guyan_condensation(K_red, M_red, trans_idx, rot_idx)
-
-            K_bb = K_red[np.ix_(rot_idx, rot_idx)]
-            K_ba = K_red[np.ix_(rot_idx, trans_idx)]
-            if np.linalg.cond(K_bb) > 1e14:
-                K_bb = K_bb + 1e-10 * np.eye(K_bb.shape[0])
-
-            eigvals_bb = np.linalg.eigvalsh(K_bb)
-            if eigvals_bb.size > 0 and eigvals_bb[0] > 0.0:
-                c, low = cho_factor(K_bb, lower=True, check_finite=False)
-                G = cho_solve((c, low), -K_ba, check_finite=False)
-            else:
-                G, *_ = np.linalg.lstsq(K_bb, -K_ba, rcond=None)
-
-            eigenvalues, vectors_a = eigh(K_cond, M_cond)
-            eigenvalues = np.maximum(eigenvalues, 0.0)
-            order = np.argsort(eigenvalues)
-            eigenvalues = eigenvalues[order]
-            vectors_a = vectors_a[:, order]
-
-            omega = np.sqrt(eigenvalues)
-            frequencies = omega / (2.0 * np.pi)
-            valid = frequencies > self.EIGEN_TOL
-
-            eigenvalues = eigenvalues[valid]
-            vectors_a = vectors_a[:, valid]
-            frequencies = frequencies[valid]
-            periods = np.where(frequencies > self.EIGEN_TOL, 1.0 / frequencies, np.inf)
-
-            count = min(n_modes, len(frequencies))
-            vectors_a = vectors_a[:, :count]
-            frequencies = frequencies[:count]
-            periods = periods[:count]
-
-            full_vectors = np.zeros((len(self.free_dofs), count), dtype=float)
-            full_vectors[trans_idx, :] = vectors_a
-            if G is not None:
-                full_vectors[rot_idx, :] = G @ vectors_a
-
-            participation, eff_mass, modal_mass = self._participation_condensed(
-                vectors_a, M_cond, trans_idx, rot_idx, G, self.free_dofs,
+        n_free = K_red.shape[0]
+        if n_free == 0:
+            empty = np.zeros(0, dtype=float)
+            return ModalResult(
+                frequencies=empty,
+                periods=empty,
+                mode_shapes=np.zeros((0, 0), dtype=float),
+                modal_dofs=self.free_dofs,
+                modal_mass=empty,
+                participation_factor_x=empty,
+                participation_factor_y=empty,
+                participation_factor_z=empty,
+                effective_mass_x=empty,
+                effective_mass_y=empty,
+                effective_mass_z=empty,
             )
-            total_mass_x, total_mass_y, total_mass_z = self._total_masses_condensed(
-                M_cond, trans_idx, rot_idx, G, self.free_dofs,
-            )
+
+        M_eff = self._build_effective_mass(M_red)
+        k_req = min(max(n_modes + 4, n_modes), n_free - 1) if n_free > 1 else 1
+
+        if n_free <= 60 or k_req >= n_free - 1:
+            from scipy.linalg import eigh
+            eigenvalues, full_vectors = eigh(K_red.toarray(), M_eff.toarray())
         else:
-            M_eff = self._build_effective_mass(M_red)
-            eigenvalues, full_vectors = eigh(K_red, M_eff)
-            eigenvalues = np.maximum(eigenvalues, 0.0)
-            order = np.argsort(eigenvalues)
-            eigenvalues = eigenvalues[order]
-            full_vectors = full_vectors[:, order]
-
-            omega = np.sqrt(eigenvalues)
-            frequencies = omega / (2.0 * np.pi)
-            valid = frequencies > self.EIGEN_TOL
-
-            eigenvalues = eigenvalues[valid]
-            full_vectors = full_vectors[:, valid]
-            frequencies = frequencies[valid]
-            periods = np.where(frequencies > self.EIGEN_TOL, 1.0 / frequencies, np.inf)
-
-            count = min(n_modes, len(frequencies))
-            full_vectors = full_vectors[:, :count]
-            frequencies = frequencies[:count]
-            periods = periods[:count]
-
-            participation, eff_mass, modal_mass = self._participation(
-                full_vectors, M_red, self.free_dofs,
+            eigenvalues, full_vectors = eigsh(
+                K_red,
+                k=k_req,
+                M=M_eff,
+                sigma=0.0,
+                which="LM",
+                tol=1e-7,
             )
-            total_mass_x, total_mass_y, total_mass_z = self._total_masses(
-                M_red, self.free_dofs,
-            )
+
+        eigenvalues = np.maximum(np.real(eigenvalues), 0.0)
+        full_vectors = np.real(full_vectors)
+        order = np.argsort(eigenvalues)
+        eigenvalues = eigenvalues[order]
+        full_vectors = full_vectors[:, order]
+
+        omega = np.sqrt(eigenvalues)
+        frequencies = omega / (2.0 * np.pi)
+        valid = frequencies > self.EIGEN_TOL
+
+        eigenvalues = eigenvalues[valid]
+        full_vectors = full_vectors[:, valid]
+        frequencies = frequencies[valid]
+        periods = np.where(frequencies > self.EIGEN_TOL, 1.0 / frequencies, np.inf)
+
+        count = min(n_modes, len(frequencies))
+        full_vectors = full_vectors[:, :count]
+        frequencies = frequencies[:count]
+        periods = periods[:count]
+
+        participation, eff_mass, modal_mass = self._participation(
+            full_vectors, M_red, self.free_dofs,
+        )
+        total_mass_x, total_mass_y, total_mass_z = self._total_masses(
+            M_red, self.free_dofs,
+        )
 
         return ModalResult(
             frequencies=frequencies,
@@ -235,13 +192,12 @@ class StructuralSolver:
             total_mass_z=total_mass_z,
         )
 
-    def _build_effective_mass(self, M: np.ndarray) -> np.ndarray:
-        m_diag = np.diag(M).astype(float).copy()
+    def _build_effective_mass(self, M: sparse.csc_matrix) -> sparse.csc_matrix:
+        m_diag = M.diagonal().astype(float)
         n = len(m_diag)
         if n == 0:
             return M.copy()
 
-        M_eff = M.copy()
         m_max = float(m_diag.max()) if n else 1.0
         mass_tol = 1e-9 * max(1.0, m_max)
 
@@ -251,75 +207,24 @@ class StructuralSolver:
             if dof_int % 6 == 0 and m_diag[i] > mass_tol:
                 trans_mass_map[dof_int] = float(m_diag[i])
 
+        add_diag = np.zeros(n, dtype=float)
         for i in range(n):
             dof_int = int(self.free_dofs[i])
             dof_type = dof_int % 6
             if dof_type in (3, 4, 5):
                 node_base = dof_int - dof_type
                 m_trans = trans_mass_map.get(node_base, 1000.0)
-                if M_eff[i, i] < self.MIN_MASS:
-                    M_eff[i, i] = max(m_trans * self.ROT_MASS_SCALE, self.MIN_MASS)
+                if m_diag[i] < self.MIN_MASS:
+                    add_diag[i] = max(m_trans * self.ROT_MASS_SCALE, self.MIN_MASS) - m_diag[i]
 
-        return M_eff
-
-    def _participation_condensed(
-        self,
-        vectors_a: np.ndarray,
-        M_cond: np.ndarray,
-        trans_idx: np.ndarray,
-        rot_idx: np.ndarray,
-        G: np.ndarray | None,
-        modal_dofs: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        n_modes = vectors_a.shape[1]
-        if n_modes == 0:
-            z = np.zeros((0, 3))
-            return z, z, np.zeros(0)
-
-        r_full = self._direction_vectors(modal_dofs)
-        r_a = r_full[:, trans_idx]
-        if G is not None:
-            r_b = r_full[:, rot_idx]
-            r_cond = r_a + r_b @ G
-        else:
-            r_cond = r_a
-
-        M_phi = M_cond @ vectors_a
-        modal_mass = np.einsum("ij,ij->j", vectors_a, M_phi)
-        safe_mass = np.where(modal_mass > 0, modal_mass, 1.0)
-
-        L = vectors_a.T @ M_cond @ r_cond.T
-        participation = L / safe_mass[:, None]
-        eff_mass = (L ** 2) / safe_mass[:, None]
-
-        return participation, eff_mass, modal_mass
-
-    def _total_masses_condensed(
-        self,
-        M_cond: np.ndarray,
-        trans_idx: np.ndarray,
-        rot_idx: np.ndarray,
-        G: np.ndarray | None,
-        modal_dofs: np.ndarray,
-    ) -> tuple[float, float, float]:
-        r_full = self._direction_vectors(modal_dofs)
-        r_a = r_full[:, trans_idx]
-        if G is not None:
-            r_b = r_full[:, rot_idx]
-            r_cond = r_a + r_b @ G
-        else:
-            r_cond = r_a
-
-        totals = []
-        for i in range(3):
-            r_i = r_cond[i]
-            totals.append(float(r_i @ M_cond @ r_i))
-        return totals[0], totals[1], totals[2]
+        if np.any(add_diag > 0.0):
+            return (M + sparse.diags(add_diag, format="csc")).tocsc()
+        return M
 
     def _participation(
         self,
         mode_shapes: np.ndarray,
-        M_red: np.ndarray,
+        M_red: sparse.csc_matrix,
         modal_dofs: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         n_modes = mode_shapes.shape[1]
@@ -332,7 +237,7 @@ class StructuralSolver:
         modal_mass = np.einsum("ij,ij->j", mode_shapes, M_phi)
         safe_mass = np.where(modal_mass > 0, modal_mass, 1.0)
 
-        L = mode_shapes.T @ M_red @ r.T
+        L = mode_shapes.T @ (M_red @ r.T)
         participation = L / safe_mass[:, None]
         eff_mass = (L ** 2) / safe_mass[:, None]
 
@@ -340,7 +245,7 @@ class StructuralSolver:
 
     @staticmethod
     def _total_masses(
-        M_red: np.ndarray,
+        M_red: sparse.csc_matrix,
         modal_dofs: np.ndarray,
     ) -> tuple[float, float, float]:
         d = np.asarray(modal_dofs) % 6
@@ -348,9 +253,9 @@ class StructuralSolver:
         ry = (d == 1).astype(float)
         rz = (d == 2).astype(float)
         return (
-            float(rx @ M_red @ rx),
-            float(ry @ M_red @ ry),
-            float(rz @ M_red @ rz),
+            float(rx @ (M_red @ rx)),
+            float(ry @ (M_red @ ry)),
+            float(rz @ (M_red @ rz)),
         )
 
     def _direction_vectors(self, modal_dofs: np.ndarray) -> np.ndarray:

@@ -1,10 +1,11 @@
 # inspector/controller.py
 from __future__ import annotations
+from typing import Any
 
 from inspector.adapters import (
     MIXED, element_to_values, elements_to_common_values, values_to_element,
 )
-from inspector.schemas import schema_for_object, multi_schema_for
+from inspector.schemas import schema_for_object, multi_schema_for, set_path
 
 
 class InspectorController:
@@ -92,11 +93,20 @@ class InspectorController:
         ]
         return _common_of(drafts)
 
-    def set_draft_value(self, key_path: str, value) -> None:
-        from inspector.schemas import set_path
-        for o in self.active_objects:
-            uid = getattr(o, "unique_id", id(o))
-            set_path(self._draft.setdefault(uid, {}), key_path, value)
+    def set_draft_value(self, key: str, value: Any) -> None:
+        set_path(self._draft, key, value)
+        self._dirty = True
+        if key == "section_name" and self._catalog is not None:
+            sec = self._catalog.get_area_section(str(value or ""))
+            if sec is not None:
+                mat = getattr(sec, "material", None)
+                self._draft["area_section"] = f"{sec.name} ({sec.area_type}, t={sec.thickness:g})"
+                self._draft["material_info"] = getattr(mat, "name", "—") if mat is not None else "—"
+                if self._draft.get("thick_over") is None:
+                    self._draft["thickness"] = float(sec.thickness)
+            else:
+                self._draft["area_section"] = f"{value} (tanımsız)" if value else "—"
+                self._draft["material_info"] = "—"
 
     def is_dirty(self) -> bool:
         for o in self.active_objects:

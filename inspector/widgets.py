@@ -97,12 +97,12 @@ def draw_field_row(objects: list, key: str, catalog) -> bool:
 
 
 def _draw_mixed(objects, key, catalog) -> bool:
+    sample = next((getattr(o, key, None) for o in objects if getattr(o, key, None) is not None), None)
     imgui.push_style_color(imgui.Col_.frame_bg, imgui.ImVec4(0.30, 0.25, 0.10, 1.0))
     imgui.push_style_color(imgui.Col_.text, imgui.ImVec4(0.95, 0.85, 0.45, 1.0))
-    try:
-        return _dispatch(objects, key, None, catalog, mixed=True)
-    finally:
-        imgui.pop_style_color(2)
+    changed = _dispatch(objects, key, sample, catalog, mixed=True)
+    imgui.pop_style_color(2)
+    return changed
 
 
 def _dispatch(objects, key, value, catalog, mixed=False) -> bool:
@@ -122,14 +122,13 @@ def _dispatch(objects, key, value, catalog, mixed=False) -> bool:
     if isinstance(value, Vertex):
         return _draw_vertex(objects, key, value)
     if isinstance(value, Section):
-        return _draw_section(objects, key, value, catalog)
+        return _draw_section(objects, key, value, catalog, mixed)
     if isinstance(value, Material):
-        return _draw_material(objects, key, value, catalog)
+        return _draw_material(objects, key, value, catalog, mixed)
     if isinstance(value, AreaSection):
-        imgui.text_disabled(getattr(value, "name", "?") or "—")
-        return False
+        return _draw_area_section(objects, key, value, catalog, mixed)
     if isinstance(value, LinkProp):
-        return _draw_link_prop(objects, key, value, catalog)
+        return _draw_link_prop(objects, key, value, catalog, mixed)
     if isinstance(value, int):
         return _draw_int(objects, key, value, mixed)
     if isinstance(value, float):
@@ -319,68 +318,84 @@ def _draw_list(objects, key, value) -> bool:
         imgui.text_disabled(f"...ve {len(value) - 30} tane daha")
     return False
 
-def _draw_section(obj, key, value, catalog) -> bool:
+def _combo_catalog_items(names: list[str], cur: str, mixed: bool) -> tuple[bool, str | None]:
+    items = list(names)
+    if mixed:
+        items.insert(0, "<Karışık>")
+        idx = 0
+    else:
+        if cur and cur not in items:
+            items.insert(0, cur)
+        idx = items.index(cur) if cur in items else -1
+    if not items:
+        return False, None
+    changed, new_idx = imgui.combo("##v", idx, items)
+    if not changed or not (0 <= new_idx < len(items)):
+        return False, None
+    picked = items[new_idx]
+    if mixed and picked == "<Karışık>":
+        return False, None
+    return True, picked
+
+
+def _draw_section(objects, key, value, catalog, mixed=False) -> bool:
     if catalog is None:
         imgui.text_disabled("(catalog yok)")
         return False
     names = catalog.list_sections()
-    if not names:
-        imgui.text_disabled("(section yok)")
-        return False
-    cur = getattr(value, "name", "") if value else ""
-    try:
-        idx = names.index(cur)
-    except ValueError:
-        idx = 0
-    changed, new_idx = imgui.combo("##v", idx, names)
-    if changed and 0 <= new_idx < len(names):
-        setattr(obj, key, catalog.get_section(names[new_idx]))
-        return True
+    cur = "" if mixed else (getattr(value, "name", "") if value else "")
+    changed, picked = _combo_catalog_items(names, cur, mixed)
+    if changed and picked is not None:
+        sec = catalog.get_section(picked)
+        if sec is not None:
+            set_value_all(objects, key, sec)
+            return True
     return False
 
 
-def _draw_material(obj, key, value, catalog) -> bool:
+def _draw_material(objects, key, value, catalog, mixed=False) -> bool:
     if catalog is None:
         imgui.text_disabled("(catalog yok)")
         return False
     names = catalog.list_materials()
-    if not names:
-        imgui.text_disabled("(material yok)")
+    cur = "" if mixed else (getattr(value, "name", "") if value else "")
+    changed, picked = _combo_catalog_items(names, cur, mixed)
+    if changed and picked is not None:
+        mat = catalog.get_material(picked)
+        if mat is not None:
+            set_value_all(objects, key, mat)
+            return True
+    return False
+
+
+def _draw_area_section(objects, key, value, catalog, mixed=False) -> bool:
+    if catalog is None or not hasattr(catalog, "list_area_sections"):
+        imgui.text_disabled("<Karışık>" if mixed else (getattr(value, "name", "?") or "—"))
         return False
-    cur = getattr(value, "name", "") if value else ""
-    try:
-        idx = names.index(cur)
-    except ValueError:
-        idx = 0
-    changed, new_idx = imgui.combo("##v", idx, names)
-    if changed and 0 <= new_idx < len(names):
-        setattr(obj, key, catalog.get_material(names[new_idx]))
-        return True
+    names = catalog.list_area_sections()
+    cur = "" if mixed else (getattr(value, "name", "") if value else "")
+    changed, picked = _combo_catalog_items(names, cur, mixed)
+    if changed and picked is not None:
+        sec = catalog.get_area_section(picked)
+        if sec is not None:
+            set_value_all(objects, key, sec)
+            set_value_all(objects, "section_name", picked)
+            return True
     return False
 
 
-def _draw_area_section(obj, key, value) -> bool:
-    imgui.text_disabled(getattr(value, "name", "?") or "—")
-    return False
-
-
-def _draw_link_prop(obj, key, value, catalog) -> bool:
+def _draw_link_prop(objects, key, value, catalog, mixed=False) -> bool:
     if catalog is None:
         imgui.text_disabled("(catalog yok)")
         return False
     names = catalog.list_link_props()
-    if not names:
-        imgui.text_disabled("(link prop yok)")
-        return False
-    cur = getattr(value, "name", "") if value else ""
-    try:
-        idx = names.index(cur)
-    except ValueError:
-        idx = 0
-    changed, new_idx = imgui.combo("##v", idx, names)
-    if changed and 0 <= new_idx < len(names):
-        setattr(obj, key, catalog.get_link_prop(names[new_idx]))
-        return True
+    cur = "" if mixed else (getattr(value, "name", "") if value else "")
+    changed, picked = _combo_catalog_items(names, cur, mixed)
+    if changed and picked is not None:
+        lp = catalog.get_link_prop(picked)
+        if lp is not None:
+            set_value_all(objects, key, lp)
+            return True
     return False
 
 def _scene_groups(scene, math_model=None):
@@ -513,8 +528,6 @@ def _domain_field_items(element) -> list[tuple[str, Any]]:
     except TypeError:
         return []
 
-# inspector/widgets.py
-
 def draw_schema_field(controller, field, catalog) -> bool:
     """Şemadaki tek bir alanı draft üzerinden render eder."""
     from inspector.adapters import MIXED
@@ -583,19 +596,14 @@ def _dispatch_schema(controller, field, value, mixed, catalog):
 
     if kind == "enum":
         choices = list(field.choices or [])
-        idx = 0
-        if not mixed and value is not None:
-            try:
-                idx = choices.index(str(value))
-            except ValueError:
-                idx = 0
-        c, ni = imgui.combo("##v", idx, choices)
-        if c and 0 <= ni < len(choices):
-            return True, choices[ni]
+        cur = "" if mixed else (str(value) if value is not None else "")
+        c, picked = _combo_catalog_items(choices, cur, mixed)
+        if c and picked is not None:
+            return True, picked
         return False, None
 
     if kind == "info":
-        imgui.text_disabled(str(value) if value not in (None, MIXED) else "—")
+        imgui.text_disabled("<Karışık>" if mixed else (str(value) if value is not None else "—"))
         return False, None
 
     if kind == "section_ref":
@@ -603,14 +611,12 @@ def _dispatch_schema(controller, field, value, mixed, catalog):
             imgui.text_disabled("(catalog yok)")
             return False, None
         names = catalog.list_sections()
-        cur = getattr(value, "name", "") if value else ""
-        idx = names.index(cur) if cur in names else 0
-        if not names:
-            imgui.text_disabled("(section yok)")
-            return False, None
-        c, ni = imgui.combo("##v", idx, names)
-        if c and 0 <= ni < len(names):
-            return True, catalog.get_section(names[ni])
+        cur = "" if mixed else (getattr(value, "name", "") if value else "")
+        c, picked = _combo_catalog_items(names, cur, mixed)
+        if c and picked is not None:
+            sec = catalog.get_section(picked)
+            if sec is not None:
+                return True, sec
         return False, None
 
     if kind == "material_ref":
@@ -618,14 +624,12 @@ def _dispatch_schema(controller, field, value, mixed, catalog):
             imgui.text_disabled("(catalog yok)")
             return False, None
         names = catalog.list_materials()
-        if not names:
-            imgui.text_disabled("(material yok)")
-            return False, None
-        cur = getattr(value, "name", "") if value else ""
-        idx = names.index(cur) if cur in names else 0
-        c, ni = imgui.combo("##v", idx, names)
-        if c and 0 <= ni < len(names):
-            return True, catalog.get_material(names[ni])
+        cur = "" if mixed else (getattr(value, "name", "") if value else "")
+        c, picked = _combo_catalog_items(names, cur, mixed)
+        if c and picked is not None:
+            mat = catalog.get_material(picked)
+            if mat is not None:
+                return True, mat
         return False, None
 
     if kind == "link_prop_ref":
@@ -633,18 +637,22 @@ def _dispatch_schema(controller, field, value, mixed, catalog):
             imgui.text_disabled("(catalog yok)")
             return False, None
         names = catalog.list_link_props()
-        if not names:
-            imgui.text_disabled("(link prop yok)")
-            return False, None
-        cur = getattr(value, "name", "") if value else ""
-        idx = names.index(cur) if cur in names else 0
-        c, ni = imgui.combo("##v", idx, names)
-        if c and 0 <= ni < len(names):
-            return True, catalog.get_link_prop(names[ni])
+        cur = "" if mixed else (getattr(value, "name", "") if value else "")
+        c, picked = _combo_catalog_items(names, cur, mixed)
+        if c and picked is not None:
+            lp = catalog.get_link_prop(picked)
+            if lp is not None:
+                return True, lp
         return False, None
 
     if kind == "string_select":
-        # basit text input (gerekirse catalog listesinden combo'ya çevrilebilir)
+        if catalog is not None and field.key == "section_name" and hasattr(catalog, "list_area_sections"):
+            names = catalog.list_area_sections()
+            cur = "" if mixed else str(value or "")
+            c, picked = _combo_catalog_items(names, cur, mixed)
+            if c and picked is not None:
+                return True, picked
+            return False, None
         v = "" if mixed else str(value or "")
         c, nv = imgui.input_text("##v", v)
         return c, str(nv)

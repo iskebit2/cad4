@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from typing import Any
+import numpy as np
 from pyglm import glm
 from core.id_manager import IDManager
 from core.units import Dimension
@@ -301,24 +302,24 @@ class Frame(Element):
         L = math.sqrt(sum(c * c for c in d))
         return (1.0, 0.0, 0.0) if L < 1e-9 else tuple(c / L for c in d)
 
-    def get_local_axes(self) -> glm.mat3:
+    def get_transformation_matrix(self) -> np.ndarray:
         if not self.node_i or not self.node_j:
-            return glm.mat3(1.0)
-        dx = self.node_j._x - self.node_i._x
-        dy = self.node_j._y - self.node_i._y
-        dz = self.node_j._z - self.node_i._z
-        L = math.sqrt(dx * dx + dy * dy + dz * dz)
-        if L < 1e-9:
-            return glm.mat3(1.0)
-        e1 = glm.vec3(dx / L, dy / L, dz / L)
-        ref = glm.vec3(0, 0, 1) if abs(e1.z) < 0.9999 else glm.vec3(1, 0, 0)
-        e2 = glm.normalize(ref - e1 * glm.dot(ref, e1))
-        e3 = glm.cross(e1, e2)
-        if abs(self.rotation_deg) > 1e-9:
-            a = math.radians(self.rotation_deg)
-            ca, sa = math.cos(a), math.sin(a)
-            e2, e3 = glm.normalize(e2 * ca + e3 * sa), glm.normalize(-e2 * sa + e3 * ca)
-        return glm.mat3(e1, e2, e3)
+            return np.eye(3, dtype=float)
+        from app.commands.analysis.frame_resolver import compute_local_axes
+        R, _ = compute_local_axes(
+            (self.node_i._x, self.node_i._y, self.node_i._z),
+            (self.node_j._x, self.node_j._y, self.node_j._z),
+            beta_deg=self.rotation_deg,
+        )
+        return R.T
+
+    def get_local_axes(self) -> glm.mat3:
+        R_col = self.get_transformation_matrix()
+        return glm.mat3(
+            glm.vec3(float(R_col[0, 0]), float(R_col[1, 0]), float(R_col[2, 0])),
+            glm.vec3(float(R_col[0, 1]), float(R_col[1, 1]), float(R_col[2, 1])),
+            glm.vec3(float(R_col[0, 2]), float(R_col[1, 2]), float(R_col[2, 2])),
+        )
 
 
 @dataclass(init=False)

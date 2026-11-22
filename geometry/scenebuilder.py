@@ -61,7 +61,12 @@ class SceneBuilder:
         Ke: dict | None = None, Ce: dict | None = None,
     ) -> LinkProp:
         if prop_type == LinkPropType.LINEAR:
-            prop = LinkPropLinear(name=name, Ke=Ke, Ce=Ce)
+            kwargs = {}
+            if Ke is not None:
+                kwargs["Ke"] = Ke
+            if Ce is not None:
+                kwargs["Ce"] = Ce
+            prop = LinkPropLinear(name=name, **kwargs)
         else:
             prop = LinkProp(name=name, prop_type=prop_type)
         self.project.add_link_prop(prop)

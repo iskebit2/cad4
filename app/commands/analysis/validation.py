@@ -1,33 +1,19 @@
 # app/commands/analysis/validation.py
-"""Model doğrulama katmanı.
-
-Tasarım ilkeleri
-----------------
-1. **Sadece analizi fiilen imkânsız kılan durumlar ``errors``'a yazılır.**
-   (eksik malzeme, sıfır uzunluklu eleman, tekil sistem, vs.)
-2. **Kullanıcının bilmesi gereken ama analizi engellemeyen durumlar**
-   ``warnings``'e yazılır (auto_mesh paramsız + fallback, düşük yoğunluk, vs.)
-3. ``strict=True`` yalnızca ``errors`` doluysa ``AnalysisValidationError``
-   fırlatır. ``warnings`` her zaman sessizce raporlanır.
-4. Her kontrol kendi alt fonksiyonunda; ``_Checker`` sınıfı state'i taşır.
-   Bu, yeni kural eklemeyi ve test etmeyi kolaylaştırır.
-"""
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
 from typing import Iterable
 
+import numpy as np
+from scipy import sparse
+
 from logging_config import CadLogger
 
 logger = CadLogger.get(__name__)
 
 
-# =============================================================================
-# Hata / Rapor tipleri
-# =============================================================================
 class AnalysisValidationError(Exception):
-    """``strict=True`` modunda, düzeltilmesi zorunlu hatalar bulunduğunda."""
 
     def __init__(self, errors: list[str], warnings: list[str] | None = None):
         self.errors = list(errors)
@@ -57,9 +43,6 @@ class ValidationReport:
         self.warnings.extend(other.warnings)
 
 
-# =============================================================================
-# Yardımcılar
-# =============================================================================
 _EPS = 1e-9
 
 
@@ -76,23 +59,14 @@ def _finite(*values: float) -> bool:
 
 
 def _get_param(obj, name: str, default=0.0) -> float:
-    try:
-        return float(getattr(obj, name, default) or default)
-    except (TypeError, ValueError):
-        return default
+    val = getattr(obj, name, default)
+    if val is None or isinstance(val, bool):
+        return float(default)
+    return float(val)
 
 
-# =============================================================================
-# Frame mesh planı (mesher._frame_station_ratios ile aynı mantık)
-# =============================================================================
 def _resolve_frame_mesh_plan(frame) -> tuple[int, str, bool]:
-    """Mesher'ın gerçekte kullanacağı segmentasyonu çözer.
-
-    Dönen: (n_segments, kaynak, fallback_kullanıldı_mı)
-    - kaynak: "mesh_num_segments" | "mesh_max_length" | "max_sta_spcg"
-              | "min_num_sta" | "single"
-    """
-    L = _get_param(frame, "get_length", 0.0)
+    L = 0.0
     if callable(getattr(frame, "get_length", None)):
         L = float(frame.get_length() or 0.0)
 
@@ -117,11 +91,53 @@ def _resolve_frame_mesh_plan(frame) -> tuple[int, str, bool]:
     return 1, "single", auto
 
 
-# =============================================================================
-# Kontrolör
-# =============================================================================
+def _matrix_is_empty(mat) -> bool:
+    if mat is None:
+        return True
+    if sparse.issparse(mat):
+        return mat.shape[0] == 0 or mat.shape[1] == 0
+    arr = np.asarray(mat)
+    return arr.size == 0
+
+
+def _matrix_all_finite(mat) -> tuple[bool, int]:
+    if sparse.issparse(mat):
+        data = mat.data
+        if data.size == 0:
+            return True, 0
+        mask = ~np.isfinite(data)
+        return not np.any(mask), int(mask.sum())
+    arr = np.asarray(mat)
+    mask = ~np.isfinite(arr)
+    return not np.any(mask), int(mask.sum())
+
+
+def _matrix_max_asymmetry(mat) -> float:
+    if sparse.issparse(mat):
+        diff = (mat - mat.T).tocsr()
+        if diff.nnz == 0:
+            return 0.0
+        return float(np.abs(diff.data).max())
+    arr = np.asarray(mat, dtype=float)
+    return float(np.max(np.abs(arr - arr.T)))
+
+
+def _matrix_is_all_zero(mat, atol: float = 1e-12) -> bool:
+    if sparse.issparse(mat):
+        if mat.nnz == 0:
+            return True
+        return bool(np.all(np.abs(mat.data) <= atol))
+    arr = np.asarray(mat, dtype=float)
+    return bool(np.allclose(arr, 0.0, atol=atol))
+
+
+def _matrix_diagonal(mat) -> np.ndarray:
+    if sparse.issparse(mat):
+        return np.asarray(mat.diagonal(), dtype=float)
+    return np.diag(np.asarray(mat, dtype=float))
+
+
 class _ModelChecker:
-    """Model + proje üzerinde tüm alt kontrolleri koordine eder."""
 
     def __init__(self, model, project):
         self.model = model
@@ -134,7 +150,6 @@ class _ModelChecker:
         self._load_patterns = dict(getattr(project, "load_patterns", {}) or {})
         self._load_cases = dict(getattr(project, "load_cases", {}) or {})
 
-    # ------------------------------------------------------------------
     def run(self) -> ValidationReport:
         self._check_units()
         self._check_materials()
@@ -147,9 +162,6 @@ class _ModelChecker:
         self._check_duplicates()
         return self.report
 
-    # ------------------------------------------------------------------
-    # 1) Birim sistemi
-    # ------------------------------------------------------------------
     def _check_units(self) -> None:
         units = getattr(self.project, "units", None)
         if units is None:
@@ -157,9 +169,6 @@ class _ModelChecker:
                 "Proje birim sistemi tanımsız; varsayılan N-mm kullanılacak."
             )
 
-    # ------------------------------------------------------------------
-    # 2) Malzemeler
-    # ------------------------------------------------------------------
     def _check_materials(self) -> None:
         if not self._materials:
             self.report.add_error(
@@ -189,9 +198,6 @@ class _ModelChecker:
                     f"Malzeme '{name}': density={rho}; öz kütle hesaplanamayacak."
                 )
 
-    # ------------------------------------------------------------------
-    # 3) Frame'ler
-    # ------------------------------------------------------------------
     def _check_frames(self) -> None:
         frames = getattr(self.model, "frames", {}) or {}
         for frame in frames.values():
@@ -200,7 +206,6 @@ class _ModelChecker:
     def _check_frame(self, frame) -> None:
         label = _label(frame, "Frame")
 
-        # Düğümler
         ni = getattr(frame, "node_i", None)
         nj = getattr(frame, "node_j", None)
         if ni is None or nj is None:
@@ -215,7 +220,6 @@ class _ModelChecker:
             self.report.add_error(f"{label}: uzunluk sıfır ({L}).")
             return
 
-        # Kesit + malzeme
         sec = getattr(frame, "section", None)
         if sec is None:
             self.report.add_error(f"{label}: kesit atanmamış.")
@@ -239,7 +243,6 @@ class _ModelChecker:
         elif _get_param(mat, "E1", 0.0) <= 0.0:
             self.report.add_error(f"{label}: malzeme E1 ≤0.")
 
-        # Serbestlik / mesnet kombinasyonu
         r_i = getattr(frame, "release_i", None)
         r_j = getattr(frame, "release_j", None)
         if _all_released(r_i) and _all_released(r_j):
@@ -247,7 +250,6 @@ class _ModelChecker:
                 f"{label}: her iki uçta tüm serbestlikler açık; eleman mekanizmada."
             )
 
-        # Mesh planı
         self._check_frame_mesh(frame, label)
 
     def _check_frame_mesh(self, frame, label: str) -> None:
@@ -276,14 +278,10 @@ class _ModelChecker:
                 f"tanımsız; '{source}' fallback kullanılacak (n_segments={n_seg})."
             )
 
-    # ------------------------------------------------------------------
-    # 4) Area'lar
-    # ------------------------------------------------------------------
     def _check_areas(self) -> None:
         for area in (getattr(self.model, "areas", {}) or {}).values():
             self._check_area(area)
 
-    
     def _check_area(self, area) -> None:
         label = _label(area, "Area")
         nodes = list(getattr(area, "nodes", []) or [])
@@ -293,8 +291,7 @@ class _ModelChecker:
             )
             return
 
-        # --- Malzeme: load transfer ise zorunlu değil ---
-        is_lt = True
+        is_lt = _is_load_transfer(area)
         mat = getattr(area, "material", None)
         if mat is None:
             sec = getattr(area, "area_section", None)
@@ -306,20 +303,16 @@ class _ModelChecker:
             elif _get_param(mat, "E1", 0.0) <= 0.0:
                 self.report.add_error(f"{label}: malzeme E1 ≤0.")
 
-        # --- Kalınlık ---
         th = _get_param(area, "thickness", 0.0)
         if th <= _EPS:
             if is_lt:
-                # Bilinçli kullanım: yapısal katkı yok, yalnızca yük dağıtımı
                 self.report.add_warning(
                     f"{label}: kalınlık ≈0 → 'load transfer' alanı olarak "
                     f"yorumlanacak (K/M'ye katkısı yok)."
                 )
             else:
-                # Material/section varsa ama kalınlık 0 → gerçek hata
                 self.report.add_error(f"{label}: kalınlık ≤0 ({th}).")
 
-        # --- Geometri ---
         pts = [(n.x, n.y, n.z) for n in nodes]
         area_val = _polygon_area(pts)
         if area_val <= 1e-6 * max(1.0, th):
@@ -329,23 +322,6 @@ class _ModelChecker:
         if _has_duplicate_points(pts):
             self.report.add_error(f"{label}: aynı koordinatta iki düğüm var.")
 
-
-    def _is_load_transfer(area) -> bool:
-        """Area yük dağıtım elemanı mı (yapısal katkısı yok)?"""
-        # Explicit davranış alanı varsa
-        behavior = getattr(area, "behavior", None)
-        if behavior is not None and str(getattr(behavior, "value", behavior)).lower() == "loadtransfer":
-            return True
-        # Fallback: kalınlık ≈ 0
-        try:
-            th = float(getattr(area, "thickness", 0.0) or 0.0)
-        except (TypeError, ValueError):
-            return False
-        return th <= 1e-9
-
-    # ------------------------------------------------------------------
-    # 5) Link'ler
-    # ------------------------------------------------------------------
     def _check_links(self) -> None:
         for link in (getattr(self.model, "links", {}) or {}).values():
             label = _label(link, "Link")
@@ -359,7 +335,7 @@ class _ModelChecker:
                 continue
             L = math.dist(
                 (ni.x, ni.y, ni.z), (nj.x, nj.y, nj.z)
-            ) if all(hasattr(n, "x") for n in (ni, nj)) else 0.0
+            )
             if L <= _EPS:
                 self.report.add_error(f"{label}: uzunluk sıfır.")
                 continue
@@ -370,9 +346,6 @@ class _ModelChecker:
                     f"{label}: link özelliği '{prop_name}' proje kayıtlarında yok."
                 )
 
-    # ------------------------------------------------------------------
-    # 6) Düğümler
-    # ------------------------------------------------------------------
     def _check_nodes(self) -> None:
         for node in (getattr(self.model, "nodes", {}) or {}).values():
             label = _label(node, "Node")
@@ -391,7 +364,6 @@ class _ModelChecker:
                             f"{label}: restraint.{dof_name} bool değil ({val!r})."
                         )
 
-            # Yay/spring değerleri pozitif mi
             for sname in ("spring_u1", "spring_u2", "spring_u3",
                           "spring_r1", "spring_r2", "spring_r3"):
                 v = _get_param(node, sname, 0.0)
@@ -400,15 +372,10 @@ class _ModelChecker:
                         f"{label}: {sname}={v} negatif (yorum belirsiz)."
                     )
 
-    # ------------------------------------------------------------------
-    # 7) Yükler
-    # ------------------------------------------------------------------
     def _check_loads(self) -> None:
-        # Yük pattern'ları
         if not self._load_patterns:
             self.report.add_warning("Hiç yük pattern'ı tanımlı değil.")
 
-        # Yük case'leri
         if not self._load_cases:
             self.report.add_warning("Hiç yük kombinasyonu tanımlı değil.")
 
@@ -422,7 +389,6 @@ class _ModelChecker:
                             f"LoadCase '{cname}': pattern '{lname}' tanımlı değil."
                         )
 
-        # Yüklerin pattern'ları mevcut mu
         bad = 0
         for node in (getattr(self.model, "nodes", {}) or {}).values():
             for pl in getattr(node, "loads", []) or []:
@@ -439,9 +405,6 @@ class _ModelChecker:
                 f"... ve {bad - 5} düğüm yükü daha tanımsız pattern'e bağlı."
             )
 
-    # ------------------------------------------------------------------
-    # 8) Mesnetler
-    # ------------------------------------------------------------------
     def _check_restraints(self) -> None:
         nodes = list((getattr(self.model, "nodes", {}) or {}).values())
         if not nodes:
@@ -462,19 +425,13 @@ class _ModelChecker:
                 f"Yalnızca {n_fixed} mesnetli düğüm; stabilite şüpheli."
             )
 
-    # ------------------------------------------------------------------
-    # 9) Duplicate düğümler
-    # ------------------------------------------------------------------
     def _check_duplicates(self) -> None:
         nodes = list((getattr(self.model, "nodes", {}) or {}).values())
         tol = 1e-4
         seen: dict[tuple[int, int, int], str] = {}
         dups = 0
         for n in nodes:
-            try:
-                key = (round(n.x / tol), round(n.y / tol), round(n.z / tol))
-            except (TypeError, AttributeError):
-                continue
+            key = (round(n.x / tol), round(n.y / tol), round(n.z / tol))
             lab = str(getattr(n, "label", ""))
             if key in seen:
                 dups += 1
@@ -488,14 +445,19 @@ class _ModelChecker:
             self.report.add_warning(f"... ve {dups - 5} çakışan düğüm daha.")
 
 
-# =============================================================================
-# Yardımcı fonksiyonlar (modül seviyesi)
-# =============================================================================
+def _is_load_transfer(area) -> bool:
+    behavior = getattr(area, "behavior", None)
+    if behavior is not None and str(getattr(behavior, "value", behavior)).lower() == "loadtransfer":
+        return True
+    th = float(getattr(area, "thickness", 0.0) or 0.0)
+    return th <= 1e-9
+
+
 def _get_param_from_dict(d: dict, key: str, default: float = 0.0) -> float:
-    try:
-        return float(d.get(key, default) or default)
-    except (TypeError, ValueError):
-        return default
+    val = d.get(key, default)
+    if val is None or isinstance(val, bool):
+        return float(default)
+    return float(val)
 
 
 def _all_released(rel) -> bool:
@@ -542,27 +504,7 @@ def _has_duplicate_points(points: Iterable[tuple[float, float, float]],
     return False
 
 
-# =============================================================================
-# Public API
-# =============================================================================
 def validate_model(model, project, strict: bool = True) -> ValidationReport:
-    """Modeli analiz öncesi doğrular.
-
-    Parameters
-    ----------
-    model : MathModel
-        Düğüm, frame, area, link koleksiyonlarını içeren model.
-    project : Project
-        Malzeme, kesit, pattern, case, birim bilgilerini içeren proje.
-    strict : bool
-        ``True`` ise ``report.errors`` dolu olduğunda
-        ``AnalysisValidationError`` fırlatır. ``False`` ise sadece
-        raporu döndürür.
-
-    Returns
-    -------
-    ValidationReport
-    """
     if model is None:
         raise AnalysisValidationError(
             ["Model (math_model) None; analiz başlatılamaz."], []
@@ -588,11 +530,6 @@ def validate_model(model, project, strict: bool = True) -> ValidationReport:
 
 
 def validate_mass(mass_assembly, is_consistent: bool = True) -> list[str]:
-    """``MassAssembly`` üzerinde tutarlılık kontrolleri.
-
-    Bu fonksiyon ``build_mass`` sonunda çağrılır. Sadece uyarı üretir
-    (kütle problemi analizi fiilen durdurmaz).
-    """
     warns: list[str] = []
     if mass_assembly is None:
         return ["Kütle montajı None."]
@@ -603,29 +540,52 @@ def validate_mass(mass_assembly, is_consistent: bool = True) -> list[str]:
             "Toplam kütle 0; modal analiz sıfır özdeğer üretebilir."
         )
 
-    # M_global: simetri + PSD kontrolü (yalnızca consistent modda)
-    if is_consistent:
-        import numpy as np
-        M = getattr(mass_assembly, "M_global", None)
-        if M is not None and M.size > 0:
-            if not np.allclose(M, M.T, atol=1e-9, rtol=1e-6):
-                warns.append("M_global simetrik değil.")
-            diag = np.diag(M)
-            if np.any(diag < -1e-12):
-                warns.append(
-                    "M_global köşegeninde negatif değer(ler) var."
-                )
-            if np.allclose(M, 0.0):
-                warns.append("M_global tamamen sıfır.")
+    M = getattr(mass_assembly, "M_global", None)
+    if not _matrix_is_empty(M):
+        if M.shape[0] != M.shape[1]:
+            warns.append(f"M_global kare değil: {M.shape}.")
+            return warns
 
-    # Katkı özeti
+        finite_ok, _ = _matrix_all_finite(M)
+        if not finite_ok:
+            warns.append("M_global içinde NaN veya Inf değeri var.")
+            return warns
+
+        if is_consistent:
+            asym = _matrix_max_asymmetry(M)
+            if asym > 1e-9:
+                warns.append(f"M_global simetrik değil (max asimetri {asym:.3e}).")
+
+        diag = _matrix_diagonal(M)
+        if np.any(diag < -1e-12):
+            warns.append(
+                "M_global köşegeninde negatif değer(ler) var."
+            )
+
+        if _matrix_is_all_zero(M, atol=1e-12):
+            warns.append("M_global tamamen sıfır.")
+
+        node_sum_kg = sum(getattr(mass_assembly, "node_masses", {}).values())
+        if node_sum_kg > 0.0:
+            M_csc = M.tocsc() if sparse.issparse(M) else sparse.csc_matrix(np.asarray(M, dtype=float))
+            for axis, label in ((0, "X"), (1, "Y"), (2, "Z")):
+                r = np.zeros(M_csc.shape[0], dtype=float)
+                r[axis::6] = 1.0
+                eff_kg = float(r @ (M_csc @ r)) * 1000.0
+                if abs(eff_kg - node_sum_kg) / node_sum_kg > 1e-3:
+                    warns.append(
+                        f"Toplam yapısal kütle ({label} yönü: {eff_kg:.2f} kg) ile düğüm kütleleri ({node_sum_kg:.2f} kg) tutarsız."
+                    )
+
     contribs = getattr(mass_assembly, "contributions", []) or []
     if not contribs:
         warns.append("Kütle katkısı kaydı boş (mass_assembly.contributions).")
     else:
-        bad = [c for c in contribs
-               if not math.isfinite(getattr(c, "mass_kg", 0.0))
-               or getattr(c, "mass_kg", 0.0) < 0.0]
+        bad = [
+            c for c in contribs
+            if not math.isfinite(getattr(c, "mass_kg", 0.0))
+            or getattr(c, "mass_kg", 0.0) < 0.0
+        ]
         if bad:
             warns.append(
                 f"{len(bad)} kütle katkısı negatif veya NaN."
@@ -633,50 +593,20 @@ def validate_mass(mass_assembly, is_consistent: bool = True) -> list[str]:
 
     return warns
 
-# app/commands/analysis/validation.py
-# ... (mevcut refactor kodu) ...
-
-import numpy as np
-
 
 def validate_stiffness(
     stiffness_assembly,
-    fixed_dofs: list[int] | None = None,
+    fixed_dofs=None,
     *,
     check_rank: bool = True,
     rank_tol: float = 1e-9,
 ) -> list[str]:
-    """``StiffnessAssembly`` üzerinde montaj sonrası tutarlılık kontrolleri.
-
-    Bu fonksiyon ``build_stiffness`` sonunda çağrılır. Dönen liste **uyarı**
-    niteliğindedir; ancak boş olmayan liste, çözümün tekil/hatalı olma
-    riskini gösterir. Çözücü (``StructuralSolver``) yine de çalışabilir;
-    nihai karar çağıranındır.
-
-    Parametreler
-    ------------
-    stiffness_assembly : StiffnessAssembly
-        ``K_global`` (N/mm), ``frame_count``, ``area_count``, ``link_count``,
-        ``skipped``, ``warnings`` alanlarını taşıyan nesne.
-    fixed_dofs : list[int] | None
-        Mesnetli DOF endeksleri. Verilirse, serbest (free) alt matrisin
-        rank'ı kontrol edilir. Verilmezse yalnızca global K kontrol edilir.
-    check_rank : bool
-        Rank testi yapılsın mı (büyük modellerde pahalı olabilir).
-    rank_tol : float
-        ``np.linalg.matrix_rank`` için göreli tolerans.
-
-    Returns
-    -------
-    list[str]
-        Uyarı listesi. Boşsa montaj sağlıklı.
-    """
     warns: list[str] = []
     if stiffness_assembly is None:
         return ["StiffnessAssembly None; rijitlik montajı yapılmamış."]
 
     K = getattr(stiffness_assembly, "K_global", None)
-    if K is None or K.size == 0:
+    if _matrix_is_empty(K):
         return ["K_global boş veya None."]
 
     n_dof = K.shape[0]
@@ -684,70 +614,68 @@ def validate_stiffness(
         warns.append(f"K_global kare değil: {K.shape}.")
         return warns
 
-    # 1) Sonluluk
-    if not np.all(np.isfinite(K)):
-        n_bad = int((~np.isfinite(K)).sum())
+    finite_ok, n_bad = _matrix_all_finite(K)
+    if not finite_ok:
         warns.append(f"K_global'de {n_bad} adet NaN/Inf eleman var.")
 
-    # 2) Simetri
-    if not np.allclose(K, K.T, atol=1e-6, rtol=1e-6):
-        max_asym = float(np.max(np.abs(K - K.T)))
-        warns.append(f"K_global simetrik değil (max asimetri {max_asym:.3e}).")
+    asym = _matrix_max_asymmetry(K)
+    if asym > 1e-6:
+        warns.append(f"K_global simetrik değil (max asimetri {asym:.3e}).")
 
-    # 3) Köşegen işareti
-    diag = np.diag(K)
+    diag = _matrix_diagonal(K)
     if np.any(diag < -1e-9):
         n_neg = int((diag < -1e-9).sum())
         warns.append(
             f"K_global köşegeninde {n_neg} negatif değer var "
             f"(min {float(diag.min()):.3e})."
         )
-    if np.allclose(diag, 0.0, atol=1e-12):
+    if np.all(np.abs(diag) <= 1e-12):
         warns.append("K_global köşegeni tamamen sıfır.")
 
-    # 4) Ölçek / kondisyon
-    if np.any(diag > 0):
-        ratio = float(diag[diag > 0].max() / diag[diag > 0].min())
+    pos_diag = diag[diag > 0]
+    if pos_diag.size > 0:
+        ratio = float(pos_diag.max() / pos_diag.min())
         if ratio > 1e12:
             warns.append(
                 f"Köşegen ölçek oranı {ratio:.2e} (>1e12); kondisyon zayıf."
             )
 
-    # 5) Sıfır satır/sütun → hiçbir elemanda bağlanmamış DOF
-    zero_rows = np.where(np.all(np.abs(K) < 1e-12, axis=1))[0]
+    if sparse.issparse(K):
+        row_max = np.abs(K.tocsr()).max(axis=1).toarray().ravel()
+    else:
+        row_max = np.max(np.abs(np.asarray(K, dtype=float)), axis=1)
+
+    zero_rows = np.flatnonzero(row_max < 1e-12)
     if zero_rows.size > 0:
         warns.append(
             f"{zero_rows.size} DOF hiçbir elemanda bağlı değil "
             f"(örnek indeksler: {zero_rows[:5].tolist()})."
         )
 
-    # 6) Rank / tekil kontrol
     if check_rank:
-        try:
-            if fixed_dofs:
-                all_dofs = np.arange(n_dof)
-                free = np.setdiff1d(all_dofs, np.asarray(fixed_dofs))
-                if free.size > 0:
-                    K_ff = K[np.ix_(free, free)]
-                    r_free = int(np.linalg.matrix_rank(K_ff, tol=rank_tol))
-                    if r_free < free.size:
-                        defekt = free.size - r_free
-                        warns.append(
-                            f"Serbest alt matris tekil: rank {r_free}/{free.size} "
-                            f"(eksik {defekt} bağımsız denklem). "
-                            f"Yapıda mekanizma/eksik mesnet olabilir."
-                        )
-            else:
-                r_full = int(np.linalg.matrix_rank(K, tol=rank_tol))
-                if r_full < n_dof:
+        K_csc = K.tocsc() if sparse.issparse(K) else sparse.csc_matrix(np.asarray(K, dtype=float))
+        fixed_arr = np.asarray(sorted(fixed_dofs), dtype=np.intp) if fixed_dofs else np.empty(0, dtype=np.intp)
+        if fixed_arr.size > 0:
+            all_dofs = np.arange(n_dof, dtype=np.intp)
+            free = np.setdiff1d(all_dofs, fixed_arr)
+            if free.size > 0:
+                K_ff = K_csc[free, :][:, free].toarray()
+                r_free = int(np.linalg.matrix_rank(K_ff, tol=rank_tol))
+                if r_free < free.size:
+                    defekt = free.size - r_free
                     warns.append(
-                        f"K_global tekil: rank {r_full}/{n_dof}. "
-                        f"Mesnetler yetersiz olabilir."
+                        f"Serbest alt matris tekil: rank {r_free}/{free.size} "
+                        f"(eksik {defekt} bağımsız denklem). "
+                        f"Yapıda mekanizma/eksik mesnet olabilir."
                     )
-        except np.linalg.LinAlgError as exc:
-            warns.append(f"Rank hesabı başarısız: {exc}")
+        else:
+            r_full = int(np.linalg.matrix_rank(K_csc.toarray(), tol=rank_tol))
+            if r_full < n_dof:
+                warns.append(
+                    f"K_global tekil: rank {r_full}/{n_dof}. "
+                    f"Mesnetler yetersiz olabilir."
+                )
 
-    # 7) Montaj istatistikleri
     skipped = getattr(stiffness_assembly, "skipped", []) or []
     n_frames = getattr(stiffness_assembly, "frame_count", 0)
     n_areas = getattr(stiffness_assembly, "area_count", 0)
@@ -762,10 +690,11 @@ def validate_stiffness(
 
     return warns
 
+
 __all__ = [
     "AnalysisValidationError",
     "ValidationReport",
     "validate_model",
     "validate_mass",
-    "validate_stiffness"
+    "validate_stiffness",
 ]

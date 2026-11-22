@@ -5,14 +5,20 @@ import math
 from dataclasses import dataclass, field
 
 import numpy as np
+from scipy import sparse
 
 from domain.definition import LinkPropLinear
-
+from app.commands.analysis.frame_resolver import (
+    compute_local_axes,
+    resolve_frame_kinematics,
+    resolve_section,
+    rigid_offset_matrix,
+)
 
 @dataclass
 class StiffnessAssembly:
     num_dofs: int
-    K_global: np.ndarray
+    K_global: sparse.csc_matrix
     frame_count: int = 0
     area_count: int = 0
     link_count: int = 0
@@ -160,24 +166,9 @@ def local_stiffness(
 
 
 def transformation_matrix(p1, p2, beta_deg: float = 0.0, up_global=(0.0, 0.0, 1.0)):
-    p1 = np.asarray(p1, dtype=float)
-    p2 = np.asarray(p2, dtype=float)
-    v = p2 - p1
-    L = float(np.linalg.norm(v))
+    R, L = compute_local_axes(p1, p2, beta_deg=beta_deg, up_global=up_global)
     if L < 1e-9:
         raise ValueError(f"Sıfır uzunluklu eleman: L={L}")
-    e1 = v / L
-    up = np.asarray(up_global, dtype=float)
-    if abs(np.dot(e1, up)) > 0.9999:
-        up = np.array([0.0, 1.0, 0.0]) if abs(e1[2]) > 0.9999 else np.array([0.0, 0.0, 1.0])
-    e3 = np.cross(e1, up)
-    e3 /= np.linalg.norm(e3)
-    e2 = np.cross(e3, e1)
-    if abs(beta_deg) > 1e-12:
-        a = math.radians(beta_deg)
-        ca, sa = math.cos(a), math.sin(a)
-        e2, e3 = ca * e2 + sa * e3, -sa * e2 + ca * e3
-    R = np.vstack([e1, e2, e3])
     T = np.kron(np.eye(4), R)
     return T, L
 
@@ -188,8 +179,7 @@ def link_transformation_matrix(p1, p2) -> np.ndarray:
     v = p2 - p1
     L = float(np.linalg.norm(v))
     if L < 1e-9:
-        R = np.eye(3, dtype=float)
-        return np.kron(np.eye(4), R)
+        return np.eye(12, dtype=float)
     T, _ = transformation_matrix(p1, p2, beta_deg=0.0)
     return T
 
@@ -303,7 +293,27 @@ def ensure_dof_indices(scene, dof_map: dict[str, int] | None = None) -> dict[str
     return resolved_map
 
 
-def _assemble_node_springs(node, K: np.ndarray, num_dofs: int) -> bool:
+def _push_block(
+    rows: list[np.ndarray],
+    cols: list[np.ndarray],
+    vals: list[np.ndarray],
+    dofs: list[int],
+    mat: np.ndarray,
+) -> None:
+    d_arr = np.asarray(dofs, dtype=np.int32)
+    n = d_arr.size
+    rows.append(np.repeat(d_arr, n))
+    cols.append(np.tile(d_arr, n))
+    vals.append(mat.ravel())
+
+
+def _assemble_node_springs(
+    node,
+    rows: list[np.ndarray],
+    cols: list[np.ndarray],
+    vals: list[np.ndarray],
+    num_dofs: int,
+) -> bool:
     dofs = getattr(node, "dof_indices", None)
     if not dofs or len(dofs) != 6:
         return False
@@ -315,17 +325,32 @@ def _assemble_node_springs(node, K: np.ndarray, num_dofs: int) -> bool:
         float(getattr(node, "spring_r2", 0.0) or 0.0),
         float(getattr(node, "spring_r3", 0.0) or 0.0),
     )
-    added = False
+    r_list: list[int] = []
+    v_list: list[float] = []
     for idx, k_val in enumerate(springs):
         if k_val > 0.0:
             dof = dofs[idx]
             if dof is not None and 0 <= dof < num_dofs:
-                K[dof, dof] += k_val
-                added = True
-    return added
+                r_list.append(int(dof))
+                v_list.append(k_val)
+    if not r_list:
+        return False
+    arr = np.asarray(r_list, dtype=np.int32)
+    rows.append(arr)
+    cols.append(arr)
+    vals.append(np.asarray(v_list, dtype=float))
+    return True
 
 
-def _assemble_link(link, project, K: np.ndarray, num_dofs: int, rigid_stiff: float = 1e12) -> str | None:
+def _assemble_link(
+    link,
+    project,
+    rows: list[np.ndarray],
+    cols: list[np.ndarray],
+    vals: list[np.ndarray],
+    num_dofs: int,
+    rigid_stiff: float = 1e12,
+) -> str | None:
     ni = getattr(link, "node_i", None)
     nj = getattr(link, "node_j", None)
     if ni is None or nj is None:
@@ -379,7 +404,7 @@ def _assemble_link(link, project, K: np.ndarray, num_dofs: int, rigid_stiff: flo
     if any(d is None or d < 0 or d >= num_dofs for d in dofs):
         return "link dof sınır dışı"
 
-    K[np.ix_(dofs, dofs)] += k_glob
+    _push_block(rows, cols, vals, dofs, k_glob)
     return None
 
 
@@ -394,7 +419,9 @@ def build_stiffness(
     ensure_dof_indices(scene, dof_map=dof_map)
     num_dofs = len(scene.nodes) * 6
 
-    K = np.zeros((num_dofs, num_dofs), dtype=float)
+    rows: list[np.ndarray] = []
+    cols: list[np.ndarray] = []
+    vals: list[np.ndarray] = []
     skipped: list[tuple[str, str]] = []
     warnings: list[str] = []
     frame_count = 0
@@ -403,31 +430,38 @@ def build_stiffness(
     spring_node_count = 0
 
     for node in scene.nodes.values():
-        if _assemble_node_springs(node, K, num_dofs):
+        if _assemble_node_springs(node, rows, cols, vals, num_dofs):
             spring_node_count += 1
 
     for frame in scene.frames.values():
-        err = _assemble_frame(frame, K, num_dofs, use_shear_deform=use_shear_deform)
+        err = _assemble_frame(frame, rows, cols, vals, num_dofs, use_shear_deform=use_shear_deform)
         if err is None:
             frame_count += 1
         else:
             skipped.append((str(getattr(frame, "label", "?")), err))
 
     for area_key, area in getattr(scene, "areas", {}).items():
-        err = _assemble_area(area, K, num_dofs)
+        err = _assemble_area(area, rows, cols, vals, num_dofs)
         if err is None:
             area_count += 1
         else:
             skipped.append((str(getattr(area, "label", f"Area {area_key}")), err))
 
     for link_key, link in getattr(scene, "links", {}).items():
-        err = _assemble_link(link, project, K, num_dofs)
+        err = _assemble_link(link, project, rows, cols, vals, num_dofs)
         if err is None:
             link_count += 1
         else:
             skipped.append((str(getattr(link, "label", f"Link {link_key}")), err))
 
-    K = 0.5 * (K + K.T)
+    if rows:
+        K = sparse.coo_matrix(
+            (np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))),
+            shape=(num_dofs, num_dofs),
+        ).tocsc()
+        K = 0.5 * (K + K.T)
+    else:
+        K = sparse.csc_matrix((num_dofs, num_dofs), dtype=float)
 
     asm = StiffnessAssembly(
         num_dofs=num_dofs,
@@ -448,71 +482,77 @@ def build_stiffness(
     return asm
 
 
+def _resolve_section_props(sec) -> dict[str, float]:
+    props: dict[str, float] = {}
+    cat = getattr(sec, "catalog_props", None) or {}
+    prm = getattr(sec, "profile_params", None) or {}
+    for src in (cat, prm):
+        for k, v in src.items():
+            if isinstance(v, (int, float)) and math.isfinite(float(v)):
+                props[k] = float(v)
+
+    h = props.get("h", 0.0)
+    b = props.get("b", 0.0)
+    if h > 0.0 and b > 0.0:
+        if "Area" not in props or props["Area"] <= 0.0:
+            props["Area"] = b * h
+        if "I33" not in props or props["I33"] <= 0.0:
+            props["I33"] = (b * h**3) / 12.0
+        if "I22" not in props or props["I22"] <= 0.0:
+            props["I22"] = (h * b**3) / 12.0
+        if "J" not in props or props["J"] <= 0.0:
+            a_max, b_min = max(h, b), min(h, b)
+            ratio = b_min / a_max
+            beta = (1.0 / 3.0) - 0.21 * ratio * (1.0 - (ratio**4) / 12.0)
+            props["J"] = beta * a_max * (b_min**3)
+
+    return props
+
+
 def _assemble_frame(
-    frame, K: np.ndarray, num_dofs: int, use_shear_deform: bool = True
+    frame,
+    rows: list[np.ndarray],
+    cols: list[np.ndarray],
+    vals: list[np.ndarray],
+    num_dofs: int,
+    use_shear_deform: bool = True,
 ) -> str | None:
-    sec = getattr(frame, "section", None)
-    if not sec:
-        return "section yok"
-    mat = getattr(sec, "material", None)
-    if not mat:
-        return "material yok"
-
-    params = sec.profile_params or {}
-    f_mods = getattr(frame, "modifiers", None) or {}
-
-    if "Area" not in params or "I33" not in params or "I22" not in params:
-        return "Kesit parametreleri (Area, I33, I22) eksik"
-
-    a_mod = float(params.get("AMod", 1.0)) * float(f_mods.get("Area", f_mods.get("AMod", 1.0)))
-    j_mod = float(params.get("JMod", 1.0)) * float(f_mods.get("J", f_mods.get("JMod", 1.0)))
-    i3_mod = float(params.get("I3Mod", 1.0)) * float(f_mods.get("I33", f_mods.get("I3Mod", 1.0)))
-    i2_mod = float(params.get("I2Mod", 1.0)) * float(f_mods.get("I22", f_mods.get("I2Mod", 1.0)))
-    as2_mod = float(f_mods.get("AS2", 1.0))
-    as3_mod = float(f_mods.get("AS3", 1.0))
-
-    A = float(params["Area"]) * a_mod
-    J = float(params.get("J", 0.0)) * j_mod
-    I33 = float(params["I33"]) * i3_mod
-    I22 = float(params["I22"]) * i2_mod
-    AS2 = float(params.get("AS2", params["Area"])) * as2_mod
-    AS3 = float(params.get("AS3", params["Area"])) * as3_mod
-
-    E = float(getattr(mat, "E1", 0.0))
-    G = float(getattr(mat, "G12", 0.0))
-    if E <= 0.0 or G <= 0.0:
-        return f"Geçersiz malzeme E1={E}, G12={G}"
+    sec_res = resolve_section(getattr(frame, "section", None), getattr(frame, "modifiers", None))
+    if sec_res is None:
+        return "section veya kesit parametreleri eksik"
+    if sec_res.E <= 0.0 or sec_res.G <= 0.0:
+        return f"Geçersiz malzeme E1={sec_res.E}, G12={sec_res.G}"
 
     ni = getattr(frame, "node_i", None)
     nj = getattr(frame, "node_j", None)
     if ni is None or nj is None:
         return "frame uç düğümleri eksik"
 
-    p1 = (ni.x, ni.y, ni.z)
-    p2 = (nj.x, nj.y, nj.z)
-    if math.dist(p1, p2) < 1e-9:
+    if math.dist((ni.x, ni.y, ni.z), (nj.x, nj.y, nj.z)) < 1e-9:
         return "Sıfır uzunluklu eleman"
 
-    T, L = transformation_matrix(p1, p2, getattr(frame, "rotation_deg", 0.0) or 0.0)
+    kin = resolve_frame_kinematics(frame, sec_res)
     k_loc = local_stiffness(
-        E=E,
-        G=G,
-        A=A,
-        J=J,
-        I33=I33,
-        I22=I22,
-        AS2=AS2,
-        AS3=AS3,
-        L=L,
+        E=sec_res.E,
+        G=sec_res.G,
+        A=sec_res.A,
+        J=sec_res.J,
+        I33=sec_res.I33,
+        I22=sec_res.I22,
+        AS2=sec_res.AS2,
+        AS3=sec_res.AS3,
+        L=kin.L_axis,
         release_i=getattr(frame, "release_i", None),
         release_j=getattr(frame, "release_j", None),
         use_shear_deform=use_shear_deform,
-        offset_i=float(getattr(frame, "offset_length_i", 0.0) or 0.0),
-        offset_j=float(getattr(frame, "offset_length_j", 0.0) or 0.0),
-        rigid_factor=float(getattr(frame, "rigid_factor", 0.0) or 0.0),
+        offset_i=getattr(frame, "offset_length_i", 0.0) or 0.0,
+        offset_j=getattr(frame, "offset_length_j", 0.0) or 0.0,
+        rigid_factor=getattr(frame, "rigid_factor", 0.0) or 0.0,
     )
 
-    k_glob = T.T @ k_loc @ T
+    k_node_loc = kin.T_ecc.T @ k_loc @ kin.T_ecc
+    k_glob = kin.T_axis.T @ k_node_loc @ kin.T_axis
+
     dofs_i = getattr(ni, "dof_indices", None)
     dofs_j = getattr(nj, "dof_indices", None)
     if not dofs_i or not dofs_j:
@@ -522,11 +562,17 @@ def _assemble_frame(
     if any(d is None or d < 0 or d >= num_dofs for d in dofs):
         return "frame dof sınır dışı"
 
-    K[np.ix_(dofs, dofs)] += k_glob
+    _push_block(rows, cols, vals, dofs, k_glob)
     return None
 
 
-def _assemble_area(area, K: np.ndarray, num_dofs: int) -> str | None:
+def _assemble_area(
+    area,
+    rows: list[np.ndarray],
+    cols: list[np.ndarray],
+    vals: list[np.ndarray],
+    num_dofs: int,
+) -> str | None:
     nodes = getattr(area, "nodes", [])
     if len(nodes) < 3:
         return "area düğüm sayısı < 3"
@@ -561,6 +607,6 @@ def _assemble_area(area, K: np.ndarray, num_dofs: int) -> str | None:
         if any(d is None or d < 0 or d >= num_dofs for d in tri_dofs):
             return "area dof sınır dışı"
 
-        K[np.ix_(tri_dofs, tri_dofs)] += k_tri_glob
+        _push_block(rows, cols, vals, tri_dofs, k_tri_glob)
 
     return None

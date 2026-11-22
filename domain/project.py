@@ -450,6 +450,12 @@ class ProjectCatalog:
     def get_section(self, name):
         return self.project.sections.get(name)
 
+    def list_area_sections(self):
+        return sorted(self.project.area_sections.keys())
+
+    def get_area_section(self, name):
+        return self.project.area_sections.get(name)
+
     def get_link_prop(self, name):
         return self.project.link_props.get(name)
 

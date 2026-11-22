@@ -1,12 +1,12 @@
 # app/commands/analysis\mass_assembly.py
-
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
 
 import numpy as np
-
+from scipy import sparse
+from app.commands.analysis.frame_resolver import resolve_frame_kinematics, resolve_section
 from app.commands.analysis.stiffness_assembly import transformation_matrix
 from core.units import G_M_S2, MEGAGRAM
 from domain.definition import LoadDirection
@@ -34,7 +34,7 @@ class MassContribution:
 @dataclass
 class MassAssembly:
     num_dofs: int
-    M_global: np.ndarray
+    M_global: sparse.csc_matrix
     node_masses: dict[str, float]
     contributions: list[MassContribution] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -51,6 +51,41 @@ class MassAssembly:
     def total_ton(self) -> float:
         return self.total_kg / MEGAGRAM
 
+def _frame_consistent_mass_local(
+    mass_per_len: float,
+    A: float,
+    I22: float,
+    I33: float,
+    J: float,
+    kin,
+) -> np.ndarray:
+    L = kin.L_clear
+    m_tot = mass_per_len * L
+    m = np.zeros((12, 12), dtype=float)
+
+    m[0, 0] = m[6, 6] = m_tot / 3.0
+    m[0, 6] = m[6, 0] = m_tot / 6.0
+
+    Ip = (I22 + I33) if (I22 + I33) > 0.0 else J
+    rx_sq = (Ip / A) if A > 0.0 else 0.0
+    m_rot = m_tot * rx_sq
+    m[3, 3] = m[9, 9] = m_rot / 3.0
+    m[3, 9] = m[9, 3] = m_rot / 6.0
+
+    c_b = m_tot / 420.0
+    for idx_u, idx_r, sgn in ((1, 5, 1.0), (2, 4, -1.0)):
+        iu, ir, ju, jr = idx_u, idx_r, 6 + idx_u, 6 + idx_r
+        m[iu, iu] = m[ju, ju] = 156.0 * c_b
+        m[iu, ju] = m[ju, iu] = 54.0 * c_b
+        m[iu, ir] = m[ir, iu] = sgn * 22.0 * L * c_b
+        m[ju, jr] = m[jr, ju] = -sgn * 22.0 * L * c_b
+        m[iu, jr] = m[jr, iu] = -sgn * 13.0 * L * c_b
+        m[ju, ir] = m[ir, ju] = sgn * 13.0 * L * c_b
+        m[ir, ir] = m[jr, jr] = 4.0 * (L * L) * c_b
+        m[ir, jr] = m[jr, ir] = -3.0 * (L * L) * c_b
+
+    m_node_loc = kin.T_ecc.T @ (kin.H.T @ m @ kin.H) @ kin.T_ecc
+    return 0.5 * (m_node_loc + m_node_loc.T)
 
 def _is_vertical_load_set(load) -> bool:
     ld = str(getattr(load, "load_dir", "") or "").strip()
@@ -111,8 +146,8 @@ def _distributed_load_mass_kg(load, frame_length: float) -> float:
         for seg in segs:
             x1 = _load_segment_value(seg, "x1", 0.0)
             x2 = _load_segment_value(seg, "x2", 1.0)
-            q1 = _load_segment_value(seg, "q1", 0.0)
-            q2 = _load_segment_value(seg, "q2", 0.0)
+            q1 = abs(_load_segment_value(seg, "q1", 0.0))
+            q2 = abs(_load_segment_value(seg, "q2", 0.0))
             dx = x2 - x1
             if dx <= 0:
                 continue
@@ -124,7 +159,7 @@ def _distributed_load_mass_kg(load, frame_length: float) -> float:
     p2 = getattr(load, "p2", None)
     if p1 is None or p2 is None:
         return 0.0
-    p_avg = 0.5 * (float(p1) + float(p2))
+    p_avg = 0.5 * (abs(float(p1)) + abs(float(p2)))
     return (p_avg * frame_length) / G_M_S2
 
 
@@ -137,46 +172,43 @@ def local_consistent_mass(
     if L <= 0 or m <= 0:
         return m_mat
 
-    axial = (m / 6.0) * np.array([[2.0, 1.0], [1.0, 2.0]])
-    m_mat[0, 0] = axial[0, 0]
-    m_mat[0, 6] = axial[0, 1]
-    m_mat[6, 0] = axial[1, 0]
-    m_mat[6, 6] = axial[1, 1]
+    c_ax = m / 6.0
+    m_mat[0, 0] = 2.0 * c_ax
+    m_mat[0, 6] = c_ax
+    m_mat[6, 0] = c_ax
+    m_mat[6, 6] = 2.0 * c_ax
 
     m_t = m * (J / A) if A > 0 else m
-    torsion = (m_t / 6.0) * np.array([[2.0, 1.0], [1.0, 2.0]])
-    m_mat[3, 3] = torsion[0, 0]
-    m_mat[3, 9] = torsion[0, 1]
-    m_mat[9, 3] = torsion[1, 0]
-    m_mat[9, 9] = torsion[1, 1]
+    c_t = m_t / 6.0
+    m_mat[3, 3] = 2.0 * c_t
+    m_mat[3, 9] = c_t
+    m_mat[9, 3] = c_t
+    m_mat[9, 9] = 2.0 * c_t
 
-    beam_m1 = (m / 420.0) * np.array([
-        [156.0,  22.0 * L,   54.0, -13.0 * L],
-        [22.0 * L, 4.0 * L**2, 13.0 * L, -3.0 * L**2],
-        [54.0,   13.0 * L,  156.0, -22.0 * L],
-        [-13.0 * L, -3.0 * L**2, -22.0 * L, 4.0 * L**2]
+    c_b = m / 420.0
+    L2 = L * L
+    beam_m1 = c_b * np.array([
+        [156.0, 22.0 * L, 54.0, -13.0 * L],
+        [22.0 * L, 4.0 * L2, 13.0 * L, -3.0 * L2],
+        [54.0, 13.0 * L, 156.0, -22.0 * L],
+        [-13.0 * L, -3.0 * L2, -22.0 * L, 4.0 * L2],
     ])
-    idx1 = [1, 5, 7, 11]
-    for r_i, ri in enumerate(idx1):
-        for c_i, ci in enumerate(idx1):
-            m_mat[ri, ci] += beam_m1[r_i, c_i]
+    idx1 = np.array([1, 5, 7, 11], dtype=np.intp)
+    m_mat[np.ix_(idx1, idx1)] += beam_m1
 
-    beam_m2 = (m / 420.0) * np.array([
-        [156.0, -22.0 * L,   54.0,  13.0 * L],
-        [-22.0 * L, 4.0 * L**2, -13.0 * L, -3.0 * L**2],
-        [54.0,  -13.0 * L,  156.0,  22.0 * L],
-        [13.0 * L, -3.0 * L**2,  22.0 * L, 4.0 * L**2]
+    beam_m2 = c_b * np.array([
+        [156.0, -22.0 * L, 54.0, 13.0 * L],
+        [-22.0 * L, 4.0 * L2, -13.0 * L, -3.0 * L2],
+        [54.0, -13.0 * L, 156.0, 22.0 * L],
+        [13.0 * L, -3.0 * L2, 22.0 * L, 4.0 * L2],
     ])
-    idx2 = [2, 4, 8, 10]
-    for r_i, ri in enumerate(idx2):
-        for c_i, ci in enumerate(idx2):
-            m_mat[ri, ci] += beam_m2[r_i, c_i]
+    idx2 = np.array([2, 4, 8, 10], dtype=np.intp)
+    m_mat[np.ix_(idx2, idx2)] += beam_m2
 
     return 0.5 * (m_mat + m_mat.T)
 
 
 def triangle_consistent_mass_3d(nodes: list, thickness: float, material) -> np.ndarray:
-    """3 düğümlü 3D kabuk elemanı 18x18 Consistent Kütle Matrisi."""
     n = len(nodes)
     if n < 3:
         return np.zeros((0, 0), dtype=float)
@@ -200,41 +232,30 @@ def triangle_consistent_mass_3d(nodes: list, thickness: float, material) -> np.n
     m_tot = rho * t * area
     m_loc = np.zeros((18, 18), dtype=float)
 
-    # Öteleme serbestlik dereceleri (UX, UY, UZ) için consistent kütle dağılımı
     sub_m = (m_tot / 12.0) * np.array([
         [2.0, 1.0, 1.0],
         [1.0, 2.0, 1.0],
-        [1.0, 1.0, 2.0]
+        [1.0, 1.0, 2.0],
     ])
 
     for dof_off in range(3):
-        for i_node in range(3):
-            for j_node in range(3):
-                ri = 6 * i_node + dof_off
-                ci = 6 * j_node + dof_off
-                m_loc[ri, ci] = sub_m[i_node, j_node]
+        idx = np.array([dof_off, 6 + dof_off, 12 + dof_off], dtype=np.intp)
+        m_loc[np.ix_(idx, idx)] = sub_m
 
     e3 = normal / np.linalg.norm(normal)
     e1 = v1 / np.linalg.norm(v1)
     e2 = np.cross(e3, e1)
-    if np.linalg.norm(e2) > 1e-9:
-        e2 = e2 / np.linalg.norm(e2)
-    else:
-        e2 = np.array([0, 1, 0], dtype=float)
+    e2_norm = float(np.linalg.norm(e2))
+    e2 = (e2 / e2_norm) if e2_norm > 1e-9 else np.array([0.0, 1.0, 0.0], dtype=float)
 
     R = np.vstack([e1, e2, e3])
-    T = np.zeros((18, 18), dtype=float)
-    for i in range(6):
-        T[i*3:(i+1)*3, i*3:(i+1)*3] = R
+    T = np.kron(np.eye(6), R)
 
     m_glob = T.T @ m_loc @ T
     return 0.5 * (m_glob + m_glob.T)
 
 
-
-
-def _node_translation_dofs(node, num_dofs: int):
-    """Düğümün UX/UY/UZ global DOF endekslerini döndürür (None'ları atar)."""
+def _node_translation_dofs(node, num_dofs: int) -> list[int]:
     dofs = getattr(node, "dof_indices", None)
     if not dofs or len(dofs) < 3:
         return []
@@ -247,17 +268,30 @@ def _node_translation_dofs(node, num_dofs: int):
 
 
 def _lump_to_node(
-    M: np.ndarray,
+    lumped_diag: np.ndarray,
     node,
     mass_kg: float,
     num_dofs: int,
 ) -> None:
-    """Lumped kütleyi düğümün UX/UY/UZ köşegenlerine eşit yazar."""
     if mass_kg <= 0:
         return
     m_ton = mass_kg / MEGAGRAM
     for d in _node_translation_dofs(node, num_dofs):
-        M[d, d] += m_ton
+        lumped_diag[d] += m_ton
+
+
+def _push_block(
+    rows: list[np.ndarray],
+    cols: list[np.ndarray],
+    vals: list[np.ndarray],
+    dofs: list[int],
+    mat: np.ndarray,
+) -> None:
+    d_arr = np.asarray(dofs, dtype=np.int32)
+    n = d_arr.size
+    rows.append(np.repeat(d_arr, n))
+    cols.append(np.tile(d_arr, n))
+    vals.append(mat.ravel())
 
 
 def build_mass(
@@ -267,25 +301,12 @@ def build_mass(
     *,
     validate: bool = True,
 ) -> MassAssembly:
-    """
-    Kütle matrisi montajı.
+    from app.commands.analysis.stiffness_assembly import ensure_dof_indices
 
-    Mimari:
-      - Frame/Area ÖZ kütle  → consistent (12x12 / 18x18) blok montajı.
-      - Dış yükler (yayılı, uniform, nokta) → lumped (köşegen) montaj.
-      - node_masses: her düğümün toplam kütlesi (kg) — raporlama ve
-        validation için tek doğruluk kaynağı.
-      - M_global: ton (N·s²/mm) biriminde, simetrik.
-    """
     num_dofs = len(scene.nodes) * 6
-
-    # --- DOF endeksleri ---
-    for i, node in enumerate(scene.nodes.values()):
-        node.dof_indices = list(range(i * 6, i * 6 + 6))
-
+    ensure_dof_indices(scene)
     node_key_map = _node_key_map(scene)
 
-    # --- Yük pattern'ları ---
     patterns = getattr(project, "load_patterns", {}) or {}
     pattern_kind: dict[str, str] = {}
     pattern_factor: dict[str, float] = {}
@@ -296,11 +317,14 @@ def build_mass(
             1.0 if k == "dead" else (n_live if k == "live" else 0.0)
         )
 
-    # --- Toplayıcılar ---
     node_masses: dict[str, float] = {k: 0.0 for k in scene.nodes.keys()}
     contributions: list[MassContribution] = []
     warnings: list[str] = []
-    M = np.zeros((num_dofs, num_dofs), dtype=float)
+
+    rows: list[np.ndarray] = []
+    cols: list[np.ndarray] = []
+    vals: list[np.ndarray] = []
+    lumped_diag = np.zeros(num_dofs, dtype=float)
 
     def _add(key: str | None, mass_kg: float) -> None:
         if key is None or mass_kg <= 0 or not math.isfinite(mass_kg):
@@ -313,9 +337,6 @@ def build_mass(
             MassContribution(source_type, elem_id, elem_label, pattern, mass_kg)
         )
 
-    # ==================================================================
-    # 1) FRAME ÖZ KÜTLE — consistent 12x12
-    # ==================================================================
     for frame in scene.frames.values():
         sec = getattr(frame, "section", None)
         mat = getattr(sec, "material", None) if sec else None
@@ -357,11 +378,8 @@ def build_mass(
         )
         m_glob_ton = T.T @ m_loc @ T
         dofs = list(dofs_i) + list(dofs_j)
-        M[np.ix_(dofs, dofs)] += m_glob_ton
+        _push_block(rows, cols, vals, dofs, m_glob_ton)
 
-    # ==================================================================
-    # 2) FRAME YAYILI YÜKLER — lumped
-    # ==================================================================
     for frame in scene.frames.values():
         L = frame.get_length()
         if L <= 0:
@@ -391,21 +409,21 @@ def build_mass(
             _add(kj, half)
             _contrib("frame_load", frame.unique_id, frame.label, pat, mass_kg)
 
-            _lump_to_node(M, frame.node_i, half, num_dofs)
-            _lump_to_node(M, frame.node_j, half, num_dofs)
+            _lump_to_node(lumped_diag, frame.node_i, half, num_dofs)
+            _lump_to_node(lumped_diag, frame.node_j, half, num_dofs)
 
-    # ==================================================================
-    # 3) AREA ÖZ KÜTLE — consistent 18x18 (üçgenleştirilmiş)
-    # ==================================================================
     for area in scene.areas.values():
         nodes = getattr(area, "nodes", [])
         n_nodes = len(nodes)
         if n_nodes < 3:
             continue
-        thickness = float(getattr(area, "thickness", 0.0))
+        area_sec = getattr(area, "area_section", None)
+        thickness = float(getattr(area, "thickness", 0.0) or 0.0)
+        if thickness == 0.0 and area_sec is not None:
+            thickness = float(getattr(area_sec, "thickness", 0.0) or 0.0)
         if thickness <= 0:
             continue
-        mat = getattr(area, "material", None)
+        mat = getattr(area, "material", None) or (getattr(area_sec, "material", None) if area_sec else None)
         if mat is None:
             continue
 
@@ -438,11 +456,8 @@ def build_mass(
             if not ok or len(tri_dofs) != 18:
                 continue
 
-            M[np.ix_(tri_dofs, tri_dofs)] += m_tri_ton
+            _push_block(rows, cols, vals, tri_dofs, m_tri_ton)
 
-    # ==================================================================
-    # 4) AREA UNIFORM YÜK — lumped
-    # ==================================================================
     for area in scene.areas.values():
         geom_A = _polygon_area_3d(area.nodes)
         if geom_A <= 0:
@@ -458,7 +473,7 @@ def build_mass(
             factor = pattern_factor.get(pat, 0.0)
             if factor <= 0:
                 continue
-            val = getattr(load, "value", 0.0)
+            val = abs(float(getattr(load, "value", 0.0)))
             if val <= 0:
                 continue
 
@@ -468,12 +483,9 @@ def build_mass(
 
             for nd in area.nodes:
                 _add(node_key_map.get(getattr(nd, "unique_id", None)), per_node)
-                _lump_to_node(M, nd, per_node, num_dofs)
+                _lump_to_node(lumped_diag, nd, per_node, num_dofs)
             _contrib("area_uniform", area.unique_id, area.label, pat, mass_kg)
 
-    # ==================================================================
-    # 5) AREA UNIFORM TO FRAME — lumped
-    # ==================================================================
     for area in scene.areas.values():
         geom_A = _polygon_area_3d(area.nodes)
         if geom_A <= 0:
@@ -491,7 +503,7 @@ def build_mass(
             factor = pattern_factor.get(pat, 0.0)
             if factor <= 0:
                 continue
-            val = getattr(load, "value", 0.0)
+            val = abs(float(getattr(load, "value", 0.0)))
             if val <= 0:
                 continue
 
@@ -501,12 +513,9 @@ def build_mass(
 
             for nd in area.nodes:
                 _add(node_key_map.get(getattr(nd, "unique_id", None)), per_node)
-                _lump_to_node(M, nd, per_node, num_dofs)
+                _lump_to_node(lumped_diag, nd, per_node, num_dofs)
             _contrib("area_to_frame", area.unique_id, area.label, pat, mass_kg)
 
-    # ==================================================================
-    # 6) NODE NOKTASAL YÜK — lumped
-    # ==================================================================
     for key, node in scene.nodes.items():
         for load in getattr(node, "loads", []) or []:
             pat = getattr(load, "pattern_name", "")
@@ -521,16 +530,23 @@ def build_mass(
             contrib_kg = mass_kg * factor
             _add(key, contrib_kg)
             _contrib("node_point", node.unique_id, node.label, pat, mass_kg)
-            _lump_to_node(M, node, contrib_kg, num_dofs)
+            _lump_to_node(lumped_diag, node, contrib_kg, num_dofs)
 
-    # ==================================================================
-    # 7) Simetrizasyon
-    # ==================================================================
-    M = 0.5 * (M + M.T)
+    nz = np.flatnonzero(lumped_diag > 0.0).astype(np.int32)
+    if nz.size > 0:
+        rows.append(nz)
+        cols.append(nz)
+        vals.append(lumped_diag[nz])
 
-    # ==================================================================
-    # 8) Özet
-    # ==================================================================
+    if rows:
+        M = sparse.coo_matrix(
+            (np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))),
+            shape=(num_dofs, num_dofs),
+        ).tocsc()
+        M = 0.5 * (M + M.T)
+    else:
+        M = sparse.csc_matrix((num_dofs, num_dofs), dtype=float)
+
     total_self = sum(c.mass_kg for c in contributions if c.source_type.endswith("_self"))
     total_dead = sum(
         c.mass_kg for c in contributions

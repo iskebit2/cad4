@@ -284,6 +284,7 @@ class S2KLoader:
         self._apply_materials(ctx, builder)
         self._apply_sections(ctx, builder)
         self._apply_area_sections(ctx, builder)
+        self._apply_link_props(ctx, builder)
         self._apply_load_patterns(ctx, builder)
         self._apply_load_cases(ctx, builder)
         self._apply_combinations(ctx, builder)
@@ -292,6 +293,11 @@ class S2KLoader:
         self._apply_auto_seismics(ctx, builder)
         self._apply_constraint_definitions(ctx, builder)
         self._apply_grid(ctx, builder)
+
+    def _apply_link_props(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+        for name, lp in ctx.link_props.items():
+            builder.link_props[name] = lp
+            builder.project.add_link_prop(lp)
 
     def _apply_spectrum_functions(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
         for sf in ctx.spectrum_functions.values():

@@ -60,6 +60,7 @@ class AnalysisManagerPanel(PanelBase):
 
         super().__init__(app=app, **overrides)
 
+    # ------------------------------------------------------------------ open/close
     def open(self, **kw):
         super().open(**kw)
         self._refresh_spectrum_list()
@@ -71,6 +72,7 @@ class AnalysisManagerPanel(PanelBase):
         super().set_context(ctx)
         self._refresh_spectrum_list()
 
+    # ------------------------------------------------------------------ helpers
     def _project(self):
         return getattr(self.app, "current_project", None) if self.app else None
 
@@ -84,6 +86,7 @@ class AnalysisManagerPanel(PanelBase):
             list(project.spectrum_functions.keys()) if project else []
         )
 
+    # ------------------------------------------------------------------ run
     def _run_analysis(self):
         if self._is_running:
             return
@@ -110,21 +113,24 @@ class AnalysisManagerPanel(PanelBase):
         self._t0 = time.time()
 
         def _worker():
-            bundle = AnalysisService.run(scene, project, opts)
-            forces: dict[str, dict[int, FrameForceResult]] = {}
-            if (
-                do_forces
-                and bundle.result is not None
-                and bundle.result.mesh is not None
-                and bundle.result.static_results
-            ):
-                forces = recover_frame_forces(
-                    project,
-                    bundle.result.mesh,
-                    bundle.result.static_results,
-                    use_shear_deform=opts.use_shear_deform,
-                )
-            self._result_queue.put(("ok", (bundle, forces)))
+            try:
+                bundle = AnalysisService.run(scene, project, opts)
+                forces: dict[str, dict[int, FrameForceResult]] = {}
+                if (
+                    do_forces
+                    and bundle.result is not None
+                    and bundle.result.mesh is not None
+                    and bundle.result.static_results
+                ):
+                    forces = recover_frame_forces(
+                        project,
+                        bundle.result.mesh,
+                        bundle.result.static_results,
+                        use_shear_deform=opts.use_shear_deform,
+                    )
+                self._result_queue.put(("ok", (bundle, forces)))
+            except Exception as exc:  # noqa: BLE001
+                self._result_queue.put(("err", repr(exc)))
 
         self._worker = threading.Thread(target=_worker, daemon=True)
         self._worker.start()
@@ -178,6 +184,7 @@ class AnalysisManagerPanel(PanelBase):
         )
         self._status_msg = f"✓ Kaydedildi: {saved_path}"
 
+    # ------------------------------------------------------------------ draw
     def draw_content(self):
         self._poll_result()
 
@@ -207,8 +214,11 @@ class AnalysisManagerPanel(PanelBase):
             return (1.0, 0.5, 0.3, 1.0)
         if self._status_msg.startswith("✓"):
             return (0.4, 1.0, 0.4, 1.0)
+        if self._status_msg.startswith("Hata"):
+            return (1.0, 0.35, 0.35, 1.0)
         return (0.9, 0.7, 0.4, 1.0)
 
+    # ------------------------------------------------------------------ options
     def _draw_options(self):
         imgui.text_colored(imgui.ImVec4(0.9, 0.85, 0.5, 1.0), "Analiz Seçenekleri")
         imgui.spacing()
@@ -293,11 +303,12 @@ class AnalysisManagerPanel(PanelBase):
         )
         imgui.text_colored(imgui.ImVec4(1.0, 0.7, 0.7, 1.0), "Analiz uyarıları:")
         for e in self._bundle.errors:
-            imgui.bullet_text(e)
+            imgui.bullet_text(str(e))
         imgui.end_child()
         imgui.pop_style_color(1)
         imgui.spacing()
 
+    # ------------------------------------------------------------------ results
     def _draw_results(self):
         if self._bundle is None or self._bundle.result is None:
             imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), "Sonuç yok")
@@ -327,17 +338,29 @@ class AnalysisManagerPanel(PanelBase):
 
     def _draw_tab_genel(self):
         r = self._bundle.result
-        imgui.text(f"DOF: {r.K.shape[0]}")
-        imgui.text(f"Mesnetli DOF: {len(r.fixed_dofs)}")
+        ndof = r.K.shape[0]
+        imgui.text(f"Toplam DOF   : {ndof}")
+        imgui.text(f"Mesnetli DOF : {len(r.fixed_dofs)}")
         imgui.text(
             f"Frame (eklendi/atlandı): "
             f"{r.stiffness.frame_count} / {len(r.stiffness.skipped)}"
+        )
+        # Area / Link / Spring özeti (test koduyla uyumlu)
+        imgui.text(
+            f"Area: {getattr(r.stiffness, 'area_count', 0)} | "
+            f"Link: {getattr(r.stiffness, 'link_count', 0)} | "
+            f"Spring Node: {getattr(r.stiffness, 'spring_node_count', 0)}"
         )
 
         if r.stiffness.skipped:
             imgui.separator()
             if imgui.tree_node(f"Atlanan elemanlar ({len(r.stiffness.skipped)})"):
-                for label, reason in r.stiffness.skipped[:50]:
+                for item in r.stiffness.skipped[:50]:
+                    # test kodunda (label, reason) tuple'ı; esnek davran
+                    if isinstance(item, (tuple, list)) and len(item) >= 2:
+                        label, reason = item[0], item[1]
+                    else:
+                        label, reason = str(item), ""
                     imgui.text_colored(
                         imgui.ImVec4(0.9, 0.7, 0.4, 1.0),
                         f"  {label}: {reason}",
@@ -368,40 +391,179 @@ class AnalysisManagerPanel(PanelBase):
         case_names = list(static_res.keys())
         if self._selected_static_case not in case_names:
             self._selected_static_case = case_names[0]
+            self._selected_frame_idx = 0
 
         imgui.push_item_width(220)
         cur_idx = case_names.index(self._selected_static_case)
         ch, idx = imgui.combo("Yük Durumu (LoadCase)", cur_idx, case_names)
         if ch:
             self._selected_static_case = case_names[idx]
+            self._selected_frame_idx = 0
         imgui.pop_item_width()
 
         res = static_res[self._selected_static_case]
-        U = res.displacements
-        F = res.applied_forces
-        R = res.reactions
+        U = np.asarray(res.displacements, dtype=float)
+        F = np.asarray(res.applied_forces, dtype=float)
+        R = np.asarray(res.reactions, dtype=float)
 
-        max_ux = float(np.max(np.abs(U[0::6]))) if U.size >= 6 else 0.0
-        max_uy = float(np.max(np.abs(U[1::6]))) if U.size >= 6 else 0.0
-        max_uz = float(np.max(np.abs(U[2::6]))) if U.size >= 6 else 0.0
-        sum_fx = float(np.sum(F[0::6])) if F.size >= 6 else 0.0
-        sum_fy = float(np.sum(F[1::6])) if F.size >= 6 else 0.0
-        sum_fz = float(np.sum(F[2::6])) if F.size >= 6 else 0.0
+        # ------------------------------------------------------------------
+        # GLOBAL DENGE KONTROLÜ (kuvvet + moment, orijine göre)
+        # ------------------------------------------------------------------
+        imgui.spacing()
+        imgui.text_colored(
+            imgui.ImVec4(0.7, 0.9, 0.7, 1.0),
+            "Global Denge Kontrolü",
+        )
+
+        # Kuvvet toplamları (6 bileşen)
+        sum_F = np.array([np.sum(F[i::6]) for i in range(6)], dtype=float) if F.size >= 6 else np.zeros(6)
+        sum_R = np.array([np.sum(R[i::6]) for i in range(6)], dtype=float) if R.size >= 6 else np.zeros(6)
+
+        # Kuvvet dengesi (sadece FX, FY, FZ)
+        force_unbalance = sum_F[:3] + sum_R[:3]
+        max_force_err = float(np.max(np.abs(force_unbalance)))
+
+        imgui.text(
+            f"ΣF  [FX, FY, FZ] = "
+            f"[{sum_F[0]:+.4e}, {sum_F[1]:+.4e}, {sum_F[2]:+.4e}]"
+        )
+        imgui.text(
+            f"ΣR  [FX, FY, FZ] = "
+            f"[{sum_R[0]:+.4e}, {sum_R[1]:+.4e}, {sum_R[2]:+.4e}]"
+        )
+        force_color = (
+            imgui.ImVec4(0.4, 1.0, 0.4, 1.0)
+            if max_force_err < 1e-3
+            else imgui.ImVec4(1.0, 0.55, 0.3, 1.0)
+        )
+        imgui.text_colored(
+            force_color,
+            f"Kuvvet dengesi max|Δ| = {max_force_err:.3e} N",
+        )
+
+        # ------------------------------------------------------------------
+        # MOMENT DENGESİ (orijine göre: M_düğüm + r × F)
+        # ------------------------------------------------------------------
+        # Düğüm koordinatları — mesh'ten al (yoksa reaksiyon sözlüğü anahtarlarından dene)
+        node_coords: dict[str, tuple[float, float, float]] = {}
+        mesh = getattr(self._bundle.result, "mesh", None)
+        if mesh is not None and getattr(mesh, "nodes", None):
+            for n_key, node in mesh.nodes.items():
+                node_coords[n_key] = (float(node.x), float(node.y), float(node.z))
+
+        # Düğüm bazlı F ve R vektörleri
+        # node_displacements/node_reactions düğüm → 6-vektör verir; F için aynı yapıyı kur
+        dof_map: dict[str, int] = {}
+        if mesh is not None and getattr(mesh, "nodes", None):
+            for n_key, node in mesh.nodes.items():
+                dofs = getattr(node, "dof_indices", None)
+                if dofs:
+                    dof_map[n_key] = int(dofs[0])
+
+        def _node_vec(vec: np.ndarray, n_key: str) -> np.ndarray:
+            base = dof_map.get(n_key)
+            if base is None or base + 6 > vec.size:
+                return np.zeros(6)
+            return vec[base:base + 6]
+
+        # Moment dengesi: her düğüm için (M_düğüm + r × F_düğüm) toplamı
+        sum_M_about_origin = np.zeros(3, dtype=float)   # F + R katkısı
+        sum_M_force_only = np.zeros(3, dtype=float)     # sadece r × F
+        sum_M_node_only = np.zeros(3, dtype=float)      # sadece düğüm momentleri
+
+        # Hangi düğümleri işleyeceğiz? Reaksiyon sözlüğü + deplasman sözlüğü birleşimi
+        all_node_keys = set()
+        for d in (getattr(res, "node_reactions", {}) or {},
+                getattr(res, "node_displacements", {}) or {}):
+            all_node_keys.update(d.keys())
+
+        for n_key in all_node_keys:
+            coord = node_coords.get(n_key)
+            f_vec = _node_vec(F, n_key)
+            r_vec = _node_vec(R, n_key)
+
+            if coord is not None:
+                x, y, z = coord
+                # r × F
+                fx, fy, fz = f_vec[0], f_vec[1], f_vec[2]
+                rxF = np.array([
+                    y * fz - z * fy,
+                    z * fx - x * fz,
+                    x * fy - y * fx,
+                ])
+                # r × R
+                rx, ry, rz = r_vec[0], r_vec[1], r_vec[2]
+                rxR = np.array([
+                    y * rz - z * ry,
+                    z * rx - x * rz,
+                    x * ry - y * rx,
+                ])
+                sum_M_force_only += rxF
+                sum_M_about_origin += rxF + rxR
+            else:
+                # Koordinat yoksa sadece düğüm momentlerini topla
+                pass
+
+            # Düğüm momentleri (F ve R'nin MX, MY, MZ bileşenleri)
+            sum_M_node_only += np.array([f_vec[3], f_vec[4], f_vec[5]]) + \
+                            np.array([r_vec[3], r_vec[4], r_vec[5]])
+
+        # Toplam moment dengesi = düğüm momentleri + r × (F + R)
+        # sum_M_about_origin zaten r × F + r × R içeriyor; düğüm momentlerini ekle
+        moment_residual = sum_M_about_origin + sum_M_node_only
+
+        max_moment_err = float(np.max(np.abs(moment_residual)))
+        moment_color = (
+            imgui.ImVec4(0.4, 1.0, 0.4, 1.0)
+            if max_moment_err < 1e-1
+            else imgui.ImVec4(1.0, 0.55, 0.3, 1.0)
+        )
+
+        imgui.text(
+            f"ΣM_düğüm [MX, MY, MZ] = "
+            f"[{sum_M_node_only[0]:+.4e}, {sum_M_node_only[1]:+.4e}, {sum_M_node_only[2]:+.4e}]"
+        )
+        imgui.text(
+            f"Σ(r×F)  [MX, MY, MZ] = "
+            f"[{sum_M_force_only[0]:+.4e}, {sum_M_force_only[1]:+.4e}, {sum_M_force_only[2]:+.4e}]"
+        )
+        imgui.text_colored(
+            moment_color,
+            f"Moment dengesi max|Δ| = {max_moment_err:.3e} N·mm",
+        )
+
+        if max_force_err >= 1e-3 or max_moment_err >= 1e-1:
+            imgui.text_colored(
+                imgui.ImVec4(0.95, 0.75, 0.35, 1.0),
+                "  ⚠ Denge bozuk — yük montajı / mesnet / birim dönüşümü kontrol edin",
+            )
+
+        # ------------------------------------------------------------------
+        # DEPLASMAN ÖZETİ
+        # ------------------------------------------------------------------
+        if U.size >= 6:
+            max_ux = float(np.max(np.abs(U[0::6])))
+            max_uy = float(np.max(np.abs(U[1::6])))
+            max_uz = float(np.max(np.abs(U[2::6])))
+            max_abs_u = float(np.max(np.abs(U)))
+        else:
+            max_ux = max_uy = max_uz = max_abs_u = 0.0
 
         imgui.spacing()
         imgui.text_colored(
             imgui.ImVec4(0.7, 0.9, 0.7, 1.0),
-            f"Max |U|: UX={max_ux:.4f} mm, UY={max_uy:.4f} mm, UZ={max_uz:.4f} mm",
-        )
-        imgui.text(
-            f"Toplam Yük (F): FX={sum_fx:.2f} N, FY={sum_fy:.2f} N, FZ={sum_fz:.2f} N"
+            f"Max |U|: UX={max_ux:.4f} mm, UY={max_uy:.4f} mm, "
+            f"UZ={max_uz:.4f} mm  (max tüm DOF={max_abs_u:.4e})",
         )
 
-        fixed_set = set(self._bundle.result.fixed_dofs)
+        # ------------------------------------------------------------------
+        # MESNET REAKSİYONLARI
+        # ------------------------------------------------------------------
         reac_rows: list[tuple[str, np.ndarray]] = []
-        for n_key, r_vec in res.node_reactions.items():
-            if np.linalg.norm(r_vec) > 1e-6:
-                reac_rows.append((n_key, r_vec))
+        for n_key, r_vec in (getattr(res, "node_reactions", {}) or {}).items():
+            rv = np.asarray(r_vec, dtype=float)
+            if np.linalg.norm(rv) > 1e-6:
+                reac_rows.append((n_key, rv))
 
         if reac_rows:
             imgui.separator()
@@ -410,20 +572,65 @@ class AnalysisManagerPanel(PanelBase):
                 f"Mesnet Reaksiyonları ({len(reac_rows)} düğüm)",
             )
             cols = ["Düğüm", "RX (N)", "RY (N)", "RZ (N)", "MX (N·mm)", "MY (N·mm)", "MZ (N·mm)"]
-            if imgui.begin_table("##static_reactions", len(cols), imgui.TableFlags_.borders | imgui.TableFlags_.row_bg):
+            if imgui.begin_table(
+                "##static_reactions",
+                len(cols),
+                imgui.TableFlags_.borders | imgui.TableFlags_.row_bg,
+            ):
                 for h in cols:
                     imgui.table_setup_column(h)
                 imgui.table_headers_row()
-                for n_key, rv in reac_rows[:100]:
+                for n_key, rv in reac_rows[:200]:
                     imgui.table_next_row()
                     vals = [
-                        n_key,
+                        str(n_key),
                         f"{rv[0]:+.2f}",
                         f"{rv[1]:+.2f}",
                         f"{rv[2]:+.2f}",
                         f"{rv[3]:+.1f}",
                         f"{rv[4]:+.1f}",
                         f"{rv[5]:+.1f}",
+                    ]
+                    for j, v in enumerate(vals):
+                        imgui.table_set_column_index(j)
+                        imgui.text(v)
+                imgui.end_table()
+
+        # ------------------------------------------------------------------
+        # DÜĞÜM DEPLASMANLARI
+        # ------------------------------------------------------------------
+        node_disp = getattr(res, "node_displacements", {}) or {}
+        disp_rows: list[tuple[str, np.ndarray]] = []
+        for n_key, u_vec in node_disp.items():
+            uv = np.asarray(u_vec, dtype=float)
+            if np.linalg.norm(uv) > 1e-12:
+                disp_rows.append((n_key, uv))
+
+        if disp_rows:
+            imgui.separator()
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.85, 0.5, 1.0),
+                f"Düğüm Deplasmanları ({len(disp_rows)} düğüm)",
+            )
+            cols = ["Düğüm", "UX (mm)", "UY (mm)", "UZ (mm)", "RX (rad)", "RY (rad)", "RZ (rad)"]
+            if imgui.begin_table(
+                "##static_node_disp",
+                len(cols),
+                imgui.TableFlags_.borders | imgui.TableFlags_.row_bg,
+            ):
+                for h in cols:
+                    imgui.table_setup_column(h)
+                imgui.table_headers_row()
+                for n_key, uv in disp_rows[:200]:
+                    imgui.table_next_row()
+                    vals = [
+                        str(n_key),
+                        f"{uv[0]:+.4e}",
+                        f"{uv[1]:+.4e}",
+                        f"{uv[2]:+.4e}",
+                        f"{uv[3]:+.4e}",
+                        f"{uv[4]:+.4e}",
+                        f"{uv[5]:+.4e}",
                     ]
                     for j, v in enumerate(vals):
                         imgui.table_set_column_index(j)
@@ -438,6 +645,7 @@ class AnalysisManagerPanel(PanelBase):
         case_names = list(self._frame_forces.keys())
         if self._selected_static_case not in case_names:
             self._selected_static_case = case_names[0]
+            self._selected_frame_idx = 0
 
         case_map = self._frame_forces[self._selected_static_case]
         if not case_map:
@@ -445,7 +653,10 @@ class AnalysisManagerPanel(PanelBase):
             return
 
         frame_items = list(case_map.values())
-        frame_labels = [f"{ff.label} (id={ff.frame_id}, L={ff.length:.0f} mm)" for ff in frame_items]
+        frame_labels = [
+            f"{ff.label} (id={ff.frame_id}, L={ff.length:.0f} mm)"
+            for ff in frame_items
+        ]
         if self._selected_frame_idx >= len(frame_items):
             self._selected_frame_idx = 0
 
@@ -456,6 +667,28 @@ class AnalysisManagerPanel(PanelBase):
         imgui.pop_item_width()
 
         ff = frame_items[self._selected_frame_idx]
+
+        # ---- end_i / end_j (lokal) — test koduyla uyumlu ----
+        imgui.spacing()
+        imgui.text_colored(
+            imgui.ImVec4(0.85, 0.85, 0.55, 1.0),
+            f"L={ff.length:.2f} mm",
+        )
+        end_i = np.asarray(getattr(ff, "end_i", []), dtype=float)
+        end_j = np.asarray(getattr(ff, "end_j", []), dtype=float)
+        if end_i.size >= 6:
+            imgui.text(
+                "end_i (lokal): "
+                f"N={end_i[0]:+.2f} V2={end_i[1]:+.2f} V3={end_i[2]:+.2f} | "
+                f"T={end_i[3]:+.1f} M2={end_i[4]:+.1f} M3={end_i[5]:+.1f}"
+            )
+        if end_j.size >= 6:
+            imgui.text(
+                "end_j (lokal): "
+                f"N={end_j[0]:+.2f} V2={end_j[1]:+.2f} V3={end_j[2]:+.2f} | "
+                f"T={end_j[3]:+.1f} M2={end_j[4]:+.1f} M3={end_j[5]:+.1f}"
+            )
+
         if not ff.stations:
             imgui.text("İstasyon verisi yok")
             return
@@ -474,7 +707,11 @@ class AnalysisManagerPanel(PanelBase):
         self._draw_moment_diagram(xs, m3s, ff.length)
 
         cols = ["x/L", "x (mm)", "N (N)", "V2 (N)", "V3 (N)", "T (N·mm)", "M2 (N·mm)", "M3 (N·mm)"]
-        if imgui.begin_table("##station_forces", len(cols), imgui.TableFlags_.borders | imgui.TableFlags_.row_bg):
+        if imgui.begin_table(
+            "##station_forces",
+            len(cols),
+            imgui.TableFlags_.borders | imgui.TableFlags_.row_bg,
+        ):
             for h in cols:
                 imgui.table_setup_column(h)
             imgui.table_headers_row()
@@ -554,7 +791,7 @@ class AnalysisManagerPanel(PanelBase):
                 imgui.ImVec4(0.7, 0.9, 0.7, 1.0), f"{val:>14.3f} {unit}"
             )
 
-        _row("Öz kütle", m.total_self_kg, "kg")
+        _row("Öz kütle (self)", m.total_self_kg, "kg")
         _row("Dead (ham)", m.total_dead_kg, "kg")
         _row(f"Live (ham, ×{m.n_live:.2f} → kullanılan)", m.total_live_kg, "kg")
         _row("Toplam (n uygulanmış)", m.total_kg, "kg")
@@ -578,28 +815,71 @@ class AnalysisManagerPanel(PanelBase):
             imgui.text("Modal sonuç yok")
             return
         modal = r.modal
+
+        # Toplam kütle özeti (test koduyla uyumlu)
         imgui.text_colored(
             imgui.ImVec4(0.85, 0.85, 0.55, 1.0),
-            f"{modal.n_modes} mod | Mx={modal.total_mass_x:.2f}, "
-            f"My={modal.total_mass_y:.2f}, Mz={modal.total_mass_z:.2f} kg",
+            f"{modal.n_modes} mod | Serbest Toplam Kütle (ton): "
+            f"Mx={modal.total_mass_x:.4f}, My={modal.total_mass_y:.4f}, "
+            f"Mz={modal.total_mass_z:.4f}",
         )
         imgui.spacing()
-        cols = ["#", "T (s)", "f (Hz)", "Γx", "Γy", "Γz", "MeffX", "MeffY"]
-        if imgui.begin_table("##modal_table", len(cols)):
+
+        cols = [
+            "#", "T (s)", "f (Hz)", "ω (rad/s)",
+            "Γx", "Γy", "Γz",
+            "UX %", "ΣUX %", "UY %", "ΣUY %", "UZ %", "ΣUZ %",
+        ]
+        if imgui.begin_table(
+            "##modal_table",
+            len(cols),
+            imgui.TableFlags_.borders | imgui.TableFlags_.row_bg,
+        ):
             for h in cols:
                 imgui.table_setup_column(h)
             imgui.table_headers_row()
+
+            cum_rx = 0.0
+            cum_ry = 0.0
+            cum_rz = 0.0
             for i in range(modal.n_modes):
+                t_val = float(modal.periods[i])
+                f_val = float(modal.frequencies[i])
+                w_val = 2.0 * np.pi * f_val
+                rx = (
+                    float(modal.effective_mass_x[i]) / modal.total_mass_x * 100.0
+                    if modal.total_mass_x > 0.0
+                    else 0.0
+                )
+                ry = (
+                    float(modal.effective_mass_y[i]) / modal.total_mass_y * 100.0
+                    if modal.total_mass_y > 0.0
+                    else 0.0
+                )
+                rz = (
+                    float(modal.effective_mass_z[i]) / modal.total_mass_z * 100.0
+                    if modal.total_mass_z > 0.0
+                    else 0.0
+                )
+                cum_rx += rx
+                cum_ry += ry
+                cum_rz += rz
+
                 imgui.table_next_row()
                 vals = [
                     str(i + 1),
-                    f"{modal.periods[i]:.4f}",
-                    f"{modal.frequencies[i]:.3f}",
-                    f"{modal.participation_factor_x[i]:+.4f}",
-                    f"{modal.participation_factor_y[i]:+.4f}",
-                    f"{modal.participation_factor_z[i]:+.4f}",
-                    f"{modal.effective_mass_x[i]:.2f}",
-                    f"{modal.effective_mass_y[i]:.2f}",
+                    f"{t_val:.4f}",
+                    f"{f_val:.4f}",
+                    f"{w_val:.4f}",
+                    f"{modal.participation_factor_x[i]:+.3f}",
+                    f"{modal.participation_factor_y[i]:+.3f}",
+                    f"{modal.participation_factor_z[i]:+.3f}",
+                    f"{rx:.2f}",
+                    f"{cum_rx:.2f}",
+                    f"{ry:.2f}",
+                    f"{cum_ry:.2f}",
+                    f"{rz:.2f}",
+                    f"{cum_rz:.2f}",
                 ]
                 for j, v in enumerate(vals):
                     imgui.table_set_column_index(j)
@@ -610,17 +890,41 @@ class AnalysisManagerPanel(PanelBase):
         s = self._bundle.spectral
         if s is None:
             return
+        # SRSS max UX / UY / UZ
         imgui.text_colored(
             imgui.ImVec4(0.85, 0.85, 0.55, 1.0),
-            f"{len(s.modes)} mod | SRSS max UX={np.max(np.abs(s.ux_srss)):.4f} mm",
+            f"{len(s.modes)} mod",
         )
-        imgui.text(
-            f"SRSS max UY={np.max(np.abs(s.uy_srss)):.4f} mm, "
-            f"UZ={np.max(np.abs(s.uz_srss)):.4f} mm"
-        )
+        if hasattr(s, "ux_srss"):
+            imgui.text(
+                f"SRSS max UX={np.max(np.abs(s.ux_srss)):.4f} mm, "
+                f"UY={np.max(np.abs(s.uy_srss)):.4f} mm, "
+                f"UZ={np.max(np.abs(s.uz_srss)):.4f} mm"
+            )
+        imgui.separator()
+
+        # Test kodundaki vars(sp) dökümü
+        if imgui.tree_node("Spectral sonuç alanları (özet)"):
+            for attr_name in vars(s):
+                val = getattr(s, attr_name)
+                if isinstance(val, np.ndarray):
+                    imgui.text(
+                        f"  {attr_name}: shape={val.shape}, "
+                        f"max|.|={float(np.max(np.abs(val))) if val.size else 0.0:.6e}"
+                    )
+                elif isinstance(val, (int, float, str, bool)) or val is None:
+                    imgui.text(f"  {attr_name}: {val}")
+                else:
+                    imgui.text(f"  {attr_name}: <{type(val).__name__}>")
+            imgui.tree_pop()
+
         imgui.separator()
         cols = ["#", "T (s)", "Sa (g)", "Γx", "Γy", "Γz"]
-        if imgui.begin_table("##spectral_modes", len(cols)):
+        if imgui.begin_table(
+            "##spectral_modes",
+            len(cols),
+            imgui.TableFlags_.borders | imgui.TableFlags_.row_bg,
+        ):
             for h in cols:
                 imgui.table_setup_column(h)
             imgui.table_headers_row()
@@ -649,8 +953,28 @@ class AnalysisManagerPanel(PanelBase):
             f"({t.total_mass_ton:.4f} ton), ağırlık {t.total_weight_kN:.3f} kN",
         )
         imgui.separator()
+
+        # Özet alanları (test kodundaki vars(takeoff) dökümü)
+        if imgui.tree_node("Takeoff özet alanları"):
+            for attr_name in vars(t):
+                val = getattr(t, attr_name)
+                if isinstance(val, (int, float, str, bool)) or val is None:
+                    imgui.text(f"  {attr_name}: {val}")
+                elif isinstance(val, dict):
+                    imgui.text(f"  {attr_name}: dict({len(val)} anahtar)")
+                elif isinstance(val, (list, tuple)):
+                    imgui.text(f"  {attr_name}: {type(val).__name__}({len(val)})")
+                else:
+                    imgui.text(f"  {attr_name}: <{type(val).__name__}>")
+            imgui.tree_pop()
+
+        imgui.separator()
         cols = ["Malzeme", "Adet", "Kütle (kg)", "Kütle (ton)", "Ağırlık (kN)"]
-        if imgui.begin_table("##takeoff_material", len(cols)):
+        if imgui.begin_table(
+            "##takeoff_material",
+            len(cols),
+            imgui.TableFlags_.borders | imgui.TableFlags_.row_bg,
+        ):
             for h in cols:
                 imgui.table_setup_column(h)
             imgui.table_headers_row()

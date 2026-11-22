@@ -1,9 +1,10 @@
 # ui/adapters.py
 from __future__ import annotations
+from typing import Any
 
 from data.enums import PolygonType
 from domain.definition import FrameDistributedLoad, AreaUniformToFrameLoad, DistType, LoadDirection
-from inspector.schemas import get_path, set_path
+from inspector.schemas import CatalogAdapter, get_path, set_path
 
 MIXED = "__MIXED__"
 
@@ -230,15 +231,67 @@ def values_to_frame(frame, v: dict) -> None:
 # ============================================================================
 # AREA
 # ============================================================================
-def area_to_values(area) -> dict:
+def area_to_values(area, catalog: CatalogAdapter | None = None) -> dict[str, Any]:
+    sec = getattr(area, "area_section", None)
+    sec_name = getattr(sec, "name", "") or getattr(area, "section_name", "") or ""
+    if sec is None and sec_name and catalog is not None:
+        sec = catalog.get_area_section(sec_name)
+    mat = getattr(sec, "material", None) if sec is not None else None
+    mat_name = getattr(mat, "name", "") if mat is not None else "—"
+
+    if sec is not None:
+        sec_info = f"{sec.name} ({sec.area_type}, t={sec.thickness:g})"
+    elif sec_name:
+        sec_info = f"{sec_name} (tanımsız)"
+    else:
+        sec_info = "—"
+
     return {
-        "label": area.label,
-        "is_visible": area.is_visible,
-        "color": list(area.color[:3]) if area.color else None,
-        "thickness": float(area.thickness),
-        "material": getattr(area, "material", None),
-        "section_name": getattr(area, "section_name", ""),
+        "label": getattr(area, "label", ""),
+        "unique_id": getattr(area, "unique_id", 0),
+        "node_count": len(getattr(area, "nodes", [])),
+        "section_name": sec_name,
+        "area_section": sec_info,
+        "material_info": mat_name,
+        "thick_over": getattr(area, "thick_over", None),
+        "offset_over": getattr(area, "offset_over", None),
+        "thickness": float(getattr(area, "thickness", 0.0)),
+        "is_visible": bool(getattr(area, "is_visible", True)),
+        "color": list(area.color) if getattr(area, "color", None) else [0.8, 0.8, 0.8],
     }
+
+
+def apply_area_changes(area, changes: dict[str, Any], catalog: CatalogAdapter | None = None) -> dict[str, Any]:
+    applied = {}
+    for k, v in changes.items():
+        if v == MIXED:
+            continue
+        if k == "section_name":
+            name = str(v or "")
+            area.section_name = name
+            area.area_section = catalog.get_area_section(name) if catalog is not None else None
+            applied[k] = name
+        elif k == "thickness":
+            area.thickness = float(v)
+            applied[k] = area.thickness
+        elif k == "thick_over":
+            area.thick_over = None if v is None else float(v)
+            applied[k] = area.thick_over
+        elif k == "offset_over":
+            area.offset_over = None if v is None else float(v)
+            applied[k] = area.offset_over
+        elif k == "label":
+            area.label = str(v)
+            applied[k] = area.label
+        elif k == "is_visible":
+            area.is_visible = bool(v)
+            applied[k] = area.is_visible
+        elif k == "color":
+            area.color = list(v)
+            applied[k] = area.color
+    if applied and hasattr(area, "mark_dirty"):
+        area.mark_dirty()
+    return applied
 
 
 def values_to_area(area, v: dict) -> None:

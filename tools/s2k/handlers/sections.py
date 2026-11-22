@@ -116,11 +116,14 @@ def _map_sap_to_local(row, sd_section=None) -> tuple[SectionType, dict[str, floa
             **analysis,
         }
     if shape in ("Channel", "C"):
+        tw = _safe_float(row, "tw", 6)
+        tf = _safe_float(row, "tf", tw)
         return SectionType.C, {
             "h": _safe_float(row, "t3", 100),
             "b": _safe_float(row, "t2", 80),
-            "t": _safe_float(row, "tw", 6),
-            "tf": _safe_float(row, "tf", 6),
+            "t": tw,
+            "tw": tw,
+            "tf": tf,
             **analysis,
         }
     if shape in ("Angle", "L"):

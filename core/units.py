@@ -58,6 +58,7 @@ class Dimension(Enum):
     AREA = "L²"
     I3 = "L³"
     I4 = "L⁴"
+    I6 = "L6"
     MOMENT = "F·L"
     MASS = "M"
     MASS_INERTIA = "M·L²"
@@ -179,6 +180,8 @@ def factor(dim: Dimension, from_sys: UnitSystem, to_sys: UnitSystem) -> float:
         return length_ratio**3
     if dim == Dimension.I4:
         return length_ratio**4
+    if dim == Dimension.I6:
+        return length_ratio**6
     if dim == Dimension.MOMENT or dim == Dimension.MASS_INERTIA:
         return force_ratio * length_ratio
     if dim == Dimension.MASS or dim == Dimension.LINE_LOAD:

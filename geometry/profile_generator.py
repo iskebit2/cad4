@@ -136,12 +136,19 @@ class ProfileGenerator:
             validated.setdefault('n', 24)
             validated['ri'] = min(validated['ro'] - 0.1, validated['ri'])
             validated['n'] = max(3, int(validated['n']))
-        elif section_type in [SectionType.I, SectionType.T, SectionType.CHANNEL]:
+        elif section_type in [SectionType.I, SectionType.T]:
             validated.setdefault('b', 100.0)
             validated.setdefault('h', 200.0)
             validated.setdefault('tw', 10.0)
             validated.setdefault('tf', 14.0)
-        elif section_type in [SectionType.L, SectionType.C]:
+        elif section_type in [SectionType.C, SectionType.CHANNEL]:
+            validated.setdefault('b', 80.0)
+            validated.setdefault('h', 100.0)
+            t_default = validated.get('tw', validated.get('t', 6.0))
+            validated.setdefault('t', t_default)
+            validated.setdefault('tw', t_default)
+            validated.setdefault('tf', t_default)
+        elif section_type == SectionType.L:
             validated.setdefault('b', 80.0)
             validated.setdefault('h', 100.0)
             validated.setdefault('t', 8.0)
@@ -249,14 +256,14 @@ class ProfileGenerator:
         return outer + inner
     
     def _c_profile(self, params: dict) -> list[tuple[float, float]]:
-        """C-profil (U-profil, kanal)"""
         b = params.get('b', 80.0)
         h = params.get('h', 100.0)
-        t = params.get('t', 6.0)
-        
+        tw = params.get('tw', params.get('t', 6.0))
+        tf = params.get('tf', tw)
         return [
-            (0, 0), (t, 0), (t, h), (b, h), (b, h - t),
-            (2*t, h - t), (2*t, t), (b, t), (b, 0)
+            (-b/2, -h/2), (b/2, -h/2), (b/2, -h/2 + tf),
+            (-b/2 + tw, -h/2 + tf), (-b/2 + tw, h/2 - tf),
+            (b/2, h/2 - tf), (b/2, h/2), (-b/2, h/2),
         ]
     
     def _custom_profile(self, params: dict) -> list[tuple[float, float]]:

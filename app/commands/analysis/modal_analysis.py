@@ -1,16 +1,13 @@
 # app/commands/analysis\modal_analysis.py
-
 from dataclasses import dataclass
 
 import numpy as np
+from scipy import sparse
 
 from core.units import G_MM_S2
 
 from .solver import ModalResult
 
-# ============================================================
-# SPEKTRAL MOD SONUCU
-# ============================================================
 
 @dataclass
 class SpectralModeResult:
@@ -44,10 +41,6 @@ class SpectralModeResult:
         }
 
 
-# ============================================================
-# SPEKTRAL SONUÇ
-# ============================================================
-
 @dataclass
 class SpectralResult:
 
@@ -71,10 +64,6 @@ class SpectralResult:
         }
 
 
-# ============================================================
-# RESPONSE SPECTRUM
-# ============================================================
-
 def _direction_vector(
     modal_dofs,
     direction
@@ -94,11 +83,14 @@ def _direction_vector(
             f"Geçersiz yön: {direction}"
         )
 
-    return np.array([
-        1.0 if dof % 6 == component
-        else 0.0
-        for dof in modal_dofs
-    ])
+    d_arr = np.asarray(modal_dofs)
+    return (d_arr % 6 == component).astype(float)
+
+
+def _as_csc(matrix) -> sparse.csc_matrix:
+    if sparse.issparse(matrix):
+        return matrix.tocsc()
+    return sparse.csc_matrix(np.asarray(matrix, dtype=float))
 
 
 def response_spectrum_solve(
@@ -117,14 +109,9 @@ def response_spectrum_solve(
         modal.n_modes
     )
 
-    modal_dofs = modal.modal_dofs
-
-    M_modal = M_global[
-        np.ix_(
-            modal_dofs,
-            modal_dofs
-        )
-    ]
+    modal_dofs = np.asarray(modal.modal_dofs, dtype=np.intp)
+    M_csc = _as_csc(M_global)
+    M_modal = M_csc[modal_dofs, :][:, modal_dofs].tocsc()
 
     r_x = _direction_vector(
         modal_dofs,
@@ -156,28 +143,19 @@ def response_spectrum_solve(
         if T <= 0.0:
             continue
 
-        # --------------------------------------------
-        # Modal participation
-        # --------------------------------------------
-
-        m_modal = (
-            phi @ M_modal @ phi
-        )
+        m_phi = M_modal @ phi
+        m_modal = float(phi @ m_phi)
 
         if m_modal <= 0.0:
             continue
 
-        lx = phi @ M_modal @ r_x
-        ly = phi @ M_modal @ r_y
-        lz = phi @ M_modal @ r_z
+        lx = float(phi @ (M_modal @ r_x))
+        ly = float(phi @ (M_modal @ r_y))
+        lz = float(phi @ (M_modal @ r_z))
 
         gamma_x = lx / m_modal
         gamma_y = ly / m_modal
         gamma_z = lz / m_modal
-
-        # --------------------------------------------
-        # Spektral ivme
-        # --------------------------------------------
 
         Sa_g = spectrum.get_sa(T)
 
@@ -193,10 +171,6 @@ def response_spectrum_solve(
             Sa /
             omega2
         )
-
-        # --------------------------------------------
-        # Mod şekli × modal katsayı
-        # --------------------------------------------
 
         ux_modal = (
             gamma_x *
@@ -215,10 +189,6 @@ def response_spectrum_solve(
             displacement_factor *
             phi
         )
-
-        # --------------------------------------------
-        # Full DOF
-        # --------------------------------------------
 
         ux_full = np.zeros(num_dofs)
         uy_full = np.zeros(num_dofs)
@@ -258,10 +228,6 @@ def response_spectrum_solve(
                 displacement_z=uz_full,
             )
         )
-
-    # ========================================================
-    # SRSS
-    # ========================================================
 
     if ux_modes:
 

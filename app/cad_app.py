@@ -12,7 +12,6 @@ from app.services.view_service import ViewService
 from app.services.visibility_service import VisibilityService
 from app.services.wind_service import WindService
 from app.commands.edit_controller import EditController
-from logging_config import CadLogger
 from tools.wind_manager import WindManager
 
 if TYPE_CHECKING:
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
     from ui.ui_host import UIHost
     from viewport.viewport_manager import ViewportManager
 
+from logging_config import CadLogger
 logger = CadLogger.get(__name__)
 
 

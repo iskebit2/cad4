@@ -128,7 +128,14 @@ def _parse_frame_assign(df, ctx) -> dict[str, tuple[str, float]]:
         fid = str(row.get("Frame", "")).strip()
         if not fid:
             continue
-        sect = str(row.get("AnalSect", row.get("Section", ""))).strip()
+        sect = ""
+        for col in ("AnalSect", "Section", "SectionName"):
+            val = row.get(col)
+            if val is not None:
+                s = str(val).strip()
+                if s and s.lower() not in ("none", "nan"):
+                    sect = s
+                    break
         if ctx and sect in ctx.auto_select_lists:
             members = ctx.auto_select_lists[sect]
             if members:
@@ -300,21 +307,18 @@ def create_frames(
             continue
         sect, rot = assign.get(fid, ("", 0.0))
         if not sect or sect not in builder.sections:
+            logger.warning("[Frame] %s: kesit %r bulunamadi, fallback=%r atandi", fid, sect, fallback)
             sect = fallback
-        try:
-            frame = builder.create_frame(
-                node_map[ji], node_map[jj], sect,
-                rotation_deg=rot, label=fid,
-            )
-            if fid in releases:
-                frame.release_i = releases[fid]["i"]
-                frame.release_j = releases[fid]["j"]
-            out[fid] = frame
-            count += 1
-        except Exception as e:
-            logger.error("[Frame] %s: %s", fid, e, exc_info=True)
+        frame = builder.create_frame(
+            node_map[ji], node_map[jj], sect,
+            rotation_deg=rot, label=fid,
+        )
+        if fid in releases:
+            frame.release_i = releases[fid]["i"]
+            frame.release_j = releases[fid]["j"]
+        out[fid] = frame
+        count += 1
 
-    # --- frame parametrelerini bağla ---
     _apply_frame_insertion_points(ctx, out)
     _apply_frame_end_offsets(ctx, out)
     _apply_frame_output_stations(ctx, out)
@@ -505,9 +509,7 @@ def create_links(builder, ctx: LoadContext, node_map: dict[str, Node]) -> int:
         return 0
 
     prop_map = _parse_link_assign(ctx.df_link_assign)
-    default_prop = next(iter(ctx.link_props), None)
-    if default_prop is None:
-        return 0
+    default_prop = next(iter(ctx.link_props), "LINK1")
 
     count = 0
     for _, row in ctx.df_link_conn.iterrows():
@@ -516,15 +518,13 @@ def create_links(builder, ctx: LoadContext, node_map: dict[str, Node]) -> int:
         jj = str(row.get("JointJ", "")).strip()
         if not lid or ji not in node_map or jj not in node_map:
             continue
-        try:
-            builder.create_link(
-                node_map[ji], node_map[jj],
-                prop_name=prop_map.get(lid, default_prop),
-                label=lid,
-            )
-            count += 1
-        except Exception as e:
-            logger.info("[Link] %s: %s", lid, e)
+        builder.create_link(
+            node_map[ji],
+            node_map[jj],
+            prop_name=prop_map.get(lid, default_prop),
+            label=lid,
+        )
+        count += 1
     return count
 
 

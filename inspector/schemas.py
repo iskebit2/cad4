@@ -196,30 +196,23 @@ def frame_schema():
 # ============================================================================
 # AREA
 # ============================================================================
-def area_schema():
+def area_schema() -> list[Group]:
     return [
         Group("Genel", [
-            Field("label",      "str",   "Label"),
+            Field("label",      "str",   "Etiket"),
+            Field("unique_id",  "info",  "ID"),
+            Field("node_count", "info",  "Düğüm Sayısı"),
+        ]),
+        Group("Kesit", [
+            Field("section_name",  "string_select", "Kesit"),
+            Field("area_section",  "info",          "Kesit Detayı"),
+            Field("material_info", "info",          "Malzeme"),
+            Field("thickness",     "float",         "Kalınlık", unit="mm"),
+        ]),
+        Group("Görünüm", [
             Field("is_visible", "bool",  "Görünür"),
             Field("color",      "color", "Renk"),
         ]),
-        Group("Kabuk", [
-            Field("thickness",    "float", "Kalınlık",
-                      step=0.1, format="%.3f", unit="(L)"),
-            Field("material",     "material_ref", "Malzeme"),
-            Field("section_name", "string_select", "Kesit Adı"),
-            Field("material_info", "info", "Malzeme Özeti"),
-        ]),
-        Group("Override", [
-            Field("thick_over",  "float", "Kalınlık Override",
-                      step=0.1, format="%.3f", unit="(L)"),
-            Field("offset_over", "float", "Offset Override",
-                      step=0.1, format="%.3f", unit="(L)"),
-            Field("mat_prop",    "str", "MatProp"),
-        ], default_open=False),
-        Group("Alan Kesiti", [
-            Field("area_section", "info", "AreaSection"),
-        ], default_open=False),
     ]
 
 
@@ -373,28 +366,55 @@ class Catalog(Protocol):
     def list_load_patterns(self) -> list[str]: ...
 
 class CatalogAdapter:
-    """CadApp.section_catalog dict'ini inspector Catalog protokolüne uyarlar."""
-
     def __init__(self, app):
-        self._app = app
+        self.app = app
 
-    def _catalog_dict(self) -> dict:
-        return getattr(self._app, "section_catalog", {}) or {}
+    @property
+    def _project(self):
+        return getattr(self.app, "current_project", None)
 
     def list_sections(self) -> list[str]:
-        return sorted(self._catalog_dict().keys())
+        names = set()
+        proj = self._project
+        if proj is not None:
+            names.update(proj.sections.keys())
+        disk_cat = getattr(self.app, "section_catalog", None)
+        if isinstance(disk_cat, dict):
+            names.update(disk_cat.keys())
+        return sorted(names)
 
-    def get_section(self, name: str) -> Any | None:
-        return self._catalog_dict().get(name)
+    def get_section(self, name: str):
+        proj = self._project
+        if proj is not None and name in proj.sections:
+            return proj.sections[name]
+        disk_cat = getattr(self.app, "section_catalog", None)
+        if isinstance(disk_cat, dict):
+            return disk_cat.get(name)
+        return None
+
+    def list_area_sections(self) -> list[str]:
+        proj = self._project
+        if proj is None:
+            return []
+        return sorted(proj.area_sections.keys())
+
+    def get_area_section(self, name: str):
+        proj = self._project
+        if proj is None:
+            return None
+        return proj.area_sections.get(name)
 
     def list_materials(self) -> list[str]:
-        # material_catalog varsa; yoksa boş
-        cat = getattr(self._app, "material_catalog", None) or {}
-        return sorted(cat.keys())
+        proj = self._project
+        if proj is None:
+            return []
+        return sorted(proj.materials.keys())
 
-    def get_material(self, name: str) -> Any | None:
-        cat = getattr(self._app, "material_catalog", None) or {}
-        return cat.get(name)
+    def get_material(self, name: str):
+        proj = self._project
+        if proj is None:
+            return None
+        return proj.materials.get(name)
 
     def list_link_props(self) -> list[str]:
         cat = getattr(self._app, "link_prop_catalog", None) or {}
