@@ -442,11 +442,8 @@ def build_stiffness(
 
     if validate:
         from app.commands.analysis.validation import validate_stiffness
-        # fixed_dofs henüz elimizde olmayabilir → caller (run_analysis) sağlar
-        # İlk aşamada yalnızca global K'yı kontrol et:
-        for e in validate_stiffness(asm, fixed_dofs=None, check_rank=False):
-            asm.warnings.append(e)
-            print("[Stiffness] %s", e)
+        errs = validate_stiffness(asm)
+        asm.warnings.extend(errs)
 
     return asm
 
@@ -533,11 +530,17 @@ def _assemble_area(area, K: np.ndarray, num_dofs: int) -> str | None:
     nodes = getattr(area, "nodes", [])
     if len(nodes) < 3:
         return "area düğüm sayısı < 3"
-    thickness = float(getattr(area, "thickness", 0.0))
-    if thickness <= 0.0:
-        return "area kalınlık <= 0"
 
     area_sec = getattr(area, "area_section", None)
+    thickness = float(getattr(area, "thickness", 0.0) or 0.0)
+    if thickness == 0.0 and area_sec is not None:
+        thickness = float(getattr(area_sec, "thickness", 0.0) or 0.0)
+
+    if thickness < 0.0:
+        return "area kalınlık < 0"
+    if thickness == 0.0:
+        return None
+
     mat = getattr(area, "material", None) or (getattr(area_sec, "material", None) if area_sec else None)
     if not mat:
         return "area material yok"

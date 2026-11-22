@@ -7,12 +7,11 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from app.commands.analysis.mesher import SolverMesh, build_solver_mesh
+from app.commands.analysis.stiffness_assembly import transformation_matrix
 from app.commands.analysis.validation import validate_model
 from core.units import UnitSystem, convert_project_units
+from data.enums import LoadDirection
 from domain.definition import (
-    AreaGravityLoad,
-    AreaUniformLoad,
-    AreaUniformToFrameLoad,
     FrameDistributedLoad,
     LoadCase,
     LoadPattern,
@@ -20,8 +19,6 @@ from domain.definition import (
     StaticLoadAssignment,
 )
 from domain.element import Area, Frame, Node
-from data.enums import LoadDirection
-
 
 _GRAVITY_MM_S2 = 9806.65
 
@@ -49,6 +46,30 @@ def _add_point_load_to_dof(F: np.ndarray, base: int, load: PointLoad, scale: flo
     F[base + 5] += scale * float(load.mz)
 
 
+def _is_released(rel: dict | None, keys: tuple[str, ...]) -> bool:
+    if not rel:
+        return False
+    if isinstance(rel, dict):
+        return any(bool(rel.get(k, False)) for k in keys)
+    return any(bool(getattr(rel, k, False)) for k in keys)
+
+
+def _apply_release_mask(f_loc: np.ndarray, release_i: dict | None, release_j: dict | None) -> None:
+    dof_keys = (
+        ("U1", "u1", "R1"),
+        ("U2", "u2"),
+        ("U3", "u3"),
+        ("R4", "r1"),
+        ("R2", "r2"),
+        ("R3", "r3"),
+    )
+    for idx, keys in enumerate(dof_keys):
+        if _is_released(release_i, keys):
+            f_loc[idx] = 0.0
+        if _is_released(release_j, keys):
+            f_loc[6 + idx] = 0.0
+
+
 def _direction_vector(
     frame: Frame,
     R: np.ndarray,
@@ -60,9 +81,9 @@ def _direction_vector(
     if L <= 1e-12:
         return np.zeros(3, dtype=float), 0.0
 
-    e1 = R[:, 0]
-    e2 = R[:, 1]
-    e3 = R[:, 2]
+    e1 = R[0]
+    e2 = R[1]
+    e3 = R[2]
     proj_xy = math.hypot(float(e1[0]), float(e1[1]))
     proj_xz = math.hypot(float(e1[0]), float(e1[2]))
     proj_yz = math.hypot(float(e1[1]), float(e1[2]))
@@ -167,30 +188,47 @@ def _trapezoidal_fef_axial(a: float, b: float, q1: float, q2: float, L: float) -
     return fi, fj
 
 
+def _add_uniform_local_vector_fef(f_loc: np.ndarray, q_loc: np.ndarray, L: float) -> None:
+    qx = float(q_loc[0])
+    qy = float(q_loc[1])
+    qz = float(q_loc[2])
+
+    if abs(qx) > 1e-15:
+        f_loc[0] += 0.5 * qx * L
+        f_loc[6] += 0.5 * qx * L
+
+    if abs(qy) > 1e-15:
+        f_loc[1] += 0.5 * qy * L
+        f_loc[5] += (qy * L * L) / 12.0
+        f_loc[7] += 0.5 * qy * L
+        f_loc[11] -= (qy * L * L) / 12.0
+
+    if abs(qz) > 1e-15:
+        f_loc[2] += 0.5 * qz * L
+        f_loc[4] -= (qz * L * L) / 12.0
+        f_loc[8] += 0.5 * qz * L
+        f_loc[10] += (qz * L * L) / 12.0
+
+
 def _assemble_frame_distributed_load(
-    F: np.ndarray,
+    f_loc: np.ndarray,
     frame: Frame,
+    R: np.ndarray,
+    L: float,
     dload: FrameDistributedLoad,
-    base_i: int,
-    base_j: int,
     scale: float,
 ) -> None:
-    L = frame.get_length()
     if L <= 1e-12 or not dload.segments:
         return
 
-    R = frame.get_transformation_matrix()
     dir_vec, proj_factor = _direction_vector(
         frame, R, dload.coord_sys, dload.load_dir, dload.direction
     )
     if proj_factor == 0.0:
         return
 
-    local_dir = R.T @ (dir_vec * proj_factor)
+    local_dir = R @ (dir_vec * proj_factor)
     is_moment = str(dload.force_or_moment or "Force").strip().lower().startswith("m")
-
-    f_loc_i = np.zeros(6, dtype=float)
-    f_loc_j = np.zeros(6, dtype=float)
 
     for seg in dload.segments:
         x1 = float(seg.x1) * L if dload.is_relative else float(seg.x1)
@@ -210,65 +248,30 @@ def _assemble_frame_distributed_load(
                 if abs(qc1) <= 1e-15 and abs(qc2) <= 1e-15:
                     continue
                 mi, mj = _trapezoidal_fef_axial(a, b, qc1, qc2, L)
-                f_loc_i[3 + comp] += mi
-                f_loc_j[3 + comp] += mj
+                f_loc[3 + comp] += mi
+                f_loc[9 + comp] += mj
         else:
             qx1, qx2 = q1 * float(local_dir[0]), q2 * float(local_dir[0])
             if abs(qx1) > 1e-15 or abs(qx2) > 1e-15:
                 fi1, fj1 = _trapezoidal_fef_axial(a, b, qx1, qx2, L)
-                f_loc_i[0] += fi1
-                f_loc_j[0] += fj1
+                f_loc[0] += fi1
+                f_loc[6] += fj1
 
             qy1, qy2 = q1 * float(local_dir[1]), q2 * float(local_dir[1])
             if abs(qy1) > 1e-15 or abs(qy2) > 1e-15:
                 ri2, mi3, rj2, mj3 = _trapezoidal_fef_transverse(a, b, qy1, qy2, L)
-                f_loc_i[1] += ri2
-                f_loc_i[5] += mi3
-                f_loc_j[1] += rj2
-                f_loc_j[5] += mj3
+                f_loc[1] += ri2
+                f_loc[5] += mi3
+                f_loc[7] += rj2
+                f_loc[11] += mj3
 
             qz1, qz2 = q1 * float(local_dir[2]), q2 * float(local_dir[2])
             if abs(qz1) > 1e-15 or abs(qz2) > 1e-15:
                 ri3, mi2, rj3, mj2 = _trapezoidal_fef_transverse(a, b, qz1, qz2, L)
-                f_loc_i[2] += ri3
-                f_loc_i[4] -= mi2
-                f_loc_j[2] += rj3
-                f_loc_j[4] -= mj2
-
-    rel_i = frame.release_i
-    if rel_i is not None:
-        if getattr(rel_i, "u1", False):
-            f_loc_i[0] = 0.0
-        if getattr(rel_i, "u2", False):
-            f_loc_i[1] = 0.0
-        if getattr(rel_i, "u3", False):
-            f_loc_i[2] = 0.0
-        if getattr(rel_i, "r1", False):
-            f_loc_i[3] = 0.0
-        if getattr(rel_i, "r2", False):
-            f_loc_i[4] = 0.0
-        if getattr(rel_i, "r3", False):
-            f_loc_i[5] = 0.0
-
-    rel_j = frame.release_j
-    if rel_j is not None:
-        if getattr(rel_j, "u1", False):
-            f_loc_j[0] = 0.0
-        if getattr(rel_j, "u2", False):
-            f_loc_j[1] = 0.0
-        if getattr(rel_j, "u3", False):
-            f_loc_j[2] = 0.0
-        if getattr(rel_j, "r1", False):
-            f_loc_j[3] = 0.0
-        if getattr(rel_j, "r2", False):
-            f_loc_j[4] = 0.0
-        if getattr(rel_j, "r3", False):
-            f_loc_j[5] = 0.0
-
-    F[base_i : base_i + 3] += R @ f_loc_i[:3]
-    F[base_i + 3 : base_i + 6] += R @ f_loc_i[3:6]
-    F[base_j : base_j + 3] += R @ f_loc_j[:3]
-    F[base_j + 3 : base_j + 6] += R @ f_loc_j[3:6]
+                f_loc[2] += ri3
+                f_loc[4] -= mi2
+                f_loc[8] += rj3
+                f_loc[10] -= mj2
 
 
 def _area_local_axes(nodes: list[Node]) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
@@ -488,13 +491,22 @@ def assemble_pattern_load_vector(
         if base_i is None or base_j is None:
             continue
 
-        for dload in frame.dist_loads:
-            if dload.pattern_name == pattern_name:
-                _assemble_frame_distributed_load(F, frame, dload, base_i, base_j, scale)
-
         L = frame.get_length()
         if L <= 1e-12:
             continue
+
+        T, L = transformation_matrix(
+            (ni.x, ni.y, ni.z),
+            (nj.x, nj.y, nj.z),
+            getattr(frame, "rotation_deg", 0.0) or 0.0,
+        )
+        R = T[:3, :3]
+
+        f_loc = np.zeros(12, dtype=float)
+
+        for dload in frame.dist_loads:
+            if dload.pattern_name == pattern_name:
+                _assemble_frame_distributed_load(f_loc, frame, R, L, dload, scale)
 
         sec = getattr(frame, "section", None)
         mat = getattr(sec, "material", None) if sec is not None else None
@@ -504,18 +516,22 @@ def assemble_pattern_load_vector(
 
         for gload in getattr(frame, "gravity_loads", None) or []:
             if gload.pattern_name == pattern_name and w_line > 0.0:
-                f_half = 0.5 * scale * w_line * L
-                F[base_i + 0] += f_half * float(gload.multiplier_x)
-                F[base_i + 1] += f_half * float(gload.multiplier_y)
-                F[base_i + 2] += f_half * float(gload.multiplier_z)
-                F[base_j + 0] += f_half * float(gload.multiplier_x)
-                F[base_j + 1] += f_half * float(gload.multiplier_y)
-                F[base_j + 2] += f_half * float(gload.multiplier_z)
+                g_glob = np.array(
+                    [float(gload.multiplier_x), float(gload.multiplier_y), float(gload.multiplier_z)],
+                    dtype=float,
+                )
+                q_loc = (scale * w_line) * (R @ g_glob)
+                _add_uniform_local_vector_fef(f_loc, q_loc, L)
 
         if sw_mult != 0.0 and w_line > 0.0:
-            sw_half = 0.5 * scale * sw_mult * w_line * L
-            F[base_i + 2] -= sw_half
-            F[base_j + 2] -= sw_half
+            q_loc = (scale * sw_mult * w_line) * (R @ np.array([0.0, 0.0, -1.0]))
+            _add_uniform_local_vector_fef(f_loc, q_loc, L)
+
+        if np.any(f_loc != 0.0):
+            _apply_release_mask(f_loc, frame.release_i, frame.release_j)
+            f_glob = T.T @ f_loc
+            F[base_i : base_i + 6] += f_glob[:6]
+            F[base_j : base_j + 6] += f_glob[6:12]
 
     for area in mesh.areas.values():
         _assemble_area_loads(F, dof_map, area, pattern_name, scale, sw_mult)

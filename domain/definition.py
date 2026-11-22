@@ -716,9 +716,24 @@ class SpectrumFunction:
     data_type: str = "Period vs Accel"
     points: list[tuple[float, float]] = field(default_factory=list)
 
+    _TBDY_TRIGGER_FIELDS = frozenset({
+        "source_type", "ss", "s1", "tl", "site_class",
+        "r_coeff", "d_coeff", "i_coeff",
+    })
+
     def __post_init__(self):
         if self.source_type == SpectrumSourceType.TSC_2018 and not self.points:
             self.generate_tbdy2018_points()
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        super().__setattr__(name, value)
+        if name not in self._TBDY_TRIGGER_FIELDS:
+            return
+        if getattr(self, "source_type", None) != SpectrumSourceType.TSC_2018:
+            return
+        if "points" not in self.__dict__:
+            return
+        self.generate_tbdy2018_points()
 
     def generate_tbdy2018_points(self, num_points: int = 200):
         self.fs, self.f1 = get_tsc2018_site_coefficients(self.ss, self.s1, self.site_class)

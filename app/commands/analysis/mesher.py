@@ -4,10 +4,11 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from domain.definition import FrameDistributedLoad, LoadSegment
+from domain.definition import FrameDistributedLoad, FrameGravityLoad, LoadSegment
 from domain.element import Area, Frame, Link, Node
 
-_DEFAULT_MESH_MAX_LENGTH = 1000.0  # mm
+_DEFAULT_MESH_MAX_LENGTH = 1000.0
+
 
 @dataclass
 class SolverMesh:
@@ -121,7 +122,7 @@ def _segment_intersect_ratios(
     return sc, tc
 
 
-def _frame_station_ratios(
+def _frame_mesh_ratios(
     frame: Frame,
     all_nodes: list[Node],
     all_frames: list[Frame],
@@ -133,21 +134,16 @@ def _frame_station_ratios(
 
     ratios: list[float] = [0.0, 1.0]
 
-    n_segments = 1
-    if frame.auto_mesh and frame.mesh_num_segments >= 2:
-        n_segments = int(frame.mesh_num_segments)
-    elif frame.auto_mesh and frame.mesh_max_length > 0.0:
-        n_segments = max(1, math.ceil(L / float(frame.mesh_max_length)))
-    elif frame.station_type == "MaxStaSpcg" and frame.max_sta_spcg and frame.max_sta_spcg > 0.0:
-        n_segments = max(1, math.ceil(L / float(frame.max_sta_spcg)))
-    else:
-        # auto_mesh=True + paramsız da buraya düşer → min_num_sta fallback
-        sta = int(frame.min_num_sta) if frame.min_num_sta and frame.min_num_sta >= 2 else 2
-        n_segments = max(1, sta - 1)
-
-    if n_segments > 1:
-        for i in range(1, n_segments):
-            ratios.append(i / float(n_segments))
+    if frame.auto_mesh:
+        if frame.mesh_num_segments >= 2:
+            n_segments = int(frame.mesh_num_segments)
+        elif frame.mesh_max_length > 0.0:
+            n_segments = max(1, math.ceil(L / float(frame.mesh_max_length)))
+        else:
+            n_segments = max(1, math.ceil(L / _DEFAULT_MESH_MAX_LENGTH))
+        if n_segments > 1:
+            for i in range(1, n_segments):
+                ratios.append(i / float(n_segments))
 
     ni, nj = frame.node_i, frame.node_j
     if (frame.mesh_at_joints or frame.add_at_elm_int) and ni and nj:
@@ -242,6 +238,19 @@ def _slice_dist_load_sets(
     return sliced_sets
 
 
+def _clone_gravity_loads(frame: Frame) -> list[FrameGravityLoad]:
+    return [
+        FrameGravityLoad(
+            pattern_name=g.pattern_name,
+            multiplier_x=g.multiplier_x,
+            multiplier_y=g.multiplier_y,
+            multiplier_z=g.multiplier_z,
+            coordinate_system=g.coordinate_system,
+        )
+        for g in (getattr(frame, "gravity_loads", None) or [])
+    ]
+
+
 def build_solver_mesh(math_model, coord_tol: float = 1e-4) -> SolverMesh:
     mesh = SolverMesh()
 
@@ -294,7 +303,7 @@ def build_solver_mesh(math_model, coord_tol: float = 1e-4) -> SolverMesh:
             nj_orig.x, nj_orig.y, nj_orig.z
         )
 
-        ratios = _frame_station_ratios(frame, raw_nodes, raw_frames)
+        ratios = _frame_mesh_ratios(frame, raw_nodes, raw_frames)
         total_len = frame.get_length()
 
         seg_nodes: list[Node] = [ni_mesh]
@@ -319,8 +328,9 @@ def build_solver_mesh(math_model, coord_tol: float = 1e-4) -> SolverMesh:
                 node_j=seg_nodes[idx + 1],
                 section=frame.section,
                 rotation_deg=frame.rotation_deg,
-                release_i=frame.release_i if idx == 0 else None,
-                release_j=frame.release_j if idx == n_sub - 1 else None,
+                release_i=dict(frame.release_i) if (idx == 0 and frame.release_i) else None,
+                release_j=dict(frame.release_j) if (idx == n_sub - 1 and frame.release_j) else None,
+                gravity_loads=_clone_gravity_loads(frame),
                 dist_load_sets=_slice_dist_load_sets(frame, t0, t1, total_len),
                 modifiers=dict(frame.modifiers),
                 rigid_factor=frame.rigid_factor,

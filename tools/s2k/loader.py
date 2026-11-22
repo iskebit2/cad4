@@ -281,19 +281,29 @@ class S2KLoader:
     # BUILDER
     # ------------------------------------------------------------------
     def _apply_ctx_to_builder(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
-        """ctx'teki tüm tanımları builder'a aktar.
-
-        Sıra önemli: material → section → area_section → SD → patterns/cases/combos.
-        """
         self._apply_materials(ctx, builder)
         self._apply_sections(ctx, builder)
         self._apply_area_sections(ctx, builder)
         self._apply_load_patterns(ctx, builder)
         self._apply_load_cases(ctx, builder)
         self._apply_combinations(ctx, builder)
+        self._apply_spectrum_functions(ctx, builder)
+        self._apply_response_spectrum_cases(ctx, builder)
+        self._apply_auto_seismics(ctx, builder)
         self._apply_constraint_definitions(ctx, builder)
         self._apply_grid(ctx, builder)
 
+    def _apply_spectrum_functions(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+        for sf in ctx.spectrum_functions.values():
+            builder.project.add_spectrum_function(sf)
+
+    def _apply_response_spectrum_cases(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+        for rsc in ctx.response_spectrum_cases.values():
+            builder.project.add_response_spectrum_case(rsc)
+
+    def _apply_auto_seismics(self, ctx: LoadContext, builder: ProjectBuilder) -> None:
+        for asec in ctx.auto_seismics.values():
+            builder.project.add_auto_seismic(asec)
 
     # ------------------------------------------------------------------
     # MATERIALS

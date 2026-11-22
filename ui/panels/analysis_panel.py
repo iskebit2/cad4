@@ -3,13 +3,18 @@ from __future__ import annotations
 
 import threading
 import time
+from collections import defaultdict
 from queue import Empty, Queue
 
 import numpy as np
 from imgui_bundle import imgui
 
+from app.commands.analysis.force_recovery import (
+    FrameForceResult,
+    recover_frame_forces,
+    save_analysis_results,
+)
 from app.commands.analysis.run import AnalysisBundle, AnalysisOptions, AnalysisService
-from app.commands.analysis.validation import AnalysisValidationError
 from app.settings.categories import Category
 from logging_config import CadLogger
 from ui.base.panel_base import PanelBase
@@ -18,32 +23,34 @@ logger = CadLogger.get(__name__)
 
 
 class AnalysisManagerPanel(PanelBase):
-    """Analiz yöneticisi — BasePanel uyumlu, thread'li çalıştırma."""
-
-    # --- BasePanel sınıf seviyesi meta ---
     panel_name = "analysis_manager"
     title = "Analiz Yöneticisi"
     category = Category.TOOLS
     menu_label = "Analiz Yöneticisi"
     icon = "play"
-    uses_draft = False         # analiz paneli draft/commit kullanmaz
+    uses_draft = False
     show_apply_bar = False
-    width = 900
-    height = 700
+    width = 920
+    height = 720
     pos_first_use = (200, 100)
     context = ("app",)
 
     def __init__(self, app=None, **overrides):
-        # --- Analiz state (super'den ÖNCE) ---
         self._n_live = 0.3
         self._n_modes = 12
+        self._run_static = True
         self._run_modal = True
         self._run_spectral = False
         self._run_takeoff = True
+        self._use_shear_deform = True
+        self._recover_forces = True
         self._spectrum_name = ""
         self._spectrum_names: list[str] = []
 
         self._bundle: AnalysisBundle | None = None
+        self._frame_forces: dict[str, dict[int, FrameForceResult]] = {}
+        self._selected_static_case: str = ""
+        self._selected_frame_idx: int = 0
         self._status_msg = ""
 
         self._worker: threading.Thread | None = None
@@ -53,23 +60,17 @@ class AnalysisManagerPanel(PanelBase):
 
         super().__init__(app=app, **overrides)
 
-    # ================================================================
-    # Yaşam döngüsü
-    # ================================================================
     def open(self, **kw):
-        super().open(**kw)                # visible=True, preview aç
+        super().open(**kw)
         self._refresh_spectrum_list()
 
     def close(self):
-        super().close()                   # preview kapat, state temizle
+        super().close()
 
     def set_context(self, ctx):
-        super().set_context(ctx)          # "app" anahtarını çeker
+        super().set_context(ctx)
         self._refresh_spectrum_list()
 
-    # ================================================================
-    # Yardımcılar
-    # ================================================================
     def _project(self):
         return getattr(self.app, "current_project", None) if self.app else None
 
@@ -83,9 +84,6 @@ class AnalysisManagerPanel(PanelBase):
             list(project.spectrum_functions.keys()) if project else []
         )
 
-    # ================================================================
-    # Analiz — thread'li
-    # ================================================================
     def _run_analysis(self):
         if self._is_running:
             return
@@ -98,29 +96,35 @@ class AnalysisManagerPanel(PanelBase):
         opts = AnalysisOptions(
             n_live=self._n_live,
             n_modes=self._n_modes,
+            run_static=self._run_static,
             run_modal=self._run_modal,
             run_spectral=self._run_spectral,
             run_takeoff=self._run_takeoff,
             spectrum_name=self._spectrum_name or None,
+            use_shear_deform=self._use_shear_deform,
         )
+        do_forces = self._recover_forces
 
         self._is_running = True
-        self._status_msg = "⏳ Analiz çalışıyor..."
+        self._status_msg = "Analiz çalışıyor..."
         self._t0 = time.time()
 
         def _worker():
-            try:
-                result = AnalysisService.run(scene, project, opts)
-                self._result_queue.put(("ok", result))
-            except AnalysisValidationError as e:
-                # Auto-mesh gibi "soft" hatalar çözümü engellememeli.
-                # Sert hatalar (eksik malzeme, boş DOF, vs.) hâlâ engeller.
-                logger.warning("[AnalysisPanel] Doğrulama uyarıları: %s", e)
-                result = AnalysisService.run(scene, project, opts)
-                self._result_queue.put(("ok", result))
-            except Exception as e:
-                logger.exception("[AnalysisPanel] worker hatası")
-                self._result_queue.put(("err", str(e)))
+            bundle = AnalysisService.run(scene, project, opts)
+            forces: dict[str, dict[int, FrameForceResult]] = {}
+            if (
+                do_forces
+                and bundle.result is not None
+                and bundle.result.mesh is not None
+                and bundle.result.static_results
+            ):
+                forces = recover_frame_forces(
+                    project,
+                    bundle.result.mesh,
+                    bundle.result.static_results,
+                    use_shear_deform=opts.use_shear_deform,
+                )
+            self._result_queue.put(("ok", (bundle, forces)))
 
         self._worker = threading.Thread(target=_worker, daemon=True)
         self._worker.start()
@@ -134,24 +138,46 @@ class AnalysisManagerPanel(PanelBase):
         elapsed = time.time() - self._t0
 
         if kind == "ok":
-            self._bundle = payload
-            r = payload
+            bundle, forces = payload
+            self._bundle = bundle
+            self._frame_forces = forces
+            self._selected_frame_idx = 0
+
+            if bundle.result and bundle.result.static_results:
+                case_names = list(bundle.result.static_results.keys())
+                if self._selected_static_case not in case_names:
+                    self._selected_static_case = case_names[0]
+            else:
+                self._selected_static_case = ""
+
             parts = [f"{elapsed:.2f}s"]
-            if r.result:
-                parts.append(f"Frame={r.result.stiffness.frame_count}")
-                if r.result.modal:
-                    parts.append(f"n_modes={r.result.modal.n_modes}")
-            if r.takeoff:
-                parts.append(f"kütle={r.takeoff.total_mass_kg:.1f} kg")
-            if r.errors:
-                parts.append(f"{len(r.errors)} hata")
+            if bundle.result:
+                parts.append(f"Frame={bundle.result.stiffness.frame_count}")
+                if bundle.result.static_results:
+                    parts.append(f"Static={len(bundle.result.static_results)}")
+                if bundle.result.modal:
+                    parts.append(f"n_modes={bundle.result.modal.n_modes}")
+            if bundle.takeoff:
+                parts.append(f"kütle={bundle.takeoff.total_mass_kg:.1f} kg")
+            if bundle.errors:
+                parts.append(f"{len(bundle.errors)} hata")
             self._status_msg = "✓ " + ", ".join(parts)
         else:
             self._status_msg = f"Hata: {payload}"
 
-    # ================================================================
-    # İçerik — BasePanel.draw_content() override
-    # ================================================================
+    def _save_results_to_disk(self):
+        if self._bundle is None or self._bundle.result is None:
+            return
+        project = self._project()
+        proj_path = getattr(project, "filepath", None) or getattr(project, "path", None)
+        target = f"{proj_path}.cd4res" if proj_path else "analysis_results.cd4res"
+        saved_path = save_analysis_results(
+            target,
+            self._bundle.result,
+            frame_forces=self._frame_forces or None,
+        )
+        self._status_msg = f"✓ Kaydedildi: {saved_path}"
+
     def draw_content(self):
         self._poll_result()
 
@@ -183,9 +209,6 @@ class AnalysisManagerPanel(PanelBase):
             return (0.4, 1.0, 0.4, 1.0)
         return (0.9, 0.7, 0.4, 1.0)
 
-    # ================================================================
-    # Seçenekler
-    # ================================================================
     def _draw_options(self):
         imgui.text_colored(imgui.ImVec4(0.9, 0.85, 0.5, 1.0), "Analiz Seçenekleri")
         imgui.spacing()
@@ -196,15 +219,22 @@ class AnalysisManagerPanel(PanelBase):
         )
         self._n_live = max(0.0, min(1.0, self._n_live))
 
+        imgui.same_line(280)
         _, self._n_modes = imgui.input_int("n_modes", self._n_modes, step=1)
         self._n_modes = max(1, min(100, self._n_modes))
         imgui.pop_item_width()
 
+        _, self._run_static = imgui.checkbox("Statik Analiz", self._run_static)
+        imgui.same_line()
         _, self._run_modal = imgui.checkbox("Modal Analiz", self._run_modal)
         imgui.same_line()
         _, self._run_spectral = imgui.checkbox("Spectral Analiz", self._run_spectral)
         imgui.same_line()
         _, self._run_takeoff = imgui.checkbox("Metrajlar", self._run_takeoff)
+
+        _, self._use_shear_deform = imgui.checkbox("Kayma Deformasyonu", self._use_shear_deform)
+        imgui.same_line()
+        _, self._recover_forces = imgui.checkbox("İç Kuvvet Hesabı", self._recover_forces)
 
         if self._run_spectral:
             self._refresh_spectrum_list()
@@ -215,11 +245,9 @@ class AnalysisManagerPanel(PanelBase):
                 )
             else:
                 imgui.push_item_width(240)
-                try:
-                    cur = self._spectrum_names.index(self._spectrum_name)
-                except ValueError:
-                    cur = 0
+                if self._spectrum_name not in self._spectrum_names:
                     self._spectrum_name = self._spectrum_names[0]
+                cur = self._spectrum_names.index(self._spectrum_name)
                 ch, idx = imgui.combo("Spektrum", cur, self._spectrum_names)
                 if ch:
                     self._spectrum_name = self._spectrum_names[idx]
@@ -236,8 +264,8 @@ class AnalysisManagerPanel(PanelBase):
             imgui.push_style_color(
                 imgui.Col_.button, imgui.ImVec4(0.3, 0.3, 0.3, 1.0)
             )
-        label = "⏳ Çalışıyor..." if self._is_running else "▶ Analizi Çalıştır"
-        if imgui.button(label, imgui.ImVec2(200, 32)) and not disabled:
+        label = "Çalışıyor..." if self._is_running else "Analizi Çalıştır"
+        if imgui.button(label, imgui.ImVec2(180, 32)) and not disabled:
             self._run_analysis()
         if disabled:
             imgui.pop_style_color(1)
@@ -247,9 +275,11 @@ class AnalysisManagerPanel(PanelBase):
                     imgui.ImVec4(0.9, 0.6, 0.3, 1.0), "(sahne veya proje yok)"
                 )
 
-    # ================================================================
-    # Hata bandı
-    # ================================================================
+        if self._bundle is not None and self._bundle.result is not None and not self._is_running:
+            imgui.same_line()
+            if imgui.button("Sonuçları Kaydet (.cd4res)", imgui.ImVec2(210, 32)):
+                self._save_results_to_disk()
+
     def _draw_error_banner(self):
         if self._bundle is None or not self._bundle.errors:
             return
@@ -261,16 +291,13 @@ class AnalysisManagerPanel(PanelBase):
             imgui.ImVec2(0, min(20 + 18 * len(self._bundle.errors), 120)),
             imgui.ChildFlags_.borders,
         )
-        imgui.text_colored(imgui.ImVec4(1.0, 0.7, 0.7, 1.0), "⚠ Analiz uyarıları:")
+        imgui.text_colored(imgui.ImVec4(1.0, 0.7, 0.7, 1.0), "Analiz uyarıları:")
         for e in self._bundle.errors:
             imgui.bullet_text(e)
         imgui.end_child()
         imgui.pop_style_color(1)
         imgui.spacing()
 
-    # ================================================================
-    # Sonuçlar — TEK tanım (çift tanım bug'ı düzeltildi)
-    # ================================================================
     def _draw_results(self):
         if self._bundle is None or self._bundle.result is None:
             imgui.text_colored(imgui.ImVec4(1.0, 0.4, 0.4, 1.0), "Sonuç yok")
@@ -279,8 +306,13 @@ class AnalysisManagerPanel(PanelBase):
         tabs = [
             ("Genel", self._draw_tab_genel, True),
             ("Kütle", self._draw_tab_kutle, False),
-            ("Modal", self._draw_tab_modal, False),
         ]
+        if self._bundle.result.static_results:
+            tabs.append(("Statik", self._draw_tab_statik, True))
+        if self._frame_forces:
+            tabs.append(("İç Kuvvetler", self._draw_tab_ic_kuvvetler, False))
+        if self._bundle.result.modal is not None:
+            tabs.append(("Modal", self._draw_tab_modal, False))
         if self._bundle.spectral is not None:
             tabs.append(("Spectral", self._draw_tab_spectral, False))
         if self._bundle.takeoff is not None:
@@ -291,14 +323,7 @@ class AnalysisManagerPanel(PanelBase):
                 imgui.TreeNodeFlags_.default_open if default_open else 0
             )
             if imgui.collapsing_header(name, flags=flags):
-                try:
-                    fn()
-                except Exception:
-                    logger.exception("[AnalysisPanel] %s sekmesi hatası", name)
-                    imgui.text_colored(
-                        imgui.ImVec4(1.0, 0.4, 0.4, 1.0),
-                        f"⚠ {name} sekmesinde hata",
-                    )
+                fn()
 
     def _draw_tab_genel(self):
         r = self._bundle.result
@@ -311,7 +336,7 @@ class AnalysisManagerPanel(PanelBase):
 
         if r.stiffness.skipped:
             imgui.separator()
-            if imgui.tree_node(f"Atlanan frame'ler ({len(r.stiffness.skipped)})"):
+            if imgui.tree_node(f"Atlanan elemanlar ({len(r.stiffness.skipped)})"):
                 for label, reason in r.stiffness.skipped[:50]:
                     imgui.text_colored(
                         imgui.ImVec4(0.9, 0.7, 0.4, 1.0),
@@ -323,7 +348,7 @@ class AnalysisManagerPanel(PanelBase):
                     )
                 imgui.tree_pop()
 
-        warns = list(r.mass.warnings) + list(r.stiffness.warnings)
+        warns = list(r.warnings)
         if warns:
             imgui.separator()
             imgui.text_colored(imgui.ImVec4(0.9, 0.8, 0.4, 1.0), "Uyarılar:")
@@ -333,6 +358,189 @@ class AnalysisManagerPanel(PanelBase):
                 )
             if len(warns) > 20:
                 imgui.text(f"  ... ve {len(warns) - 20} tane daha")
+
+    def _draw_tab_statik(self):
+        static_res = self._bundle.result.static_results
+        if not static_res:
+            imgui.text("Statik sonuç yok")
+            return
+
+        case_names = list(static_res.keys())
+        if self._selected_static_case not in case_names:
+            self._selected_static_case = case_names[0]
+
+        imgui.push_item_width(220)
+        cur_idx = case_names.index(self._selected_static_case)
+        ch, idx = imgui.combo("Yük Durumu (LoadCase)", cur_idx, case_names)
+        if ch:
+            self._selected_static_case = case_names[idx]
+        imgui.pop_item_width()
+
+        res = static_res[self._selected_static_case]
+        U = res.displacements
+        F = res.applied_forces
+        R = res.reactions
+
+        max_ux = float(np.max(np.abs(U[0::6]))) if U.size >= 6 else 0.0
+        max_uy = float(np.max(np.abs(U[1::6]))) if U.size >= 6 else 0.0
+        max_uz = float(np.max(np.abs(U[2::6]))) if U.size >= 6 else 0.0
+        sum_fx = float(np.sum(F[0::6])) if F.size >= 6 else 0.0
+        sum_fy = float(np.sum(F[1::6])) if F.size >= 6 else 0.0
+        sum_fz = float(np.sum(F[2::6])) if F.size >= 6 else 0.0
+
+        imgui.spacing()
+        imgui.text_colored(
+            imgui.ImVec4(0.7, 0.9, 0.7, 1.0),
+            f"Max |U|: UX={max_ux:.4f} mm, UY={max_uy:.4f} mm, UZ={max_uz:.4f} mm",
+        )
+        imgui.text(
+            f"Toplam Yük (F): FX={sum_fx:.2f} N, FY={sum_fy:.2f} N, FZ={sum_fz:.2f} N"
+        )
+
+        fixed_set = set(self._bundle.result.fixed_dofs)
+        reac_rows: list[tuple[str, np.ndarray]] = []
+        for n_key, r_vec in res.node_reactions.items():
+            if np.linalg.norm(r_vec) > 1e-6:
+                reac_rows.append((n_key, r_vec))
+
+        if reac_rows:
+            imgui.separator()
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.85, 0.5, 1.0),
+                f"Mesnet Reaksiyonları ({len(reac_rows)} düğüm)",
+            )
+            cols = ["Düğüm", "RX (N)", "RY (N)", "RZ (N)", "MX (N·mm)", "MY (N·mm)", "MZ (N·mm)"]
+            if imgui.begin_table("##static_reactions", len(cols), imgui.TableFlags_.borders | imgui.TableFlags_.row_bg):
+                for h in cols:
+                    imgui.table_setup_column(h)
+                imgui.table_headers_row()
+                for n_key, rv in reac_rows[:100]:
+                    imgui.table_next_row()
+                    vals = [
+                        n_key,
+                        f"{rv[0]:+.2f}",
+                        f"{rv[1]:+.2f}",
+                        f"{rv[2]:+.2f}",
+                        f"{rv[3]:+.1f}",
+                        f"{rv[4]:+.1f}",
+                        f"{rv[5]:+.1f}",
+                    ]
+                    for j, v in enumerate(vals):
+                        imgui.table_set_column_index(j)
+                        imgui.text(v)
+                imgui.end_table()
+
+    def _draw_tab_ic_kuvvetler(self):
+        if not self._frame_forces:
+            imgui.text("İç kuvvet verisi yok")
+            return
+
+        case_names = list(self._frame_forces.keys())
+        if self._selected_static_case not in case_names:
+            self._selected_static_case = case_names[0]
+
+        case_map = self._frame_forces[self._selected_static_case]
+        if not case_map:
+            imgui.text("Bu yük durumu için eleman kuvveti bulunamadı")
+            return
+
+        frame_items = list(case_map.values())
+        frame_labels = [f"{ff.label} (id={ff.frame_id}, L={ff.length:.0f} mm)" for ff in frame_items]
+        if self._selected_frame_idx >= len(frame_items):
+            self._selected_frame_idx = 0
+
+        imgui.push_item_width(340)
+        ch, idx = imgui.combo("Çubuk Eleman", self._selected_frame_idx, frame_labels)
+        if ch:
+            self._selected_frame_idx = idx
+        imgui.pop_item_width()
+
+        ff = frame_items[self._selected_frame_idx]
+        if not ff.stations:
+            imgui.text("İstasyon verisi yok")
+            return
+
+        xs = np.array([s.x for s in ff.stations], dtype=float)
+        m3s = np.array([s.M3 for s in ff.stations], dtype=float)
+        v2s = np.array([s.V2 for s in ff.stations], dtype=float)
+
+        imgui.spacing()
+        imgui.text_colored(
+            imgui.ImVec4(0.85, 0.85, 0.55, 1.0),
+            f"M3 min/max: {float(np.min(m3s)):.1f} / {float(np.max(m3s)):.1f} N·mm | "
+            f"V2 min/max: {float(np.min(v2s)):.2f} / {float(np.max(v2s)):.2f} N",
+        )
+
+        self._draw_moment_diagram(xs, m3s, ff.length)
+
+        cols = ["x/L", "x (mm)", "N (N)", "V2 (N)", "V3 (N)", "T (N·mm)", "M2 (N·mm)", "M3 (N·mm)"]
+        if imgui.begin_table("##station_forces", len(cols), imgui.TableFlags_.borders | imgui.TableFlags_.row_bg):
+            for h in cols:
+                imgui.table_setup_column(h)
+            imgui.table_headers_row()
+            for st in ff.stations:
+                imgui.table_next_row()
+                vals = [
+                    f"{st.ratio:.3f}",
+                    f"{st.x:.1f}",
+                    f"{st.N:+.2f}",
+                    f"{st.V2:+.2f}",
+                    f"{st.V3:+.2f}",
+                    f"{st.T:+.1f}",
+                    f"{st.M2:+.1f}",
+                    f"{st.M3:+.1f}",
+                ]
+                for j, v in enumerate(vals):
+                    imgui.table_set_column_index(j)
+                    imgui.text(v)
+            imgui.end_table()
+
+    def _draw_moment_diagram(self, xs: np.ndarray, values: np.ndarray, length: float):
+        if xs.size < 2 or length <= 0.0:
+            return
+        avail_w = max(240.0, imgui.get_content_region_avail().x)
+        canvas_h = 130.0
+        p0 = imgui.get_cursor_screen_pos()
+        p1 = imgui.ImVec2(p0.x + avail_w, p0.y + canvas_h)
+
+        draw_list = imgui.get_window_draw_list()
+        draw_list.add_rect_filled(p0, p1, imgui.get_color_u32(imgui.ImVec4(0.10, 0.12, 0.16, 1.0)))
+        draw_list.add_rect(p0, p1, imgui.get_color_u32(imgui.ImVec4(0.30, 0.35, 0.42, 1.0)))
+
+        pad_x = 18.0
+        pad_y = 18.0
+        mid_y = p0.y + canvas_h * 0.5
+        plot_w = avail_w - 2.0 * pad_x
+        max_abs = float(np.max(np.abs(values)))
+
+        axis_col = imgui.get_color_u32(imgui.ImVec4(0.65, 0.65, 0.70, 0.9))
+        line_col = imgui.get_color_u32(imgui.ImVec4(0.25, 0.85, 0.55, 1.0))
+        fill_col = imgui.get_color_u32(imgui.ImVec4(0.25, 0.85, 0.55, 0.22))
+
+        draw_list.add_line(
+            imgui.ImVec2(p0.x + pad_x, mid_y),
+            imgui.ImVec2(p0.x + pad_x + plot_w, mid_y),
+            axis_col,
+            1.5,
+        )
+
+        if max_abs > 1e-12:
+            scale_y = (canvas_h * 0.5 - pad_y) / max_abs
+            pts: list[imgui.ImVec2] = []
+            for x_val, m_val in zip(xs, values):
+                sx = p0.x + pad_x + (float(x_val) / length) * plot_w
+                sy = mid_y + float(m_val) * scale_y
+                pts.append(imgui.ImVec2(sx, sy))
+
+            for i in range(len(pts) - 1):
+                a = pts[i]
+                b = pts[i + 1]
+                a0 = imgui.ImVec2(a.x, mid_y)
+                b0 = imgui.ImVec2(b.x, mid_y)
+                draw_list.add_quad_filled(a0, a, b, b0, fill_col)
+                draw_list.add_line(a, b, line_col, 2.0)
+
+        imgui.dummy(imgui.ImVec2(avail_w, canvas_h + 4.0))
 
     def _draw_tab_kutle(self):
         m = self._bundle.result.mass
@@ -354,7 +562,6 @@ class AnalysisManagerPanel(PanelBase):
 
         imgui.separator()
         imgui.text_colored(imgui.ImVec4(0.9, 0.85, 0.5, 1.0), "Kaynak Dökümü")
-        from collections import defaultdict
         agg = defaultdict(float)
         for c in m.contributions:
             agg[c.source_type] += c.mass_kg
