@@ -1,4 +1,4 @@
-# domain/enums.py
+# data/enums.py
 
 from enum import Enum, IntEnum, auto
 

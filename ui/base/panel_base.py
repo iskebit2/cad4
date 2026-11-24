@@ -2,15 +2,20 @@
 from __future__ import annotations
 
 from copy import deepcopy
-
 from typing import Any
 
 from imgui_bundle import imgui
+
 from app.settings.categories import Category
 from ui.helpers.apply_bar import draw_apply_bar
 
 
-
+_STATUS_COLORS: dict[str, imgui.ImVec4] = {
+    "info": imgui.ImVec4(0.6, 0.8, 0.6, 1.0),
+    "warn": imgui.ImVec4(1.0, 0.6, 0.3, 1.0),
+    "error": imgui.ImVec4(1.0, 0.4, 0.4, 1.0),
+}
+_DEFAULT_STATUS_COLOR = imgui.ImVec4(0.7, 0.7, 0.7, 1.0)
 
 
 class PanelBase:
@@ -24,14 +29,12 @@ class PanelBase:
     shortcut: str | None = None
     context: tuple[str, ...] = ()
 
-    # ---- UI durumu ----
     app = None
     visible: bool = False
     width: int = 480
     height: int = 600
     pos_first_use: tuple[float, float] | None = None
 
-    # ---- Draft/commit ----
     _original: Any = None
     draft: Any = None
     _dirty: bool = False
@@ -39,7 +42,6 @@ class PanelBase:
     show_apply_bar: bool = True
     preview_flags: dict[str, bool] | None = None
 
-    # ---- Layout ----
     use_standard_layout: bool = False
 
     def __init_subclass__(cls, **kwargs):
@@ -53,9 +55,18 @@ class PanelBase:
         for k, v in overrides.items():
             setattr(self, k, v)
 
-    # ================================================================
-    # Yaşam döngüsü
-    # ================================================================
+    def _resolve_project(self) -> Any:
+        proj = getattr(self, "project", None)
+        if proj is not None:
+            return proj
+        if self.app is None:
+            return None
+        current = getattr(self.app, "current_project", None)
+        if current is not None:
+            return current
+        svc = getattr(self.app, "project_service", None)
+        return getattr(svc, "project", None) if svc is not None else None
+
     def open(self, **kw) -> None:
         self.visible = True
         if self.uses_draft:
@@ -69,9 +80,6 @@ class PanelBase:
         self.draft = None
         self._dirty = False
 
-    # ================================================================
-    # Context
-    # ================================================================
     def set_context(self, ctx: dict) -> None:
         for key in self.context:
             if key in ctx:
@@ -80,13 +88,15 @@ class PanelBase:
         self._refresh_draft()
 
     def _on_context_ready(self) -> None:
-        """Alt sınıf override eder — context geldiğinde bir kez."""
+        pass
 
-    # ================================================================
-    # Draft yönetimi
-    # ================================================================
     def _refresh_draft(self) -> None:
-        project = getattr(self.app, "current_project", None)
+        if not self.uses_draft:
+            self._original = None
+            self.draft = None
+            self._dirty = False
+            return
+        project = self._resolve_project()
         if project is None:
             self._original = None
             self.draft = None
@@ -99,65 +109,48 @@ class PanelBase:
     def reset(self) -> None:
         self._refresh_draft()
 
-    # ================================================================
-    # Apply
-    # ================================================================
     def apply(self) -> bool:
         if not self._dirty or self.draft is None:
             return False
-        try:
-            self._emit_commands()
-            return True
-        except Exception:
-            from logging_config import CadLogger
-            CadLogger.get(__name__).exception(
-                "[%s] apply hatası", self.panel_name
-            )
-            return False
+        self._emit_commands()
+        return True
 
     def _emit_commands(self) -> None:
         raise NotImplementedError
 
-    # ================================================================
-    # Draw — giriş noktası
-    # ================================================================
     def draw(self) -> None:
         if not self.visible:
             return
-        imgui.set_next_window_size(imgui.ImVec2(self.width, self.height),
-                                   imgui.Cond_.first_use_ever)
+        imgui.set_next_window_size(
+            imgui.ImVec2(self.width, self.height),
+            imgui.Cond_.first_use_ever,
+        )
         if self.pos_first_use:
-            imgui.set_next_window_pos(imgui.ImVec2(*self.pos_first_use),
-                                      imgui.Cond_.first_use_ever)
+            imgui.set_next_window_pos(
+                imgui.ImVec2(*self.pos_first_use),
+                imgui.Cond_.first_use_ever,
+            )
 
         win_id = f"{self.title}###{self.panel_name or id(self)}"
         expanded, opened = imgui.begin(win_id, True)
-        try:
-            if not opened:
-                self.close()
-                return
-            if expanded:
-                if self.uses_draft or self.show_apply_bar:
-                    self._draw_apply_bar()
-                    imgui.separator()
-                self.draw_content()
-        finally:
+        if not opened:
             imgui.end()
+            self.close()
+            return
+        if expanded:
+            if self.uses_draft or self.show_apply_bar:
+                self._draw_apply_bar()
+                imgui.separator()
+            self.draw_content()
+        imgui.end()
 
     def _draw_apply_bar(self) -> None:
-        if self.uses_draft:
-            draw_apply_bar(
-                dirty=self._dirty,
-                on_apply=self._on_apply_clicked,
-                on_reset=self._on_reset_clicked,
-            )
-        else:
-            dirty = bool(self.has_pending_changes())
-            draw_apply_bar(
-                dirty=dirty,
-                on_apply=self._on_apply_clicked,
-                on_reset=self._on_reset_clicked,
-            )
+        dirty = self._dirty if self.uses_draft else bool(self.has_pending_changes())
+        draw_apply_bar(
+            dirty=dirty,
+            on_apply=self._on_apply_clicked,
+            on_reset=self._on_reset_clicked,
+        )
 
     def has_pending_changes(self) -> bool:
         return False
@@ -167,7 +160,7 @@ class PanelBase:
             if self.apply():
                 self._refresh_draft()
                 ui = getattr(self.app, "ui", None)
-                if ui is not None:
+                if ui is not None and hasattr(ui, "on_panel_applied"):
                     ui.on_panel_applied(self)
         else:
             self.on_apply_action()
@@ -185,17 +178,10 @@ class PanelBase:
     def on_reset_action(self) -> None:
         pass
 
-    # ================================================================
-    # İçerik — iki mod: standart layout veya serbest draw_content
-    # ================================================================
     def draw_content(self) -> None:
         if self.use_standard_layout:
             self.draw_standard_layout()
-        # else: alt sınıf override eder (boş)
 
-    # ================================================================
-    # Standart Layout — Header / Settings / Visual / Table / Actions
-    # ================================================================
     def draw_standard_layout(self) -> None:
         self.draw_header()
         imgui.separator()
@@ -213,19 +199,19 @@ class PanelBase:
         self.draw_actions()
 
     def draw_header(self) -> None:
-        """1. Seçili eleman özeti. Override eder."""
+        pass
 
     def draw_settings(self) -> None:
-        """2. Form alanları (enum, input). Override eder."""
+        pass
 
     def draw_visual(self) -> None:
-        """3. Görsel (canvas/plot). Opsiyonel — override etmezse atlanır."""
+        pass
 
     def draw_table(self) -> None:
-        """4. Tablo. Opsiyonel — override etmezse atlanır."""
+        pass
 
     def draw_actions(self) -> None:
-        """5. Alt butonlar ([UYGULA] [Temizle] [Yenile]). Override eder."""
+        pass
 
     def _has_visual(self) -> bool:
         return type(self).draw_visual is not PanelBase.draw_visual
@@ -233,9 +219,6 @@ class PanelBase:
     def _has_table(self) -> bool:
         return type(self).draw_table is not PanelBase.draw_table
 
-    # ================================================================
-    # Layout yardımcıları — panellerin ortak kullandığı küçük parçalar
-    # ================================================================
     def section_label(self, text: str) -> None:
         imgui.text_colored(imgui.ImVec4(0.7, 0.8, 0.9, 1.0), text)
 
@@ -253,24 +236,14 @@ class PanelBase:
         return clicked and enabled
 
     def status_line(self, text: str, kind: str = "info") -> None:
-        if kind == "info":
-            col = imgui.ImVec4(0.6, 0.8, 0.6, 1.0)
-        elif kind == "warn":
-            col = imgui.ImVec4(1.0, 0.6, 0.3, 1.0)
-        elif kind == "error":
-            col = imgui.ImVec4(1.0, 0.4, 0.4, 1.0)
-        else:
-            col = imgui.ImVec4(0.7, 0.7, 0.7, 1.0)
+        col = _STATUS_COLORS.get(kind, _DEFAULT_STATUS_COLOR)
         imgui.text_colored(col, text)
 
-    # ================================================================
-    # Yardımcılar
-    # ================================================================
     def mark_dirty(self) -> None:
         self._dirty = True
 
     def queue(self):
-        return self.app.command_queue
+        return getattr(self.app, "command_queue", None)
 
     def _apply_preview(self, active: bool) -> None:
         flags = self.preview_flags
@@ -281,18 +254,21 @@ class PanelBase:
         if eng is None:
             return
 
+        show = getattr(eng, "show", None)
         if active:
-            if self._preview_snapshot is None:
-                self._preview_snapshot = {k: eng.show.get(k, True) for k in flags}
-            for k, v in flags.items():
-                eng.show[k] = bool(v)
+            if self._preview_snapshot is None and isinstance(show, dict):
+                self._preview_snapshot = {k: show.get(k, True) for k in flags}
+            if isinstance(show, dict):
+                for k, v in flags.items():
+                    show[k] = bool(v)
         else:
-            if self._preview_snapshot:
+            if self._preview_snapshot and isinstance(show, dict):
                 for k, v in self._preview_snapshot.items():
-                    eng.show[k] = v
-                self._preview_snapshot = None
+                    show[k] = v
+            self._preview_snapshot = None
 
-        if (eng.renderer is not None
-                and getattr(app, "current_project", None) is not None
-                and eng.math_model is not None):          # ← EKLE
-            eng.renderer.update_geo(eng.math_model)
+        pipeline = getattr(eng, "pipeline", None)
+        renderer = getattr(eng, "renderer", None) or getattr(pipeline, "renderer", None)
+        math_model = getattr(eng, "math_model", None)
+        if renderer is not None and self._resolve_project() is not None and math_model is not None:
+            renderer.update_geo(math_model)

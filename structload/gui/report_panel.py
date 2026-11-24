@@ -9,7 +9,7 @@ from kivy.uix.scrollview import ScrollView
 
 from structload.data.material_data import MATERIAL_WEIGHTS
 from structload.loads.load_manager import LoadManager
-from structload.utils.report_dataframe import ReportDataFrame
+from core.report.report_dataframe import ReportDataFrame
 from structload.utils.status_manager import status
 
 load_manager = LoadManager(material_weights=MATERIAL_WEIGHTS)
@@ -323,7 +323,7 @@ class ReportPanel(BoxLayout):
     # ==========================================================
     def word_export(self, instance):
         try:
-            from structload.utils.my_document import myDocument
+            from core.report.my_document import myDocument
         except ImportError:
             status.error("myDocument bulunamadı. utils/my_document.py gerekli.")
             return

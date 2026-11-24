@@ -7,7 +7,7 @@ from structload.data.material_data import (
     WALL_PRESETS,
 )
 from structload.data.mechanical import woodMaterial
-from structload.utils.report_dataframe import ReportDataFrame
+from core.report.report_dataframe import ReportDataFrame
 
 # ============================================================
 # KATMAN HESABI — TEK KAYNAK

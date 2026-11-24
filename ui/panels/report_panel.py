@@ -1,18 +1,19 @@
 # ui/panels/report_panel.py
-import numpy as np
-from imgui_bundle import imgui
-from data.seismic import get_tsc2018_site_coefficients
-from structload.loads.snow_load import SnowLoad
-from structload.loads.spectrum import Spectrum
-from structload.utils.meta_tables import parse_project_loads
-from structload.windcalc.report import create_cpe_summary_df, create_wind_force_df, get_parameters_report
-from structload.windcalc.wind_analyzer import WindAnalyzer
-from structload.windcalc.windengine import WindEngine
-from tools.wind_scene_adapter import WindSceneAdapter
-from ui.base.panel_base import PanelBase, Category
+from __future__ import annotations
 
+import pandas as pd
+from imgui_bundle import imgui
+
+from app.settings.categories import Category
+from core.report.report_dataframe import ReportDataFrame
+from core.report.report_tree import ReportSection, ReportTree, ReportTreeNode
 from logging_config import CadLogger
+from tools.report_builders import ReportBuildResult, build_project_report_tree
+from tools.report_export import export_docx
+from ui.base.panel_base import PanelBase
+
 logger = CadLogger.get(__name__)
+
 
 class ReportPanel(PanelBase):
     __abstract__ = False
@@ -24,224 +25,319 @@ class ReportPanel(PanelBase):
     icon = "file-text"
     context = ("scene", "project")
 
+    uses_draft = False
+    show_apply_bar = False
+    PREVIEW_ROWS = 15
+
     def __init__(self, app=None):
         super().__init__(app=app)
-        self.log = "Report"
-        self.selected_index = 0
+        self.width = 960
+        self.height = 620
+        self.pos_first_use = (420, 110)
         self.project = None
         self.scene = None
-        self.width = 720
-        self.height = 540
-        self.pos_first_use = (450, 120)
+        self._result: ReportBuildResult | None = None
+        self._tree: ReportTree = ReportTree()
+        self._sections: dict[str, ReportSection] = {}
+        self._selected_section_id: str | None = None
+        self._detail_index: int = 0
+        self._export_selected: set[str] = set()
 
-    def _on_context_ready(self):
-        proj = self.project or (self.app.current_project if self.app else None)
-        self.project = proj
+    def _refresh_draft(self) -> None:
+        self.draft = None
+        self._original = None
+        self._dirty = False
 
-    def open(self, rep=None):
-        super().open()
-        proj = self.project or (self.app.current_project if self.app else None)
-        if rep is not None and proj and hasattr(proj, "report"):
-            proj.report.add_report(rep)
-        if proj and hasattr(proj, "report") and not getattr(proj.report, "reports", []):
-            self._generate_default_reports(proj)
+    def _project(self):
+        return self.project or (self.app.current_project if self.app else None)
 
-    def _generate_default_reports(self, project) -> None:
-        """Mevcut proje geometrisi ve rüzgar verilerinden WindSceneAdapter kullanarak güvenli şekilde rapor üretir."""
-        if not project:
-            logger.info("[ReportPanel] Proje eksik olduğu için otomatik rapor oluşturulamadı.")
+    def open(self, **kw) -> None:
+        super().open(**kw)
+        proj = self._project()
+        if proj is None or not hasattr(proj, "report"):
             return
-        # --- 1. RÜZGAR RAPORLARI ---
-        try: 
-            # Doğru anahtarlama ve tip uyumu için WindSceneAdapter kullanalım
-            points, polygons, wind_config = WindSceneAdapter.build_inputs(project)
+        if not self._sections and not proj.report.reports:
+            self._rebuild(proj)
+        self._detail_index = 0
 
-            if not points or not polygons:
-                logger.info("[ReportPanel] Projede analiz edilecek düğüm veya poligon bulunamadı.")
-                return
+    def _rebuild(self, proj) -> None:
+        proj.report.clear()
+        self._result = build_project_report_tree(proj)
+        self._tree = self._result.tree
+        self._sections = {s.section_id: s for s in self._result.sections}
+        for rep in self._result.produced:
+            proj.report.add_report(rep)
+        self._selected_section_id = self._tree.nodes[0].section_id if self._tree.nodes else None
+        self._detail_index = 0
+        self._export_selected = {n.section_id for n in self._tree.nodes if n.enabled}
+        for stage, reason in self._result.skipped:
+            logger.info("[ReportPanel] %s atlandı: %s", stage, reason)
+        for stage, reason in self._result.failed:
+            logger.warning("[ReportPanel] %s başarısız: %s", stage, reason)
 
-            engine = WindEngine(points=points, polygons=polygons)
-            
-            # 1. Parametre Raporu
-            param_rep = get_parameters_report(engine)
-            param_rep.custom_title = "Rüzgar Yükü Parametreleri (Genel)"
-            project.report.add_report(param_rep)
+    def draw_content(self) -> None:
+        proj = self._project()
+        if proj is None or not hasattr(proj, "report"):
+            imgui.text_colored(
+                imgui.ImVec4(0.9, 0.5, 0.4, 1.0),
+                "Proje veya Rapor Yöneticisi bağlı değil.",
+            )
+            return
 
-            # 2. Rüzgar Yönleri Raporları
-            w_list = {
-                "X+ (Yön 1)": np.array([1.0, 0.0, 0.0]),
-                "Y+ (Yön 2)": np.array([0.0, 1.0, 0.0]),
-            }
-            for w_key, w_dir in w_list.items():
-                analyzer = WindAnalyzer(points, polygons, w_dir)
-                zones = analyzer.analyze()
-                if zones:
-                    cpe_rep = create_cpe_summary_df(zones, analyzer.engine)
-                    cpe_rep.custom_title = f"Dış Basınç Katsayıları - {w_key}"
-                    project.report.add_report(cpe_rep)
+        self._draw_toolbar(proj)
+        imgui.separator()
 
-                    force_rep = create_wind_force_df(zones, analyzer.engine)
-                    force_rep.custom_title = f"Tasarım Rüzgar Yükleri - {w_key}"
-                    project.report.add_report(force_rep)
+        if not self._tree.nodes:
+            imgui.text_colored(
+                imgui.ImVec4(0.7, 0.7, 0.7, 1.0),
+                "Henüz oluşturulmuş bir rapor bulunmuyor.",
+            )
+            self._draw_issues()
+            return
 
-            logger.info("[ReportPanel] Varsayılan proje raporları başarıyla derlendi.")
-        except Exception as e:
-            logger.exception(f"[ReportPanel] Rüzgar Raporları oluşturulurken hata oluştu: {e}")
+        valid_ids = {n.section_id for n in self._tree.nodes}
+        self._export_selected = {sid for sid in self._export_selected if sid in valid_ids}
+        if self._selected_section_id not in valid_ids:
+            self._selected_section_id = self._tree.nodes[0].section_id
 
+        self._draw_tree(self._tree.nodes)
+        imgui.same_line()
+        active_sec = self._sections.get(self._selected_section_id or "")
+        self._draw_section_preview(active_sec)
+        self._draw_issues()
 
-        # --- 2. KAR RAPORU (project.config.snow üzerinden) ---
-        try:
-            snow_cfg = project.config.snow
-            snow_config = {
-                "slope": getattr(snow_cfg, "slope", 0.0),
-                "snow_region": getattr(snow_cfg, "snow_region", 2),
-                "altitude": getattr(snow_cfg, "altitude", 0.0),
-                "Ce": getattr(snow_cfg, "exposure_coefficient", 1.0),
-                "Ct": getattr(snow_cfg, "thermal_coefficient", 1.0),
-            }
-            snow_obj = SnowLoad(snow_config)
-            project.report.add_report(snow_obj.report())
-        except Exception:
-            logger.exception("Kar raporu oluşturulamadı")
+    def _draw_toolbar(self, proj) -> None:
+        if imgui.button("Yeniden Oluştur"):
+            self._rebuild(proj)
+        imgui.same_line()
+        if imgui.button("Temizle"):
+            proj.report.clear()
+            self._result = None
+            self._tree = ReportTree()
+            self._sections = {}
+            self._selected_section_id = None
+            self._detail_index = 0
+            self._export_selected = set()
+        imgui.same_line()
+        if imgui.button("Tümünü Seç"):
+            self._export_selected = {n.section_id for n in self._tree.nodes}
+        imgui.same_line()
+        if imgui.button("Seçimi Kaldır"):
+            self._export_selected = set()
 
-        # --- 3. ÖLÜ VE HAREKETLİ YÜK RAPORLARI ---
-        try:
-            pdata = {
-                "dead_loads": list(getattr(project.loads, "definitions", {}).keys()) or ["konut_dosemesi"],
-                "live_loads": ["konut"],
-                "duvarlar": []
-            }
-            reports_dict = parse_project_loads(pdata)
-            for rep in reports_dict.values():
-                project.report.add_report(rep)
-        except Exception:
-            logger.exception("Ölü/Hareketli yük raporları oluşturulamadı")
+        imgui.same_line()
+        imgui.text_disabled(f"Seçili: {len(self._export_selected)}")
+        imgui.same_line()
 
-        # --- 4. DEPREM RAPORU (project.config.seismic üzerinden) ---
-        try:
-            seismic_cfg = project.config.seismic
-            ss = getattr(seismic_cfg, "ss", 0.329)
-            s1 = getattr(seismic_cfg, "s1", 0.128)
-            soil_class = getattr(seismic_cfg, "soil_class", "ZC")
+        has_selection = bool(self._export_selected)
+        imgui.begin_disabled(not has_selection)
+        if imgui.button("DOCX'e Aktar"):
+            self._export_docx(proj)
+        imgui.same_line()
+        if imgui.button("PDF'e Aktar"):
+            self._export_pdf(proj)
+        imgui.end_disabled()
 
-            fs, f1 = get_tsc2018_site_coefficients(ss, s1, soil_class)
-            sds = ss * fs
-            sd1 = s1 * f1
-
-            eq_data = {
-                "dd2": {"Sds": sds, "Sd1": sd1},
-                "dd3": {"Sds": sds * 0.5, "Sd1": sd1 * 0.5},
-                "zemin_sinifi": soil_class,
-                "Hn": 10.0,
-                "structure_type": "concrete_frame"
-            }
-            eq = Spectrum(eq_data)
-            eq.run()
-
-            if eq.table_parameters is not None and not eq.table_parameters.empty:
-                project.report.add_report(eq.table_parameters)
-
-            if eq.table_spectrum is not None and not eq.table_spectrum.empty:
-                project.report.add_report(eq.table_spectrum)
-        except Exception:
-            logger.exception("Deprem raporu oluşturulamadı")
-
-        logger.info("[ReportPanel] Domain nesnelerinden proje raporları başarıyla derlendi.")
-    
-
-    def draw_content(self):
-        try:
-            proj = self.project or (self.app.current_project if self.app else None)
-            if not proj or not hasattr(proj, "report"):
-                imgui.text_colored(imgui.ImVec4(0.9, 0.5, 0.4, 1.0), "Proje veya Rapor Yöneticisi bağlı değil.")
-                return
-
-            report_mgr = proj.report
-            reports = getattr(report_mgr, "reports", [])
-
-            # Üst Araç Çubuğu
-            if imgui.button("🔄 Raporları Yeniden Oluştur"):
-                try:
-                    report_mgr.clear()
-                    self._generate_default_reports(proj)
-                    self.selected_index = 0
-                except Exception as e:
-                    logger.exception(f"[ReportPanel] Yeniden oluşturma hatası: {e}")
-
+    def _draw_tree(self, nodes: list[ReportTreeNode]) -> None:
+        imgui.begin_child("##report_tree", imgui.ImVec2(320, 0), True)
+        imgui.text_colored(imgui.ImVec4(0.8, 0.9, 1.0, 1.0), "Rapor Ağacı")
+        imgui.separator()
+        for node in nodes:
+            checked = node.section_id in self._export_selected
+            changed, new_val = imgui.checkbox(f"##exp_{node.node_id}", checked)
+            if changed:
+                if new_val:
+                    self._export_selected.add(node.section_id)
+                else:
+                    self._export_selected.discard(node.section_id)
             imgui.same_line()
-            if imgui.button("🗑 Tüm Raporları Temizle"):
-                report_mgr.clear()
-                self.selected_index = 0
+            selected = self._selected_section_id == node.section_id
+            label = f"{node.title} [{node.status.value}]##sel_{node.node_id}"
+            if imgui.selectable(label, selected)[0]:
+                self._selected_section_id = node.section_id
+                self._detail_index = 0
+        imgui.end_child()
 
+    def _draw_section_preview(self, section: ReportSection | None) -> None:
+        imgui.begin_child("##report_detail", imgui.ImVec2(0, 0), True)
+        if section is None:
+            imgui.text_disabled("Bölüm seçilmedi.")
+            imgui.end_child()
+            return
+
+        imgui.text_colored(imgui.ImVec4(0.3, 0.85, 0.95, 1.0), f"{section.title} ({section.status.value})")
+        imgui.separator()
+
+        for note in section.notes:
+            imgui.text_wrapped(f"Not: {note}")
+
+        if not section.frames:
+            imgui.text_colored(
+                imgui.ImVec4(0.8, 0.6, 0.4, 1.0),
+                "Bu bölümde gösterilecek tablo verisi bulunmuyor.",
+            )
+            imgui.end_child()
+            return
+
+        if len(section.frames) > 1:
+            imgui.text_disabled("Tablolar:")
+            for idx, frame in enumerate(section.frames):
+                ftitle = getattr(frame, "custom_title", None) or f"Tablo {idx + 1}"
+                if imgui.radio_button(f"{ftitle}##tab_{idx}", self._detail_index == idx):
+                    self._detail_index = idx
             imgui.spacing()
-            imgui.separator()
+
+        if self._detail_index >= len(section.frames):
+            self._detail_index = 0
+        rep = section.frames[self._detail_index]
+        self._draw_dataframe_preview(rep)
+        imgui.end_child()
+
+    def _draw_dataframe_preview(self, rep: ReportDataFrame) -> None:
+        title = getattr(rep, "custom_title", None) or "Rapor"
+        imgui.text_colored(imgui.ImVec4(0.85, 0.9, 0.95, 1.0), title)
+        desc = getattr(rep, "custom_desc", None)
+        if desc:
+            imgui.text_wrapped(str(desc).strip())
             imgui.spacing()
 
-            if not reports:
-                imgui.text_colored(imgui.ImVec4(0.7, 0.7, 0.7, 1.0), "Henüz oluşturulmuş veya eklenmiş bir rapor bulunmuyor.")
-                imgui.text_wrapped("Yukarıdaki butona basarak mevcut projeye ait hesap raporlarını derleyebilirsiniz.")
-                return
+        self._draw_meta(rep)
+        self._draw_table(rep)
+        self._draw_graphics_info(rep)
 
-            if self.selected_index >= len(reports):
-                self.selected_index = max(0, len(reports) - 1)
+    def _draw_meta(self, rep: ReportDataFrame) -> None:
+        units = getattr(rep, "column_units", {}) or {}
+        descriptions = getattr(rep, "column_descriptions", {}) or {}
+        if not units and not descriptions:
+            return
+        imgui.text_disabled("Kolon bilgisi")
+        for col in rep.columns:
+            line = str(col)
+            unit = units.get(col, "")
+            desc = descriptions.get(col, "")
+            if unit:
+                line += f"  [{unit}]"
+            if desc:
+                line += f"  — {desc}"
+            imgui.text_wrapped(line)
+        imgui.spacing()
 
-            # Sol Sütun: Rapor Listesi
-            if imgui.begin_child("report_list_child", imgui.ImVec2(220, 0), True):
-                imgui.text_colored(imgui.ImVec4(0.8, 0.9, 1.0, 1.0), "Rapor Kategorileri")
-                imgui.separator()
-                
-                for i, rep in enumerate(reports):
-                    title = getattr(rep, "custom_title", f"Rapor {i+1}")
-                    is_selected = (self.selected_index == i)
-                    if imgui.selectable(f"{title}##{i}", is_selected)[0]:
-                        self.selected_index = i
-                imgui.end_child()
+    def _draw_table(self, rep: ReportDataFrame) -> None:
+        if not isinstance(rep, pd.DataFrame) or rep.empty:
+            imgui.text_colored(
+                imgui.ImVec4(0.8, 0.6, 0.4, 1.0),
+                "Bu raporda gösterilecek tablo verisi bulunmuyor.",
+            )
+            return
 
-            imgui.same_line()
+        total = len(rep)
+        shown = min(total, self.PREVIEW_ROWS)
+        imgui.text_disabled(f"Önizleme: {shown} / {total} satır")
 
-            # Sağ Sütun: Seçilen Raporun Detayı ve Tablosu
-            if imgui.begin_child("report_detail_child", imgui.ImVec2(0, 0), True):
-                if 0 <= self.selected_index < len(reports):
-                    rep = reports[self.selected_index]
-                    
-                    title = getattr(rep, "custom_title", "Rapor Detayı")
-                    imgui.text_colored(imgui.ImVec4(0.3, 0.85, 0.95, 1.0), title)
-                    imgui.separator()
-                    
-                    desc = getattr(rep, "custom_desc", "")
-                    if desc:
-                        imgui.text_wrapped(desc.strip())
-                        imgui.spacing()
-                        imgui.separator()
+        cols = [str(c) for c in rep.columns]
+        flags = (
+            imgui.TableFlags_.borders
+            | imgui.TableFlags_.row_bg
+            | imgui.TableFlags_.resizable
+            | imgui.TableFlags_.scroll_y
+        )
+        if not imgui.begin_table(f"##preview_table_{self._detail_index}", len(cols), flags):
+            return
+        for col in cols:
+            imgui.table_setup_column(col)
+        imgui.table_headers_row()
 
-                    # rep zaten ReportDataFrame sınıfıdır (pandas.DataFrame)
-                    df = rep if not rep.empty else None
-                    if df is not None and not df.empty:
-                        imgui.text("Veri Tablosu:")
-                        cols = list(df.columns)
-                        
-                        flags = (
-                            imgui.TableFlags_.borders
-                            | imgui.TableFlags_.row_bg
-                            | imgui.TableFlags_.resizable
-                            | imgui.TableFlags_.scroll_y
-                        )
-                        
-                        if imgui.begin_table(f"##rep_table_{self.selected_index}", len(cols), flags, imgui.ImVec2(0, 300)):
-                            for col in cols:
-                                imgui.table_setup_column(str(col))
-                            imgui.table_headers_row()
+        for _, row in rep.head(shown).iterrows():
+            imgui.table_next_row()
+            formatted = rep._format_row(row)
+            for col_idx, text in enumerate(formatted):
+                imgui.table_set_column_index(col_idx)
+                imgui.text(text)
+        imgui.end_table()
 
-                            for row_idx, row in df.iterrows():
-                                imgui.table_next_row()
-                                for col_idx, col in enumerate(cols):
-                                    imgui.table_set_column_index(col_idx)
-                                    val = row[col]
-                                    imgui.text(str(val))
-                            imgui.end_table()
-                    else:
-                        imgui.text_colored(imgui.ImVec4(0.8, 0.6, 0.4, 1.0), "Bu raporda gösterilecek tablo verisi bulunmuyor.")
-                
-                imgui.end_child()
-        except Exception as e:
-            logger.exception(f"[ReportPanel] Çizim sırasında hata oluştu: {e}")
+    def _draw_graphics_info(self, rep: ReportDataFrame) -> None:
+        graphics = getattr(rep, "graphics", []) or []
+        if not graphics:
+            return
+        imgui.spacing()
+        imgui.text_disabled(f"Grafikler: {len(graphics)} adet")
+
+    def _draw_issues(self) -> None:
+        result = self._result
+        if result is None or not result.has_issues:
+            return
+        imgui.spacing()
+        imgui.separator()
+        imgui.text_colored(imgui.ImVec4(0.95, 0.75, 0.35, 1.0), "Uyarılar")
+        for stage, reason in result.skipped:
+            imgui.text_wrapped(f"Atlandı — {stage}: {reason}")
+        for stage, reason in result.failed:
+            imgui.text_wrapped(f"Başarısız — {stage}: {reason}")
+
+    def _export_docx(self, proj) -> None:
+        selected_ids = [n.section_id for n in self._tree.nodes if n.section_id in self._export_selected]
+        if not selected_ids:
+            return
+        ui = getattr(self.app, "ui", None)
+        if ui is None:
+            return
+
+        selected_sections = [self._sections[sid] for sid in selected_ids if sid in self._sections]
+        selected_tree = ReportTree(
+            nodes=[n for n in self._tree.nodes if n.section_id in self._export_selected]
+        )
+        selected_frames = self._selected_reports(proj)
+
+        def _on_save(path: str) -> None:
+            ok = export_docx(
+                selected_frames,
+                path,
+                tree=selected_tree,
+                sections=selected_sections,
+            )
+            if ok:
+                logger.info("[ReportPanel] DOCX kaydedildi: %s", path)
+            else:
+                logger.warning("[ReportPanel] DOCX kaydedilemedi: %s", path)
+
+        ui.open_export_dialog(
+            on_select=_on_save,
+            default_name="proje_raporu.docx",
+            ext=".docx",
+            title="Raporu DOCX olarak kaydet",
+        )
+
+    def _export_pdf(self, proj) -> None:
+        selected = self._selected_reports(proj)
+        if not selected:
+            return
+        ui = getattr(self.app, "ui", None)
+        if ui is None:
+            return
+
+        def _on_save(path: str) -> None:
+            from tools.report_export import export_pdf
+            ok = export_pdf(selected, path)
+            if ok:
+                logger.info("[ReportPanel] PDF kaydedildi: %s", path)
+            else:
+                logger.warning("[ReportPanel] PDF kaydedilemedi: %s", path)
+
+        ui.open_export_dialog(
+            on_select=_on_save,
+            default_name="proje_raporu.pdf",
+            ext=".pdf",
+            title="Raporu PDF olarak kaydet",
+        )
+
+    def _selected_reports(self, proj) -> list[ReportDataFrame]:
+        out: list[ReportDataFrame] = []
+        for node in self._tree.nodes:
+            if node.section_id not in self._export_selected:
+                continue
+            sec = self._sections.get(node.section_id)
+            if sec is not None:
+                out.extend(sec.frames)
+        if out:
+            return out
+        return list(proj.report.reports)

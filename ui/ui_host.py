@@ -103,8 +103,8 @@ class UIHost:
             put_command=app.put_command,
             builder=builder,
             app_getter=lambda: self.app,
-            extra_menus=[self._build_view_menu()],
         )
+        self.status_bar.icon_mgr = self.toolbar.icon_mgr
 
         self._ensure_default_viewport()
         self._initialized = True
@@ -191,26 +191,7 @@ class UIHost:
 
         self._forward_viewport_mouse_events()
 
-        eng = self.app.engine
-        inp = eng.input.state if eng else None
-        is_drawing = bool(eng and eng.draw_mgr and eng.draw_mgr.is_active)
-        app_status = "Çizim Aktif" if is_drawing else self.status_bar.last_event_text
-
-        ucs_name = getattr(eng.input, "mouse_ucs_name", "Global") if (eng and eng.input) else "Global"
-        ucs_pos = getattr(eng.input, "mouse_ucs_pos", None) if (eng and eng.input) else None
-
-        self.status_bar.draw(app = self.app,
-            engine_connected=(eng is not None),
-            app_status=app_status,
-            mouse_pos=(inp.mouse_pos.x, inp.mouse_pos.y) if inp else (0.0, 0.0),
-            mouse_buttons=inp.buttons if inp else {},
-            modifiers=inp.modifiers if inp else 0,
-            fps=(1.0 / dt) if dt > 0 else 0.0,
-            ucs_name=ucs_name,
-            ucs_pos=ucs_pos,
-            current_unit=ps.project.unit_system,
-            on_unit_selected=lambda unit: self.app.put_command(PC.SetUnitSystem(unit)),
-        )
+        self.status_bar.draw(app=self.app)
 
     def _draw_dock_space(self) -> None:
         viewport = imgui.get_main_viewport()
@@ -420,8 +401,8 @@ class UIHost:
         self.status_bar.notify_selection(selected)
         if self.inspector is not None:
             self.inspector.set_selection(selected)
-        for entry in self.app.panel_registry.all():
-            callback = getattr(entry, "on_selection_changed", None)
+        for _spec, instance in self.app.panel_registry.all_instances():
+            callback = getattr(instance, "on_selection_changed", None)
             if callable(callback):
                 callback(selected)
 
@@ -498,3 +479,20 @@ class UIHost:
             self.app.put_command(PC.ToggleLoadsVisible(new_val))
         else:
             self.app.put_command(PC.ToggleRenderFlag(key, new_val))
+
+    def open_export_dialog(
+        self,
+        on_select: Callable[[str], None],
+        default_name: str,
+        ext: str,
+        title: str = "Dışa Aktar",
+    ) -> None:
+        if self.file_dialog is not None:
+            self.file_dialog.open(
+                mode="save",
+                filters=[ext],
+                title=title,
+                initial_dir=os.getcwd(),
+                default_name=default_name,
+                on_select=on_select,
+            )

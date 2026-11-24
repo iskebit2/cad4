@@ -8,7 +8,7 @@ from typing import Any
 
 from structload.data.snow_data import SNOW_LOAD_TABLE
 from structload.utils.math_utils import calculate_snow_shape_coefficient, interpolate_2d
-from structload.utils.report_dataframe import ReportDataFrame
+from core.report.report_dataframe import ReportDataFrame
 
 
 class SnowLoad:

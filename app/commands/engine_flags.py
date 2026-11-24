@@ -92,9 +92,9 @@ def _redo(app, cmd: PC.Redo) -> CommandResult:
         icon="toggle2_d",
         category=Category.VIEW,
         default_shortcut="F2",
-        quick=True,
+        quick=False,
         tooltip="2D düzlem ve 3D görünüm arasında geçiş yap",
-        visible_in_ui=True,
+        visible_in_ui=False,
         check_state=lambda app: bool(
             app and app.viewport_manager and app.viewport_manager.active and app.viewport_manager.active.is_2d
         ),
@@ -113,7 +113,7 @@ def _toggle_2d(app, cmd: PC.Toggle2D) -> CommandResult:
         category=Category.VIEW,
         quick=False,
         tooltip="Eleman yerel eksenlerini göster/gizle",
-        visible_in_ui=True,
+        visible_in_ui=False,
         check_state=lambda app: bool(app and app.engine and app.engine.scene and app.engine.scene.show_local_axes),
     ),
 )
@@ -202,7 +202,7 @@ def _start_plane_2pt_z(app, cmd: PC.StartPlane2ptZ) -> CommandResult:
         default_shortcut="F4",
         quick=False,
         tooltip="Shaded ve Simple çizim modları arasında geçiş yap",
-        visible_in_ui=True,
+        visible_in_ui=False,
     ),
 )
 def _toggle_render_mode(app, cmd: PC.ToggleRenderMode) -> CommandResult:

@@ -106,7 +106,10 @@ class ReplaceProject:
     project: Any
     label: str = ""
 
-
+@dataclass
+class OpenViewport:
+    preset: str
+    
 @dataclass
 class SetUnitSystem:
     unit_system: Any

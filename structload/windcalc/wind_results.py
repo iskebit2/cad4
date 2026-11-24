@@ -8,7 +8,7 @@ from PIL import ImageDraw, ImageFont
 
 from structload.data.defaults import proje_data
 from structload.data.wind_data import CPI_NEGATIVE, CPI_POSITIVE
-from structload.utils.report_dataframe import ReportDataFrame
+from core.report.report_dataframe import ReportDataFrame
 from structload.windcalc.wind_analyzer import WindAnalyzer
 from structload.windcalc.windengine import WindEngine
 

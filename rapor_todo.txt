@@ -1,0 +1,213 @@
+### **CAD4 – Statik Hesap Raporu Şablonu**
+
+Ana rapor ağacı · Malzemeden bağımsız ortak iskelet ve malzemeye özel bölümler
+
+## **01. Kapak ve doküman yönetimi**
+
+- Proje adı
+- Yapının adı ve adresi
+- İşveren / proje müellifi
+- Raporu hazırlayan
+- Proje ve rapor numarası
+- Rapor tarihi ve revizyon numarası
+- Doküman revizyon geçmişi
+- İçindekiler
+- Şekiller listesi
+- Tablolar listesi
+- Semboller ve kısaltmalar
+
+## **02. Proje özeti**
+
+- Projenin tanımı
+- Yapının kullanım amacı
+- Taşıyıcı sistem türü
+- Kat adedi ve yapı yüksekliği
+- Yapı oturum alanı
+- Taşıyıcı sistemin genel özellikleri
+- Analiz yöntemi
+- Kullanılan yazılım
+- İncelenen taşıyıcı sistemin sınırları
+- Hesaba dahil edilen elemanlar
+- Hesap dışında bırakılan hususlar
+- Kullanılan proje ve belgeler
+- Mevcut veri ve belge kısıtları
+- Analiz ve değerlendirme yaklaşımı
+
+## **03. Yönetmelikler, standartlar ve kabuller**
+
+- Deprem yönetmeliği
+- Yük ve yükleme standartları
+- Malzeme tasarım standartları
+- Çelik / betonarme / ahşap / yığma tasarım standartları
+- Zemin ve temel esasları
+- Ulusal ekler
+- Tasarım yöntemi
+- Güvenlik katsayıları
+- Yük birleşimleri
+- Analiz kabulleri
+
+## **04. Saha ve yapı bilgileri**
+
+- Yapının bulunduğu bölge
+- Deprem tehlike parametreleri
+- Yerel zemin sınıfı
+- Bina önem katsayısı
+- Bina kullanım sınıfı
+- Rüzgâr bölgesi ve arazi kategorisi
+- Kar yükü parametreleri
+- Topografya bilgileri
+- Mevcut yapı / yeni yapı ayrımı
+- Saha gözlemleri ve mevcut durum bilgileri
+
+## **05. Malzeme özellikleri**
+
+- Malzeme sınıfları
+- Karakteristik dayanımlar
+- Tasarım dayanımları
+- Elastisite modülleri
+- Kayma modülleri
+- Birim hacim ağırlıkları
+- Poisson oranları
+- Malzemeye özgü diğer mekanik özellikler
+- Malzeme kabulleri ve kaynakları
+
+## **06. Geometrik bilgiler ve taşıyıcı sistem**
+
+- Yapı aksları
+- Kat kotları
+- Kat yükseklikleri
+- Taşıyıcı sistemin genel tanımı
+- Kolon ve kiriş yerleşimleri
+- Perdeler ve çaprazlar
+- Döşeme sistemleri
+- Çatı sistemi
+- Taşıyıcı sistem elemanlarının kesitleri
+- Mesnet ve bağlantı tanımları
+- Temel sistemi
+
+## **07. Kesit ve eleman özellikleri**
+
+- Kesit geometrileri
+- Kesit sınıfları
+- Kesit karakteristikleri
+- Alan ve atalet momentleri
+- Burulma sabiti
+- Plastik kesit modülleri
+- Etkin kesit özellikleri
+- Eleman rijitlikleri
+- Kesit ve malzeme eşleştirmeleri
+
+## **08. Yüklerin belirlenmesi**
+
+- Sabit yükler (G)
+- Hareketli yükler (Q)
+- Duvar yükleri
+- Döşeme yükleri
+- Çatı yükleri
+- Kar yükleri
+- Rüzgâr yükleri
+- Deprem yükleri
+- Diğer özel yükler
+- Yük aktarım prensipleri
+- Yükleme durumları
+
+## **09. Yükleme kombinasyonları**
+
+- Dayanım kombinasyonları
+- Kullanılabilirlik kombinasyonları
+- Deprem kombinasyonları
+- Özel yük birleşimleri
+- Yük katsayıları
+- Kombinasyon tabloları
+
+## **10. Analitik model ve hesap yöntemi**
+
+- Analiz modelinin oluşturulması
+- Düğüm ve eleman tanımları
+- Eleman yerel koordinat sistemleri
+- Mesnet koşulları
+- Birleşim ve rijitlik kabulleri
+- Döşeme ve diyafram tanımları
+- Eleman bölümlendirme / sonlu eleman ağı
+- Kütle modeli
+- Geometrik doğrusal olmayanlık
+- İkinci mertebe etkileri
+- Analiz çözüm yöntemi
+- Sayısal çözüm ve yakınsama kontrolleri
+
+## **11. Deprem davranışı ve düzensizlik analizleri**
+
+- Deprem tasarım parametreleri
+- Deprem tasarım sınıfı
+- Bina yükseklik sınıfı
+- Taşıyıcı sistem davranış katsayıları
+- Dayanım fazlalığı katsayısı
+- Hakim doğal titreşim periyotları
+- Mod şekilleri
+- Modal kütle katılım oranları
+- Burulma düzensizliği
+- Döşeme süreksizliği
+- Düşey doğrultuda düzensizlikler
+- Yumuşak kat / zayıf kat
+- Göreli kat ötelemeleri
+- İkinci mertebe göstergesi
+- Deprem tasarım yöntemi
+- Taban kesme kuvveti
+- Modal birleştirme sonuçları
+
+## **12. Analiz sonuçları**
+
+- Düğüm deplasmanları
+- Kat deplasmanları
+- Kat ötelemeleri
+- Kat kesme kuvvetleri
+- Mesnet reaksiyonları
+- Eleman iç kuvvetleri
+- N, V2, V3, T, M2, M3
+- Moment ve kesme diyagramları
+- Normal kuvvet diyagramları
+- Deformasyon şekilleri
+- Kritik elemanların sonuçları
+- Global denge kontrolleri
+
+## **13. Taşıyıcı sistem tahkikleri**
+
+- Eleman dayanım kontrolleri
+- Kesit kapasite kontrolleri
+- Stabilite kontrolleri
+- Burkulma kontrolleri
+- Sehim kontrolleri
+- Deplasman sınırları
+- Birleşim kontrolleri
+- Mesnet kontrolleri
+- Kullanılabilirlik sınır durumları
+- Kritik elemanların ayrıntılı hesapları
+
+## **14. Temel ve zemin değerlendirmeleri**
+
+- Zemin parametreleri
+- Temel sistemi
+- Temel yükleri
+- Zemin gerilmesi
+- Taşıma gücü
+- Oturma kontrolleri
+- Kayma ve devrilme
+- Temel elemanlarının dayanım kontrolleri
+
+## **15. Ekler**
+- Taşıyıcı sistem çizimleri
+- Analiz modeli görselleri
+- Yükleme görselleri
+
+## **1. Malzemeye göre değişen bölümler**
+### **Malzeme bazlı rapor modülleri**
+**Çelik yapı modülü**
+**Betonarme yapı modülü**
+**Ahşap yapı modülü**
+**Yığma yapı modülü**
+
+**A. Rapor ağacı dinamik olmalı.**
+**B. Rapor verisi ile rapor sunumu ayrılmalı.**
+**C. Her rapor bölümü bağımsız üretilebilmeli.**
+**D. Otomatik sayfa düzeni olmalı.**
+**E. Rapor tekrar üretilebilir olmalı.**
