@@ -158,8 +158,10 @@ class LoadRenderer:
                 load_sets = getattr(frame, "dist_load_sets", None)
                 if not load_sets:
                     continue
-                for pat, ls in load_sets.items():
-                    if self.active_pattern and pat != self.active_pattern:
+                for key, ls in load_sets.items():
+                    # key = (pattern, load_dir, coord_sys, force_or_moment)
+                    pattern = key[0] if isinstance(key, tuple) else key
+                    if self.active_pattern and pattern != self.active_pattern:
                         continue
                     self._emit_load_set(frame, ls, lines, tris, camera_scale)
 
@@ -237,7 +239,10 @@ class LoadRenderer:
             for frame in scene.frames.values():
                 load_sets = getattr(frame, "dist_load_sets", None)
                 if load_sets:
-                    pats.update(load_sets.keys())
+                    for k in load_sets.keys():
+                        pat = k[0] if isinstance(k, tuple) else k
+                        if pat:
+                            pats.add(pat)
                 for dl in getattr(frame, "dist_loads", []) or []:
                     p = getattr(dl, "pattern_name", None)
                     if p:
@@ -275,23 +280,39 @@ class LoadRenderer:
         if not segments:
             return
 
-        pts = []
-        for seg in segments:
-            x1 = self._attr(seg, "x1")
-            x2 = self._attr(seg, "x2")
-            q1 = self._attr(seg, "q1")
-            q2 = self._attr(seg, "q2")
-            if None in (x1, x2, q1, q2):
+        pattern = getattr(ls, "pattern_name", "?")
+        load_dir = getattr(ls, "load_dir", "2")
+
+        # load_dir'i renge dahil et ki farklı yönler ayırt edilebilsin
+        color = self._pattern_color(f"{pattern}_{load_dir}")
+
+        # Süreksiz aralıkları ayrı profiller olarak çiz
+        if hasattr(ls, "to_contiguous_runs"):
+            runs = ls.to_contiguous_runs()
+        else:
+            # geriye dönük uyumluluk: tek run
+            runs = [list(segments)]
+        group_max_q = ls.max_abs_q() if hasattr(ls, "max_abs_q") else None
+        for run in runs:
+            pts: list[tuple[float, float]] = []
+            for seg in run:
+                x1 = self._attr(seg, "x1")
+                x2 = self._attr(seg, "x2")
+                q1 = self._attr(seg, "q1")
+                q2 = self._attr(seg, "q2")
+                if None in (x1, x2, q1, q2):
+                    continue
+                if not pts:
+                    pts.append((float(x1), float(q1)))
+                pts.append((float(x2), float(q2)))
+
+            if len(pts) < 2:
                 continue
-            if not pts:
-                pts.append((float(x1), float(q1)))
-            pts.append((float(x2), float(q2)))
 
-        if len(pts) < 2:
-            return
-
-        color = self._pattern_color(getattr(ls, "pattern_name", "?"))
-        self._emit_profile(frame, pts, color, lines, tris, cam_scale, load=ls)
+            self._emit_profile(
+                            frame, pts, color, lines, tris, cam_scale,
+                            load=ls, max_q_override=group_max_q,
+                        )
 
     @staticmethod
     def _attr(obj, key):
@@ -301,7 +322,8 @@ class LoadRenderer:
             return obj.get(key)
         return None
 
-    def _emit_profile(self, frame, pts, color, lines, tris, cam_scale, load=None):
+    def _emit_profile(self, frame, pts, color, lines, tris, cam_scale,
+                  load=None, max_q_override=None):
         ni = getattr(frame, "node_i", None)
         nj = getattr(frame, "node_j", None)
         if not ni or not nj:
@@ -320,7 +342,10 @@ class LoadRenderer:
         load_dir_vec = self._resolve_load_direction(load, e1, e2, e3) if load is not None else e2
         up = -load_dir_vec
 
-        max_q = max(abs(q) for _, q in pts) or 1.0
+        if max_q_override is not None and max_q_override > 1e-12:
+            max_q = float(max_q_override)
+        else:
+            max_q = max(abs(q) for _, q in pts) or 1.0
         profile_h = max(
             L * self.PROFILE_HEIGHT_RATIO * self.profile_scale,
             L * 0.02,

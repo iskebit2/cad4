@@ -1,7 +1,7 @@
 # core/selection_manager.py
 from dataclasses import field
 
-from app.commands import CommandManager, DeleteElementsCommand
+from app.commands import CommandManager
 from core.selection_policy import SelectionMode
 
 

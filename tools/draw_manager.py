@@ -7,7 +7,7 @@ import numpy as np
 from OpenGL.GL import *
 from pyglm import glm
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 from domain.line import Line
 from domain.polygon import Polygon
 from domain.vertex import Vertex
@@ -208,7 +208,7 @@ class DrawManager:
     def _emit_drawn(self, element) -> None:
         cq = getattr(self.engine, "command_queue", None)
         if cq is not None:
-            cq.put(PC.CommitDrawnElement(element=element))
+            cq.put(cmd.CommitDrawnElement(element=element))
             return
 
         project = self.engine.project

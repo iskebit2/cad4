@@ -10,7 +10,7 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from imgui_bundle import imgui
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 from data.enums import ConstraintType, LinkPropType, SectionType
 from domain.definition import (
     AreaSection, AutoSeismicTSC2018, ConstraintDefinition,
@@ -945,7 +945,7 @@ class DefinitionPanel(PanelBase):
             for a in scn.areas.values():
                 if getattr(a, "section_name", "") == section_name:
                     uids.append(a.unique_id)
-        self.queue().put(PC.SelectElements(uids, mode="replace"))
+        self.queue().put(cmd.SelectElements(uids, mode="replace"))
 
     def _select_by_definition(self, cls, name: str, container_attr: str):
         scn = self.app.current_project.math_model if self.app and self.app.current_project else None
@@ -990,7 +990,7 @@ class DefinitionPanel(PanelBase):
             for n in scn.nodes.values():
                 if getattr(n, "constraint_name", None) == name:
                     uids.append(n.unique_id)
-        self.queue().put(PC.SelectElements(uids, mode="replace"))
+        self.queue().put(cmd.SelectElements(uids, mode="replace"))
 
     def _draw_sd_section_summary(self, section) -> bool:
         sd = getattr(section, "sd_section", None)
@@ -1290,7 +1290,7 @@ class DefinitionPanel(PanelBase):
                     bv = getattr(new_obj, f.name, None)
                     if av != bv:
                         changes[f.name] = bv
-                queue.put(PC.UpdateDefinition(
+                queue.put(cmd.UpdateDefinition(
                     container_attr, old_name, changes, new_name=new_name,
                 ))
                 renamed_olds.add(old_name)
@@ -1302,10 +1302,10 @@ class DefinitionPanel(PanelBase):
 
             # 3) Kalanlar: normal add/remove/update
             for name in draft_names - orig_names:
-                queue.put(PC.AddDefinition(container_attr, name, draft_c[name]))
+                queue.put(cmd.AddDefinition(container_attr, name, draft_c[name]))
 
             for name in orig_names - draft_names:
-                queue.put(PC.RemoveDefinition(container_attr, name))
+                queue.put(cmd.RemoveDefinition(container_attr, name))
 
             for name in orig_names & draft_names:
                 a, b = orig_c[name], draft_c[name]
@@ -1318,4 +1318,4 @@ class DefinitionPanel(PanelBase):
                     if av != bv:
                         changes[f.name] = bv
                 if changes:
-                    queue.put(PC.UpdateDefinition(container_attr, name, changes))
+                    queue.put(cmd.UpdateDefinition(container_attr, name, changes))

@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 from imgui_bundle import imgui
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 from app.services.toolbar_builder import ToolbarBuilder, UnifiedSpec
 from app.settings.categories import category_label
 from core.units import UnitSystem
@@ -67,7 +67,7 @@ class Toolbar:
         if spec is None:
             return
         if spec.is_panel and spec.panel_name:
-            self._put(PC.TogglePanel(spec.panel_name))
+            self._put(cmd.TogglePanel(spec.panel_name))
             return
         if spec.cmd is not None:
             self._put(spec.cmd)
@@ -142,7 +142,7 @@ class Toolbar:
             for unit in UnitSystem:
                 u_lbl = getattr(unit, "label", unit.name)
                 if imgui.menu_item(u_lbl, "", current_unit == unit)[0]:
-                    self._put(PC.SetUnitSystem(unit))
+                    self._put(cmd.SetUnitSystem(unit))
             imgui.end_menu()
 
         if model_text:

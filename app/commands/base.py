@@ -1,126 +1,189 @@
 # core/commands/base.py
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections import deque
+from dataclasses import dataclass, field
+import queue
+from typing import Any, Callable, Literal
 
-from logging_config import CadLogger
 
-logger = CadLogger.get(__name__)
+Level = Literal["info", "success", "warn", "error"]
+_CURRENT_APP: list[Any] = [None]
+def get_current_app() -> Any:
+    return _CURRENT_APP[0]
+
+def bind_app(app: Any) -> None:
+    _CURRENT_APP[0] = app
+
+@dataclass(frozen=True)
+class CommandResult:
+    geometry_dirty: bool = False
+    project_dirty: bool = False
+    handled: bool = True
+    message: str = ""
+    level: Level = "info"
+    followup: Any = None
 
 
 class Command(ABC):
-    """Tüm komutların arayüzü."""
-    
     @abstractmethod
-    def execute(self):
-        """İşlemi uygula."""
-    
+    def execute(self) -> CommandResult: ...
+
     @abstractmethod
-    def undo(self):
-        """İşlemi geri al."""
-    
-    def redo(self):
-        """Yeniden uygula (varsayılan: execute)."""
-        self.execute()
-    
+    def undo(self) -> None: ...
+
+    def redo(self) -> CommandResult:
+        return self.execute()
+
     @property
     def name(self) -> str:
-        """Debug/log için okunabilir isim."""
-        return self.__class__.__name__
+        return type(self).__name__
+
+    def _resolve(self) -> CommandResult | None:
+        self._app = get_current_app()
+        if self._app is None:
+            return CommandResult(handled=False, message="Uygulama bağlı değil.", level="error")
+        project = getattr(self._app, "current_project", None)
+        if project is None:
+            return CommandResult(handled=False, message="Proje yok.", level="warn")
+        self._scene = project.math_model
+        return None
+
+
+@dataclass(frozen=True)
+class CommandMeta:
+    label: str
+    icon: str = ""
+    category: str = "Tools"
+    default_shortcut: str = ""
+    tooltip: str = ""
+    quick: bool = False
+    visible_in_ui: bool = False
+    check_state: Callable[[Any], bool] | None = None
+    factory: Callable[[list[str]], Any | None] | None = None
 
 
 class CommandManager:
-    """
-    Komut geçmişi ve undo/redo yönetimi.
-    
-    Kullanım:
-        mgr = CommandManager()
-        mgr.execute(DeleteElementsCommand(scene, elements))
-        mgr.undo()
-        mgr.redo()
-    """
-    
-    def __init__(self, max_history: int = 100):
-        self._undo_stack: deque = deque(maxlen=max_history)
-        self._redo_stack: deque = deque(maxlen=max_history)
-        self._listeners = []   # komut sonrası tetiklenecek callback'ler
-    
-    # ---------------------------------------------------------
-    # PUBLIC API
-    # ---------------------------------------------------------
-    
-    def execute(self, command: Command) -> bool:
-        """Komutu çalıştır ve geçmişe ekle."""
-        try:
-            command.execute()
-        except Exception as e:
-            logger.error(f"[Cmd] {command.name} execute hatası: {e}")
-            return False
-        
-        self._undo_stack.append(command)
-        self._redo_stack.clear()
-        
-        #pass(f"[Cmd] {command.name} uygulandı (undo={len(self._undo_stack)})")
-        self._notify()
-        return True
-    
-    def undo(self) -> bool:
-        """Son komutu geri al."""
-        if not self._undo_stack:
-            return False
-        
-        cmd = self._undo_stack.pop()
+    def __init__(self, max_history: int = 100) -> None:
+        self._undo: deque[Command] = deque(maxlen=max_history)
+        self._redo: deque[Command] = deque(maxlen=max_history)
+        self._listeners: list[Callable[[CommandResult], None]] = []
+
+    def execute(self, cmd: Command) -> CommandResult:
+        result = cmd.execute()
+        if result.handled:
+            self._undo.append(cmd)
+            self._redo.clear()
+        self._notify(result)
+        return result
+
+    def undo(self) -> CommandResult:
+        if not self._undo:
+            return CommandResult(handled=False, message="Geri alınacak işlem yok", level="warn")
+        cmd = self._undo[-1]
         try:
             cmd.undo()
-        except Exception as e:
-            logger.error(f"[Cmd] {cmd.name} undo hatası: {e}")
-            # Hata olursa komutu geri koyma — kullanıcı tekrar deneyebilir
-            return False
-        
-        self._redo_stack.append(cmd)
-        #pass(f"[Cmd] {cmd.name} geri alındı")
-        self._notify()
-        return True
-    
-    def redo(self) -> bool:
-        """Son geri alınanı yeniden uygula."""
-        if not self._redo_stack:
-            return False
-        
-        cmd = self._redo_stack.pop()
+        except Exception as exc:
+            return CommandResult(handled=False, message=f"Geri alınamadı: {exc}", level="error")
+        self._undo.pop()
+        self._redo.append(cmd)
+        result = CommandResult(message=f"Geri alındı: {cmd.name}", level="info")
+        self._notify(result)
+        return result
+
+    def redo(self) -> CommandResult:
+        if not self._redo:
+            return CommandResult(handled=False, message="Yinelenecek işlem yok", level="warn")
+        cmd = self._redo[-1]
         try:
-            cmd.redo()
-        except Exception as e:
-            logger.error(f"[Cmd] {cmd.name} redo hatası: {e}")
-            return False
-        
-        self._undo_stack.append(cmd)
-        #pass(f"[Cmd] {cmd.name} yeniden yapıldı")
-        self._notify()
-        return True
-    
+            result = cmd.redo()
+        except Exception as exc:
+            return CommandResult(handled=False, message=f"Yinelenemedi: {exc}", level="error")
+        self._redo.pop()
+        self._undo.append(cmd)
+        self._notify(result)
+        return result
+
+    @property
     def can_undo(self) -> bool:
-        return len(self._undo_stack) > 0
-    
+        return bool(self._undo)
+
+    @property
     def can_redo(self) -> bool:
-        return len(self._redo_stack) > 0
-    
-    def clear(self):
-        """Tüm geçmişi temizle."""
-        self._undo_stack.clear()
-        self._redo_stack.clear()
-        #pass("[Cmd] Geçmiş temizlendi")
-    
-    # ---------------------------------------------------------
-    # LISTENERS (opsiyonel — UI güncellemeleri için)
-    # ---------------------------------------------------------
-    
-    def add_listener(self, callback):
-        """Komut sonrası tetiklenecek callback ekle."""
+        return bool(self._redo)
+
+    def clear(self) -> None:
+        self._undo.clear()
+        self._redo.clear()
+
+    def add_listener(self, callback: Callable[[CommandResult], None]) -> None:
         self._listeners.append(callback)
-    
-    def _notify(self):
+
+    def _notify(self, result: CommandResult) -> None:
         for cb in self._listeners:
+            cb(result)
+
+
+@dataclass(frozen=True)
+class BulkPlan:
+    element: Any
+    before: dict[str, Any] = field(default_factory=dict)
+    after: dict[str, Any] = field(default_factory=dict)
+
+class CommandQueue:
+    def __init__(self) -> None:
+        self._q: queue.Queue = queue.Queue()
+
+    def put(self, command) -> None:
+        self._q.put(command)
+
+    def drain(self) -> list:
+        out = []
+        while True:
             try:
-                cb()
-            except Exception as e:
-                logger.error(f"[Cmd] Listener hatası: {e}")
+                out.append(self._q.get_nowait())
+            except queue.Empty:
+                return out
+
+_COMMAND_BY_TYPE: dict[type, type[Command]] = {}
+def command_for(payload_type: type) -> type[Command] | None:
+    return _COMMAND_BY_TYPE.get(payload_type)
+
+
+
+
+
+
+# def command(payload_type: type):
+#     def decorator(fn: Callable[[Any, Any], CommandResult]) -> type[Command]:
+#         if payload_type in _COMMAND_BY_TYPE:
+#             raise ValueError(
+#                 f"command: {payload_type.__name__} için zaten komut kayıtlı."
+#             )
+
+#         class _FnCommand(Command):
+#             def __init__(self, payload: Any) -> None:
+#                 self.payload = payload
+#                 self._app = _CURRENT_APP[0]
+
+#             def execute(self) -> CommandResult:
+#                 self._app = _CURRENT_APP[0]
+#                 return fn(self._app, self.payload)
+
+#             def undo(self) -> None:
+#                 pass
+
+#             @property
+#             def name(self) -> str:
+#                 return f"{payload_type.__name__}"
+
+#         _FnCommand.__name__ = f"{payload_type.__name__}Command"
+#         _FnCommand.__qualname__ = _FnCommand.__name__
+#         _FnCommand.__payload_type__ = payload_type
+#         _COMMAND_BY_TYPE[payload_type] = _FnCommand
+#         return _FnCommand
+
+#     return decorator
+
+

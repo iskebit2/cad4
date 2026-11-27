@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from imgui_bundle import imgui
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 from domain.definition import PointLoad
 from domain.element import Node
 from logging_config import CadLogger
@@ -195,7 +195,7 @@ class JointLoadPanel(PanelBase):
                 fx=self.fx, fy=self.fy, fz=self.fz,
                 mx=self.mx, my=self.my, mz=self.mz,
             ))
-            queue.put(PC.UpdateElementFields(uid, {"loads": cur}))
+            queue.put(cmd.UpdateElementFields(uid, {"loads": cur}))
             n_queued += 1
         self._status = f"{n_queued} node'a yük eklendi."
         logger.info("[JointLoad] %d node kuyruğa eklendi", n_queued)
@@ -213,7 +213,7 @@ class JointLoadPanel(PanelBase):
                 pl for pl in (getattr(n, "loads", []) or [])
                 if getattr(pl, "pattern_name", "") != self.pattern
             ]
-            queue.put(PC.UpdateElementFields(uid, {"loads": cur}))
+            queue.put(cmd.UpdateElementFields(uid, {"loads": cur}))
             n_queued += 1
         self._status = f"{n_queued} node'dan '{self.pattern}' yükü kaldırıldı."
 

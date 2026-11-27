@@ -367,6 +367,31 @@ SAP_DIR_CODES = {
     "7": "Gravity", "8": "ProjX",   "9": "ProjY",  "10": "ProjZ",
 }
 
+_AREA_LOAD_DIRECTIONS: tuple[tuple[str, LoadDirection], ...] = (
+    ("Gravity (-Z)", LoadDirection.GRAVITY),
+    ("Global Z", LoadDirection.GLOBAL_Z),
+    ("Global X", LoadDirection.GLOBAL_X),
+    ("Global Y", LoadDirection.GLOBAL_Y),
+    ("Local 3 (Surface Normal)", LoadDirection.LOCAL_3),
+    ("Local 2 (V Axis)", LoadDirection.LOCAL_2),
+    ("Local 1 (U Axis)", LoadDirection.LOCAL_1),
+)
+
+_AREA_LOAD_DIRECTION_LABELS = tuple(label for label, _ in _AREA_LOAD_DIRECTIONS)
+_AREA_LOAD_DIRECTION_VALUES = tuple(dir_ for _, dir_ in _AREA_LOAD_DIRECTIONS)
+
+_FRAME_LOCAL_DIR_TO_INDEX = {
+    LoadDirection.LOCAL_1: 0,
+    LoadDirection.LOCAL_2: 1,
+    LoadDirection.LOCAL_3: 2,
+}
+
+_POLYGON_LOCAL_TO_AXIS = {
+    LoadDirection.LOCAL_1: 0,
+    LoadDirection.LOCAL_2: 1,
+    LoadDirection.LOCAL_3: 2,
+}
+
 class DistType(Enum):
     ONE_WAY    = "One way"           # SAP uyumlu geri kalan (U1 gibi davranır)
     TWO_WAY    = "Two way"           # SAP uyumlu

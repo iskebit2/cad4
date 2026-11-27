@@ -34,6 +34,7 @@ from OpenGL.GL import (
     GL_FLOAT,
     GL_LINES,
     GL_STATIC_DRAW,
+    GL_TRIANGLES,
     glBindBuffer,
     glBindVertexArray,
     glBufferData,
@@ -122,23 +123,44 @@ class LocalAxesRenderer:
             return False
 
     def _build_unit_axes(self) -> np.ndarray:
-        """Birim uzayda 3 eksen × 2 nokta verisini üretir."""
+        """Birim uzayda 3 eksen + ok başları."""
         r = AXIS_COLORS[1]
         g = AXIS_COLORS[2]
         c = AXIS_COLORS[3]
 
-        # (x, y, z, r, g, b) × 6 vertex
-        verts = (
-            # 1-ekseni: origin → +X
-            0.0, 0.0, 0.0,   *r,
-            1.0, 0.0, 0.0,   *r,
-            # 2-ekseni: origin → +Y
-            0.0, 0.0, 0.0,   *g,
-            0.0, 1.0, 0.0,   *g,
-            # 3-ekseni: origin → +Z
-            0.0, 0.0, 0.0,   *c,
-            0.0, 0.0, 1.0,   *c,
-        )
+        verts = []
+        # Çizgiler (6 vertex)
+        for axis, color in (
+            ((1.0, 0.0, 0.0), r),
+            ((0.0, 1.0, 0.0), g),
+            ((0.0, 0.0, 1.0), c),
+        ):
+            verts.extend([0.0, 0.0, 0.0, *color])
+            verts.extend([*axis, *color])
+
+        # Ok başları (her eksen için 3 vertex = üçgen)
+        head_len = 0.15
+        head_w = 0.05
+        for axis, color in (
+            ((1.0, 0.0, 0.0), r),
+            ((0.0, 1.0, 0.0), g),
+            ((0.0, 0.0, 1.0), c),
+        ):
+            ax = np.array(axis, dtype=float)
+            tip = ax
+            base_pt = ax * (1.0 - head_len)
+            # Dik vektör
+            if abs(ax[2]) < 0.9:
+                perp = np.cross(ax, [0.0, 0.0, 1.0])
+            else:
+                perp = np.cross(ax, [0.0, 1.0, 0.0])
+            perp /= np.linalg.norm(perp)
+            left = base_pt + perp * head_w
+            right = base_pt - perp * head_w
+            verts.extend([*tip, *color])
+            verts.extend([*left, *color])
+            verts.extend([*right, *color])
+
         return np.array(verts, dtype=np.float32)
 
     def _upload_geometry(self, data: np.ndarray) -> None:
@@ -164,42 +186,24 @@ class LocalAxesRenderer:
 
     # ------------------------------------------------------------------- draw
     def draw(self, mvp: glm.mat4) -> None:
-        """
-        Tek bir element için eksen üçlüsünü çizer.
-
-        Parameters
-        ----------
-        mvp : glm.mat4
-            Projeksiyon · View · Model matrisi. Model matrisi
-            T(origin) · R(3x3 local→global) · S(scale) olmalı.
-        """
         if not self._initialized or self._u_mvp_loc == -1:
             return
-
         from OpenGL.GL import glUniformMatrix4fv
         glUniformMatrix4fv(self._u_mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
-
         glBindVertexArray(self.vao)
-        glDrawArrays(GL_LINES, 0, self._VERTEX_COUNT)
+        glDrawArrays(GL_LINES, 0, 6)          # 3 eksen çizgisi
+        glDrawArrays(GL_TRIANGLES, 6, 9)      # 3 ok başı
         glBindVertexArray(0)
 
     def draw_many(self, mvps) -> None:
-        """
-        Birden fazla element için aynı draw call bloğunda çizer.
-        Sadece u_mvp güncellenir — VAO binding'i dışarıda kalmış olsun.
-
-        Parameters
-        ----------
-        mvps : Iterable[glm.mat4]
-        """
         if not self._initialized or self._u_mvp_loc == -1:
             return
-
         from OpenGL.GL import glUniformMatrix4fv
         glBindVertexArray(self.vao)
         for mvp in mvps:
             glUniformMatrix4fv(self._u_mvp_loc, 1, GL_FALSE, glm.value_ptr(mvp))
-            glDrawArrays(GL_LINES, 0, self._VERTEX_COUNT)
+            glDrawArrays(GL_LINES, 0, 6)
+            glDrawArrays(GL_TRIANGLES, 6, 9)
         glBindVertexArray(0)
 
     # ----------------------------------------------------------------- helpers

@@ -567,47 +567,82 @@ def _load_frame_loads(ctx: LoadContext, frame_map):
     if ctx.df_frame_distributed is None or ctx.df_frame_distributed.empty:
         return
 
+    # 1) Satırları frame bazında topla (pattern veya load_dir'e göre DEĞİL)
     per_frame = defaultdict(list)
     for _, r in ctx.df_frame_distributed.iterrows():
         fid = str(r.get("Frame", "")).strip()
         if not fid or fid not in frame_map:
             continue
+
         pat = str(r.get("LoadPat", "DEFAULT")).strip()
-        csys = str(r.get("CoordSys", "Local")).strip()
+        csys_raw = str(r.get("CoordSys", "Local")).strip()
+        csys_norm = "Global" if csys_raw.lower().startswith("g") else "Local"
         load_dir = _sap_frame_dir_code(str(r.get("Dir", "Gravity")))
-        is_rel = "REL" in str(r.get("DistType", "RelDist")).upper()
+        force_or_moment = str(r.get("Type", "Force")).strip() or "Force"
+        mode = str(r.get("Mode", "REPLACE")).strip() or "REPLACE"
+        dist_type = str(r.get("DistType", "RelDist")).strip() or "RelDist"
+
+        is_rel = "REL" in dist_type.upper()
         if is_rel:
             x1 = _safe_float(r, "RelDistA", 0.0)
             x2 = _safe_float(r, "RelDistB", 1.0)
         else:
             L = frame_map[fid].get_length()
-            x1 = _safe_float(r, "DistA", 0.0) / L if L > 0 else 0.0
-            x2 = _safe_float(r, "DistB", L) / L if L > 0 else 1.0
+            x1 = _safe_float(r, "AbsDistA", _safe_float(r, "DistA", 0.0)) / L if L > 0 else 0.0
+            x2 = _safe_float(r, "AbsDistB", _safe_float(r, "DistB", L)) / L if L > 0 else 1.0
+
         v1 = _safe_float(r, "FOverLA", 0.0)
         v2 = _safe_float(r, "FOverLB", v1)
+
         per_frame[fid].append({
-            "pattern": pat, "csys": csys, "load_dir": load_dir,
-            "is_rel": is_rel, "x1": x1, "x2": x2, "v1": v1, "v2": v2,
+            "pattern": pat,
+            "csys": csys_norm,
+            "load_dir": load_dir,
+            "force_or_moment": force_or_moment,
+            "mode": mode,
+            "dist_type": dist_type,
+            "is_rel": is_rel,
+            "x1": x1, "x2": x2, "v1": v1, "v2": v2,
         })
 
+    # 2) Her frame için satırları (pattern, load_dir, csys, force_or_moment)
+    #    bazında grupla ve her grup için tek bir FrameDistributedLoad oluştur.
     for fid, rows in per_frame.items():
         frame = frame_map[fid]
-        by_pat = defaultdict(list)
+
+        grouped: dict[tuple[str, str, str, str], list[dict]] = defaultdict(list)
         for row in rows:
-            by_pat[row["pattern"]].append(row)
-        for pat, items in by_pat.items():
+            group_key = (
+                row["pattern"],
+                row["load_dir"],
+                row["csys"],
+                row["force_or_moment"],
+            )
+            grouped[group_key].append(row)
+
+        for group_key, items in grouped.items():
+            pattern, load_dir, csys_norm, force_or_moment = group_key
             first = items[0]
-            csys_norm = "Global" if first["csys"].lower().startswith("g") else "Local"
+
             load_set = FrameDistributedLoad(
-                pattern_name=pat, coord_sys=csys_norm,
-                load_dir=first["load_dir"], mode="REPLACE",
-                is_relative=first["is_rel"], segments=[],
+                pattern_name=pattern,
+                coord_sys=csys_norm,
+                load_dir=load_dir,
+                mode=first["mode"],
+                force_or_moment=force_or_moment,
+                is_relative=first["is_rel"],
+                coordinate_system=csys_norm.upper(),
+                dist_type=first["dist_type"],
+                segments=[],
             )
             for it in items:
-                load_set.add_segment(x1=it["x1"], x2=it["x2"], q1=it["v1"], q2=it["v2"])
-            frame.dist_load_sets[pat] = load_set
-            # NOT: dist_loads ÇİFT DÖNÜŞÜM riski nedeniyle DOLDURULMAZ.
-            # Tek doğruluk kaynağı: frame.dist_load_sets.
+                load_set.add_segment(
+                    x1=it["x1"], x2=it["x2"], q1=it["v1"], q2=it["v2"],
+                )
+
+            # 3) Yeni tuple-key formatıyla kaydet
+            frame.dist_load_sets[load_set.key] = load_set
+
 
 
 def _load_area_loads(ctx: LoadContext, area_map):

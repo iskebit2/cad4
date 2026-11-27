@@ -1,302 +1,273 @@
 # app/commands/registry.py
 from __future__ import annotations
 
+import dataclasses
 import importlib
+import pkgutil
 import re
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable, get_args, get_origin, get_type_hints
 
-from app.commands.result import CommandResult
-from app.commands.meta import CommandMeta
-
-_HANDLERS: list[tuple[type, CommandHandler]] = []
-_FACTORIES: list[tuple[str, CommandFactory]] = []
-_METAS: list[tuple[type, CommandMeta]] = []
+from app.commands.base import Command, CommandMeta
 
 
-def command(cmd_type: type, meta: CommandMeta | None = None):
-    if not isinstance(cmd_type, type):
-        raise TypeError(f"@command beklediği: type, aldığı: {type(cmd_type).__name__}")
-
-    def decorator(handler: CommandHandler) -> CommandHandler:
-        if not callable(handler):
-            raise TypeError(f"@command handler callable değil: {handler!r}")
-        _HANDLERS.append((cmd_type, handler))
-        if meta is not None:
-            _METAS.append((cmd_type, meta))
-        return handler
-    return decorator
-
-if TYPE_CHECKING:
-    from app.cad_app import CadApp
-
-
-CommandHandler = Callable[["CadApp", Any], CommandResult]
-CommandFactory = Callable[[list[str]], "Any | None"]
-
+_BOOL_TRUE = {"1", "true", "yes", "on", "evet", "e"}
+_BOOL_FALSE = {"0", "false", "no", "off", "hayir", "hayır", "h"}
 _SNAKE_RE = re.compile(r"(?<!^)(?=[A-Z])")
 _FACTORY_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
-def _snake(name: str) -> str:
-    return _SNAKE_RE.sub("_", name).lower()
+# def _snake(name: str) -> str:
+#     return _SNAKE_RE.sub("_", name).lower()
 
 
-def _no_args_factory(cmd_type: type) -> CommandFactory:
-    def build(args: list[str]) -> Any | None:
-        if args:
+def _parse_scalar(raw: str, target: Any) -> Any:
+    if target is bool:
+        low = raw.lower()
+        if low in _BOOL_TRUE:
+            return True
+        if low in _BOOL_FALSE:
+            return False
+        raise ValueError(raw)
+    if target is int:
+        return int(raw)
+    if target is float:
+        return float(raw)
+    if target is str:
+        return raw
+    origin = get_origin(target)
+    if origin is list:
+        args = get_args(target)
+        inner = args[0] if args else str
+        return [_parse_scalar(x.strip(), inner) for x in raw.split(",") if x.strip()]
+    return raw
+
+
+def _build_auto_factory(cmd_type: type) -> Callable[[list[str]], Command | None]:
+    if not dataclasses.is_dataclass(cmd_type):
+        payload_type = getattr(cmd_type, "__payload_type__", None)
+        if payload_type is not None:
+            def build_payload(args: list[str]) -> Command | None:
+                if len(args) != 1:
+                    return None
+                try:
+                    payload = _parse_scalar(args[0], payload_type)
+                except (ValueError, TypeError):
+                    return None
+                if not isinstance(payload, payload_type):
+                    return None
+                return cmd_type(payload)
+
+            return build_payload
+
+        def no_args(args: list[str]) -> Command | None:
+            return None if args else cmd_type()
+
+        return no_args
+
+    fields = dataclasses.fields(cmd_type)
+    hints = get_type_hints(cmd_type)
+
+    def build(args: list[str]) -> Command | None:
+        if len(args) > len(fields):
             return None
+        kwargs: dict[str, Any] = {}
+        for idx, f in enumerate(fields):
+            if idx >= len(args):
+                if f.default is dataclasses.MISSING and f.default_factory is dataclasses.MISSING:
+                    return None
+                break
+            try:
+                kwargs[f.name] = _parse_scalar(args[idx], hints.get(f.name, str))
+            except (ValueError, TypeError):
+                return None
         try:
-            return cmd_type()
+            return cmd_type(**kwargs)
         except TypeError:
             return None
+
     return build
+
+
+def _usage_for(cmd_type: type) -> str:
+    if not dataclasses.is_dataclass(cmd_type):
+        return ""
+    hints = get_type_hints(cmd_type)
+    parts = []
+    for f in dataclasses.fields(cmd_type):
+        has_default = (
+            f.default is not dataclasses.MISSING
+            or f.default_factory is not dataclasses.MISSING
+        )
+        t = hints.get(f.name, str)
+        name = getattr(t, "__name__", "str")
+        parts.append(f"[{f.name}:{name}]" if has_default else f"<{f.name}:{name}>")
+    return " ".join(parts)
 
 
 class CommandRegistry:
     def __init__(self) -> None:
-        self._handlers: dict[type, CommandHandler] = {}
-        self._factories: dict[str, CommandFactory] = {}
+        self._factories: dict[str, Callable[[list[str]], Command | None]] = {}
+        self._types: dict[str, type] = {}
         self._metas: dict[type, CommandMeta] = {}
-        self._conflicts: list[str] = []
         self._usages: dict[str, str] = {}
 
-    def register_meta(self, cmd_type: type, meta: CommandMeta) -> None:
+    def register(self, cmd_type: type, meta: CommandMeta | None = None) -> None:
+        # name = _snake(cmd_type.__name__)
+        name = cmd_type.__name__
+        if name.endswith("_command"):
+            name = name[: -len("_command")]
+        meta = meta or CommandMeta(label=cmd_type.__name__)
+        self._types[name] = cmd_type
+        self._factories[name] = (
+            meta.factory
+            if meta.factory is not None
+            else _build_auto_factory(cmd_type)
+        )
+        self._usages[name] = _usage_for(cmd_type)
         self._metas[cmd_type] = meta
 
     def get_meta(self, cmd_type: type) -> CommandMeta | None:
         return self._metas.get(cmd_type)
 
     def get_meta_by_name(self, name: str) -> CommandMeta | None:
-        for cmd_type in self._handlers:
-            if _snake(cmd_type.__name__) == name:
-                return self._metas.get(cmd_type)
-        return None
+        cmd_type = self._types.get(name)
+        return self._metas.get(cmd_type) if cmd_type else None
 
     def all_meta(self) -> list[tuple[str, type, CommandMeta]]:
-        out: list[tuple[str, type, CommandMeta]] = []
-        for cmd_type in self._handlers:
-            name = _snake(cmd_type.__name__)
-            meta = self._metas.get(cmd_type) or _default_meta(cmd_type)
-            out.append((name, cmd_type, meta))
-        out.sort(key=lambda t: t[0])
-        return out
-
-    def build_instance(self, cmd_id: str) -> Any | None:
-        cmd_type = next(
-            (t for t in self._handlers if _snake(t.__name__) == cmd_id), None
+        return sorted(
+            ((name, t, self._metas.get(t, CommandMeta(label=t.__name__)))
+             for name, t in self._types.items()),
+            key=lambda x: x[0],
         )
-        if cmd_type is None:
-            return None
-        meta = self._metas.get(cmd_type)
-        if meta is not None and meta.factory is not None:
-            return meta.factory()
-        return self.build_by_name(cmd_id, [])
-        
-    def register(self, cmd_type: type, handler: CommandHandler) -> None:
-        if cmd_type in self._handlers:
-            self._conflicts.append(
-                f"handler çakışması: {cmd_type.__name__} "
-                f"({self._handlers[cmd_type].__module__} vs {handler.__module__})"
-            )
-        self._handlers[cmd_type] = handler
-        name = _snake(cmd_type.__name__)
-        if name not in self._factories:
-            factory_fn, usage = _auto_factory(cmd_type)
-            self._factories[name] = factory_fn
-            self._usages[name] = usage
+
+    def build(self, name: str, args: list[str]) -> Command | None:
+        factory = self._factories.get(name)
+        return factory(args) if factory else None
+
+    def build_instance(self, name: str) -> Command | None:
+        return self.build(name, [])
 
     def get_usage(self, name: str) -> str:
         return self._usages.get(name, "")
 
-    def get_command_catalog(self) -> list[tuple[str, str]]:
-        """(komut_adi, kullanim_imzasi) çiftlerini alfabetik döndürür."""
-        return [(name, self._usages.get(name, "")) for name in sorted(self._factories.keys())]
-
-    def add_factory(self, name: str, factory: CommandFactory) -> None:
-        if not _FACTORY_NAME_RE.match(name):
-            self._conflicts.append(f"geçersiz factory adı: {name!r}")
-            return
-        if name in self._factories:
-            prev = self._factories[name]
-            if not getattr(prev, "_is_auto", False):
-                prev_mod = getattr(prev, "__module__", "?")
-                new_mod = getattr(factory, "__module__", "?")
-                if prev_mod != new_mod:
-                    self._conflicts.append(
-                        f"factory çakışması: {name!r} "
-                        f"({prev_mod} vs {new_mod})"
-                    )
-        self._factories[name] = factory
+    def catalog(self) -> list[tuple[str, str]]:
+        return [(n, self._usages.get(n, "")) for n in sorted(self._factories)]
 
     def list_names(self) -> list[str]:
-        return sorted(self._factories.keys())
+        return sorted(self._factories)
 
-    def list_types(self) -> list[type]:
-        return sorted(self._handlers.keys(), key=lambda t: t.__name__)
-
-    def has_factory(self, name: str) -> bool:
+    def has(self, name: str) -> bool:
         return name in self._factories
 
-    def has_handler(self, cmd_type: type) -> bool:
-        return cmd_type in self._handlers
+from app.commands.impl import *
 
-    def build_by_name(self, name: str, args: list[str]) -> Any | None:
-        factory = self._factories.get(name)
-        if factory is None:
-            return None
-        return factory(args)
+def _parse_unit(args: list[str]) -> SetUnitSystem | None:
+    if not args:
+        return None
+    from core.units import UnitSystem
+    raw = " ".join(args).strip()
+    key = raw.upper()
+    if key in UnitSystem.__members__:
+        return SetUnitSystem(UnitSystem[key])
+    return SetUnitSystem(UnitSystem.from_sap(raw))
 
-    def dispatch(self, app: "CadApp", cmd: Any) -> CommandResult:
-        handler = self._handlers.get(type(cmd))
-        if handler is None:
-            return CommandResult(
-                handled=False,
-                message=f"Handler bulunamadı: {type(cmd).__name__}",
-                level="warn",
-            )
-        return handler(app, cmd)
+# ---------------------------------------------------------------------------
+# Meta kayıtları
+# ---------------------------------------------------------------------------
 
-    @property
-    def conflicts(self) -> list[str]:
-        return list(self._conflicts)
-
-
-def factory(name: str) -> Callable[[CommandFactory], CommandFactory]:
-    if not _FACTORY_NAME_RE.match(name):
-        raise ValueError(
-            f"@factory adı geçersiz: {name!r} "
-            f"(beklenen: ^[a-z][a-z0-9_]*$)"
+_META: list[tuple[type, CommandMeta]] = [
+    (SetUnitSystem, CommandMeta(
+    label="Birim Sistemi",
+    icon="set_unit",
+    category="Settings",
+    tooltip="Birim sistemini değiştir",
+    visible_in_ui=True,
+    factory=_parse_unit,
+)),
+    (FitView, CommandMeta(label="Tüm Modeli Sığdır", icon="fit_view", category="View",
+                          default_shortcut="F", quick=True, tooltip="Modeli sığdır", visible_in_ui=True)),
+    (ZoomExtents, CommandMeta(label="Sınırlara Yaklaş", icon="zoom_extents", category="View",
+                              default_shortcut="Ctrl+Shift+F", tooltip="Sınırları yenile")),
+    (DeleteSelected, CommandMeta(label="Seçilileri Sil", icon="delete_selected", category="Edit",
+                                 default_shortcut="Delete", quick=True, visible_in_ui=True)),
+    (Undo, CommandMeta(label="Geri Al", icon="undo", category="Edit",
+                       default_shortcut="Ctrl+Z", quick=True, visible_in_ui=True)),
+    (Redo, CommandMeta(label="Yinele", icon="redo", category="Edit",
+                       default_shortcut="Ctrl+Y", quick=True, visible_in_ui=True)),
+    (NewProject, CommandMeta(label="Yeni Proje", icon="new_project", category="File",
+                             default_shortcut="Ctrl+N", quick=True, visible_in_ui=True)),
+    (OpenProject, CommandMeta(label="Proje Aç...", icon="open_project", category="File",
+                              default_shortcut="Ctrl+O", quick=True, visible_in_ui=True)),
+    (SaveProject, CommandMeta(label="Kaydet", icon="save_project", category="File",
+                              default_shortcut="Ctrl+S", quick=True, visible_in_ui=True)),
+    (SaveProjectAs, CommandMeta(label="Farklı Kaydet...", icon="save_project_as", category="File",
+                                default_shortcut="Ctrl+Shift+S", quick=False, visible_in_ui=True)),
+    (CloseProject, CommandMeta(label="Projeyi Kapat", icon="close_project", category="File",
+                               default_shortcut="Ctrl+W", visible_in_ui=True)),
+    (StartDrawLine, CommandMeta(
+        label="Draw Line",
+        icon="line",
+        category="Draw",
+        visible_in_ui=True,
+    )),
+    (StartDrawPoly, CommandMeta(
+        label="Draw Poly",
+        icon="poly",
+        category="Draw",
+        visible_in_ui=True,
+    )),
+    (StartPlane3pt, CommandMeta(
+        label="3 Nokta ile Düzlem",
+        icon="start_plane3pt",
+        category="Draw",
+        visible_in_ui=True
         )
+        ),
+    (StartPlane2ptZ, CommandMeta(label="2 Nokta + Z Düzlem",
+                                    icon="start_plane2pt_z",
+                                    category="Draw",
+                                    visible_in_ui=True)),
+    (ConvertFramesToLinks, CommandMeta(label="Çubukları Link'e Dönüştür",
+                                       icon="convert_frames_to_links", category="Convert",
+                                       visible_in_ui=True)),
+    (ReplicateSelected, CommandMeta(
+            label="Replicate",
+            icon="rep",
+            category="Edit",
+            visible_in_ui=True,
+        )),
+]
 
-    def decorator(fn: CommandFactory) -> CommandFactory:
-        if not callable(fn):
-            raise TypeError(f"@factory fn callable değil: {fn!r}")
-        _FACTORIES.append((name, fn))
-        return fn
-    return decorator
+_SKIP_MODULES = {"__init__", "base", "registry"}
 
 
-# ---------------------------------------------------------------------------
-# Modül keşfi
-# ---------------------------------------------------------------------------
-
-def _discover_modules() -> list[str]:
-    import pkgutil
-    import app.commands as pkg
-
-    skip = {"registry", "result", "base", "__init__"}
-    names = []
+def _discover_package(pkg_name: str = "app.commands") -> None:
+    pkg = importlib.import_module(pkg_name)
     for info in pkgutil.iter_modules(pkg.__path__):
-        if info.name in skip or info.name.startswith("_"):
+        if info.name in _SKIP_MODULES or info.name.startswith("_"):
             continue
-        names.append(info.name)
-    return sorted(names)
+        importlib.import_module(f"{pkg_name}.{info.name}")
 
 
-def _import_command_modules() -> None:
-    for name in _discover_modules():
-        importlib.import_module(f"app.commands.{name}")
-
-
-def build_registry() -> CommandRegistry:
-    _HANDLERS.clear()
-    _FACTORIES.clear()
-
-    _import_command_modules()
-
-    reg = CommandRegistry()
-    for cmd_type, meta in _METAS:
-        reg.register_meta(cmd_type, meta)
-    for cmd_type, handler in _HANDLERS:
-        reg.register(cmd_type, handler)
-    for name, fn in _FACTORIES:
-        reg.add_factory(name, fn)
-
-    if reg.conflicts:
-        from logging_config import CadLogger
-        log = CadLogger.get(__name__)
-        for c in reg.conflicts:
-            log.warning("[registry] %s", c)
-
-    return reg
-
-def _default_meta(cmd_type: type) -> CommandMeta:
-    name = _snake(cmd_type.__name__)
-    return CommandMeta(
-        label=cmd_type.__name__,
-        icon="",
-        category="Tools",
-        tooltip=cmd_type.__name__,
-        visible_in_ui=False,
-    )
-
-import dataclasses
-from typing import get_type_hints
-
-
-def _auto_factory(cmd_type: type) -> tuple[CommandFactory, str]:
-    """Dataclass alanlarından otomatik CLI parser ve kullanım imzası üretir."""
-    if not dataclasses.is_dataclass(cmd_type):
-        return _no_args_factory(cmd_type), ""
-
-    fields = dataclasses.fields(cmd_type)
-    hints = get_type_hints(cmd_type)
-    usage_parts = []
-
-    for f in fields:
-        has_default = (
-            f.default is not dataclasses.MISSING
-            or f.default_factory is not dataclasses.MISSING
-        )
-        t_name = getattr(hints.get(f.name, Any), "__name__", "str")
-        token = f"[{f.name}:{t_name}]" if has_default else f"<{f.name}:{t_name}>"
-        usage_parts.append(token)
-
-    usage = " ".join(usage_parts)
-
-    def build(args: list[str]) -> Any | None:
-        if len(args) > len(fields):
-            return None
-        kwargs: dict[str, Any] = {}
-        for idx, f in enumerate(fields):
-            if idx >= len(args):
-                has_default = (
-                    f.default is not dataclasses.MISSING
-                    or f.default_factory is not dataclasses.MISSING
-                )
-                if not has_default:
-                    return None
-                break
-
-            raw = args[idx]
-            target_t = hints.get(f.name, str)
-            try:
-                if target_t is bool:
-                    kwargs[f.name] = raw.lower() in ("1", "true", "yes", "on", "evet")
-                elif target_t is int:
-                    kwargs[f.name] = int(raw)
-                elif target_t is float:
-                    kwargs[f.name] = float(raw)
-                elif target_t is list[int]:
-                    kwargs[f.name] = [int(x) for x in raw.split(",") if x.strip()]
-                else:
-                    kwargs[f.name] = raw
-            except (ValueError, TypeError):
-                return None
-
-        try:
-            return cmd_type(**kwargs)
-        except TypeError:
-            return None
-    build._is_auto = True  # type: ignore[attr-defined]
-    return build, usage
-
-_REGISTRY: "CommandRegistry | None" = None
+_REGISTRY: CommandRegistry | None = None
 
 
 def get_registry() -> CommandRegistry:
-    """Süreç başına tek registry. build_registry() import maliyetini tekrarlamaz."""
     global _REGISTRY
     if _REGISTRY is None:
-        _REGISTRY = build_registry()
+        _REGISTRY = CommandRegistry()
+        register_all(_REGISTRY)
     return _REGISTRY
+
+def register_all(registry) -> None:
+    from app.commands import polygon_commands
+    from app.commands import visibility
+    for cmd_type in _ALL_COMMAND_TYPES:
+        meta = next((m for t, m in _META if t is cmd_type), None)
+        registry.register(cmd_type, meta)
+    polygon_commands.register(registry)
+    visibility.register(registry)
+
+
+_ALL_COMMAND_TYPES = [t for t in globals().values()
+                      if isinstance(t, type) and issubclass(t, Command) and t is not Command]

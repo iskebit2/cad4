@@ -94,19 +94,36 @@ class InspectorController:
         return _common_of(drafts)
 
     def set_draft_value(self, key: str, value: Any) -> None:
-        set_path(self._draft, key, value)
+        for obj in self.active_objects:
+            uid = getattr(obj, "unique_id", id(obj))
+            draft = self._draft.get(uid)
+
+            if draft is None:
+                continue
+
+            set_path(draft, key, value)
+
+            if key == "section_name" and self._catalog is not None:
+                sec = self._catalog.get_area_section(str(value or ""))
+
+                if sec is not None:
+                    mat = getattr(sec, "material", None)
+                    draft["area_section"] = (
+                        f"{sec.name} ({sec.area_type}, t={sec.thickness:g})"
+                    )
+                    draft["material_info"] = (
+                        getattr(mat, "name", "—") if mat is not None else "—"
+                    )
+
+                    if draft.get("thick_over") is None:
+                        draft["thickness"] = float(sec.thickness)
+                else:
+                    draft["area_section"] = (
+                        f"{value} (tanımsız)" if value else "—"
+                    )
+                    draft["material_info"] = "—"
+
         self._dirty = True
-        if key == "section_name" and self._catalog is not None:
-            sec = self._catalog.get_area_section(str(value or ""))
-            if sec is not None:
-                mat = getattr(sec, "material", None)
-                self._draft["area_section"] = f"{sec.name} ({sec.area_type}, t={sec.thickness:g})"
-                self._draft["material_info"] = getattr(mat, "name", "—") if mat is not None else "—"
-                if self._draft.get("thick_over") is None:
-                    self._draft["thickness"] = float(sec.thickness)
-            else:
-                self._draft["area_section"] = f"{value} (tanımsız)" if value else "—"
-                self._draft["material_info"] = "—"
 
     def is_dirty(self) -> bool:
         for o in self.active_objects:

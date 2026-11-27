@@ -10,20 +10,17 @@ from core.engine.camera_rig import CameraRig
 from core.engine.hover_system import HoverSystem
 from core.engine.plane_mode import PlaneMode
 from core.engine.tools_registry import ToolsRegistry
-from render.snapsquare import SnapSquareRenderer
 from plane.plane_creation_tool import PlaneFromElementState
 from logging_config import CadLogger
 
 if TYPE_CHECKING:
     from domain.project import Project
     from viewport.viewport import Viewport
-    from domain.bounds import Bounds3D
 
 logger = CadLogger.get(__name__)
 
 
 class Engine:
-    """Render pipeline orkestratörü. App bilmez, UI bilmez."""
 
     def __init__(self, width: int, height: int, command_queue) -> None:
         self.w = max(1, int(width))
@@ -41,11 +38,28 @@ class Engine:
         self.tools: ToolsRegistry | None = None
 
         self.show = {
-            "scene": True, "grid": True, "polygon": True, "lines": True,
-            "interaction": True, "presentation_any": True,
-            "loads": True, "zones": False,
-            "labels": True, "grid_labels": True, "selected_labels": True,
-            "global_axis": True, "local_axes": False,
+            "scene": True,
+            "grid": True,
+            "polygon": True,
+            "lines": True,
+            "area": True,
+            "frame": True,
+            "link": True,
+            "node": True,
+            "restraint": True,
+            "interaction": True,
+            "snap": True,
+            "tool_preview": True,
+            "plane_preview": True,
+            "presentation_any": True,
+            "loads": True,
+            "zones": False,
+            "wind_vector": True,
+            "labels": True,
+            "grid_labels": True,
+            "selected_labels": True,
+            "global_axis": True,
+            "local_axes": True,
         }
 
         self.hover_visual_enabled = True
@@ -54,8 +68,6 @@ class Engine:
         self._plane_from_element.engine = self
         self.viewport_manager = None
 
-        
-    # ------------------------------------------------------------------
     def init_gl(self) -> None:
         self.gl.init()
         self.pipeline = RendererPipeline(self.w, self.h, self.gl.shaders)
@@ -125,8 +137,6 @@ class Engine:
         if self.tools is not None:
             self.tools.tick()
 
-    # ------------------------------------------------------------------
-    # Viewport 2D geçişi
     def enter_plane_2d(self, plane) -> None:
         if self.plane_mode is not None:
             self.plane_mode.enter_2d(plane)
@@ -135,8 +145,6 @@ class Engine:
         if self.plane_mode is not None:
             self.plane_mode.exit_2d()
 
-    # ------------------------------------------------------------------
-    # Fit / zoom
     def fit_view(self) -> None:
         bounds = self.pipeline.fit_view_bounds() if self.pipeline else None
         self.camera_rig.fit_view(bounds)
@@ -153,15 +161,12 @@ class Engine:
             from plane.plane_policy import PlaneFilterPolicy  # noqa
         if self.pipeline is None or self.pipeline.math_model is None:
             return None
-        # project üzerinden
         from domain.project import Project
         project = getattr(self.pipeline, "_project", None)
         if project is None:
             return None
         return PlaneMode._default_xy_plane(project)
 
-    # ------------------------------------------------------------------
-    # Hover
     def set_viewport_pointer(self, viewport, x: int, y: int) -> None:
         if self.hover is not None:
             self.hover.set_pointer(viewport.name, x, y)
@@ -197,8 +202,6 @@ class Engine:
     def _find_element(self, pick_id: int):
         return self.pipeline.get_element_by_id(pick_id) if self.pipeline else None
 
-    # ------------------------------------------------------------------
-    # Screen → world
     def screen_ray(self, x: float, y: float):
         from core.engine.ray_cast import screen_ray
         return screen_ray(self.cam, x, y, self.w, self.h)
@@ -236,8 +239,6 @@ class Engine:
         self.input.mouse_world_valid = False
         self.input.mouse_ucs_pos = None
 
-    # ------------------------------------------------------------------
-    # Plane from element
     def start_plane_from_element(self) -> None:
         self._plane_from_element.start()
 
@@ -247,8 +248,6 @@ class Engine:
     def toggle_plane_from_element_axis(self) -> None:
         self._plane_from_element.frame_axis_12 = not self._plane_from_element.frame_axis_12
 
-    # ------------------------------------------------------------------
-    # Cleanup
     def cleanup(self) -> None:
         if self.pipeline is not None:
             self.pipeline.cleanup()
@@ -257,8 +256,6 @@ class Engine:
         self.hover = None
         self.plane_mode = None
 
-    # ------------------------------------------------------------------
-    # Property delegasyonları — InteractionRenderer ve eski kod için
     @property
     def cam(self):
         return self.camera_rig.cam
@@ -349,11 +346,12 @@ class Engine:
 
     @property
     def active_working_plane(self):
-        return None  # pipeline._project üzerinden override edilebilir
+        return None
 
     @property
     def viewport_pointer(self):
         return self.hover.pointer if self.hover else None
+
     def _combined_bounds(self):
         return self.pipeline.fit_view_bounds() if self.pipeline else None
 

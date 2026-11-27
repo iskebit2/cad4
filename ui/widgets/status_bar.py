@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 from imgui_bundle import imgui
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 from core.units import UnitSystem
 
 
@@ -135,24 +135,24 @@ class StatusBar:
     # ------------------------------------------------------------------
     def _draw_right(self, app) -> None:
         right_items = [
-            self._icon_button("layout", "XY viewport", lambda: self._emit(app, PC.OpenViewport("xy"))),
-            self._icon_button("columns", "XZ viewport", lambda: self._emit(app, PC.OpenViewport("xz"))),
-            self._icon_button("sidebar", "YZ viewport", lambda: self._emit(app, PC.OpenViewport("yz"))),
-            self._icon_button("box", "Iso viewport", lambda: self._emit(app, PC.OpenViewport("iso"))),
+            self._icon_button("layout", "XY viewport", lambda: self._emit(app, cmd.OpenViewport("xy"))),
+            self._icon_button("columns", "XZ viewport", lambda: self._emit(app, cmd.OpenViewport("xz"))),
+            self._icon_button("sidebar", "YZ viewport", lambda: self._emit(app, cmd.OpenViewport("yz"))),
+            self._icon_button("box", "Iso viewport", lambda: self._emit(app, cmd.OpenViewport("iso"))),
             "SEP",
             self._icon_button(
                 "axes",
                 "Global eksenler",
                 lambda: self._emit(
                     app,
-                    PC.ToggleRenderFlag("global_axis", not bool(app.engine.show.get("global_axis", True))),
+                    cmd.ToggleRenderFlag("global_axis", not bool(app.engine.show.get("global_axis", True))),
                 ),
                 active=lambda: bool(app.engine.show.get("global_axis", True)) if app.engine else False,
             ),
             self._icon_button(
                 "crosshair",
                 "Yerel eksenler",
-                lambda: self._emit(app, PC.ToggleLocalAxes()),
+                lambda: self._emit(app, cmd.ToggleLocalAxes()),
                 active=lambda: bool(app.engine and app.engine.scene and app.engine.scene.show_local_axes),
             ),
             "SEP",
@@ -161,7 +161,7 @@ class StatusBar:
                 "Yük görünürlüğü",
                 lambda: self._emit(
                     app,
-                    PC.ToggleLoadsVisible(not app.visibility_service.get_loads_visible()),
+                    cmd.ToggleLoadsVisible(not app.visibility_service.get_loads_visible()),
                 ),
                 active=lambda: bool(app.visibility_service.get_loads_visible()),
             ),
@@ -169,7 +169,7 @@ class StatusBar:
             self._icon_button(
                 "2d3d",
                 "2D / 3D",
-                lambda: self._emit(app, PC.Toggle2D()),
+                lambda: self._emit(app, cmd.Toggle2D()),
                 active=lambda: bool(
                     app.viewport_manager
                     and app.viewport_manager.active
@@ -179,7 +179,7 @@ class StatusBar:
             self._icon_button(
                 "render",
                 "Render modu",
-                lambda: self._emit(app, PC.ToggleRenderMode()),
+                lambda: self._emit(app, cmd.ToggleRenderMode()),
                 active=lambda: False,
             ),
             "SEP",
@@ -223,7 +223,7 @@ class StatusBar:
 
     # ------------------------------------------------------------------
     def _emit(self, app, cmd) -> None:
-        app.command_queue.put(cmd)
+        app.put_command(cmd)
 
     def _icon_button(
         self,
@@ -285,5 +285,5 @@ class StatusBar:
                 selected = current == unit
                 if imgui.menu_item(f"{_format_unit_label(unit)}##unit_{unit.name}", "", selected)[0]:
                     if not selected:
-                        self._emit(app, PC.SetUnitSystem(unit, reason="status_bar"))
+                        self._emit(app, cmd.SetUnitSystem(unit, reason="status_bar"))
             imgui.end_popup()

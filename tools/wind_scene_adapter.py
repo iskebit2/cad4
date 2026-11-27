@@ -1,3 +1,4 @@
+# tools/wind_scene_adapter.py
 from __future__ import annotations
 
 from typing import Any
@@ -11,7 +12,18 @@ from structload.windcalc.wind_analyzer import WindAnalyzer
 
 
 class WindSceneAdapter:
-    """Translate CAD geometry (Project Polygons / Vertices) to the wind calculator."""
+    WIND_UNIT_SYSTEM = UnitSystem.KN_M
+
+    @staticmethod
+    def _project_unit_system(project) -> UnitSystem:
+        unit_system = project.unit_system
+        if not isinstance(unit_system, UnitSystem):
+            return UnitSystem.from_sap(unit_system)
+        return unit_system
+
+    @staticmethod
+    def _length_scale(from_sys: UnitSystem, to_sys: UnitSystem) -> float:
+        return float(convert_value(Dimension.LENGTH, 1.0, from_sys, to_sys))
 
     @staticmethod
     def _coefficient_pair(value: Any) -> tuple[float, float]:
@@ -24,27 +36,13 @@ class WindSceneAdapter:
         return values[0], values[1] if len(values) > 1 else values[0]
 
     @staticmethod
-    def build_inputs(project) -> tuple[dict[str, list[float]], dict[str, list[str]], dict[str, Any]]:
-        unit_system = project.unit_system
-        if not isinstance(unit_system, UnitSystem):
-            unit_system = UnitSystem.from_sap(unit_system)
-        to_meters = convert_value(Dimension.LENGTH, 1.0, unit_system, UnitSystem.N_M)
-
+    def _extract_points_and_polygons(
+        project,
+        target_polygons: list[Any],
+        to_wind_length: float,
+    ) -> tuple[dict[str, list[float]], dict[str, list[str]]]:
         points: dict[str, list[float]] = {}
         polygons: dict[str, list[str]] = {}
-
-        explicit_surfaces = {
-                PolygonType.SURFACE,
-                PolygonType.LOAD_AREA,
-            }
-
-        target_polygons = [
-            p for p in project.polygons.values()
-            if p.poly_type in explicit_surfaces or not getattr(p, "is_temporary", False)
-        ]
-
-        if not target_polygons:
-            target_polygons = list(project.polygons.values())
 
         for polygon in target_polygons:
             if polygon.poly_type in {PolygonType.ZONE, PolygonType.SECTION_CUT}:
@@ -55,7 +53,7 @@ class WindSceneAdapter:
                 continue
 
             poly_name = polygon.label or f"POLYGON_{polygon.unique_id}"
-            point_names = []
+            point_names: list[str] = []
 
             for idx, v in enumerate(vertices):
                 if hasattr(v, "x") and hasattr(v, "y") and hasattr(v, "z"):
@@ -71,9 +69,9 @@ class WindSceneAdapter:
                 points.setdefault(
                     point_name,
                     [
-                        vx * to_meters,
-                        vy * to_meters,
-                        vz * to_meters,
+                        vx * to_wind_length,
+                        vy * to_wind_length,
+                        vz * to_wind_length,
                     ],
                 )
                 point_names.append(point_name)
@@ -81,17 +79,44 @@ class WindSceneAdapter:
             if len(point_names) >= 3:
                 polygons[poly_name] = point_names
 
+        return points, polygons
+
+    @staticmethod
+    def _build_wind_config(project, proj_unit: UnitSystem) -> dict[str, Any]:
         cfg = project.config.wind
         terrain = str(getattr(cfg, "terrain_category", "III")).strip()
         if not terrain.lower().startswith("kategori"):
             terrain = f"Kategori {terrain}"
-        wind_config = {
+        return {
             "v_b0": float(getattr(cfg, "vb0", 28.0)),
             "terrain": terrain,
             "rho": float(getattr(cfg, "rho", 1.25)),
             "ct": float(getattr(cfg, "ct", 1.0)),
             "kI": float(getattr(cfg, "kI", 1.0)),
         }
+
+    @staticmethod
+    def build_inputs(project) -> tuple[dict[str, list[float]], dict[str, list[str]], dict[str, Any]]:
+        proj_unit = WindSceneAdapter._project_unit_system(project)
+        to_wind_length = WindSceneAdapter._length_scale(proj_unit, WindSceneAdapter.WIND_UNIT_SYSTEM)
+
+        explicit_surfaces = {
+            PolygonType.SURFACE,
+            PolygonType.LOAD_AREA,
+        }
+
+        target_polygons = [
+            p for p in project.polygons.values()
+            if p.poly_type in explicit_surfaces or not getattr(p, "is_temporary", False)
+        ]
+
+        if not target_polygons:
+            target_polygons = list(project.polygons.values())
+
+        points, polygons = WindSceneAdapter._extract_points_and_polygons(
+            project, target_polygons, to_wind_length,
+        )
+        wind_config = WindSceneAdapter._build_wind_config(project, proj_unit)
         return points, polygons, wind_config
 
     @staticmethod
@@ -110,6 +135,7 @@ class WindSceneAdapter:
         analyzer = WindAnalyzer(points, polygons, direction, **wind_config)
         zones = analyzer.analyze()
         engine = analyzer.engine
+        
         return zones, {
             "q_p": float(engine.q_p),
             "q_b": float(engine.q_b),
@@ -126,11 +152,6 @@ class WindSceneAdapter:
         engine_data: dict[str, Any] | None = None,
         direction: tuple[float, float, float] | None = None,
     ) -> None:
-        """Analiz önbelleği: project.loads.wind_zones + wind_results.
-
-        ★ polygon.zone_children_by_direction YAZMAZ — onu wind_analysis_panel
-        (_assign_zones_to_polygons) yapar. Böylece tek doğruluk kaynağı kalır.
-        """
         if not hasattr(project.loads, "wind_zones"):
             project.loads.wind_zones = {}
         project.loads.wind_zones[direction_key] = list(zones)
@@ -138,20 +159,13 @@ class WindSceneAdapter:
         if engine_data is None:
             return
 
-        unit_system = project.unit_system
-        if not isinstance(unit_system, UnitSystem):
-            unit_system = UnitSystem.from_sap(unit_system)
-
-        # Proje birimine çevir
-        meters_to_project = convert_value(
-            Dimension.LENGTH, 1.0, UnitSystem.N_M, unit_system,
-        )
+        proj_unit = WindSceneAdapter._project_unit_system(project)
+        wind_to_project = WindSceneAdapter._length_scale(WindSceneAdapter.WIND_UNIT_SYSTEM, proj_unit)
 
         zone_data = []
         for zone in zones:
             coords = np.asarray(zone.coords, dtype=float)
-            # WindAnalyzer'dan gelen coords METRE cinsinden → proje birimine
-            coords_project = (coords * meters_to_project).tolist()
+            coords_project = (coords * wind_to_project).tolist()
             zone_data.append({
                 "label": zone.label,
                 "surface": zone.surface,
@@ -206,49 +220,15 @@ class WindSceneAdapter:
 
     @staticmethod
     def build_inputs_for_polygons(project, polygons):
-        """Seçili polygon'lardan structload input."""
         if not polygons:
             raise ValueError("Polygon listesi boş")
 
-        unit_system = project.unit_system
-        if not isinstance(unit_system, UnitSystem):
-            unit_system = UnitSystem.from_sap(unit_system)
-        to_meters = convert_value(Dimension.LENGTH, 1.0, unit_system, UnitSystem.N_M)
+        proj_unit = WindSceneAdapter._project_unit_system(project)
+        to_wind_length = WindSceneAdapter._length_scale(proj_unit, WindSceneAdapter.WIND_UNIT_SYSTEM)
 
-        points: dict[str, list[float]] = {}
-        polygons_dict: dict[str, list[str]] = {}
-
-        for p in polygons:
-            vertices = getattr(p, "vertices", None) or getattr(p, "nodes", None)
-            if not vertices or len(vertices) < 3:
-                continue
-
-            poly_name = p.label or f"Polygon_{p.unique_id}"
-            point_names = []
-
-            for idx, v in enumerate(vertices):
-                if hasattr(v, "x") and hasattr(v, "y") and hasattr(v, "z"):
-                    vx, vy, vz = float(v.x), float(v.y), float(v.z)
-                    v_id = getattr(v, "unique_id", f"{p.unique_id}_{idx}")
-                elif isinstance(v, (list, tuple)) and len(v) >= 3:
-                    vx, vy, vz = float(v[0]), float(v[1]), float(v[2])
-                    v_id = f"{p.unique_id}_{idx}"
-                else:
-                    continue
-
-                point_name = f"V_{v_id}"
-                points.setdefault(
-                    point_name,
-                    [
-                        vx * to_meters,
-                        vy * to_meters,
-                        vz * to_meters,
-                    ],
-                )
-                point_names.append(point_name)
-
-            if len(point_names) >= 3:
-                polygons_dict[poly_name] = point_names
-
-        _, _, wind_config = WindSceneAdapter.build_inputs(project)
+        points, polygons_dict = WindSceneAdapter._extract_points_and_polygons(
+            project, list(polygons), to_wind_length,
+        )
+        wind_config = WindSceneAdapter._build_wind_config(project, proj_unit)
+        
         return points, polygons_dict, wind_config

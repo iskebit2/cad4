@@ -19,7 +19,7 @@ from ui.context_resolvers import resolve_context
 from ui.widgets.file_dialog import ImGuiFileDialog
 from ui.widgets.status_bar import StatusBar
 from ui.widgets.toolbar import Toolbar
-from app.commands import project_commands as PC
+import app.commands as cmd
 from viewport.viewport_panel import ViewportPanel
 from ui.widgets.viewport_view_dialog import ViewportViewDialog
 
@@ -223,7 +223,7 @@ class UIHost:
         imgui.end()
 
     def toggle_view_2d(self) -> None:
-        self.app.command_queue.put(PC.Toggle2D())
+        self.app.put_command(cmd.Toggle2D())
         
 
     def _ensure_default_viewport(self) -> None:
@@ -420,7 +420,7 @@ class UIHost:
 
         self.close_all_viewports()
         self._ensure_default_viewport()
-        self.app.command_queue.put(PC.ClearSelection())
+        self.app.put_command(cmd.ClearSelection())
         self._is_resetting = False
 
     def _build_view_menu(self) -> tuple[str, Callable[[], None]]:
@@ -454,7 +454,7 @@ class UIHost:
             imgui.text_disabled("EKSEN")
             imgui.separator()
             self._toggle_row("Global Axis", "global_axis", bool(eng.show.get("global_axis", True)))
-            self._toggle_row("Local Axes", "local_axes", bool(eng.scene and eng.scene.show_local_axes))
+            self._toggle_row("Local Axes", "local_axes", bool(eng.show.get("local_axes", False)))
 
             imgui.separator()
             imgui.text_disabled("RENDER MODU")
@@ -462,8 +462,8 @@ class UIHost:
             mode = eng.renderer.get_render_mode() if eng.renderer else "shaded"
             for m, lbl in (("shaded", "Shaded"), ("simple", "Simple")):
                 if imgui.radio_button(lbl, mode == m):
-                    app.put_command(PC.SetRenderMode(m))
-                    app.put_command(PC.RefreshGeometry())
+                    app.put_command(cmd.SetRenderMode(m))
+                    app.put_command(cmd.RefreshGeometry())
 
         return ("View", _draw)
 
@@ -474,11 +474,11 @@ class UIHost:
         if not changed:
             return
         if key == "local_axes":
-            self.app.put_command(PC.ToggleLocalAxes())
+            self.app.put_command(cmd.ToggleLocalAxes())
         elif key == "loads":
-            self.app.put_command(PC.ToggleLoadsVisible(new_val))
+            self.app.put_command(cmd.ToggleLoadsVisible(new_val))
         else:
-            self.app.put_command(PC.ToggleRenderFlag(key, new_val))
+            self.app.put_command(cmd.ToggleRenderFlag(key, new_val))
 
     def open_export_dialog(
         self,

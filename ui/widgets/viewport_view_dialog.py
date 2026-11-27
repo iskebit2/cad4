@@ -33,7 +33,7 @@ class ViewportViewDialog:
         self._use_depth = False
         self._depth_minus = 1000.0
         self._depth_plus = 1000.0
-        self._clip_mode = VolumeClipMode.INTERSECT
+        self._clip_mode = VolumeClipMode.STRICT
         self._is_2d = False
 
         self._only_beams = False
@@ -45,6 +45,7 @@ class ViewportViewDialog:
         self._name_pattern = ""
         self._section_filter = ""
         self._material_filter = ""
+        self._show_flags: dict[str, bool] = {}
 
     def open(self, viewport_name: str | None = None) -> None:
         vm = self.app.viewport_manager
@@ -74,8 +75,12 @@ class ViewportViewDialog:
         self._use_depth = (vol.depth_minus is not None) or (vol.depth_plus is not None)
         self._depth_minus = float(vol.depth_minus) if vol.depth_minus is not None else 1000.0
         self._depth_plus = float(vol.depth_plus) if vol.depth_plus is not None else 1000.0
-        self._clip_mode = vol.mode
+        self._clip_mode = vol.mode if vol.mode is not None else VolumeClipMode.STRICT
         self._is_2d = bool(vp.is_2d)
+
+        eng = self.app.engine
+        eng_show = getattr(eng, "show", None) if eng is not None else None
+        self._show_flags = {k: bool(v) for k, v in eng_show.items()} if isinstance(eng_show, dict) else {}
 
         q: ElementFilterQuery | None = vp.element_filter
         if q is None or q.is_empty():
@@ -113,7 +118,7 @@ class ViewportViewDialog:
             self.visible = False
             return
 
-        imgui.set_next_window_size(imgui.ImVec2(440, 560), imgui.Cond_.first_use_ever)
+        imgui.set_next_window_size(imgui.ImVec2(480, 620), imgui.Cond_.first_use_ever)
         expanded, p_open = imgui.begin(f"Görünüm UCS, Sınırlar & Filtre [{vp.name}]###vp_view_cfg", True)
         if not p_open:
             self.visible = False
@@ -123,92 +128,118 @@ class ViewportViewDialog:
             imgui.end()
             return
 
-        imgui.separator_text("1. Çalışma Koordinat Sistemi (UCS)")
-        presets = ["Mevcut", "Global XY", "Global XZ", "Global YZ"]
-        changed_preset, idx = imgui.combo("Hazır UCS", self._ucs_preset, presets)
-        if changed_preset:
-            self._ucs_preset = idx
-            if idx == 1:
-                self._origin = [0.0, 0.0, 0.0]
-                self._u_axis = [1.0, 0.0, 0.0]
-                self._v_axis = [0.0, 1.0, 0.0]
-            elif idx == 2:
-                self._origin = [0.0, 0.0, 0.0]
-                self._u_axis = [1.0, 0.0, 0.0]
-                self._v_axis = [0.0, 0.0, 1.0]
-            elif idx == 3:
-                self._origin = [0.0, 0.0, 0.0]
-                self._u_axis = [0.0, 1.0, 0.0]
-                self._v_axis = [0.0, 0.0, 1.0]
+        if imgui.collapsing_header("1. Çalışma Koordinat Sistemi (UCS)", imgui.TreeNodeFlags_.default_open):
+            presets = ["Mevcut", "Global XY", "Global XZ", "Global YZ"]
+            changed_preset, idx = imgui.combo("Hazır UCS", self._ucs_preset, presets)
+            if changed_preset:
+                self._ucs_preset = idx
+                if idx == 1:
+                    self._origin = [0.0, 0.0, 0.0]
+                    self._u_axis = [1.0, 0.0, 0.0]
+                    self._v_axis = [0.0, 1.0, 0.0]
+                elif idx == 2:
+                    self._origin = [0.0, 0.0, 0.0]
+                    self._u_axis = [1.0, 0.0, 0.0]
+                    self._v_axis = [0.0, 0.0, 1.0]
+                elif idx == 3:
+                    self._origin = [0.0, 0.0, 0.0]
+                    self._u_axis = [0.0, 1.0, 0.0]
+                    self._v_axis = [0.0, 0.0, 1.0]
 
-        _, self._origin = imgui.input_float3("Orijin (X, Y, Z)", self._origin)
-        _, self._u_axis = imgui.input_float3("U Ekseni", self._u_axis)
-        _, self._v_axis = imgui.input_float3("V Ekseni", self._v_axis)
+            _, self._origin = imgui.input_float3("Orijin (X, Y, Z)", self._origin)
+            _, self._u_axis = imgui.input_float3("U Ekseni", self._u_axis)
+            _, self._v_axis = imgui.input_float3("V Ekseni", self._v_axis)
 
-        eng = self.app.engine
-        sel_nodes = [
-            e for e in (eng.sel_mgr.get_selected() if (eng and eng.sel_mgr) else ())
-            if hasattr(e, "x") and hasattr(e, "y") and hasattr(e, "z")
-        ]
-        if len(sel_nodes) >= 1 and imgui.small_button("Orijini Seçili Düğümden Al"):
-            n0 = sel_nodes[0]
-            self._origin = [float(n0.x), float(n0.y), float(n0.z)]
-        if len(sel_nodes) >= 2:
+            eng = self.app.engine
+            sel_nodes = [
+                e for e in (eng.sel_mgr.get_selected() if (eng and eng.sel_mgr) else ())
+                if hasattr(e, "x") and hasattr(e, "y") and hasattr(e, "z")
+            ]
+            if len(sel_nodes) >= 1 and imgui.small_button("Orijini Seçili Düğümden Al"):
+                n0 = sel_nodes[0]
+                self._origin = [float(n0.x), float(n0.y), float(n0.z)]
+            if len(sel_nodes) >= 2:
+                imgui.same_line()
+                if imgui.small_button("2 Düğüm + Z"):
+                    n0, n1 = sel_nodes[0], sel_nodes[1]
+                    ucs = ViewUCS.from_2_points_z_up((n0.x, n0.y, n0.z), (n1.x, n1.y, n1.z))
+                    self._origin = [float(ucs.origin[0]), float(ucs.origin[1]), float(ucs.origin[2])]
+                    self._u_axis = [float(ucs.u[0]), float(ucs.u[1]), float(ucs.u[2])]
+                    self._v_axis = [float(ucs.v[0]), float(ucs.v[1]), float(ucs.v[2])]
+            if len(sel_nodes) >= 3:
+                imgui.same_line()
+                if imgui.small_button("3 Düğümden UCS"):
+                    n0, n1, n2 = sel_nodes[0], sel_nodes[1], sel_nodes[2]
+                    ucs = ViewUCS.from_3_points((n0.x, n0.y, n0.z), (n1.x, n1.y, n1.z), (n2.x, n2.y, n2.z))
+                    self._origin = [float(ucs.origin[0]), float(ucs.origin[1]), float(ucs.origin[2])]
+                    self._u_axis = [float(ucs.u[0]), float(ucs.u[1]), float(ucs.u[2])]
+                    self._v_axis = [float(ucs.v[0]), float(ucs.v[1]), float(ucs.v[2])]
+
+            _, self._is_2d = imgui.checkbox("2D Düzlem Bakışı", self._is_2d)
+
+        if imgui.collapsing_header("2. Hacimsel Sınırlar (View Volume)", imgui.TreeNodeFlags_.default_open):
+            _, self._use_uv_bounds = imgui.checkbox("U / V Sınırları Aktif", self._use_uv_bounds)
+            if self._use_uv_bounds:
+                _, self._u_min = imgui.drag_float("U Min", self._u_min, 10.0)
+                _, self._u_max = imgui.drag_float("U Max", self._u_max, 10.0)
+                _, self._v_min = imgui.drag_float("V Min", self._v_min, 10.0)
+                _, self._v_max = imgui.drag_float("V Max", self._v_max, 10.0)
+
+            _, self._use_depth = imgui.checkbox("Derinlik Sınırları Aktif (-N / +N)", self._use_depth)
+            if self._use_depth:
+                _, self._depth_minus = imgui.drag_float("Derinlik Alt (-N)", self._depth_minus, 10.0, 0.0, 1e8)
+                _, self._depth_plus = imgui.drag_float("Derinlik Üst (+N)", self._depth_plus, 10.0, 0.0, 1e8)
+
+            for mode, label in (
+                (VolumeClipMode.STRICT, "Strict (Tamamı İçinde)"),
+                (VolumeClipMode.INTERSECT, "Intersect (Kesenler Dahil)"),
+                (VolumeClipMode.CLIP, "Clip"),
+            ):
+                if imgui.radio_button(label, self._clip_mode == mode):
+                    self._clip_mode = mode
+
+        if imgui.collapsing_header("3. Eleman Filtresi", imgui.TreeNodeFlags_.default_open):
+            _, self._only_beams = imgui.checkbox("Kiriş (Beam)", self._only_beams)
             imgui.same_line()
-            if imgui.small_button("2 Düğüm + Z"):
-                n0, n1 = sel_nodes[0], sel_nodes[1]
-                ucs = ViewUCS.from_2_points_z_up((n0.x, n0.y, n0.z), (n1.x, n1.y, n1.z))
-                self._origin = [float(ucs.origin[0]), float(ucs.origin[1]), float(ucs.origin[2])]
-                self._u_axis = [float(ucs.u[0]), float(ucs.u[1]), float(ucs.u[2])]
-                self._v_axis = [float(ucs.v[0]), float(ucs.v[1]), float(ucs.v[2])]
-        if len(sel_nodes) >= 3:
+            _, self._only_columns = imgui.checkbox("Kolon (Column)", self._only_columns)
             imgui.same_line()
-            if imgui.small_button("3 Düğümden UCS"):
-                n0, n1, n2 = sel_nodes[0], sel_nodes[1], sel_nodes[2]
-                ucs = ViewUCS.from_3_points((n0.x, n0.y, n0.z), (n1.x, n1.y, n1.z), (n2.x, n2.y, n2.z))
-                self._origin = [float(ucs.origin[0]), float(ucs.origin[1]), float(ucs.origin[2])]
-                self._u_axis = [float(ucs.u[0]), float(ucs.u[1]), float(ucs.u[2])]
-                self._v_axis = [float(ucs.v[0]), float(ucs.v[1]), float(ucs.v[2])]
+            _, self._only_braces = imgui.checkbox("Çapraz (Brace)", self._only_braces)
 
-        _, self._is_2d = imgui.checkbox("2D Düzlem Bakışı", self._is_2d)
+            _, self._show_nodes = imgui.checkbox("Node", self._show_nodes)
+            imgui.same_line()
+            _, self._show_areas = imgui.checkbox("Area", self._show_areas)
+            imgui.same_line()
+            _, self._show_links = imgui.checkbox("Link", self._show_links)
 
-        imgui.separator_text("2. Hacimsel Sınırlar (View Volume)")
-        _, self._use_uv_bounds = imgui.checkbox("U / V Sınırları Aktif", self._use_uv_bounds)
-        if self._use_uv_bounds:
-            _, self._u_min = imgui.drag_float("U Min", self._u_min, 10.0)
-            _, self._u_max = imgui.drag_float("U Max", self._u_max, 10.0)
-            _, self._v_min = imgui.drag_float("V Min", self._v_min, 10.0)
-            _, self._v_max = imgui.drag_float("V Max", self._v_max, 10.0)
+            _, self._name_pattern = imgui.input_text("Etiket Deseni", self._name_pattern)
+            _, self._section_filter = imgui.input_text("Kesitler (virgüllü)", self._section_filter)
+            _, self._material_filter = imgui.input_text("Malzemeler (virgüllü)", self._material_filter)
 
-        _, self._use_depth = imgui.checkbox("Derinlik Sınırları Aktif (-N / +N)", self._use_depth)
-        if self._use_depth:
-            _, self._depth_minus = imgui.drag_float("Derinlik Alt (-N)", self._depth_minus, 10.0, 0.0, 1e8)
-            _, self._depth_plus = imgui.drag_float("Derinlik Üst (+N)", self._depth_plus, 10.0, 0.0, 1e8)
+        if imgui.collapsing_header("4. Görünürlük Katmanları (engine.show)"):
+            eng = self.app.engine
+            eng_show = getattr(eng, "show", None) if eng is not None else None
+            if isinstance(eng_show, dict):
+                for k in eng_show:
+                    if k not in self._show_flags:
+                        self._show_flags[k] = bool(eng_show[k])
+                for k in list(self._show_flags):
+                    if k not in eng_show:
+                        del self._show_flags[k]
 
-        for mode, label in (
-            (VolumeClipMode.INTERSECT, "Intersect (Kesenler Dahil)"),
-            (VolumeClipMode.STRICT, "Strict (Tamamı İçinde)"),
-            (VolumeClipMode.CLIP, "Clip"),
-        ):
-            if imgui.radio_button(label, self._clip_mode == mode):
-                self._clip_mode = mode
+                if imgui.small_button("Tümünü Aç##show_all"):
+                    for k in self._show_flags:
+                        self._show_flags[k] = True
+                imgui.same_line()
+                if imgui.small_button("Tümünü Kapat##show_none"):
+                    for k in self._show_flags:
+                        self._show_flags[k] = False
 
-        imgui.separator_text("3. Eleman Filtresi")
-        _, self._only_beams = imgui.checkbox("Kiriş (Beam)", self._only_beams)
-        imgui.same_line()
-        _, self._only_columns = imgui.checkbox("Kolon (Column)", self._only_columns)
-        imgui.same_line()
-        _, self._only_braces = imgui.checkbox("Çapraz (Brace)", self._only_braces)
-
-        _, self._show_nodes = imgui.checkbox("Node", self._show_nodes)
-        imgui.same_line()
-        _, self._show_areas = imgui.checkbox("Area", self._show_areas)
-        imgui.same_line()
-        _, self._show_links = imgui.checkbox("Link", self._show_links)
-
-        _, self._name_pattern = imgui.input_text("Etiket Deseni", self._name_pattern)
-        _, self._section_filter = imgui.input_text("Kesitler (virgüllü)", self._section_filter)
-        _, self._material_filter = imgui.input_text("Malzemeler (virgüllü)", self._material_filter)
+                if imgui.begin_table("##engine_show_grid", 3, imgui.TableFlags_.sizing_stretch_same):
+                    for key in self._show_flags:
+                        imgui.table_next_column()
+                        label = key.replace("_", " ").title()
+                        _, self._show_flags[key] = imgui.checkbox(f"{label}##show_{key}", self._show_flags[key])
+                    imgui.end_table()
 
         imgui.separator()
         if imgui.button("Apply", imgui.ImVec2(95, 0)):
@@ -264,6 +295,10 @@ class ViewportViewDialog:
 
     def _apply(self, vp) -> None:
         eng = self.app.engine
+        if eng is not None and isinstance(getattr(eng, "show", None), dict):
+            for k, v in self._show_flags.items():
+                eng.show[k] = bool(v)
+
         ucs = self._build_ucs(vp.ucs)
         vp.ucs = ucs
         vp.is_2d = bool(self._is_2d)
@@ -296,6 +331,7 @@ class ViewportViewDialog:
     def _reset_limits(self, vp) -> None:
         self._use_uv_bounds = False
         self._use_depth = False
+        self._clip_mode = VolumeClipMode.STRICT
         self._only_beams = False
         self._only_columns = False
         self._only_braces = False
@@ -306,4 +342,5 @@ class ViewportViewDialog:
         self._section_filter = ""
         self._material_filter = ""
         vp.clear_volume()
+        vp.volume.mode = VolumeClipMode.STRICT
         vp.set_element_filter(None)

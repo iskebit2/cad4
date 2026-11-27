@@ -27,7 +27,7 @@ from kivy.core.text import LabelBase
 
 LabelBase.register(
     name="CustomFont", 
-    fn_regular="assets/fonts/Roboto-Regular.ttf"  # Kendi ttf yolun
+    fn_regular = "C:/Windows/Fonts/segoeui.ttf"
 )
 
 FONT = {

@@ -1,3 +1,4 @@
+# domain/scene.py
 from __future__ import annotations
 
 import numpy as np
@@ -15,7 +16,7 @@ class Scene:
         self.grid.scene = self
         self.lighting = LightingSettings()
         self._bounds: Bounds3D | None = None
-        self.show_local_axes = False
+        self.show_local_axes = True
         self.show_local_axes_for_selected = True
         self.show_local_axes_scale = 1.0
         self.units = "N, mm, C"

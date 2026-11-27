@@ -199,7 +199,6 @@ class WindAnalyzer:
         self.zones = []
 
     def analyze(self):
-
         self._create_surfaces()
         self._analyze_shared_edges()
         self._analysis_global_edges()

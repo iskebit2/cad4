@@ -6,7 +6,7 @@ from enum import Enum, auto
 from typing import TYPE_CHECKING, Any
 
 from imgui_bundle import imgui
-from app.commands import project_commands as PC
+import app.commands as cmd
 from domain.element import Area, Frame, Link, Node
 from domain.line import Line
 from domain.polygon import Polygon
@@ -160,7 +160,7 @@ class ContextMenuManager:
 
         # En üstte doğrudan Inspector tetikleyici (sağ tık anında eleman zaten seçilmiş durumda)
         if imgui.menu_item_simple("Özellikler (Inspector)", "F3"):
-            self.app.put_command(PC.OpenInspector())
+            self.app.put_command(cmd.OpenInspector())
         imgui.separator()
 
         # Eleman tipine özel eylemler
@@ -169,20 +169,20 @@ class ContextMenuManager:
             imgui.separator()
         elif isinstance(el, Frame):
             if imgui.menu_item_simple("Link Elemanına Dönüştür"):
-                self.app.put_command(PC.ConvertFramesToLinks())
+                self.app.put_command(cmd.ConvertFramesToLinks())
             imgui.separator()
 
         # Görünürlük
         uids = [getattr(e, "unique_id", None) for e in selected if getattr(e, "unique_id", None) is not None]
         if uids:
             if imgui.menu_item_simple("Sadece Seçilileri Göster"):
-                self.app.put_command(PC.ShowOnly(uids=uids))
+                self.app.put_command(cmd.ShowOnly(uids=uids))
             if imgui.menu_item_simple("Gizle"):
-                self.app.put_command(PC.HideElements(uids=uids))
+                self.app.put_command(cmd.HideElements(uids=uids))
 
         imgui.separator()
         if imgui.menu_item_simple("Sil", "Del"):
-            self.app.put_command(PC.DeleteSelected())
+            self.app.put_command(cmd.DeleteSelected())
 
     def _draw_node_actions(self, selected: list[Any]) -> None:
         nodes = [e for e in selected if isinstance(e, Node)]
@@ -202,7 +202,7 @@ class ContextMenuManager:
                         "restraint.rx": dofs[3], "restraint.ry": dofs[4], "restraint.rz": dofs[5],
                     }
                     for nd in nodes:
-                        self.app.put_command(PC.UpdateElementFields(nd.unique_id, changes))
+                        self.app.put_command(cmd.UpdateElementFields(nd.unique_id, changes))
             imgui.end_menu()
 
     def _draw_viewport_empty_menu(self) -> None:
@@ -227,37 +227,37 @@ class ContextMenuManager:
 
         if imgui.begin_menu("Çizim Başlat"):
             if imgui.menu_item_simple("Çizgi (Line)"):
-                self.app.put_command(PC.StartDrawTool(mode="line"))
+                self.app.put_command(cmd.StartDrawTool(mode="line"))
             if imgui.menu_item_simple("Poligon (Polygon)"):
-                self.app.put_command(PC.StartDrawTool(mode="sequential"))
+                self.app.put_command(cmd.StartDrawTool(mode="sequential"))
             if imgui.menu_item_simple("Dikdörtgen (Rectangle)"):
-                self.app.put_command(PC.StartDrawTool(mode="rectangle"))
+                self.app.put_command(cmd.StartDrawTool(mode="rectangle"))
             imgui.end_menu()
 
         if imgui.begin_menu("Kamera Görünümü"):
             for label, preset in [("3D İzometrik", "3d"), ("Üst (XY)", "xy"), ("Ön (XZ)", "xz"), ("Sağ (YZ)", "yz")]:
                 if imgui.menu_item_simple(label):
-                    self.app.put_command(PC.SetCameraPreset(preset=preset))
+                    self.app.put_command(cmd.SetCameraPreset(preset=preset))
             imgui.end_menu()
 
         imgui.separator()
         if imgui.menu_item_simple("Refresh", "R"):
-            self.app.put_command(PC.RefreshGeometry())
+            self.app.put_command(cmd.RefreshGeometry())
         if imgui.menu_item_simple("Görünüme Sığdır", "F"):
-            self.app.put_command(PC.FitView())
+            self.app.put_command(cmd.FitView())
         if imgui.menu_item_simple("Tüm Modeli Göster"):
-            self.app.put_command(PC.ShowEntireModel())
+            self.app.put_command(cmd.ShowEntireModel())
         if imgui.menu_item_simple("Seçimi Temizle", "Esc"):
-            self.app.put_command(PC.ClearSelection())
+            self.app.put_command(cmd.ClearSelection())
 
     def _draw_window_global_menu(self) -> None:
         imgui.text_disabled("Çalışma Alanı")
         imgui.separator()
 
         if imgui.menu_item_simple("Geri Al (Undo)", "Ctrl+Z"):
-            self.app.put_command(PC.Undo())
+            self.app.put_command(cmd.Undo())
         if imgui.menu_item_simple("Yinele (Redo)", "Ctrl+Y"):
-            self.app.put_command(PC.Redo())
+            self.app.put_command(cmd.Redo())
 
         imgui.separator()
         if imgui.begin_menu("Paneller"):

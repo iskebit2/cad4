@@ -1,629 +1,583 @@
 # tests/test_commands.py
 from __future__ import annotations
 
+import dataclasses
+import sys
+import types
+from typing import Any
+from unittest.mock import MagicMock
+
 import pytest
 
-from app.commands.registry import CommandRegistry, build_registry
-from app.commands.result import CommandResult
-from app.commands import project_commands as PC
-from domain.definition import Section
-from domain.element import Frame, Node
-from domain.math_model import MathModel
-from domain.project import Project
-
 
 # ---------------------------------------------------------------------------
-# FAKE ALT YAPI
+# Sahte app / domain — CAD4 gerçek modüllerini taklit eder
 # ---------------------------------------------------------------------------
 
-class FakeEngine:
+class FakeNode:
+    _next_id = 1
+    def __init__(self, x=0.0, y=0.0, z=0.0, label=None, restraint=None):
+        self.unique_id = FakeNode._next_id
+        FakeNode._next_id += 1
+        self.x, self.y, self.z = x, y, z
+        self.label = label
+        self.restraint = restraint
+    def mark_dirty(self): self._dirty = True
+
+
+class FakeFrame:
+    _next_id = 1
+    def __init__(self, ni, nj, section=None, rotation_deg=0.0, label=None):
+        self.unique_id = FakeFrame._next_id
+        FakeFrame._next_id += 1
+        self.node_i, self.node_j = ni, nj
+        self.section = section
+        self.rotation_deg = rotation_deg
+        self.label = label
+    def mark_dirty(self): self._dirty = True
+
+
+class FakeArea:
+    _next_id = 1
+    def __init__(self, nodes, thickness=0.0, label=None):
+        self.unique_id = FakeArea._next_id
+        FakeArea._next_id += 1
+        self.nodes = list(nodes)
+        self.thickness = thickness
+        self.label = label
+    def mark_dirty(self): self._dirty = True
+
+
+class FakeLink:
+    _next_id = 1
+    def __init__(self, ni, nj, propname="", label=None):
+        self.unique_id = FakeLink._next_id
+        FakeLink._next_id += 1
+        self.node_i, self.node_j = ni, nj
+        self.propname = propname
+        self.label = label
+    def mark_dirty(self): self._dirty = True
+
+
+class FakeMathModel:
     def __init__(self):
-        self.show: dict[str, bool] = {"scene": True, "grid": True, "polygon": True,
-                                       "lines": True, "labels": True, "interaction": True,
-                                       "loads": True, "zones": True,
-                                       "global_axis": True, "local_axes": True}
-        self.math_model: MathModel | None = None
-        self.scene = None
-        self.cam = None
-        self.renderer = None
-        self.grid = None
-        self.sel_mgr = None
-        self.fit_view_calls = 0
-        self.zoom_extents_calls = 0
-        self.update_geo_calls = 0
-        self.plane_draw_mgr = _FakePlaneDrawMgr()
+        self.nodes: dict[int, Any] = {}
+        self.frames: dict[int, Any] = {}
+        self.areas: dict[int, Any] = {}
+        self.links: dict[int, Any] = {}
+        self.all_elements: dict[int, Any] = {}
+        self._dirty = False
+        self._bounds_dirty = False
 
-    def fit_view(self):
-        self.fit_view_calls += 1
+    def _store(self, el, container):
+        container[el.unique_id] = el
+        self.all_elements[el.unique_id] = el
 
-    def zoom_extents(self):
-        self.zoom_extents_calls += 1
+    def add_element(self, el):
+        if isinstance(el, FakeNode): self._store(el, self.nodes)
+        elif isinstance(el, FakeFrame): self._store(el, self.frames)
+        elif isinstance(el, FakeArea): self._store(el, self.areas)
+        elif isinstance(el, FakeLink): self._store(el, self.links)
+        else: return False
+        return True
 
-    def update_geo(self, project):
-        self.update_geo_calls += 1
+    def add_node(self, n): return self.add_element(n)
+    def add_frame(self, f): return self.add_element(f)
+    def add_area(self, a): return self.add_element(a)
+    def add_link(self, l): return self.add_element(l)
 
+    def remove_element(self, el):
+        uid = getattr(el, "unique_id", None)
+        if uid is None or uid not in self.all_elements:
+            return False
+        self.all_elements.pop(uid, None)
+        for c in (self.nodes, self.frames, self.areas, self.links):
+            c.pop(uid, None)
+        return True
 
-class _FakePlaneDrawMgr:
-    def __init__(self):
-        self.is_active = False
-        self.cancel_calls = 0
+    def restore_element(self, el):
+        if isinstance(el, FakeNode): self.nodes[el.unique_id] = el
+        elif isinstance(el, FakeFrame): self.frames[el.unique_id] = el
+        elif isinstance(el, FakeArea): self.areas[el.unique_id] = el
+        elif isinstance(el, FakeLink): self.links[el.unique_id] = el
+        self.all_elements[el.unique_id] = el
+        return True
 
-    def cancel(self):
-        self.cancel_calls += 1
-        self.is_active = False
+    def get_element_by_unique_id(self, uid):
+        return self.all_elements.get(uid)
+
+    def mark_dirty(self): self._dirty = True
+    def refresh_bounds(self): self._bounds_dirty = True
+    def invalidate_dependents_of_nodes(self, nodes): return len(nodes)
 
 
 class FakeSelectionManager:
     def __init__(self):
-        self._selected: list = []
-        self.clear_calls = 0
-
-    def clear(self):
-        self._selected.clear()
-        self.clear_calls += 1
-
-    def get_selected(self):
-        return list(self._selected)
-
-    def is_selected(self, el):
-        return el in self._selected
-
+        self._selected: list[Any] = []
+    def get_selected(self): return list(self._selected)
+    def clear(self): self._selected.clear()
     def select(self, el, additive=False):
-        if not additive:
-            self._selected = [el]
-        elif el not in self._selected:
+        if additive and el not in self._selected:
             self._selected.append(el)
+        elif not additive:
+            self._selected = [el]
+    def select_multiple(self, els, mode=None): self._selected = list(els)
+    def is_selected(self, el): return el in self._selected
 
-    def select_multiple(self, elements, mode):
-        # SelectionMode.REPLACE varsayımı
-        self._selected = list(elements)
 
-
-class FakeUIHost:
+class FakeProject:
     def __init__(self):
-        self.refresh_open_panels_calls = 0
-        self.on_project_changed_calls = 0
-        self.on_selection_changed_calls = 0
-        self.on_wind_analysis_done_calls: list[str] = []
-        self.on_unit_changed_calls = 0
+        self.math_model = FakeMathModel()
+        self.sections: dict[str, Any] = {}
+        self.materials: dict[str, Any] = {}
+        self.lines: dict[int, Any] = {}
+        self.polygons: dict[int, Any] = {}
+        self.scene = FakeMathModel()
 
-    def refresh_open_panels(self):
-        self.refresh_open_panels_calls += 1
+    def add_line(self, line): self.lines[line.unique_id] = line
+    def add_polygon(self, poly): self.polygons[poly.unique_id] = poly
 
-    def on_project_changed(self):
-        self.on_project_changed_calls += 1
 
-    def on_selection_changed(self, selected):
-        self.on_selection_changed_calls += 1
+class FakeVisibilityService:
+    def __init__(self):
+        self.show_only_ids: set[int] | None = None
+        self.hidden: set[int] = set()
+        self.loads_visible = False
+    def show_only(self, uids): self.show_only_ids = set(uids); return True
+    def show_all(self): self.show_only_ids = None; self.hidden.clear()
+    def hide(self, uids): self.hidden.update(uids); return True
+    def show(self, uids): self.hidden -= set(uids)
+    def toggle_loads_visible(self, enabled=None):
+        self.loads_visible = (not self.loads_visible) if enabled is None else enabled
+        return self.loads_visible
 
-    def on_wind_analysis_done(self, key):
-        self.on_wind_analysis_done_calls.append(key)
 
-    def on_unit_changed(self):
-        self.on_unit_changed_calls += 1
+class FakeEngine:
+    def __init__(self, model):
+        self.math_model = model
+        self.sel_mgr = FakeSelectionManager()
+        self.hover = None
+        self.draw_mgr = MagicMock()
+        self.plane_draw_mgr = MagicMock(is_active=False)
+        self.renderer = MagicMock()
+        self.scene = MagicMock(show_local_axes=False)
+        self.show: dict[str, bool] = {}
+        self.update_geo = MagicMock()
+        self.presentation_renderer = MagicMock()
+    def clear_hover(self): self.hover = None
+
+
+class FakeViewService:
+    def __init__(self):
+        self.fit_view = MagicMock()
+        self.zoom_extents = MagicMock()
+        self.set_camera_preset = MagicMock()
+        self.toggle_2d = MagicMock()
+
+
+class FakeProjectService:
+    def __init__(self, project):
+        self.project = project
+        self.load = MagicMock()
+        self.save = MagicMock()
+        self.save_current = MagicMock(return_value=True)
+        self.replace = MagicMock()
+        self.set_unit_system = MagicMock()
+
+
+class FakePanelRegistry:
+    def __init__(self):
+        self._specs: dict[str, Any] = {}
+        self._instances: dict[str, Any] = {}
+    def get(self, name): return self._specs.get(name)
+    def instance(self, name): return self._instances.get(name)
+    def visible_instances(self): return [(self._specs[n], self._instances[n]) for n in self._instances if getattr(self._instances[n], "visible", False)]
 
 
 class FakeApp:
-    """CadApp'in _drain_commands ve handler'lar için gereken yüzeyi."""
-
     def __init__(self):
-        self.current_project = _fresh_project()
-        self.engine = FakeEngine()
-        self.engine.math_model = self.current_project.math_model
-        self.engine.sel_mgr = FakeSelectionManager()
-        self._ui_host = FakeUIHost()
-        self.command_queue = _FakeCommandQueue()
-        self._show_only_ids: set[int] | None = None
-        self._hidden_ids: set[int] | None = None
-        self._command_registry = build_registry()
-        self.update_geo_invocations = 0
+        self.current_project = FakeProject()
+        self.project_service = FakeProjectService(self.current_project)
+        self.engine = FakeEngine(self.current_project.math_model)
+        self.edit_controller = None
+        self.view_service = FakeViewService()
+        self.visibility_service = FakeVisibilityService()
+        self.panel_registry = FakePanelRegistry()
+        self.ui = MagicMock()
+        self.request_quit = MagicMock()
 
-        # Handler'ların çağıracağı metotlar
-        self.set_project_calls: list[Project] = []
-        self.set_unit_system_calls: list = []
-        self.set_loads_visible_calls: list[bool] = []
-        self.toggle_2d_calls = 0
-        self.show_entire_model_calls = 0
-
-    # --- CadApp API taklidi ---
-    def set_project(self, project):
-        self.set_project_calls.append(project)
-        self.current_project = project
-        self.engine.math_model = project.math_model
-
-    def set_unit_system(self, unit):
-        self.set_unit_system_calls.append(unit)
-        self.current_project.unit_system = unit
-
-    def set_loads_visible(self, enabled):
-        self.set_loads_visible_calls.append(bool(enabled))
-
-    def toggle_2d(self):
-        self.toggle_2d_calls += 1
-
-    def show_entire_model(self):
-        self.show_entire_model_calls += 1
-
-    # --- _drain_commands BİREBİR kopyası (CadApp ile aynı mantık) ---
-    def drain_commands(self):
-        cmds = self.command_queue.drain()
-        if not cmds:
-            return
-
-        geometry_dirty = False
-        project_dirty = False
-
-        for cmd in cmds:
-            result = self._command_registry.dispatch(self, cmd)
-            if not result.handled:
-                continue
-            geometry_dirty = geometry_dirty or result.geometry_dirty
-            project_dirty = project_dirty or result.project_dirty
-
-        if geometry_dirty and self.engine and self.current_project:
-            self.engine.update_geo(self.current_project)
-            self.update_geo_invocations += 1
-
-        if project_dirty and self._ui_host is not None:
-            self._ui_host.refresh_open_panels()
-
-
-class _FakeCommandQueue:
-    def __init__(self):
-        self._items: list = []
-
-    def put(self, cmd):
-        self._items.append(cmd)
-
-    def drain(self):
-        items, self._items = self._items, []
-        return items
-
-
-def _fresh_project() -> Project:
-    project = Project()
-    project.math_model = MathModel()
-    return project
+    def put_command(self, cmd): pass
 
 
 # ---------------------------------------------------------------------------
-# FIXTURES
+# Domain modüllerini sys.modules'a enjekte et
+# ---------------------------------------------------------------------------
+
+def _install_fake_domain():
+    domain = types.ModuleType("domain")
+    element = types.ModuleType("domain.element")
+    element.Node = FakeNode
+    element.Frame = FakeFrame
+    element.Area = FakeArea
+    element.Link = FakeLink
+    project_mod = types.ModuleType("domain.project")
+    project_mod.Project = FakeProject
+    line_mod = types.ModuleType("domain.line")
+    line_mod.Line = type("Line", (), {"unique_id": 0})
+    polygon_mod = types.ModuleType("domain.polygon")
+    polygon_mod.Polygon = type("Polygon", (), {"unique_id": 0, "nodes": []})
+    sys.modules.update({
+        "domain": domain,
+        "domain.element": element,
+        "domain.project": project_mod,
+        "domain.line": line_mod,
+        "domain.polygon": polygon_mod,
+    })
+
+
+_install_fake_domain()
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def app() -> FakeApp:
-    return FakeApp()
-
-
-@pytest.fixture
-def registry() -> CommandRegistry:
-    return build_registry()
-
-
-def _dispatch(app, registry, cmd) -> CommandResult:
-    return registry.dispatch(app, cmd)
-
-
-# ---------------------------------------------------------------------------
-# 1) CommandResult SÖZLEŞMESİ
-# ---------------------------------------------------------------------------
-
-class TestCommandResultContract:
-    def test_default_values(self):
-        r = CommandResult()
-        assert r.geometry_dirty is False
-        assert r.project_dirty is False
-        assert r.handled is True
-
-    def test_frozen(self):
-        r = CommandResult(geometry_dirty=True)
-        with pytest.raises(Exception):
-            r.geometry_dirty = False
+def app():
+    FakeNode._next_id = 1
+    FakeFrame._next_id = 1
+    FakeArea._next_id = 1
+    FakeLink._next_id = 1
+    a = FakeApp()
+    from app.commands.impl import bind_app
+    bind_app(a)
+    from app.commands.edit_controller import EditController
+    a.edit_controller = EditController(a)
+    return a
 
 
 # ---------------------------------------------------------------------------
-# 2) DEFINITIONS
+# Testler
 # ---------------------------------------------------------------------------
 
-class TestDefinitions:
-    def test_add_section(self, app, registry):
-        section = Section(name="S1")
-        result = _dispatch(app, registry, PC.AddDefinition("sections", "S1", section))
-        assert result.handled
-        assert result.project_dirty
-        assert not result.geometry_dirty
-        assert app.current_project.sections["S1"] is section
-
-    def test_add_unknown_container(self, app, registry):
-        result = _dispatch(app, registry, PC.AddDefinition("nonexistent", "X", object()))
-        assert not result.handled
-        assert not result.project_dirty
-
-    def test_update_section(self, app, registry):
-        section = Section(name="S1")
-        app.current_project.sections["S1"] = section
-        result = _dispatch(app, registry, PC.UpdateDefinition("sections", "S1", {"name": "S1-updated"}))
-        assert result.handled
-        assert result.project_dirty
-        assert section.name == "S1-updated"
-
-    def test_update_renames_key(self, app, registry):
-        section = Section(name="S1")
-        app.current_project.sections["S1"] = section
-        _dispatch(app, registry, PC.UpdateDefinition("sections", "S1",
-                                                    {"name": "S2"}, new_name="S2"))
-        assert "S1" not in app.current_project.sections
-        assert "S2" in app.current_project.sections
-
-    def test_update_unknown(self, app, registry):
-        result = _dispatch(app, registry, PC.UpdateDefinition("sections", "NOPE", {"h": 1.0}))
-        assert not result.handled
-
-    def test_remove(self, app, registry):
-        app.current_project.sections["S1"] = Section(name="S1")
-        result = _dispatch(app, registry, PC.RemoveDefinition("sections", "S1"))
-        assert result.handled
-        assert "S1" not in app.current_project.sections
-
-    def test_remove_unknown_no_error(self, app, registry):
-        result = _dispatch(app, registry, PC.RemoveDefinition("sections", "NOPE"))
-        assert result.handled
-
-    def test_rename(self, app, registry):
-        app.current_project.sections["S1"] = Section(name="S1")
-        result = _dispatch(app, registry, PC.RenameDefinition("sections", "S1", "S2"))
-        assert result.handled
-        assert "S2" in app.current_project.sections
-        assert "S1" not in app.current_project.sections
-
-
-# ---------------------------------------------------------------------------
-# 3) ELEMENTS
-# ---------------------------------------------------------------------------
-
-class TestElements:
-    def test_add_node(self, app, registry):
-        cmd = PC.AddNode(0.0, 1.0, 2.0, label="N1", restraint=None)
-        result = _dispatch(app, registry, cmd)
-        assert result.handled
-        assert result.geometry_dirty
-        model = app.current_project.math_model
-        assert len(model.nodes) == 1
-        node = list(model.nodes.values())[0]
-        assert (node.x, node.y, node.z) == (0.0, 1.0, 2.0)
-
-    def test_add_frame(self, app, registry):
-        section = Section(name="S1")
-        app.current_project.sections["S1"] = section
-
-        n1 = Node(0.0, 0.0, 0.0, label="N1")
-        n2 = Node(1.0, 0.0, 0.0, label="N2")
-        model = app.current_project.math_model
-        model.add_node(n1)
-        model.add_node(n2)
-
-        cmd = PC.AddFrame(n1.unique_id, n2.unique_id,
-                        section_name="S1", rotation_deg=15.0, label="F1")
-        result = _dispatch(app, registry, cmd)
-
-        assert result.handled
-        assert result.geometry_dirty
-        assert not result.project_dirty
-        assert len(model.frames) == 1
-
-        frame = list(model.frames.values())[0]
-        assert frame.node_i is n1
-        assert frame.node_j is n2
-        assert frame.section is section
-        assert frame.rotation_deg == 15.0
-        assert frame.label == "F1"
-        assert frame.element_type == "Frame"
-
-
-    def test_add_frame_unknown_section(self, app, registry):
-        n1 = Node(0.0, 0.0, 0.0, label="N1")
-        n2 = Node(1.0, 0.0, 0.0, label="N2")
-        model = app.current_project.math_model
-        model.add_node(n1)
-        model.add_node(n2)
-
-        cmd = PC.AddFrame(n1.unique_id, n2.unique_id,
-                        section_name="NOPE", rotation_deg=0.0, label="F1")
-        result = _dispatch(app, registry, cmd)
-
-        assert not result.handled
-        assert len(model.frames) == 0
-
-
-    def test_add_frame_missing_node(self, app, registry):
-        cmd = PC.AddFrame(999, 1000, section_name="S1", rotation_deg=0.0, label="F1")
-        result = _dispatch(app, registry, cmd)
-        assert not result.handled
-
-    def test_update_element_fields(self, app, registry):
-        node = Node(0.0, 0.0, 0.0, label="N1")
-        app.current_project.math_model.add_node(node)
-        cmd = PC.UpdateElementFields(node.unique_id, {"label": "N1-new"})
-        result = _dispatch(app, registry, cmd)
-        assert result.handled
-        assert result.geometry_dirty
-        assert node.label == "N1-new"
-
-    def test_update_unknown_element(self, app, registry):
-        cmd = PC.UpdateElementFields(999, {"label": "X"})
-        result = _dispatch(app, registry, cmd)
-        assert not result.handled
-
-    def test_delete_elements(self, app, registry):
-        node = Node(0.0, 0.0, 0.0, label="N1")
-        app.current_project.math_model.add_node(node)
-        cmd = PC.DeleteElements([node.unique_id])
-        result = _dispatch(app, registry, cmd)
-        assert result.handled
-        assert result.geometry_dirty
-        assert len(app.current_project.math_model.nodes) == 0
-
-
-# ---------------------------------------------------------------------------
-# 4) PROJECT
-# ---------------------------------------------------------------------------
-
-class TestProject:
-    def test_replace_project(self, app, registry):
-        new_project = _fresh_project()
-        result = _dispatch(app, registry, PC.ReplaceProject(new_project))
-        assert result.handled
-        assert app.set_project_calls == [new_project]
-
-    def test_set_unit_system(self, app, registry):
-        from core.units import UnitSystem
-        result = _dispatch(app, registry, PC.SetUnitSystem(UnitSystem.KN_M))
-        assert result.handled
-        assert app.set_unit_system_calls == [UnitSystem.KN_M]
-
-
-# ---------------------------------------------------------------------------
-# 5) VISIBILITY
-# ---------------------------------------------------------------------------
-
-class TestVisibility:
-    def test_show_only(self, app, registry):
-        result = _dispatch(app, registry, PC.ShowOnly([1, 2, 3]))
-        assert result.handled
-        assert result.geometry_dirty
-        assert app._show_only_ids == {1, 2, 3}
-        assert app.engine.math_model._render_filter == {1, 2, 3}
-
-    def test_show_only_empty_clears(self, app, registry):
-        app._show_only_ids = {1, 2}
-        _dispatch(app, registry, PC.ShowOnly([]))
-        assert app._show_only_ids is None
-        assert app.engine.math_model._render_filter is None
-
-    def test_hide_elements(self, app, registry):
-        node = Node(0.0, 0.0, 0.0, label="N1")
-        app.current_project.math_model.add_node(node)
-        result = _dispatch(app, registry, PC.HideElements([node.unique_id]))
-        assert result.handled
-        assert result.geometry_dirty
-        assert app._hidden_ids == {node.unique_id}
-        assert getattr(node, "is_visible", getattr(node, "visible", True)) is False
-
-    def test_show_entire_model(self, app, registry):
-        result = _dispatch(app, registry, PC.ShowEntireModel())
-        assert result.handled
-        assert app.show_entire_model_calls == 1
-
-
-# ---------------------------------------------------------------------------
-# 6) CAMERA
-# ---------------------------------------------------------------------------
-
-class TestCamera:
-    def test_fit_view(self, app, registry):
-        result = _dispatch(app, registry, PC.FitView())
-        assert result.handled
-        assert app.engine.fit_view_calls == 1
-
-    def test_zoom_extents(self, app, registry):
-        result = _dispatch(app, registry, PC.ZoomExtents())
-        assert result.handled
-        assert app.engine.zoom_extents_calls == 1
-
-    def test_set_camera_preset(self, app, registry):
-        class _Cam:
-            def __init__(self):
-                self.presets: list[str] = []
-
-            def set_view_preset(self, preset):
-                self.presets.append(preset)
-
-        cam = _Cam()
-        app.engine.cam = cam
-        result = _dispatch(app, registry, PC.SetCameraPreset("top"))
-        assert result.handled
-        assert cam.presets == ["top"]
-
-
-# ---------------------------------------------------------------------------
-# 7) ENGINE FLAGS
-# ---------------------------------------------------------------------------
-
-class TestEngineFlags:
-    def test_toggle_2d(self, app, registry):
-        result = _dispatch(app, registry, PC.Toggle2D())
-        assert result.handled
-        assert app.toggle_2d_calls == 1
-
-    def test_toggle_loads(self, app, registry):
-        result = _dispatch(app, registry, PC.ToggleLoadsVisible(True))
-        assert result.handled
-        assert app.set_loads_visible_calls == [True]
-
-    def test_toggle_local_axes(self, app, registry):
-        assert app.engine.show["local_axes"] is True
-        _dispatch(app, registry, PC.ToggleLocalAxes())
-        assert app.engine.show["local_axes"] is True  # scene üzerinden okunur
-
-    def test_render_flag(self, app, registry):
-        result = _dispatch(app, registry, PC.ToggleRenderFlag("grid", False))
-        assert result.handled
-        assert app.engine.show["grid"] is False
-
-    def test_set_render_mode(self, app, registry):
-        class _Renderer:
-            def __init__(self):
-                self.modes: list[str] = []
-
-            def set_render_mode(self, mode):
-                self.modes.append(mode)
-
-        renderer = _Renderer()
-        app.engine.renderer = renderer
-        result = _dispatch(app, registry, PC.SetRenderMode("simple"))
-        assert result.handled
-        assert renderer.modes == ["simple"]
-
-
-# ---------------------------------------------------------------------------
-# 8) SELECTION
-# ---------------------------------------------------------------------------
-
-class TestSelection:
-    def test_clear_selection(self, app, registry):
-        node = Node(0.0, 0.0, 0.0, label="N1")
-        app.engine.sel_mgr._selected = [node]
-        result = _dispatch(app, registry, PC.ClearSelection())
-        assert result.handled
-        assert app.engine.sel_mgr.clear_calls == 1
-
-    def test_select_elements_replace(self, app, registry):
-        n1 = Node(0.0, 0.0, 0.0, label="N1")
-        n2 = Node(1.0, 0.0, 0.0, label="N2")
-        model = app.current_project.math_model
-        model.add_node(n1)
-        model.add_node(n2)
-
-        result = _dispatch(app, registry, PC.SelectElements(
-            [n1.unique_id, n2.unique_id], mode="replace"))
-        assert result.handled
-        assert set(e.unique_id for e in app.engine.sel_mgr.get_selected()) == {n1.unique_id, n2.unique_id}
-
-    def test_select_elements_add_mode(self, app, registry):
-        n1 = Node(0.0, 0.0, 0.0, label="N1")
-        n2 = Node(1.0, 0.0, 0.0, label="N2")
-        model = app.current_project.math_model
-        model.add_node(n1)
-        model.add_node(n2)
-        app.engine.sel_mgr.select(n1)
-
-        _dispatch(app, registry, PC.SelectElements([n2.unique_id], mode="add"))
-        selected = app.engine.sel_mgr.get_selected()
-        assert len(selected) == 2
-
-    def test_select_elements_missing_engine(self, app, registry):
-        app.engine.sel_mgr = None
-        result = _dispatch(app, registry, PC.SelectElements([1, 2], mode="replace"))
-        assert not result.handled
-
-
-# ---------------------------------------------------------------------------
-# 9) SIGNAL
-# ---------------------------------------------------------------------------
-
-class TestSignal:
-    def test_refresh_geometry(self, app, registry):
-        result = _dispatch(app, registry, PC.RefreshGeometry())
-        assert result.handled
-        assert result.geometry_dirty
-
-
-# ---------------------------------------------------------------------------
-# 10) DISPATCH — BİLİNMEYEN KOMUT
-# ---------------------------------------------------------------------------
-
-class TestUnknownCommand:
-    def test_unknown(self, app, registry):
-        class _Mystery:
-            pass
-
-        result = _dispatch(app, registry, _Mystery())
-        assert not result.handled
-        assert not result.geometry_dirty
-        assert not result.project_dirty
-
-
-# ---------------------------------------------------------------------------
-# 11) _drain_commands AKIŞI
-# ---------------------------------------------------------------------------
-
-class TestDrainCommands:
-    def test_empty_queue_no_side_effects(self, app):
-        app.drain_commands()
-        assert app.engine.update_geo_calls == 0
-        assert app._ui_host.refresh_open_panels_calls == 0
-
-    def test_geometry_dirty_calls_update_geo_once(self, app):
-        app.command_queue.put(PC.AddNode(0.0, 0.0, 0.0, label="N1", restraint=None))
-        app.command_queue.put(PC.AddNode(1.0, 0.0, 0.0, label="N2", restraint=None))
-        app.drain_commands()
-        assert app.engine.update_geo_calls == 1
-        assert len(app.current_project.math_model.nodes) == 2
-
-    def test_project_dirty_calls_refresh_panels(self, app):
-        app.command_queue.put(PC.AddDefinition("sections", "S1", Section(name="S1")))
-        app.drain_commands()
-        assert app.engine.update_geo_calls == 0
-        assert app._ui_host.refresh_open_panels_calls == 1
-
-    def test_geometry_and_project_dirty(self, app):
-        app.command_queue.put(PC.AddDefinition("sections", "S1", Section(name="S1")))
-        app.command_queue.put(PC.AddNode(0.0, 0.0, 0.0, label="N1", restraint=None))
-        app.drain_commands()
-        assert app.engine.update_geo_calls == 1
-        assert app._ui_host.refresh_open_panels_calls == 1
-
-    def test_handled_false_skipped(self, app):
-        class _Mystery:
-            pass
-        app.command_queue.put(_Mystery())
-        app.command_queue.put(PC.AddNode(0.0, 0.0, 0.0, label="N1", restraint=None))
-        app.drain_commands()
-        assert app.engine.update_geo_calls == 1
-        assert len(app.current_project.math_model.nodes) == 1
-
-    def test_mixed_batch_aggregation(self, app):
-        """Tek batch'te: 2 def + 1 element + 1 kamera → 1 update_geo, 1 refresh."""
-        app.command_queue.put(PC.AddDefinition("sections", "S1", Section(name="S1")))
-        app.command_queue.put(PC.AddDefinition("sections", "S2", Section(name="S2")))
-        app.command_queue.put(PC.AddNode(0.0, 0.0, 0.0, label="N1", restraint=None))
-        app.command_queue.put(PC.FitView())
-        app.drain_commands()
-        assert app.engine.update_geo_calls == 1
-        assert app._ui_host.refresh_open_panels_calls == 1
-        assert app.engine.fit_view_calls == 1
-        assert len(app.current_project.math_model.nodes) == 1
-        assert set(app.current_project.sections.keys()) == {"S1", "S2"}
-
-
-# ---------------------------------------------------------------------------
-# 12) REGISTRY KAPSAMI — her komut tipi kayıtlı mı
-# ---------------------------------------------------------------------------
-
-class TestRegistryCoverage:
-    def test_all_pc_commands_have_handler(self, registry):
-        """core.commands.project_commands içindeki her Command alt sınıfı
-        registry'de kayıtlı olmalı. Yeni komut eklenirse bu test patlar."""
-        import inspect
-        from app.commands import base
-
-        expected: set[type] = set()
-        for name, obj in inspect.getmembers(PC, inspect.isclass):
-            if obj is base.Command:
-                continue
-            if issubclass(obj, base.Command):
-                expected.add(obj)
-
-        registered = set(registry._handlers.keys())
-        missing = expected - registered
-        assert not missing, f"Handler eksik: {missing}"
+def test_command_manager_execute_and_undo(app):
+    from app.commands.impl import AddNode
+    ctrl = app.edit_controller
+    res = ctrl.commands.execute(AddNode(x=1, y=2, z=3))
+    assert res.handled
+    assert len(app.current_project.math_model.nodes) == 1
+    ctrl.commands.undo()
+    assert len(app.current_project.math_model.nodes) == 0
+    ctrl.commands.redo()
+    assert len(app.current_project.math_model.nodes) == 1
+
+
+def test_add_node_undo_restores(app):
+    from app.commands.impl import AddNode
+    ctrl = app.edit_controller
+    node = AddNode(x=5, y=5, z=5)
+    ctrl.commands.execute(node)
+    uid = node._created.unique_id
+    assert uid in app.current_project.math_model.nodes
+    ctrl.commands.undo()
+    assert uid not in app.current_project.math_model.nodes
+
+
+def test_add_frame_requires_nodes(app):
+    from app.commands.impl import AddFrame
+    ctrl = app.edit_controller
+    res = ctrl.commands.execute(AddFrame(node_i_uid=999, node_j_uid=998))
+    assert not res.handled
+    assert len(app.current_project.math_model.frames) == 0
+
+
+def test_add_area_validation(app):
+    from app.commands.impl import AddArea
+    ctrl = app.edit_controller
+    res = ctrl.commands.execute(AddArea(node_uids=[1, 2]))
+    assert not res.handled
+    res = ctrl.commands.execute(AddArea(node_uids=[1, 2, 2]))
+    assert not res.handled
+    res = ctrl.commands.execute(AddArea(node_uids=[1, 2, 3], thickness=-1))
+    assert not res.handled
+
+
+def test_delete_and_undo(app):
+    from app.commands.impl import AddNode, DeleteElements
+    ctrl = app.edit_controller
+    n1, n2 = AddNode(x=0), AddNode(x=1)
+    ctrl.commands.execute(n1)
+    ctrl.commands.execute(n2)
+    uids = [n1._created.unique_id, n2._created.unique_id]
+    res = ctrl.commands.execute(DeleteElements(uids=uids))
+    assert res.handled
+    assert len(app.current_project.math_model.nodes) == 0
+    ctrl.commands.undo()
+    assert len(app.current_project.math_model.nodes) == 2
+
+
+def test_update_element_fields(app):
+    from app.commands.impl import AddNode, UpdateElementFields
+    ctrl = app.edit_controller
+    n = AddNode(x=0, y=0, z=0)
+    ctrl.commands.execute(n)
+    uid = n._created.unique_id
+    ctrl.commands.execute(UpdateElementFields(element_uid=uid, changes={"x": 10.0}))
+    assert app.current_project.math_model.nodes[uid].x == 10.0
+    ctrl.commands.undo()
+    assert app.current_project.math_model.nodes[uid].x == 0.0
+
+
+def test_undo_stack_integrity_on_failure(app):
+    from app.commands.base import Command, CommandManager, CommandResult
+
+    class Broken(Command):
+        def execute(self): return CommandResult(handled=True)
+        def undo(self): raise RuntimeError("boom")
+
+    mgr = CommandManager()
+    mgr.execute(Broken())
+    assert mgr.can_undo
+    res = mgr.undo()
+    assert not res.handled
+    assert mgr.can_undo
+    assert not mgr.can_redo
+
+
+def test_undo_empty(app):
+    from app.commands.base import CommandManager
+    mgr = CommandManager()
+    res = mgr.undo()
+    assert not res.handled
+    res = mgr.redo()
+    assert not res.handled
+
+
+def test_factory_parse_primitives(app):
+    from app.commands.impl import AddNode
+    from app.commands.registry import _parse_scalar
+    assert _parse_scalar("42", int) == 42
+    assert _parse_scalar("3.14", float) == 3.14
+    assert _parse_scalar("true", bool) is True
+    assert _parse_scalar("0", bool) is False
+    assert _parse_scalar("evet", bool) is True
+    assert _parse_scalar("hayır", bool) is False
+    assert _parse_scalar("hello", str) == "hello"
+
+
+def test_factory_parse_list_int(app):
+    from app.commands.registry import _parse_scalar
+    result = _parse_scalar("1,2,3", list[int])
+    assert result == [1, 2, 3]
+
+
+def test_registry_auto_factory(app):
+    from app.commands.registry import get_registry
+    from app.commands.impl import AddNode
+    reg = get_registry()
+    reg.register(AddNode)
+    cmd = reg.build("add_node", ["1.0", "2.0", "3.0"])
+    assert cmd is not None
+    assert cmd.x == 1.0
+    assert cmd.y == 2.0
+    assert cmd.z == 3.0
+
+
+def test_registry_list_int_factory(app):
+    from app.commands.registry import get_registry
+    from app.commands.impl import DeleteElements
+    reg = get_registry()
+    reg.register(DeleteElements)
+    cmd = reg.build("delete_elements", ["1,2,3"])
+    assert cmd is not None
+    assert cmd.uids == [1, 2, 3]
+
+
+def test_visibility_hide_show(app):
+    from app.commands.impl import HideElements, ShowEntireModel
+    ctrl = app.edit_controller
+    ctrl.commands.execute(HideElements(uids=[1, 2]))
+    assert app.visibility_service.hidden == {1, 2}
+    ctrl.commands.execute(ShowEntireModel())
+    assert app.visibility_service.hidden == set()
+
+
+def test_toggle_2d_undo(app):
+    from app.commands.impl import Toggle2D
+    ctrl = app.edit_controller
+    ctrl.commands.execute(Toggle2D())
+    assert app.view_service.toggle_2d.call_count == 1
+    ctrl.commands.undo()
+    assert app.view_service.toggle_2d.call_count == 2
+
+
+def test_selection_replace(app):
+    from app.commands.impl import AddNode, SelectElements
+    ctrl = app.edit_controller
+    n1, n2 = AddNode(), AddNode()
+    ctrl.commands.execute(n1)
+    ctrl.commands.execute(n2)
+    res = ctrl.commands.execute(SelectElements(uids=[n1._created.unique_id], mode="replace"))
+    assert res.handled
+    assert app.engine.sel_mgr.get_selected() == [n1._created]
+
+
+def test_definition_add_remove_undo(app):
+    from app.commands.impl import AddDefinition, RemoveDefinition
+    ctrl = app.edit_controller
+    ctrl.commands.execute(AddDefinition(container_attr="sections", name="S1", obj="section_obj"))
+    assert "S1" in app.current_project.sections
+    ctrl.commands.undo()
+    assert "S1" not in app.current_project.sections
+    ctrl.commands.execute(AddDefinition(container_attr="sections", name="S2", obj="x"))
+    ctrl.commands.execute(RemoveDefinition(container_attr="sections", name="S2"))
+    assert "S2" not in app.current_project.sections
+    ctrl.commands.undo()
+    assert "S2" in app.current_project.sections
+
+
+def test_rename_definition_collision(app):
+    from app.commands.impl import AddDefinition, RenameDefinition
+    ctrl = app.edit_controller
+    ctrl.commands.execute(AddDefinition(container_attr="sections", name="A", obj=1))
+    ctrl.commands.execute(AddDefinition(container_attr="sections", name="B", obj=2))
+    res = ctrl.commands.execute(RenameDefinition(container_attr="sections", old_name="A", new_name="B"))
+    assert not res.handled
+    assert app.current_project.sections["A"] == 1
+
+
+def test_bulk_update(app):
+    from app.commands.impl import AddNode
+    ctrl = app.edit_controller
+    n1, n2 = AddNode(), AddNode()
+    ctrl.commands.execute(n1)
+    ctrl.commands.execute(n2)
+    nodes = [n1._created, n2._created]
+    res = ctrl.bulk_update(nodes, {"x": 99.0})
+    assert res.ok
+    assert all(n.x == 99.0 for n in nodes)
+    ctrl.commands.undo()
+    assert all(n.x == 0.0 for n in nodes)
+
+
+def test_edit_controller_create_node(app):
+    ctrl = app.edit_controller
+    res = ctrl.create("node", {"x": 1.0, "y": 2.0, "z": 3.0, "label": "N1"})
+    assert res.ok and res.created
+    assert len(app.current_project.math_model.nodes) == 1
+
+
+def test_edit_controller_create_frame_missing_nodes(app):
+    ctrl = app.edit_controller
+    res = ctrl.create("frame", {"node_i_id": 999, "node_j_id": 998})
+    assert not res.ok
+
+
+def test_registry_catalog(app):
+    from app.commands.registry import get_registry
+    from app.commands.impl import AddNode, DeleteElements
+    reg = get_registry()
+    reg.register(AddNode)
+    reg.register(DeleteElements)
+    catalog = dict(reg.catalog())
+    assert "add_node" in catalog
+    assert "delete_elements" in catalog
+    assert catalog["add_node"]
+
+
+def test_meta_registration(app):
+    from app.commands.registry import get_registry
+    from app.commands.impl import register_all, FitView, Undo
+    reg = get_registry()
+    register_all(reg)
+    meta = reg.get_meta(FitView)
+    assert meta is not None
+    assert meta.label == "Tüm Modeli Sığdır"
+    meta = reg.get_meta(Undo)
+    assert meta.default_shortcut == "Ctrl+Z"
+
+
+def test_followup_open_panel(app):
+    from app.commands.impl import ImportS2K, OpenPanel
+    ctrl = app.edit_controller
+    res = ctrl.commands.execute(ImportS2K(path=""))
+    assert res.handled
+    assert isinstance(res.followup, OpenPanel)
+    assert res.followup.name == "s2k_panel"
+
+
+def test_command_manager_listener(app):
+    from app.commands.impl import AddNode
+    received = []
+    app.edit_controller.commands.add_listener(lambda r: received.append(r))
+    app.edit_controller.commands.execute(AddNode(x=1))
+    assert len(received) == 1
+    assert received[0].geometry_dirty
+
+
+def test_command_manager_max_history(app):
+    from app.commands.base import CommandManager, Command, CommandResult
+    class Noop(Command):
+        def execute(self): return CommandResult()
+        def undo(self): pass
+    mgr = CommandManager(max_history=3)
+    for _ in range(5):
+        mgr.execute(Noop())
+    assert len(mgr._undo) == 3
+
+
+def test_replicate_selected(app):
+    from app.commands.impl import AddNode, SelectElements, ReplicateSelected
+    ctrl = app.edit_controller
+    n = AddNode(x=0, y=0, z=0)
+    ctrl.commands.execute(n)
+    app.engine.sel_mgr.select(n._created)
+    res = ctrl.commands.execute(ReplicateSelected(dx=10, dy=0, dz=0, count=2))
+    assert res.handled
+    assert len(app.current_project.math_model.nodes) == 3
+
+
+def test_propagate_geometry(app):
+    from app.commands.impl import AddNode, PropagateGeometryChange
+    ctrl = app.edit_controller
+    n = AddNode()
+    ctrl.commands.execute(n)
+    res = ctrl.commands.execute(PropagateGeometryChange(node_uids=[n._created.unique_id]))
+    assert res.handled
+
+
+def test_refresh_geometry(app):
+    from app.commands.impl import AddNode, RefreshGeometry
+    ctrl = app.edit_controller
+    n = AddNode()
+    ctrl.commands.execute(n)
+    res = ctrl.commands.execute(RefreshGeometry())
+    assert res.handled
+    assert res.geometry_dirty
+
+
+def test_start_draw_invalid_mode(app):
+    from app.commands.impl import StartDrawTool
+    ctrl = app.edit_controller
+    res = ctrl.commands.execute(StartDrawTool(mode="bogus"))
+    assert res.handled
+    assert res.level == "warn"
+
+
+def test_start_draw_valid_mode(app):
+    from app.commands.impl import StartDrawTool
+    ctrl = app.edit_controller
+    res = ctrl.commands.execute(StartDrawTool(mode="line"))
+    assert res.handled
+    app.engine.draw_mgr.start.assert_called_once_with(mode="line")
+
+
+def test_redo_after_new_command_clears(app):
+    from app.commands.impl import AddNode, DeleteElements
+    ctrl = app.edit_controller
+    n1 = AddNode()
+    ctrl.commands.execute(n1)
+    ctrl.commands.undo()
+    assert ctrl.commands.can_redo
+    ctrl.commands.execute(AddNode())
+    assert not ctrl.commands.can_redo

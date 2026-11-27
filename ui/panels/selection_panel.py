@@ -164,7 +164,7 @@ class SelectionPanel(PanelBase):
         if ui is None:
             return
 
-        from app.commands import project_commands as PC
+        import app.commands as cmd
 
         show_only = getattr(app, "_show_only_ids", None) is not None
         hidden = getattr(app, "_hidden_ids", None) or set()
@@ -175,9 +175,9 @@ class SelectionPanel(PanelBase):
             selected = self.selection_manager.get_selected() if self.selection_manager else []
             if selected:
                 uids = [e.unique_id for e in selected]
-                app.command_queue.put(PC.ShowOnly(uids))
+                app.put_command(cmd.ShowOnly(uids))
             else:
-                ui.command_queue.put(PC.ShowOnly(None))
+                ui.put_command(cmd.ShowOnly(None))
         if show_only:
             imgui.pop_style_color()
 
@@ -186,11 +186,11 @@ class SelectionPanel(PanelBase):
             selected = self.selection_manager.get_selected() if self.selection_manager else []
             if selected:
                 uids = [e.unique_id for e in selected]
-                ui.command_queue.put(PC.HideElements(uids))
+                ui.put_command(cmd.HideElements(uids))
 
         imgui.same_line()
         if imgui.button("Tümünü Göster", imgui.ImVec2(140, 0)):
-            ui.command_queue.put(PC.ShowEntireModel())
+            ui.put_command(cmd.ShowEntireModel())
 
         if hidden:
             imgui.text_disabled(f"({len(hidden)} eleman gizli)")

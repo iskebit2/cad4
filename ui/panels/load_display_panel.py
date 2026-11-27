@@ -30,8 +30,8 @@ class LoadDisplayPanel(PanelBase):
         self.math_model = None
         self.renderer = None
         self.on_change = None
-        self.on_clear_loads = None
-        self.on_clear_all = None
+        # self.on_clear_loads = None
+        # self.on_clear_all = None
 
         self.show_loads = False
         self.show_frame_loads = True
@@ -77,7 +77,27 @@ class LoadDisplayPanel(PanelBase):
     # ------------------------------------------------------------------
     # SETTINGS — master + tip + pattern
     # ------------------------------------------------------------------
+    def _compute_pattern_signature(self):
+        if not self.math_model:
+            return ()
+        pats = set()
+        for f in self.math_model.frames.values():
+            for key in (getattr(f, "dist_load_sets", {}) or {}).keys():
+                pat = key[0] if isinstance(key, tuple) else key
+                if pat:
+                    pats.add(pat)
+        for n in self.math_model.nodes.values():
+            for pl in getattr(n, "loads", None) or []:
+                p = getattr(pl, "pattern_name", None)
+                if p:
+                    pats.add(p)
+        return tuple(sorted(pats))
+
     def draw_settings(self) -> None:
+        # Pattern listesi değiştiyse yenile (hafif kontrol)
+        sig = self._compute_pattern_signature()
+        if sig != self._pattern_signature:
+            self._refresh_patterns()
         # Master toggle
         changed, new_val = imgui.checkbox("Yükleri Göster", self.show_loads)
         if changed:
@@ -267,17 +287,17 @@ class LoadDisplayPanel(PanelBase):
         imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.65, 0.30, 0.30, 1.0))
         imgui.push_style_color(imgui.Col_.button_hovered, imgui.ImVec4(0.80, 0.40, 0.40, 1.0))
         if imgui.button("Seçili Elemanlardan Sil", imgui.ImVec2(-1, 32)):
-            if callable(self.on_clear_loads):
-                self.on_clear_loads(pattern_to_clear)
-                self._refresh_patterns()
+            self._clear_loads_from_selected(pattern_to_clear)
+            self._refresh_patterns()
+            self._apply()
         imgui.pop_style_color(2)
 
         imgui.push_style_color(imgui.Col_.button, imgui.ImVec4(0.55, 0.20, 0.20, 1.0))
         imgui.push_style_color(imgui.Col_.button_hovered, imgui.ImVec4(0.70, 0.28, 0.28, 1.0))
         if imgui.button("Tüm Sahneden Sil", imgui.ImVec2(-1, 32)):
-            if callable(self.on_clear_all):
-                self.on_clear_all(pattern_to_clear)
-                self._refresh_patterns()
+            self._clear_loads_from_all(pattern_to_clear)
+            self._refresh_patterns()
+            self._apply()
         imgui.pop_style_color(2)
 
     # ------------------------------------------------------------------
@@ -288,19 +308,49 @@ class LoadDisplayPanel(PanelBase):
             self.available_patterns = []
             return
         pats: set[str] = set()
+
         for f in self.math_model.frames.values():
-            sets = getattr(f, "dist_load_sets", None)
-            if sets:
-                pats.update(sets.keys())
+            sets = getattr(f, "dist_load_sets", None) or {}
+            for key in sets.keys():
+                pat = key[0] if isinstance(key, tuple) else key
+                if pat:
+                    pats.add(str(pat))
+            # dist_loads zaten pattern_name taşıyor
             for dl in getattr(f, "dist_loads", []) or []:
                 p = getattr(dl, "pattern_name", None)
                 if p:
                     pats.add(p)
+            # point/gravity/temp loads
+            for attr in ("point_loads", "gravity_loads", "temp_loads"):
+                for l in getattr(f, attr, None) or []:
+                    p = getattr(l, "pattern_name", None)
+                    if p:
+                        pats.add(p)
+
         for n in self.math_model.nodes.values():
             for pl in getattr(n, "loads", None) or []:
                 p = getattr(pl, "pattern_name", None)
                 if p:
                     pats.add(p)
+
+        # Area yükleri (varsa)
+        for area in getattr(self.math_model, "areas", {}).values():
+            for attr in ("gravity_loads", "temp_loads", "strain_loads",
+                        "surface_pressures", "uniform_loads",
+                        "uniform_to_frame_loads", "wind_pressures"):
+                for l in getattr(area, attr, None) or []:
+                    p = getattr(l, "pattern_name", None)
+                    if p:
+                        pats.add(p)
+
+        # Polygon analysis assigned_loads
+        analysis_map = getattr(self.math_model, "polygon_analysis", {}) or {}
+        for analysis in analysis_map.values():
+            for l in getattr(analysis, "assigned_loads", None) or []:
+                p = getattr(l, "pattern_name", None)
+                if p:
+                    pats.add(p)
+
         self.available_patterns = sorted(pats)
         self._pattern_signature = tuple(self.available_patterns)
         if self.active_pattern and self.active_pattern not in self.available_patterns:
@@ -313,13 +363,11 @@ class LoadDisplayPanel(PanelBase):
             return 0
         count = 0
         for f in self.math_model.frames.values():
-            if pattern in (getattr(f, "dist_load_sets", {}) or {}):
+            if self._frame_has_pattern(f, pattern):
                 count += 1
         for n in self.math_model.nodes.values():
-            for pl in getattr(n, "loads", None) or []:
-                if getattr(pl, "pattern_name", None) == pattern:
-                    count += 1
-                    break
+            if self._node_has_pattern(n, pattern):
+                count += 1
         return count
 
     def _apply(self) -> None:
@@ -332,19 +380,15 @@ class LoadDisplayPanel(PanelBase):
                 for attr, val in (
                     ("show_frame_loads", self.show_frame_loads),
                     ("show_point_loads", self.show_point_loads),
+                    ("show_area_loads", self.show_area_loads),
                     ("profile_scale", self.profile_scale),
                     ("line_width", self.line_width),
                     ("fill_alpha", self.fill_alpha),
                     ("show_arrows", self.show_arrows),
                     ("show_fill", self.show_fill),
-                    ("show_area_loads", self.show_area_loads),
                 ):
                     if hasattr(lr, attr):
                         setattr(lr, attr, val)
-                if hasattr(self.renderer, "area_loads"):
-                    self.renderer.area_loads.active_pattern = self.active_pattern
-                    self.renderer.area_loads.enabled = self.show_area_loads
-                    self.renderer.area_loads.arrow_scale = self.profile_scale
 
         if self.math_model:
             self.math_model.mark_dirty()
@@ -365,3 +409,144 @@ class LoadDisplayPanel(PanelBase):
 
         if callable(self.on_change):
             self.on_change()
+
+    # ------------------------------------------------------------------
+    # CLEAR HELPERS — callback yerine panel içinde
+    # ------------------------------------------------------------------
+    def _iter_frame_load_keys(self, frame, pattern: str):
+        """Bir frame'in dist_load_sets anahtarlarından pattern'e uyanları döndürür."""
+        sets = getattr(frame, "dist_load_sets", None) or {}
+        out = []
+        for key in list(sets.keys()):
+            pat = key[0] if isinstance(key, tuple) else key
+            if pat == pattern:
+                out.append(key)
+        return out
+
+    def _frame_has_pattern(self, frame, pattern: str) -> bool:
+        if self._iter_frame_load_keys(frame, pattern):
+            return True
+        for pl in getattr(frame, "point_loads", None) or []:
+            if getattr(pl, "pattern_name", None) == pattern:
+                return True
+        return False
+
+    def _node_has_pattern(self, node, pattern: str) -> bool:
+        for pl in getattr(node, "loads", None) or []:
+            if getattr(pl, "pattern_name", None) == pattern:
+                return True
+        return False
+
+    def _remove_pattern_from_frame(self, frame, pattern: str) -> None:
+        """Frame'den belirtilen pattern'in tüm yüklerini siler."""
+        # Distributed loads (tuple-key farkındalığı)
+        sets = getattr(frame, "dist_load_sets", None)
+        if sets:
+            for key in self._iter_frame_load_keys(frame, pattern):
+                del sets[key]
+
+        # Frame point loads
+        if getattr(frame, "point_loads", None):
+            frame.point_loads = [
+                pl for pl in frame.point_loads
+                if getattr(pl, "pattern_name", None) != pattern
+            ]
+
+        # Frame gravity loads
+        if getattr(frame, "gravity_loads", None):
+            frame.gravity_loads = [
+                gl for gl in frame.gravity_loads
+                if getattr(gl, "pattern_name", None) != pattern
+            ]
+
+        # Frame temp loads
+        if getattr(frame, "temp_loads", None):
+            frame.temp_loads = [
+                tl for tl in frame.temp_loads
+                if getattr(tl, "pattern_name", None) != pattern
+            ]
+
+    def _remove_pattern_from_node(self, node, pattern: str) -> None:
+        if getattr(node, "loads", None):
+            node.loads = [
+                pl for pl in node.loads
+                if getattr(pl, "pattern_name", None) != pattern
+            ]
+
+    def _clear_loads_from_all(self, pattern: str) -> None:
+        """Sahnedeki tüm frame ve node'lardan pattern'i siler."""
+        if not self.math_model or not pattern:
+            return
+
+        for frame in self.math_model.frames.values():
+            self._remove_pattern_from_frame(frame, pattern)
+
+        for node in self.math_model.nodes.values():
+            self._remove_pattern_from_node(node, pattern)
+
+        # Area/polygon yükleri (varsa)
+        for area in getattr(self.math_model, "areas", {}).values():
+            for attr in ("gravity_loads", "temp_loads", "strain_loads",
+                        "surface_pressures", "uniform_loads",
+                        "uniform_to_frame_loads", "wind_pressures"):
+                loads = getattr(area, attr, None)
+                if loads:
+                    setattr(area, attr, [
+                        l for l in loads
+                        if getattr(l, "pattern_name", None) != pattern
+                    ])
+
+        # Polygon analysis assigned_loads
+        analysis_map = getattr(self.math_model, "polygon_analysis", {}) or {}
+        for analysis in analysis_map.values():
+            assigned = getattr(analysis, "assigned_loads", None)
+            if assigned:
+                analysis.assigned_loads = [
+                    l for l in assigned
+                    if getattr(l, "pattern_name", None) != pattern
+                ]
+
+        logger.info(f"[CLEAR] Pattern '{pattern}' tüm sahneden silindi.")
+
+    def _clear_loads_from_selected(self, pattern: str) -> None:
+        """
+        Sadece seçili elemanlardan pattern'i siler.
+        Seçim yoksa tüm sahneye düşer (kullanıcıyı uyarır).
+        """
+        if not self.math_model or not pattern:
+            return
+
+        any_selected = False
+
+        for frame in self.math_model.frames.values():
+            if getattr(frame, "is_selected", False):
+                any_selected = True
+                self._remove_pattern_from_frame(frame, pattern)
+
+        for node in self.math_model.nodes.values():
+            if getattr(node, "is_selected", False):
+                any_selected = True
+                self._remove_pattern_from_node(node, pattern)
+
+        for area in getattr(self.math_model, "areas", {}).values():
+            if not getattr(area, "is_selected", False):
+                continue
+            any_selected = True
+            for attr in ("gravity_loads", "temp_loads", "strain_loads",
+                        "surface_pressures", "uniform_loads",
+                        "uniform_to_frame_loads", "wind_pressures"):
+                loads = getattr(area, attr, None)
+                if loads:
+                    setattr(area, attr, [
+                        l for l in loads
+                        if getattr(l, "pattern_name", None) != pattern
+                    ])
+
+        if not any_selected:
+            self.status_line(
+                "⚠ Seçili eleman yok — tüm sahneden silmek için 'Tüm Sahneden Sil' kullanın",
+                "warn",
+            )
+            return
+
+        logger.info(f"[CLEAR] Pattern '{pattern}' seçili elemanlardan silindi.")

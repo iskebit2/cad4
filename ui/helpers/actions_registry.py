@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 from ui.base.panel_base import Category
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ ACTION_SPECS: list[ActionSpec] = [
         shortcut="Ctrl+N",
         icon="new",
         quick=True,
-        command_factory=lambda: PC.NewProject(),
+        command_factory=lambda: cmd.NewProject(),
     ),
     ActionSpec(
         name="open_project",
@@ -52,7 +52,7 @@ ACTION_SPECS: list[ActionSpec] = [
         shortcut="Ctrl+S",
         icon="save",
         quick=True,
-        command_factory=lambda: PC.SaveProject(),
+        command_factory=lambda: cmd.SaveProject(),
     ),
     ActionSpec(
         name="save_project_as",
@@ -65,20 +65,20 @@ ACTION_SPECS: list[ActionSpec] = [
         name="s2k_import",
         category=Category.FILE,
         menu_label="SAP2000 (.s2k) İçe Aktar...",
-        command_factory=lambda: PC.OpenPanel("s2k_panel", {"mode": "import"}),
+        command_factory=lambda: cmd.OpenPanel("s2k_panel", {"mode": "import"}),
     ),
     ActionSpec(
         name="s2k_export",
         category=Category.FILE,
         menu_label="SAP2000 (.s2k) Dışa Aktar...",
-        command_factory=lambda: PC.OpenPanel("s2k_panel", {"mode": "export"}),
+        command_factory=lambda: cmd.OpenPanel("s2k_panel", {"mode": "export"}),
     ),
     ActionSpec(
         name="quit",
         category=Category.FILE,
         menu_label="Çıkış",
         shortcut="Alt+F4",
-        command_factory=lambda: PC.QuitApp(),
+        command_factory=lambda: cmd.QuitApp(),
     ),
 
     # --- EDIT ---
@@ -89,7 +89,7 @@ ACTION_SPECS: list[ActionSpec] = [
         shortcut="Ctrl+Z",
         icon="undo",
         quick=True,
-        command_factory=lambda: PC.Undo(),
+        command_factory=lambda: cmd.Undo(),
     ),
     ActionSpec(
         name="redo",
@@ -98,7 +98,7 @@ ACTION_SPECS: list[ActionSpec] = [
         shortcut="Ctrl+Y",
         icon="redo",
         quick=True,
-        command_factory=lambda: PC.Redo(),
+        command_factory=lambda: cmd.Redo(),
     ),
     ActionSpec(
         name="delete_selected",
@@ -106,7 +106,7 @@ ACTION_SPECS: list[ActionSpec] = [
         menu_label="Seçilileri Sil",
         shortcut="Del",
         icon="delete_selected",
-        command_factory=lambda: PC.DeleteSelected(),
+        command_factory=lambda: cmd.DeleteSelected(),
     ),
 
     # --- DRAW / MODEL ---
@@ -117,7 +117,7 @@ ACTION_SPECS: list[ActionSpec] = [
         shortcut="D",
         icon="line",
         quick=True,
-        command_factory=lambda: PC.StartDrawTool("line"),
+        command_factory=lambda: cmd.StartDrawTool("line"),
         state_fn=lambda app: bool(app.engine and app.engine.draw_mgr and app.engine.draw_mgr.is_active),
     ),
     ActionSpec(
@@ -127,19 +127,19 @@ ACTION_SPECS: list[ActionSpec] = [
         shortcut="P",
         icon="polygon",
         quick=True,
-        command_factory=lambda: PC.StartDrawTool("sequential"),
+        command_factory=lambda: cmd.StartDrawTool("sequential"),
     ),
     ActionSpec(
         name="draw_plane_3pt",
         category=Category.DRAW,
         menu_label="3 Nokta ile Düzlem",
-        command_factory=lambda: PC.StartPlane3pt(),
+        command_factory=lambda: cmd.StartPlane3pt(),
     ),
     ActionSpec(
         name="draw_plane_2pt_z",
         category=Category.DRAW,
         menu_label="2 Nokta + Z Düzlem",
-        command_factory=lambda: PC.StartPlane2ptZ(),
+        command_factory=lambda: cmd.StartPlane2ptZ(),
     ),
     ActionSpec(
         name="plane_from_source",
@@ -156,7 +156,7 @@ ACTION_SPECS: list[ActionSpec] = [
         shortcut="F",
         icon="fit_view",
         quick=True,
-        command_factory=lambda: PC.ShowEntireModel(),
+        command_factory=lambda: cmd.ShowEntireModel(),
     ),
     ActionSpec(
         name="toggle_2d",
@@ -165,7 +165,7 @@ ACTION_SPECS: list[ActionSpec] = [
         shortcut="F2",
         icon="toggle2_d",
         quick=True,
-        command_factory=lambda: PC.Toggle2D(),
+        command_factory=lambda: cmd.Toggle2D(),
         state_fn=lambda app: bool(
             app.engine and app.engine.renderer and app.engine.renderer.projection == "plane_2d"
         ),
@@ -175,20 +175,20 @@ ACTION_SPECS: list[ActionSpec] = [
         category=Category.VIEW,
         menu_label="Render Modu (Shaded/Simple)",
         shortcut="F4",
-        command_factory=lambda: PC.ToggleRenderMode(),
+        command_factory=lambda: cmd.ToggleRenderMode(),
     ),
     ActionSpec(
         name="toggle_loads",
         category=Category.VIEW,
         menu_label="Yükleri Göster/Gizle",
-        command_factory=lambda: PC.ToggleLoadsVisible(None),
+        command_factory=lambda: cmd.ToggleLoadsVisible(None),
         state_fn=lambda app: bool(app.view_service.get_loads_visible()),
     ),
     ActionSpec(
         name="toggle_local_axes",
         category=Category.VIEW,
         menu_label="Yerel Eksenleri Göster/Gizle",
-        command_factory=lambda: PC.ToggleLocalAxes(),
+        command_factory=lambda: cmd.ToggleLocalAxes(),
         state_fn=lambda app: bool(
             app.engine and app.engine.scene and app.engine.scene.show_local_axes
         ),
@@ -198,7 +198,7 @@ ACTION_SPECS: list[ActionSpec] = [
         category=Category.VIEW,
         menu_label="Inspector",
         shortcut="F3",
-        command_factory=lambda: PC.OpenInspector(),
+        command_factory=lambda: cmd.OpenInspector(),
     ),
 ]
 
@@ -210,7 +210,7 @@ def build_commands(host: "UIHost") -> dict[str, Callable]:
     """
     cq = host.app.command_queue
     cmds: dict[str, Callable] = {
-        "on_unit_change": lambda unit: cq.put(PC.SetUnitSystem(unit)),
+        "on_unit_change": lambda unit: cq.put(cmd.SetUnitSystem(unit)),
     }
 
     for spec in ACTION_SPECS:

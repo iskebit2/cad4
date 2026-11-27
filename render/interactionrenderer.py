@@ -1,3 +1,4 @@
+# render/interactionrenderer.py
 from __future__ import annotations
 
 import numpy as np
@@ -38,6 +39,10 @@ class InteractionRenderer:
                mouse_pos=None, plane=None, visible_ids=None):
         if not engine:
             return
+        show = getattr(engine, "show", None) or {}
+        if not show.get("interaction", False):
+            return
+
         camera = camera or engine.cam
         if mouse_pos is None and viewport_name is None and engine.input:
             mouse_pos = (
@@ -45,24 +50,24 @@ class InteractionRenderer:
                 engine.input.state.mouse_pos.y,
             )
 
-        if engine.snap and getattr(engine, "hover_visual_enabled", True):
+        if show.get("snap", False) and engine.snap and getattr(engine, "hover_visual_enabled", True):
             self._draw_snap(engine, w, h, camera, mouse_pos, visible_ids=visible_ids)
 
-        if engine.draw_mgr and engine.draw_mgr.is_active:
+        if show.get("tool_preview", False) and engine.draw_mgr and engine.draw_mgr.is_active:
             mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             engine.draw_mgr.render_preview(mvp, engine.preview_s)
 
         tool = getattr(engine, "plane_draw_mgr", None)
-        if tool is not None and tool.is_active:
+        if show.get("tool_preview", False) and tool is not None and tool.is_active:
             mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             tool.render(mvp)
 
-        if self.preview_plane is not None and camera is not None:
+        if show.get("plane_preview", False) and self.preview_plane is not None and camera is not None:
             mvp = camera.get_projection_matrix() @ camera.get_view_matrix()
             self._draw_plane_preview(self.preview_plane, mvp)
 
         pfe = getattr(engine, "_plane_from_element", None)
-        if pfe is not None and pfe.active and pfe.hover_element is not None:
+        if show.get("plane_preview", False) and pfe is not None and pfe.active and pfe.hover_element is not None:
             el = pfe.hover_element
             self._draw_element_outline(el, camera, color=(0.3, 0.9, 0.3, 1.0))
             cand_plane = Plane.from_element(el, frame_local_12=pfe.frame_axis_12)

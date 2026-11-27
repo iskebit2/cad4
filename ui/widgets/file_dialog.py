@@ -1,4 +1,4 @@
-# ui/file_dialog.py
+# ui/widgets/file_dialog.py
 
 from __future__ import annotations
 

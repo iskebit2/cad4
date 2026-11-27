@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Iterator
 
 from pyglm import glm
 import numpy as np
@@ -285,18 +285,25 @@ class WindConfig:
     cpi_negative: float = -0.3
 
     @property
-    def vb0(self) -> float: return self.v_b0
+    def vb0(self) -> float:
+        return self.v_b0
+
     @vb0.setter
-    def vb0(self, val: float): self.v_b0 = val
+    def vb0(self, val: float):
+        self.v_b0 = val
 
     @property
-    def terrain_category(self) -> str: return self.terrain
+    def terrain_category(self) -> str:
+        return self.terrain
+
     @terrain_category.setter
-    def terrain_category(self, val: str): self.terrain = val
+    def terrain_category(self, val: str):
+        self.terrain = val
 
     __unit_schema__ = {
-        "v_b0": Dimension.ACCEL, "vb0": Dimension.ACCEL,
-        "z0": Dimension.LENGTH, "z1": Dimension.LENGTH, "z2": Dimension.LENGTH
+        "z0": Dimension.LENGTH,
+        "z1": Dimension.LENGTH,
+        "z2": Dimension.LENGTH,
     }
 
 
@@ -311,16 +318,25 @@ class SnowConfig:
     shape_coefficient: float = 0.8
 
     @property
-    def exposure_coefficient(self) -> float: return self.Ce
+    def exposure_coefficient(self) -> float:
+        return self.Ce
+
     @exposure_coefficient.setter
-    def exposure_coefficient(self, val: float): self.Ce = val
+    def exposure_coefficient(self, val: float):
+        self.Ce = val
 
     @property
-    def thermal_coefficient(self) -> float: return self.Ct
-    @thermal_coefficient.setter
-    def thermal_coefficient(self, val: float): self.Ct = val
+    def thermal_coefficient(self) -> float:
+        return self.Ct
 
-    __unit_schema__ = {"sk": Dimension.AREA_LOAD}
+    @thermal_coefficient.setter
+    def thermal_coefficient(self, val: float):
+        self.Ct = val
+
+    __unit_schema__ = {
+        "altitude": Dimension.LENGTH,
+        "sk": Dimension.AREA_LOAD,
+    }
 
 
 @dataclass
@@ -591,8 +607,16 @@ class LoadSegment:
 
     __unit_schema__ = {"q1": Dimension.LINE_LOAD, "q2": Dimension.LINE_LOAD}
 
-    def to_points(self):
+    def to_points(self) -> list[tuple[float, float]]:
         return [(self.x1, self.q1), (self.x2, self.q2)]
+
+    def is_contiguous_with(self, other: "LoadSegment", tol: float = 1e-6) -> bool:
+        """Bu segmentin bitişi diğerinin başlangıcına değiyor mu?"""
+        return abs(self.x2 - other.x1) <= tol
+
+    @property
+    def is_zero(self) -> bool:
+        return abs(self.q1) < 1e-12 and abs(self.q2) < 1e-12
 
 
 @dataclass
@@ -608,24 +632,188 @@ class FrameDistributedLoad:
     dist_type: str = "one_way"
     segments: list[LoadSegment] = field(default_factory=list)
 
-    def add_segment(self, x1, x2, q1, q2):
+    # ------------------------------------------------------------------
+    # Kimlik / eşleştirme
+    # ------------------------------------------------------------------
+    @property
+    def key(self) -> tuple[str, str, str, str]:
+        """dist_load_sets sözlüğünde kullanılacak kimlik anahtarı."""
+        return (self.pattern_name, self.load_dir, self.coord_sys, self.force_or_moment)
+
+    def matches(self, other: "FrameDistributedLoad") -> bool:
+        """İki yükün aynı gruba ait olup olmadığını kontrol eder."""
+        return self.key == other.key
+
+    def _same_group(self, other: "FrameDistributedLoad") -> bool:
+        """Segment birleştirme için gereken tüm alanların eşitliği."""
+        return (
+            self.pattern_name == other.pattern_name
+            and self.coord_sys == other.coord_sys
+            and self.load_dir == other.load_dir
+            and self.mode == other.mode
+            and self.force_or_moment == other.force_or_moment
+            and self.direction == other.direction
+            and self.is_relative == other.is_relative
+            and self.coordinate_system == other.coordinate_system
+            and self.dist_type == other.dist_type
+        )
+
+    # ------------------------------------------------------------------
+    # Segment yönetimi
+    # ------------------------------------------------------------------
+    def add_segment(self, x1: float, x2: float, q1: float, q2: float) -> None:
+        """Yeni bir segment ekler ve listeyi x1'e göre sıralar."""
         self.segments.append(LoadSegment(x1, x2, q1, q2))
         self.segments.sort(key=lambda s: s.x1)
 
-    def clear(self):
+    def add_load_segment(self, seg: LoadSegment) -> None:
+        self.segments.append(seg)
+        self.segments.sort(key=lambda s: s.x1)
+
+    def clear(self) -> None:
         self.segments.clear()
 
-    def to_sap_loads(self):
+    def __len__(self) -> int:
+        return len(self.segments)
+
+    def __iter__(self) -> Iterator[LoadSegment]:
+        return iter(self.segments)
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.segments
+
+    def to_contiguous_runs(self, tol: float = 1e-6) -> list[list[LoadSegment]]:
+        """
+        x1-x2 aralıkları birbirine değen segmentleri gruplar.
+        Süreksiz aralıklar ayrı listelerde döner. Renderer bunları
+        ayrı profiller olarak çizer.
+        """
+        if not self.segments:
+            return []
+        segs = sorted(self.segments, key=lambda s: s.x1)
+        runs: list[list[LoadSegment]] = [[segs[0]]]
+        for s in segs[1:]:
+            prev = runs[-1][-1]
+            if prev.is_contiguous_with(s, tol):
+                runs[-1].append(s)
+            else:
+                runs.append([s])
+        return runs
+
+    def sample_points(self) -> list[tuple[float, float]]:
+        """
+        Tüm segmentleri tek bir (x, q) polyline'a dönüştürür.
+        NOT: Süreksiz aralıklar arasında q sıçraması olabilir; renderer
+        bunu görselleştirirken to_contiguous_runs() kullanmalıdır.
+        """
+        if not self.segments:
+            return []
+        pts: list[tuple[float, float]] = []
+        for seg in sorted(self.segments, key=lambda s: s.x1):
+            if not pts:
+                pts.append((seg.x1, seg.q1))
+            pts.append((seg.x2, seg.q2))
+        return pts
+
+    def max_abs_q(self) -> float:
+        if not self.segments:
+            return 0.0
+        return max(max(abs(s.q1), abs(s.q2)) for s in self.segments)
+
+    # ------------------------------------------------------------------
+    # SAP2000 uyumluluğu (her segment ayrı satır)
+    # ------------------------------------------------------------------
+    def to_sap_loads(self) -> list["FrameDistributedLoad"]:
+        """
+        Her segmenti ayrı bir FrameDistributedLoad nesnesine böler.
+        SAP2000'in 'her satır bir load' mantığını yansıtır.
+        Dönen nesnelerin her biri tek segment içerir ve aynı key'e sahiptir.
+        """
         return [
             FrameDistributedLoad(
-                pattern_name=self.pattern_name, coord_sys=self.coord_sys,
-                load_dir=self.load_dir, mode=self.mode,
-                force_or_moment=self.force_or_moment, direction=self.direction,
-                is_relative=self.is_relative, coordinate_system=self.coordinate_system,
-                dist_type=self.dist_type, segments=[seg],
+                pattern_name=self.pattern_name,
+                coord_sys=self.coord_sys,
+                load_dir=self.load_dir,
+                mode=self.mode,
+                force_or_moment=self.force_or_moment,
+                direction=self.direction,
+                is_relative=self.is_relative,
+                coordinate_system=self.coordinate_system,
+                dist_type=self.dist_type,
+                segments=[seg],
             )
             for seg in self.segments
         ]
+
+    @classmethod
+    def from_sap_loads(
+        cls,
+        sap_loads: list["FrameDistributedLoad"],
+    ) -> "FrameDistributedLoad":
+        """
+        Aynı gruba (key) ait SAP satırlarını tek bir FrameDistributedLoad
+        nesnesinde birleştirir.
+        """
+        if not sap_loads:
+            raise ValueError("from_sap_loads: boş liste.")
+
+        first = sap_loads[0]
+        merged = cls(
+            pattern_name=first.pattern_name,
+            coord_sys=first.coord_sys,
+            load_dir=first.load_dir,
+            mode=first.mode,
+            force_or_moment=first.force_or_moment,
+            direction=first.direction,
+            is_relative=first.is_relative,
+            coordinate_system=first.coordinate_system,
+            dist_type=first.dist_type,
+            segments=[],
+        )
+        for load in sap_loads:
+            if not merged._same_group(load):
+                raise ValueError(
+                    f"from_sap_loads: uyumsuz yük özellikleri. "
+                    f"Beklenen {merged.key}, gelen {load.key}"
+                )
+            for seg in load.segments:
+                merged.add_load_segment(
+                    LoadSegment(seg.x1, seg.x2, seg.q1, seg.q2)
+                )
+        return merged
+
+    @classmethod
+    def group_sap_loads(
+        cls,
+        sap_loads: list["FrameDistributedLoad"],
+    ) -> dict[tuple[str, str, str, str], "FrameDistributedLoad"]:
+        """
+        SAP satır listesini key bazında gruplar ve her grup için
+        tek bir birleşik FrameDistributedLoad döndürür.
+        Import sırasında kullanılmalıdır.
+        """
+        groups: dict[tuple[str, str, str, str], list["FrameDistributedLoad"]] = {}
+        for load in sap_loads:
+            groups.setdefault(load.key, []).append(load)
+        return {k: cls.from_sap_loads(v) for k, v in groups.items()}
+
+    # ------------------------------------------------------------------
+    # Kopyalama
+    # ------------------------------------------------------------------
+    def copy(self) -> "FrameDistributedLoad":
+        return FrameDistributedLoad(
+            pattern_name=self.pattern_name,
+            coord_sys=self.coord_sys,
+            load_dir=self.load_dir,
+            mode=self.mode,
+            force_or_moment=self.force_or_moment,
+            direction=self.direction,
+            is_relative=self.is_relative,
+            coordinate_system=self.coordinate_system,
+            dist_type=self.dist_type,
+            segments=[LoadSegment(s.x1, s.x2, s.q1, s.q2) for s in self.segments],
+        )
 
 
 @dataclass

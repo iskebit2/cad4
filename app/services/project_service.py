@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from core.units import UnitSystem, convert_project_units
-from domain.project import Project, ProjectCatalog
+from domain.project import Project
 from logging_config import CadLogger
+from tools.project_catalog import ProjectCatalog
 
 if TYPE_CHECKING:
     from app.cad_app import CadApp

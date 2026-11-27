@@ -4,8 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.commands import project_commands as PC
-from app.commands.registry import factory
 from core.units import UnitSystem
 from data.serializer import load_project_file, save_project_file
 from domain.definition import (
@@ -13,15 +11,14 @@ from domain.definition import (
     GeneralProjectInfo, LinkProp, LoadCase, LoadCombination, LoadManager,
     LoadPattern, Material, ModalCase, ProjectConfig, ProjectInfo,
     ReportManager, ResponseSpectrumCase, Section, SectionCut,
-    SiteInformation, SpectrumFunction, SpectrumSourceType,
-    get_tsc2018_site_coefficients,
+    SiteInformation, SpectrumFunction,
 )
 from domain.grid import Grid
 from domain.line import Line
 from domain.math_model import MathModel, PolygonAnalysisData
-from plane.plane import Plane
 from domain.polygon import Polygon
 from domain.scene import Scene
+from plane.plane import Plane
 
 
 @dataclass
@@ -38,13 +35,6 @@ class Project:
     unit_system: UnitSystem = UnitSystem.N_MM
 
     custom_planes: dict[str, Plane] = field(default_factory=dict)
-
-    _active_plane_id: str | None = field(
-        default=None, init=False, repr=False, compare=False,
-    )
-    _grid_planes_cache: dict[str, Plane] = field(
-        default_factory=dict, init=False, repr=False, compare=False,
-    )
 
     materials: dict[str, Material] = field(default_factory=dict)
     sections: dict[str, Section] = field(default_factory=dict)
@@ -66,18 +56,21 @@ class Project:
     frame_design_procs: dict[str, str] = field(default_factory=dict)
     frame_auto_mesh: dict[str, dict] = field(default_factory=dict)
     catalog_sections: dict[str, Section] = field(default_factory=dict)
-    transfer_grid_step: float = 0.0    # 0 → tools default (200 mm)
+    transfer_grid_step: float = 0.0
     transfer_grid_bins: int = 12
 
-    def __post_init__(self):
+    _active_plane_id: str | None = field(default=None, init=False, repr=False, compare=False)
+    _grid_planes_cache: dict[str, Plane] = field(default_factory=dict, init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
         self.scene.project = self
         if self.scene.grid:
             self.scene.grid.scene = self.scene
-        self._ensure_default_active_plane()
 
-    def _ensure_default_active_plane(self):
-        self._active_plane_id = None
-            
+    # ------------------------------------------------------------------
+    # Grid / polygon / line
+    # ------------------------------------------------------------------
+
     @property
     def grid(self) -> Grid:
         return self.scene.grid
@@ -87,6 +80,7 @@ class Project:
         value.scene = self.scene
         self.scene.grid = value
         self.scene.mark_dirty()
+        self.invalidate_grid_planes()
 
     @property
     def polygons(self) -> dict[int, Polygon]:
@@ -106,24 +100,25 @@ class Project:
         self.math_model.lines = value
         self.math_model.mark_dirty()
 
-    # ------------------------------------------------------------------
     def add_polygon(self, polygon: Polygon) -> None:
         self.math_model.add_polygon(polygon)
-
-    def remove_polygon(self, polygon_id: int) -> bool:
-        polygon = self.math_model.polygons.pop(polygon_id, None)
-        if polygon is None:
-            return False
         self.math_model.mark_dirty()
-        if self.math_model.polygon_analysis.pop(polygon_id, None) is not None:
-            self.math_model.mark_dirty()
+
+    def remove_polygon(self, polygon: Polygon | int) -> bool:
+        pid = polygon if isinstance(polygon, int) else polygon.unique_id
+        if self.math_model.polygons.pop(pid, None) is None:
+            return False
+        self.math_model.polygon_analysis.pop(pid, None)
+        self.math_model.mark_dirty()
         return True
 
     def add_line(self, line: Line) -> None:
         self.math_model.add_line(line)
+        self.math_model.mark_dirty()
 
-    def remove_line(self, line_id: int) -> bool:
-        if self.math_model.lines.pop(line_id, None) is None:
+    def remove_line(self, line: Line | int) -> bool:
+        lid = line if isinstance(line, int) else line.unique_id
+        if self.math_model.lines.pop(lid, None) is None:
             return False
         self.math_model.mark_dirty()
         return True
@@ -137,14 +132,16 @@ class Project:
             data = PolygonAnalysisData()
             self.math_model.polygon_analysis[polygon_id] = data
             self.math_model.mark_dirty()
-
-        # --- Polygon.dist_type tek doğruluk kaynağı ---
         if data is not None and not isinstance(polygon, int):
-            data.transfer_dist_type = polygon.dist_type.value
-
+            dist_type = getattr(polygon, "dist_type", None)
+            if dist_type is not None:
+                data.transfer_dist_type = dist_type.value
         return data
 
     # ------------------------------------------------------------------
+    # Tanım container'ları
+    # ------------------------------------------------------------------
+
     def _add(self, registry: dict, obj, key: str = "name") -> None:
         registry[getattr(obj, key)] = obj
 
@@ -167,56 +164,39 @@ class Project:
     def get_material_by_name(self, name): return self.materials.get(name)
     def get_link_prop_by_name(self, name): return self.link_props.get(name)
 
-    _filtered_axes_cache: tuple | None = field(default=None, init=False, repr=False, compare=False)
-    _filtered_axes_cache_key: tuple | None = field(default=None, init=False, repr=False, compare=False)
+    # ------------------------------------------------------------------
+    # Plane yönetimi
+    # ------------------------------------------------------------------
 
-    def filtered_grid_axes(self) -> list:
-        """Return grid axes prepared by the geometry processing layer."""
-        from geometry.geometry_processor import GeometryProcessor
-
-        return GeometryProcessor.process_grid_axes(self.grid, self.active_plane)
-
-    def invalidate_grid_planes(self):
+    def invalidate_grid_planes(self) -> None:
         self._grid_planes_cache.clear()
-        self._filtered_axes_cache = None  # Cache'i sıfırla
-    
+
     def grid_planes(self) -> list[Plane]:
         if not self._grid_planes_cache:
-            self._grid_planes_cache = {}
             xs = sorted(set(self.grid.x_coords)) or [0.0]
             ys = sorted(set(self.grid.y_coords)) or [0.0]
-            zs = sorted(set(self.grid.z_coords)) or [0.0]  # <-- Burası self.grid.z_coords olacak
-
-            default_depth = Plane.default_grid_plane_depth(self.unit_system)
+            zs = sorted(set(self.grid.z_coords)) or [0.0]
+            depth = Plane.default_grid_plane_depth(self.unit_system)
 
             for z in zs:
-                p = Plane.from_axis_offset(
-                    "z", z, name=f"XY_Z{z:g}",
-                    depth_minus=default_depth, depth_plus=default_depth
-                )
+                p = Plane.from_axis_offset("z", z, name=f"XY_Z{z:g}",
+                                           depth_minus=depth, depth_plus=depth)
                 p.u_min, p.u_max = xs[0], xs[-1]
                 p.v_min, p.v_max = ys[0], ys[-1]
                 self._grid_planes_cache[p.name] = p
             for y in ys:
-                p = Plane.from_axis_offset(
-                    "y", y, name=f"XZ_Y{y:g}",
-                    depth_minus=default_depth, depth_plus=default_depth
-                )
+                p = Plane.from_axis_offset("y", y, name=f"XZ_Y{y:g}",
+                                           depth_minus=depth, depth_plus=depth)
                 p.u_min, p.u_max = xs[0], xs[-1]
                 p.v_min, p.v_max = zs[0], zs[-1]
                 self._grid_planes_cache[p.name] = p
             for x in xs:
-                p = Plane.from_axis_offset(
-                    "x", x, name=f"YZ_X{x:g}",
-                    depth_minus=default_depth, depth_plus=default_depth
-                )
+                p = Plane.from_axis_offset("x", x, name=f"YZ_X{x:g}",
+                                           depth_minus=depth, depth_plus=depth)
                 p.u_min, p.u_max = ys[0], ys[-1]
                 p.v_min, p.v_max = zs[0], zs[-1]
                 self._grid_planes_cache[p.name] = p
         return list(self._grid_planes_cache.values())
-
-    def invalidate_grid_planes(self):
-        self._grid_planes_cache.clear()
 
     def all_planes(self) -> dict[str, Plane]:
         result = {p.name: p for p in self.grid_planes()}
@@ -278,6 +258,9 @@ class Project:
         return [p for p in self.all_planes().values() if p.contains_pt(pt)]
 
     # ------------------------------------------------------------------
+    # Grid plane üretimi (saf hesap)
+    # ------------------------------------------------------------------
+
     def grid_levels(self, orientation: str) -> list[float]:
         m = {"XY": self.grid.z_coords, "XZ": self.grid.y_coords, "YZ": self.grid.x_coords}
         return sorted(set(m.get(orientation.upper(), [])))
@@ -302,37 +285,9 @@ class Project:
         return plane
 
     # ------------------------------------------------------------------
-    def create_tbdy2018_spectrum(self, name, ss, s1, site_class="ZC",
-                                  r_coeff=1.0, d_coeff=1.0, i_coeff=1.0,
-                                  tl=6.0, num_points=200) -> SpectrumFunction:
-        fs, f1 = get_tsc2018_site_coefficients(ss, s1, site_class)
-        sds, sd1 = ss * fs, s1 * f1
-        ta = 0.2 * sd1 / sds if sds > 0 else 0.0
-        tb = sd1 / sds if sds > 0 else 0.0
-        dt = max(tl + 2.0, 8.0) / num_points
-        points = []
-        for k in range(num_points + 1):
-            t = k * dt
-            if ta > 0 and t < ta:
-                sae = (0.4 + 0.6 * t / ta) * sds
-            elif t <= tb:
-                sae = sds
-            elif t <= tl:
-                sae = sd1 / t
-            else:
-                sae = sd1 * tl / (t * t)
-            ra = ((d_coeff + (r_coeff / i_coeff - d_coeff) * t / tb)
-                  if (t < tb and tb > 0) else r_coeff / i_coeff)
-            points.append((round(t, 4), round(sae / ra, 6)))
-        spec = SpectrumFunction(
-            name=name, source_type=SpectrumSourceType.TSC_2018,
-            ss=ss, s1=s1, tl=tl, site_class=site_class, fs=fs, f1=f1,
-            r_coeff=r_coeff, d_coeff=d_coeff, i_coeff=i_coeff, points=points,
-        )
-        self.add_spectrum_function(spec)
-        return spec
-
+    # Kalıcılık
     # ------------------------------------------------------------------
+
     def save(self, filepath: str) -> None:
         path = Path(filepath)
         if path.suffix != ".cd4":
@@ -346,81 +301,7 @@ class Project:
             return cls()
         return load_project_file(path)
 
-    def sync_grid_from_s2k_lines(self, grid_lines: list[dict]) -> None:
-        if not grid_lines:
-            return
-
-        from core.units import Dimension, UnitSystem, convert_value
-
-        buckets: dict[str, dict[float, str]] = {"X": {}, "Y": {}, "Z": {}}
-        for gl in grid_lines:
-            direction = str(gl.get("axis_dir", gl.get("line_type", "X"))).upper()
-            v = float(gl.get("ordinate", 0.0))
-            lbl = str(
-                gl.get("grid_id")
-                or gl.get("label")
-                or gl.get("name")
-                or ""
-            ).strip()
-            if "X" in direction:
-                key = "X"
-            elif "Y" in direction or "V" in direction:
-                key = "Y"
-            elif "Z" in direction:
-                key = "Z"
-            else:
-                continue
-            if v not in buckets[key] or (lbl and not buckets[key][v]):
-                buckets[key][v] = lbl
-
-        def _extract(axis_key: str) -> tuple[list[float], list[str]]:
-            items = sorted(buckets[axis_key].items(), key=lambda kv: kv[0])
-            coords = [c for c, _ in items]
-            labels = [
-                lbl if lbl else f"{axis_key}{i + 1}"
-                for i, (_, lbl) in enumerate(items)
-            ]
-            return coords, labels
-
-        xs, x_labels = _extract("X")
-        ys, y_labels = _extract("Y")
-        zs, z_labels = _extract("Z")
-
-        target_unit = self.unit_system
-        bubble_offset = convert_value(
-            Dimension.LENGTH, 1000.0, UnitSystem.N_MM, target_unit,
-        )
-        label_overflow = convert_value(
-            Dimension.LENGTH, 200.0, UnitSystem.N_MM, target_unit,
-        )
-
-        self.scene.grid = Grid(
-            x_coords=xs,
-            y_coords=ys,
-            z_coords=zs,
-            x_labels=x_labels,
-            y_labels=y_labels,
-            z_labels=z_labels,
-            bubble_offset=bubble_offset,
-            label_overflow=label_overflow,
-        )
-        self.scene.mark_dirty()
-        self.invalidate_grid_planes()
-
-    @factory("set_unit")
-    def _f_set_unit(args):
-        if not args:
-            return None
-        from core.units import UnitSystem
-        raw = " ".join(args).strip()
-        key = raw.upper()
-        if key in UnitSystem.__members__:
-            return PC.SetUnitSystem(UnitSystem[key])
-        return PC.SetUnitSystem(UnitSystem.from_sap(raw))
     # ------------------------------------------------------------------
-    def _migrate_materials(self):
-        pass
-
     def __repr__(self) -> str:
         return (f"<Project unit={self.unit_system.value} "
                 f"materials={len(self.materials)} sections={len(self.sections)} "
@@ -439,37 +320,3 @@ class Project:
             f"{self.math_model.summary()}\n"
             f"{self.scene.summary()}"
         )
-
-class ProjectCatalog:
-    def __init__(self, project):
-        self.project = project
-
-    def list_sections(self):
-        return sorted(self.project.sections.keys())
-
-    def get_section(self, name):
-        return self.project.sections.get(name)
-
-    def list_area_sections(self):
-        return sorted(self.project.area_sections.keys())
-
-    def get_area_section(self, name):
-        return self.project.area_sections.get(name)
-
-    def get_link_prop(self, name):
-        return self.project.link_props.get(name)
-
-    def list_materials(self):
-        return sorted(self.project.materials.keys())
-
-    def get_material(self, name):
-        return self.project.materials.get(name)
-
-    def list_link_props(self):
-        return sorted(self.project.link_props.keys())
-
-    def list_load_patterns(self):
-        return sorted(self.project.load_patterns.keys())
-
-    def list_planes(self):
-        return sorted(self.project.all_planes().values(), key=lambda p: p.name)

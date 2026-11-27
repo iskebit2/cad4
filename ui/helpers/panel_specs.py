@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from app.settings.categories import Category
 from ui.panels.analysis_panel import AnalysisManagerPanel
-from ui.panels.area_to_frame_panel import AreaToFramePanel
+# from ui.panels.area_to_frame_panel import AreaToFramePanel
 from ui.panels.command_panel import CommandPanel
 from ui.panels.debug_panel import DebugPanel
 from ui.panels.definition_panel import DefinitionPanel
@@ -13,7 +13,8 @@ from ui.panels.joint_load_panel import JointLoadPanel
 from ui.panels.load_assign_panel import LoadAssignPanel
 from ui.panels.load_display_panel import LoadDisplayPanel
 from ui.panels.load_manager_panel import LoadManagerPanel
-from ui.panels.polygon_properties_panel import PolygonPropertiesPanel
+from ui.panels.polygon.frame_transfer_panel import FrameTransferPanel
+from ui.panels.polygon.polygon_panel import PolygonPanel
 from ui.panels.report_panel import ReportPanel
 from ui.panels.s2k_panel import S2KPanel
 from ui.panels.selection_panel import SelectionPanel
@@ -112,15 +113,15 @@ PANELS: list[PanelSpec] = [
         context=("project", "engine"),
         order=70,
     ),
-    PanelSpec(
-        cls=AreaToFramePanel,
-        name="area_to_frame",
-        title="Area to Frame",
-        category=Category.LOADS,
-        icon="area_to_frame",
-        context=("project", "engine"),
-        order=80,
-    ),
+    # PanelSpec(
+    #     cls=AreaToFramePanel,
+    #     name="area_to_frame",
+    #     title="Area to Frame",
+    #     category=Category.LOADS,
+    #     icon="area_to_frame",
+    #     context=("project", "engine"),
+    #     order=80,
+    # ),
     PanelSpec(
         cls=DebugPanel,
         name="debug_panel",
@@ -166,8 +167,9 @@ PANELS: list[PanelSpec] = [
         context=("project", "selection_polygons", "patterns"),
         order=130,
     ),
+    
     PanelSpec(
-        cls=PolygonPropertiesPanel,
+        cls=PolygonPanel,
         name="polygon_properties",
         title="Polygon",
         category=Category.MANAGEMENT,
@@ -175,6 +177,15 @@ PANELS: list[PanelSpec] = [
         context=("project", "engine"),
         order=150,
     ),
+    PanelSpec(
+            cls=FrameTransferPanel,
+            name="frame_transfer",
+            title="Frame Transfer",
+            category=Category.MANAGEMENT,
+            icon="polygon_properties",
+            context=("project", "engine"),
+            order=155,
+        ),
     PanelSpec(
         cls=SelectionPanel,
         name="selection",

@@ -1,3 +1,4 @@
+# render/scenerenderer.py
 from __future__ import annotations
 
 from pyglm import glm
@@ -34,6 +35,8 @@ class SceneRenderer:
     def set_engine(self, engine):
         self.engine = engine
         self.presentation_renderer.set_engine(engine)
+        if self.math_model_renderer is not None and hasattr(self.math_model_renderer, "bind_show"):
+            self.math_model_renderer.bind_show(engine.show)
 
     def set_cam(self, camera):
         if self.math_model_renderer:
@@ -89,8 +92,9 @@ class SceneRenderer:
             return
 
         engine = self.engine
+        show = engine.show
         vw, vh = viewport_size if viewport_size is not None else (engine.w, engine.h)
-        if engine.show.get("presentation_any", True) and engine.scene is not None:
+        if show.get("presentation_any", False) and engine.scene is not None:
             model = (
                 self.math_model_renderer.model_mat
                 if self.math_model_renderer else glm.mat4(1.0)
@@ -98,15 +102,15 @@ class SceneRenderer:
             self.presentation_renderer.render_scene_visuals(
                 camera, model,
                 engine.scene, engine.math_model, vw, vh,
-                engine.show, engine.active_wind_vector,
+                show, engine.active_wind_vector,
             )
 
         if not self.math_model_renderer:
             return
         base = self.math_model_renderer
-        base.show["polygon"] = engine.show.get("polygon", True)
-        base.show["lines"] = engine.show.get("lines", True)
-        if engine.show.get("scene", True):
+        if hasattr(base, "bind_show"):
+            base.bind_show(show)
+        if show.get("scene", False):
             base.render(
                 camera, target_fbo, force_id_pass=force_id_pass,
                 plane=plane, visible_ids=visible_ids,

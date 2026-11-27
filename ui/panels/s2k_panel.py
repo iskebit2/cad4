@@ -7,7 +7,7 @@ import os
 import pandas as pd
 from imgui_bundle import imgui
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 from domain.project import Project
 from logging_config import CadLogger
 from tools.s2k import LoadContext, S2KLoader, S2KParser
@@ -182,7 +182,7 @@ class S2KPanel(PanelBase):
             self._log_error("Uygulama bağlantısı hazır değil.")
             return
         label = f"MODEL: {os.path.basename(self.import_path or '')}"
-        self.app.put_command(PC.ReplaceProject(new_project, label=label))
+        self.app.put_command(cmd.ReplaceProject(new_project, label=label))
         self._log_info("İçe aktarma komutu kuyruğa eklendi.")
 
     def _run_handlers(self) -> LoadContext:

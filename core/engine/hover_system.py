@@ -4,7 +4,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 
 if TYPE_CHECKING:
     from viewport.viewport import Viewport
@@ -104,7 +104,7 @@ class HoverSystem:
         if force or old != pick_id:
             # Sadece dinleyici varsa komut üret
             if self.command_queue and self._has_listeners():
-                self.command_queue.put(PC.HoverChanged(pick_id))
+                self.command_queue.put(cmd.HoverChanged(pick_id))
 
     def _has_listeners(self) -> bool:
         # Engine, dinleyici varlığını HoverSystem'a bildirir

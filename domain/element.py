@@ -2,7 +2,7 @@
 from __future__ import annotations
 import math
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Iterator
 import numpy as np
 from pyglm import glm
 from core.id_manager import IDManager
@@ -232,16 +232,21 @@ class Frame(Element):
 
     node_i: Node | None = None
     node_j: Node | None = None
-    section: any = None
+    section: Any = None
     rotation_deg: float = 0.0
-    
+
     release_i: dict | None = None
     release_j: dict | None = None
     point_loads: list = field(default_factory=list)
     gravity_loads: list = field(default_factory=list)
     temp_loads: list = field(default_factory=list)
-    dist_load_sets: dict[str, D.FrameDistributedLoad] = field(default_factory=dict)
-    
+
+    # Anahtar: (pattern_name, load_dir, coord_sys, force_or_moment)
+    # Değer: o gruba ait tüm segmentleri tutan tek FrameDistributedLoad
+    dist_load_sets: dict[tuple[str, str, str, str], D.FrameDistributedLoad] = field(
+        default_factory=dict
+    )
+
     cardinal_pt: str = "10 (centroid)"
     mirror2: bool = False
     mirror3: bool = False
@@ -276,11 +281,152 @@ class Frame(Element):
         super().__post_init__()
         self.element_type = "Frame"
         self.rotation_deg = float(self.rotation_deg)
+        self._migrate_dist_load_sets()
+
+    # ------------------------------------------------------------------
+    # Geriye dönük uyumluluk: eski dict[str, ...] formatını yeni
+    # tuple-key formatına taşır.
+    # ------------------------------------------------------------------
+    def _migrate_dist_load_sets(self) -> None:
+        if not self.dist_load_sets:
+            return
+        migrated: dict[tuple[str, str, str, str], D.FrameDistributedLoad] = {}
+        for k, v in list(self.dist_load_sets.items()):
+            if isinstance(k, tuple) and len(k) == 4:
+                migrated[k] = v
+                continue
+            # Eski format: k bir pattern adı (str)
+            if isinstance(v, D.FrameDistributedLoad):
+                # v'nin kendi key'ini kullan
+                migrated[v.key] = v
+            elif isinstance(v, (list, tuple)):
+                # Eski format: liste halinde FrameDistributedLoad'lar
+                for item in v:
+                    if isinstance(item, D.FrameDistributedLoad):
+                        existing = migrated.get(item.key)
+                        if existing is None:
+                            migrated[item.key] = item
+                        else:
+                            for seg in item.segments:
+                                existing.add_load_segment(seg)
+        self.dist_load_sets = migrated
+
+    # ------------------------------------------------------------------
+    # Dağıtılmış yük API'si
+    # ------------------------------------------------------------------
+    def add_distributed_load(self, load: D.FrameDistributedLoad) -> D.FrameDistributedLoad:
+        """
+        Bir FrameDistributedLoad'u frame'e ekler. Aynı key'e sahip bir yük
+        varsa segmentleri birleştirir; yoksa yeni grup oluşturur.
+        """
+        if not isinstance(load, D.FrameDistributedLoad):
+            raise TypeError("FrameDistributedLoad gerekli")
+        key = load.key
+        existing = self.dist_load_sets.get(key)
+        if existing is None:
+            self.dist_load_sets[key] = load.copy()
+            return self.dist_load_sets[key]
+        for seg in load.segments:
+            existing.add_load_segment(
+                D.LoadSegment(seg.x1, seg.x2, seg.q1, seg.q2)
+            )
+        return existing
+
+    def add_distributed_segment(
+        self,
+        pattern_name: str,
+        load_dir: str,
+        x1: float,
+        x2: float,
+        q1: float,
+        q2: float,
+        *,
+        coord_sys: str = "Local",
+        force_or_moment: str = "Force",
+        coordinate_system: str = "GLOBAL",
+        direction: D.LoadDirection | None = None,
+        dist_type: str = "one_way",
+        mode: str = "REPLACE",
+        is_relative: bool = True,
+    ) -> D.FrameDistributedLoad:
+        """Kısayol: tek bir segment ekler (yoksa grubu oluşturur)."""
+        load = D.FrameDistributedLoad(
+            pattern_name=pattern_name,
+            coord_sys=coord_sys,
+            load_dir=load_dir,
+            mode=mode,
+            force_or_moment=force_or_moment,
+            direction=direction if direction is not None else D.LoadDirection.GLOBAL_Z,
+            is_relative=is_relative,
+            coordinate_system=coordinate_system,
+            dist_type=dist_type,
+            segments=[D.LoadSegment(x1, x2, q1, q2)],
+        )
+        return self.add_distributed_load(load)
+
+    def remove_distributed_load(
+        self,
+        pattern_name: str,
+        load_dir: str,
+        coord_sys: str = "Local",
+        force_or_moment: str = "Force",
+    ) -> bool:
+        key = (pattern_name, load_dir, coord_sys, force_or_moment)
+        return self.dist_load_sets.pop(key, None) is not None
+
+    def clear_distributed_loads(self, pattern_name: str | None = None) -> None:
+        """Belirtilen pattern'in tüm dağıtılmış yüklerini (veya hepsini) temizler."""
+        if pattern_name is None:
+            self.dist_load_sets.clear()
+            return
+        for key in [k for k in self.dist_load_sets if k[0] == pattern_name]:
+            del self.dist_load_sets[key]
+
+    def get_distributed_load(
+        self,
+        pattern_name: str,
+        load_dir: str,
+        coord_sys: str = "Local",
+        force_or_moment: str = "Force",
+    ) -> D.FrameDistributedLoad | None:
+        return self.dist_load_sets.get(
+            (pattern_name, load_dir, coord_sys, force_or_moment)
+        )
+
+    def iter_distributed_loads(
+        self,
+        pattern_name: str | None = None,
+        load_dir: str | None = None,
+    ) -> Iterator[D.FrameDistributedLoad]:
+        """Filtreli iterasyon. Renderer bunu kullanmalı."""
+        for key, load in self.dist_load_sets.items():
+            if pattern_name is not None and key[0] != pattern_name:
+                continue
+            if load_dir is not None and key[1] != load_dir:
+                continue
+            yield load
+
+    def distributed_loads_by_pattern(self) -> dict[str, list[D.FrameDistributedLoad]]:
+        """Pattern adına göre gruplanmış yükler."""
+        out: dict[str, list[D.FrameDistributedLoad]] = {}
+        for load in self.dist_load_sets.values():
+            out.setdefault(load.pattern_name, []).append(load)
+        return out
 
     @property
     def dist_loads(self) -> list[D.FrameDistributedLoad]:
-        return [s for ls in self.dist_load_sets.values() for s in ls.to_sap_loads()]
+        """
+        Geriye dönük uyumluluk: SAP2000 satır formatında (her segment ayrı)
+        tüm dağıtılmış yükleri döndürür.
+        """
+        out: list[D.FrameDistributedLoad] = []
+        for load in self.dist_load_sets.values():
+            out.extend(load.to_sap_loads())
+        return out
 
+    # ------------------------------------------------------------------
+    # Geometri
+    # ------------------------------------------------------------------
     def get_length(self) -> float:
         if not self.node_i or not self.node_j:
             return 0.0
@@ -289,23 +435,27 @@ class Frame(Element):
     def get_midpoint(self):
         if not self.node_i or not self.node_j:
             return (0.0, 0.0, 0.0)
-        return ((self.node_i._x + self.node_j._x) * 0.5,
-                (self.node_i._y + self.node_j._y) * 0.5,
-                (self.node_i._z + self.node_j._z) * 0.5)
+        return (
+            (self.node_i._x + self.node_j._x) * 0.5,
+            (self.node_i._y + self.node_j._y) * 0.5,
+            (self.node_i._z + self.node_j._z) * 0.5,
+        )
 
     def get_axis(self):
         if not self.node_i or not self.node_j:
             return (1.0, 0.0, 0.0)
-        d = (self.node_j._x - self.node_i._x,
-             self.node_j._y - self.node_i._y,
-             self.node_j._z - self.node_i._z)
+        d = (
+            self.node_j._x - self.node_i._x,
+            self.node_j._y - self.node_i._y,
+            self.node_j._z - self.node_i._z,
+        )
         L = math.sqrt(sum(c * c for c in d))
         return (1.0, 0.0, 0.0) if L < 1e-9 else tuple(c / L for c in d)
 
     def get_transformation_matrix(self) -> np.ndarray:
         if not self.node_i or not self.node_j:
             return np.eye(3, dtype=float)
-        from app.commands.analysis.frame_resolver import compute_local_axes
+        from app.analysis.frame_resolver import compute_local_axes
         R, _ = compute_local_axes(
             (self.node_i._x, self.node_i._y, self.node_i._z),
             (self.node_j._x, self.node_j._y, self.node_j._z),
@@ -447,6 +597,29 @@ class Area(Element):
         if self.area_section is not None:
             return float(self.area_section.effective_bend_thick)
         return self.thickness
+
+    def centroid(self) -> tuple[float, float, float]:
+        if not self.nodes:
+            return (0.0, 0.0, 0.0)
+        n = len(self.nodes)
+        return (
+            sum(node.x for node in self.nodes) / n,
+            sum(node.y for node in self.nodes) / n,
+            sum(node.z for node in self.nodes) / n,
+        )
+
+    def get_plane_frame(self):
+        from domain.polygon import Polygon
+        if len(self.nodes) < 3:
+            return (
+                glm.vec3(0.0),
+                glm.vec3(1.0, 0.0, 0.0),
+                glm.vec3(0.0, 1.0, 0.0),
+                glm.vec3(0.0, 0.0, 1.0),
+            )
+        u, v, n = Polygon.calculate_plane_axes(self.nodes)
+        cx, cy, cz = self.centroid()
+        return glm.vec3(cx, cy, cz), u, v, n
 
 
 @dataclass(init=False)

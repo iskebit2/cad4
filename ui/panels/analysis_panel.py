@@ -9,12 +9,12 @@ from queue import Empty, Queue
 import numpy as np
 from imgui_bundle import imgui
 
-from app.commands.analysis.force_recovery import (
+from app.analysis.force_recovery import (
     FrameForceResult,
     recover_frame_forces,
     save_analysis_results,
 )
-from app.commands.analysis.run import AnalysisBundle, AnalysisOptions, AnalysisService
+from app.analysis.run import AnalysisBundle, AnalysisOptions, AnalysisService
 from app.settings.categories import Category
 from logging_config import CadLogger
 from ui.base.panel_base import PanelBase

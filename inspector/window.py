@@ -229,6 +229,7 @@ class InspectorWindow:
         imgui.separator()
 
         imgui.begin_child("insp_body", imgui.ImVec2(0, 0))
+        
         try:
             if self._left_open:
                 imgui.begin_child("insp_left",
@@ -374,7 +375,8 @@ class InspectorWindow:
             imgui.spacing()
             imgui.text_colored(_col(0.5, 0.5, 0.5), "Eleman seçilmedi")
             return
-
+        imgui.text_colored(_col(0.6, 0.4, 0.4), "element")
+        
         if len(c.type_counts) > 1:
             self._draw_type_selector(c)
 
@@ -382,6 +384,7 @@ class InspectorWindow:
         if not act:
             imgui.text_colored(_col(0.7, 0.7, 0.5), "Tip seç")
             return
+        
 
         t = c.common_type
         if t is None:
@@ -454,8 +457,8 @@ class InspectorWindow:
         app = self.app
         if app is None:
             return
-        from app.commands import project_commands as PC
+        import app.commands as cmd
         node_uids = payload.get("node_uids", [])
         if node_uids:
-            app.command_queue.put(PC.PropagateGeometryChange(node_uids=node_uids))
-        app.command_queue.put(PC.RefreshGeometry())
+            app.put_command(cmd.PropagateGeometryChange(node_uids=node_uids))
+        app.put_command(cmd.RefreshGeometry())

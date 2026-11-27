@@ -9,7 +9,7 @@ from data.enums import SAP_DIR_LABELS
 from domain.definition import FrameDistributedLoad, LoadSegment
 from domain.element import Frame
 from ui.base.panel_base import PanelBase, Category
-from app.commands import project_commands as PC
+import app.commands as cmd
 
 
 class _DrawListAdapter:
@@ -725,7 +725,7 @@ class FrameLoadPanel(PanelBase):
             # Mevcut dist_load_sets kopyası + yeni pattern
             cur = dict(getattr(frame, "dist_load_sets", {}) or {})
             cur[self.pattern_name] = deepcopy(self.active_set)
-            queue.put(PC.UpdateElementFields(uid, {"dist_load_sets": cur}))
+            queue.put(cmd.UpdateElementFields(uid, {"dist_load_sets": cur}))
 
     def refresh_targets(self):
         """Aktif seçimi sahne üzerinden yeniden oku."""

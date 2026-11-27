@@ -1,18 +1,15 @@
 # app/commands/edit_controller.py
-from dataclasses import dataclass
-from typing import Any
+from __future__ import annotations
 
-from app.commands import (
-    BulkUpdateCommand,
-    CommandManager,
-    CreateElementCommand,
-    DeleteElementsCommand,
-    UpdateElementCommand,
+from dataclasses import dataclass, field
+from typing import Any, Callable
+
+from app.commands.base import BulkPlan, CommandManager, CommandResult
+from app.commands.impl import (
+    AddArea, AddFrame, AddLink, AddNode,
+    AddDefinition, RemoveDefinition, RenameDefinition,
+    BulkUpdate, DeleteElements, UpdateElementFields,
 )
-from app.commands.replicate import ReplicateElementsCommand
-from logging_config import CadLogger
-
-logger = CadLogger.get(__name__)
 
 
 @dataclass
@@ -24,474 +21,122 @@ class EditResult:
 
 
 class EditController:
-    """
-    Panel ↔ Scene köprüsü.
-    Tüm işlemler kendi CommandManager'ı üzerinden → undo/redo.
-    Mevcut SelectionManager.undo/redo'ya DOKUNMAZ; paralel çalışır.
-    """
-
-    def __init__(self, engine, max_history: int = 100):
-        self.engine = engine
-        self.commands = CommandManager(max_history=max_history)
-        # Her başarılı komuttan sonra renderer'ı tazele
-        self.commands.add_listener(self._refresh)
+    def __init__(self, app) -> None:
+        self._app = app
+        self.commands = CommandManager(max_history=100)
+        self.commands.add_listener(self._on_result)
 
     @property
     def scene(self):
-        return self.engine.math_model
+        return self._app.current_project.math_model
 
-    # ========================================================
-    # CREATE
-    # ========================================================
+    def _on_result(self, result: CommandResult) -> None:
+        if result.geometry_dirty:
+            try:
+                self.scene.mark_dirty()
+            except Exception:
+                pass
 
     def create(self, element_type: str, values: dict[str, Any]) -> EditResult:
         et = element_type.lower().strip()
-        factory = self._factory_for(et)
-        if factory is None:
-            return EditResult(False, message=f"Bilinmeyen tip: {element_type}")
-
-        try:
-            cmd = CreateElementCommand(self.scene, et, factory, values)
-            if not self.commands.execute(cmd):
-                return EditResult(False, message="Oluşturulamadı")
-        except Exception as e:
-            logger.exception(f"create({et}) hatası")
-            return EditResult(False, message=str(e))
-
-        return EditResult(
-            True,
-            element=cmd.created,
-            created=True,
-            message=f"{element_type} eklendi",
-        )
-
-    # ========================================================
-    # UPDATE
-    # ========================================================
+        cmd = self._build_create(et, values)
+        if cmd is None:
+            return EditResult(False, message=f"Bilinmeyen tip: {et}")
+        result = self.commands.execute(cmd)
+        return EditResult(result.handled, element=getattr(cmd, "_created", None),
+                          message=result.message, created=result.handled)
 
     def update(self, element, new_values: dict[str, Any]) -> EditResult:
         if element is None:
             return EditResult(False, message="Eleman yok")
-
         before, after = {}, {}
         for f, raw in new_values.items():
-            try:
-                old = self._read_field(element, f)
-            except Exception:
-                old = None
-            if not self._is_same(old, raw):
+            old = getattr(element, f, None)
+            if old != raw:
                 before[f] = old
                 after[f] = raw
-
         if not after:
             return EditResult(True, element=element, message="Değişiklik yok")
-
-        try:
-            cmd = UpdateElementCommand(
-                element=element,
-                before=before,
-                after=after,
-                setter=self._apply_field,
-            )
-            if not self.commands.execute(cmd):
-                return EditResult(False, element=element, message="Güncellenemedi")
-        except Exception as e:
-            logger.exception("update hatası")
-            return EditResult(False, element=element, message=str(e))
-
-        return EditResult(
-            True, element=element,
-            message=f"{len(after)} alan güncellendi",
+        cmd = UpdateElementFields(
+            element_uid=getattr(element, "unique_id", 0),
+            changes=after,
         )
-
-    # ========================================================
-    # DELETE
-    # ========================================================
+        result = self.commands.execute(cmd)
+        return EditResult(result.handled, element=element, message=result.message)
 
     def delete(self, elements) -> EditResult:
         if not elements:
             return EditResult(False, message="Eleman yok")
-
         if not isinstance(elements, (list, tuple)):
             elements = [elements]
-
-        try:
-            cmd = DeleteElementsCommand(self.scene, list(elements))
-            if not self.commands.execute(cmd):
-                return EditResult(False, message="Silinemedi")
-        except Exception as e:
-            logger.exception("delete hatası")
-            return EditResult(False, message=str(e))
-
-        # Silinen elemanları aktif seçimden çıkar
-        if cmd.deleted and self.engine and self.engine.sel_mgr:
-            deleted_ids = {id(el) for el in cmd.deleted}
-            remaining = [
-                el for el in self.engine.sel_mgr.get_selected()
-                if id(el) not in deleted_ids
-            ]
-            from core.selection_policy import SelectionMode
-            self.engine.sel_mgr.select_multiple(remaining, mode=SelectionMode.REPLACE)
-            self.engine.clear_hover()
-
-        msg = f"{len(cmd.deleted)} silindi"
-        if cmd.rejected:
-            msg += f", {len(cmd.rejected)} reddedildi (bağlı eleman var)"
-        return EditResult(True, message=msg)
-
-    # ========================================================
-    # UNDO / REDO  (bu controller'ın kendi geçmişi)
-    # ========================================================
+        uids = [getattr(e, "unique_id", None) for e in elements]
+        uids = [u for u in uids if u is not None]
+        cmd = DeleteElements(uids=uids)
+        result = self.commands.execute(cmd)
+        return EditResult(result.handled, message=result.message)
 
     def undo(self) -> EditResult:
-        if not self.commands.can_undo():
-            return EditResult(False, message="Geri alınacak işlem yok")
-        ok = self.commands.undo()
-        return EditResult(ok, message="Geri alındı" if ok else "Geri alınamadı")
+        result = self.commands.undo()
+        return EditResult(result.handled, message=result.message)
 
     def redo(self) -> EditResult:
-        if not self.commands.can_redo():
-            return EditResult(False, message="Yinelenecek işlem yok")
-        ok = self.commands.redo()
-        return EditResult(ok, message="Yinelendi" if ok else "Yinelenemedi")
+        result = self.commands.redo()
+        return EditResult(result.handled, message=result.message)
 
-    # ========================================================
-    # FABRİKALAR (nesne üretir, scene'e EKLEMEZ)
-    # ========================================================
-
-    def _factory_for(self, et: str):
-        return {
-            "node":    self._build_node,
-            "frame":   self._build_frame,
-            "link":    self._build_link,
-            "area":    self._build_area,
-            "polygon": self._build_polygon,
-        }.get(et)
-
-    def _build_node(self, v):
-        from domain.element import Node
-        return Node(
-            x=float(v.get("x", 0.0)),
-            y=float(v.get("y", 0.0)),
-            z=float(v.get("z", 0.0)),
-            label=v.get("label") or None,
-        )
-
-    def _build_frame(self, v):
-        from domain.element import Frame
-        ni = self._resolve_node(v.get("node_i_id") or v.get("node_i"))
-        nj = self._resolve_node(v.get("node_j_id") or v.get("node_j"))
-        if ni is None or nj is None:
-            raise ValueError("Frame için iki node gerekli")
-        sec = self._resolve_section(v.get("section_name"))
-        return Frame(node_i=ni, node_j=nj, section=sec,
-                     label=v.get("label") or None)
-
-    def _build_link(self, v):
-        from domain.element import Link
-        ni = self._resolve_node(v.get("node_i_id") or v.get("node_i"))
-        nj = self._resolve_node(v.get("node_j_id") or v.get("node_j"))
-        if ni is None or nj is None:
-            raise ValueError("Link için iki node gerekli")
-        return Link(node_i=ni, node_j=nj,
-                    propname=v.get("propname", ""),
-                    label=v.get("label") or None)
-
-    def _build_area(self, v):
-        from domain.element import Area
-        node_labels = v.get("nodes", [])
-        if isinstance(node_labels, str):
-            node_labels = [s.strip() for s in node_labels.split(",") if s.strip()]
-        nodes = [self._resolve_node(n) for n in node_labels]
-        if not nodes or any(n is None for n in nodes):
-            raise ValueError("Area için tüm node'lar bulunamadı")
-        return Area(nodes=nodes,
-                    thickness=float(v.get("thickness", 0.0)),
-                    label=v.get("label") or None)
-
-    def _build_polygon(self, v):
-        from domain.polygon import Polygon, PolygonType
-        node_labels = v.get("nodes", [])
-        if isinstance(node_labels, str):
-            node_labels = [s.strip() for s in node_labels.split(",") if s.strip()]
-        nodes = [self._resolve_node(n) for n in node_labels]
-        if not nodes or any(n is None for n in nodes):
-            raise ValueError("Polygon için tüm node'lar bulunamadı")
-
-        # PolygonType Enum dönüşümü
-        raw_type = v.get("poly_type", "GENERIC")
-        if isinstance(raw_type, str):
-            try:
-                poly_type = PolygonType[raw_type.strip().upper()]
-            except KeyError:
-                poly_type = PolygonType.GENERIC
-        elif isinstance(raw_type, PolygonType):
-            poly_type = raw_type
-        else:
-            poly_type = PolygonType.GENERIC
-
-        return Polygon(nodes=nodes, label=v.get("label") or None, poly_type=poly_type)
-
-    # ========================================================
-    # ALAN OKU / YAZ
-    # ========================================================
-
-    def _read_field(self, element, field: str):
-        if field == "node_i_id":
-            return getattr(getattr(element, "node_i", None), "unique_id", None)
-        if field == "node_j_id":
-            return getattr(getattr(element, "node_j", None), "unique_id", None)
-        if field == "section_name":
-            return getattr(getattr(element, "section", None), "name", None)
-        if field == "nodes":
-            return [n.unique_id for n in getattr(element, "nodes", [])]
-        if field == "poly_type":
-            pt = getattr(element, "poly_type", None)
-            return pt.name if hasattr(pt, "name") else str(pt)
-
-        parts = field.split(".")
-        obj = element
-        for p in parts[:-1]:
-            obj = getattr(obj, p)
-        return getattr(obj, parts[-1])
-
-    def _apply_field(self, element, field: str, value):
-        # --- Renk ---
-        if field == "color":
-            if isinstance(value, (list, tuple)) and len(value) >= 3:
-                element.color = [float(v) for v in value[:3]]
-            return
-
-        # --- Görünürlük ---
-        if field == "is_visible":
-            element.is_visible = bool(value)
-            return
-
-        # --- Restraint ---
-        if field.startswith("restraint."):
-            dof = field.split(".", 1)[1]
-            if element.restraint is None:
-                from domain.definition import Restraint
-                element.restraint = Restraint()
-            setattr(element.restraint, dof, bool(value))
-            return
-
-        # --- Node referansları ---
-        if field in ("node_i_id", "node_j_id"):
-            node = self._resolve_node(value)
-            if node is None:
-                raise ValueError(f"{field}: node bulunamadı: {value!r}")
-            attr = "node_i" if field == "node_i_id" else "node_j"
-            setattr(element, attr, node)
-            return
-
-        # --- Section ---
-        if field == "section_name":
-            element.section = self._resolve_section(value)
-            return
-
-        # --- Node listesi (Area/Polygon) ---
-        if field == "nodes":
-            if isinstance(value, str):
-                value = [s.strip() for s in value.split(",") if s.strip()]
-            node_objs = [self._resolve_node(n) for n in value]
-            if any(n is None for n in node_objs):
-                raise ValueError("Bazı node'lar bulunamadı")
-            element.nodes = node_objs
-            return
-
-        # --- Polygon tipi ---
-        if field == "poly_type":
-            from domain.element import PolygonType
-            if isinstance(value, str):
-                try:
-                    element.poly_type = PolygonType[value.strip().upper()]
-                except KeyError:
-                    raise ValueError(
-                        f"Geçersiz poligon tipi: {value!r}. "
-                        f"Geçerli: {[t.name for t in PolygonType]}"
-                    )
-            elif isinstance(value, PolygonType):
-                element.poly_type = value
-            return
-
-        # --- Genel (nokta yolu: a.b.c) ---
-        parts = field.split(".")
-        obj = element
-        for p in parts[:-1]:
-            obj = getattr(obj, p)
-        setattr(obj, parts[-1], value)
-
-    # ========================================================
-    # YARDIMCILAR
-    # ========================================================
-
-    def _resolve_node(self, ref):
-        """ref: Node | unique_id (int) | label (str) | UUID (str)"""
-        if ref is None:
-            return None
-        from domain.element import Node
-
-        if isinstance(ref, Node):
-            return ref
-
-        scene = self.scene
-
-        if isinstance(ref, int):
-            return scene.nodes.get(ref)
-
-        try:
-            return scene.nodes.get(int(ref))
-        except (ValueError, TypeError):
-            pass
-
-        for n in scene.nodes.values():
-            if getattr(n, "label", None) == ref:
-                return n
-            if getattr(n, "unique_id", None) == ref:
-                return n
-
-        return None
-
-    def _resolve_section(self, name):
-        if not name:
-            return None
-        scene = self.scene
-        def_mgr = getattr(scene, "def_mgr", None)
-        if def_mgr and hasattr(def_mgr, "get_section"):
-            return def_mgr.get_section(str(name))
-        if hasattr(scene, "get_section"):
-            return scene.get_section(str(name))
-        return None
-
-    def _is_same(self, a, b):
-        try:
-            return a == b
-        except Exception:
-            return False
-
-    def _refresh(self):
-        math_model = self.engine.math_model
-        if math_model is not None:
-            math_model.mark_dirty()
-        try:
-            self.engine.renderer.update_geo(math_model)
-        except Exception:
-            logger.exception("renderer.update_geo hatası")
-
-    # ========================================================
-    # BULK UPDATE — Komut tabanlı toplu güncelleme
-    # ========================================================
-
-    def bulk_update(self, elements, changes) -> EditResult:
-        """
-        Birden fazla elemente aynı anda alan uygula.
-        Her element için before/after hesaplanır; farklı olanlar komuta girer.
-        Tek CommandManager kaydı → undo/redo tam çalışır.
-
-        changes örnek:
-            {"x": 100.0, "label": "N1", "restraint.ux": True, "color": [1,0,0]}
-        """
+    def bulk_update(self, elements, changes: dict[str, Any]) -> EditResult:
         if not elements:
             return EditResult(False, message="Eleman yok")
-
-        # 1. Her element için before/after hesapla
-        plan = []
+        plans = []
         for e in elements:
             before, after = {}, {}
-            for field, raw in changes.items():
-                try:
-                    old = self._read_field_safe(e, field)
-                except Exception:
-                    old = None
-                if not self._is_same(old, raw):
-                    before[field] = old
-                    after[field] = raw
+            for f, raw in changes.items():
+                old = getattr(e, f, None)
+                if old != raw:
+                    before[f] = old
+                    after[f] = raw
             if after:
-                plan.append((e, before, after))
-
-        if not plan:
+                plans.append(BulkPlan(e, before, after))
+        if not plans:
             return EditResult(True, message="Değişiklik yok")
+        cmd = BulkUpdate(plans=plans, setter=lambda el, f, v: setattr(el, f, v))
+        result = self.commands.execute(cmd)
+        return EditResult(result.handled, message=result.message)
 
-        # 2. BulkUpdateCommand oluştur ve çalıştır
-        try:
-            cmd = BulkUpdateCommand(plan, setter=self._apply_field)
-            if not self.commands.execute(cmd):
-                return EditResult(False, message="Toplu güncelleme başarısız")
-        except Exception as e:
-            logger.exception("bulk_update hatası")
-            return EditResult(False, message=str(e))
-
-        return EditResult(
-            True,
-            message=f"{len(plan)} eleman güncellendi",
-        )
-
-    def _read_field_safe(self, element, field):
-        """
-        Bulk update için güvenli field okuma.
-        Özel alanlar (color, is_visible, restraint.*) burada ele alınır.
-        """
-        # Renk
-        if field == "color":
-            c = getattr(element, 'color', None)
-            return list(c[:3]) if c else None
-
-        # Görünürlük
-        if field == "is_visible":
-            return bool(getattr(element, 'is_visible', True))
-
-        # Restraint
-        if field.startswith("restraint."):
-            dof = field.split(".", 1)[1]
-            r = getattr(element, 'restraint', None)
-            if r is None:
-                return None
-            return bool(getattr(r, dof, False))
-
-        # Diğer alanlar _read_field üzerinden
-        try:
-            return self._read_field(element, field)
-        except Exception:
-            return None
-
-    # ========================================================
-    # REPLICATE (Doğrusal Çoğaltma)
-    # ========================================================
-
-    def replicate(
-        self,
-        elements,
-        dx: float,
-        dy: float,
-        dz: float,
-        count: int = 1,
-        select_created: bool = True,
-    ) -> EditResult:
+    def replicate(self, elements, dx: float, dy: float, dz: float, count: int = 1) -> EditResult:
+        from app.commands.impl import ReplicateSelected
         if not elements:
-            return EditResult(False, message="Çoğaltılacak seçili eleman yok")
+            return EditResult(False, message="Seçili eleman yok")
+        cmd = ReplicateSelected(dx=dx, dy=dy, dz=dz, count=count)
+        result = self.commands.execute(cmd)
+        return EditResult(result.handled, message=result.message, created=result.handled)
 
-        if not isinstance(elements, (list, tuple)):
-            elements = [elements]
-
-        try:
-            cmd = ReplicateElementsCommand(
-                self.scene, list(elements), dx=dx, dy=dy, dz=dz, count=count
+    def _build_create(self, et: str, values: dict[str, Any]):
+        if et == "node":
+            return AddNode(
+                x=float(values.get("x", 0.0)),
+                y=float(values.get("y", 0.0)),
+                z=float(values.get("z", 0.0)),
+                label=values.get("label", ""),
             )
-            if not self.commands.execute(cmd):
-                return EditResult(False, message="Çoğaltma başarısız")
-        except Exception as e:
-            logger.exception("replicate hatası")
-            return EditResult(False, message=str(e))
-
-        created = cmd.all_created
-        if select_created and created and self.engine and self.engine.sel_mgr:
-            from core.selection_policy import SelectionMode
-            self.engine.sel_mgr.select_multiple(created, mode=SelectionMode.REPLACE)
-
-        return EditResult(
-            True,
-            element=created,
-            created=True,
-            message=f"{count}x çoğaltıldı ({len(cmd.created_nodes)} node, {len(cmd.created_elements)} eleman)",
-        )
+        if et == "frame":
+            return AddFrame(
+                node_i_uid=int(values.get("node_i_id") or values.get("node_i") or 0),
+                node_j_uid=int(values.get("node_j_id") or values.get("node_j") or 0),
+                section_name=values.get("section_name", ""),
+                rotation_deg=float(values.get("rotation_deg", 0.0)),
+                label=values.get("label", ""),
+            )
+        if et == "link":
+            return AddLink(
+                node_i_uid=int(values.get("node_i_id") or values.get("node_i") or 0),
+                node_j_uid=int(values.get("node_j_id") or values.get("node_j") or 0),
+                prop_name=values.get("propname", "LINK1"),
+                label=values.get("label", ""),
+            )
+        if et == "area":
+            return AddArea(
+                node_uids=list(values.get("nodes", [])),
+                thickness=float(values.get("thickness", 0.0)),
+                label=values.get("label", ""),
+            )
+        return None

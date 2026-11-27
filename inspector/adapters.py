@@ -4,6 +4,7 @@ from typing import Any
 
 from data.enums import PolygonType
 from domain.definition import FrameDistributedLoad, AreaUniformToFrameLoad, DistType, LoadDirection
+from domain.math_model import PolygonAnalysisData
 from inspector.schemas import CatalogAdapter, get_path, set_path
 
 MIXED = "__MIXED__"
@@ -386,8 +387,8 @@ def polygon_to_values(poly, analysis_data=None) -> dict:
     return values
 
 
-def values_to_polygon(poly, v: dict, analysis_data=None) -> None:
-    
+def values_to_polygon(poly, v: dict, analysis_data:dict[int, PolygonAnalysisData] = {}) -> None:
+    print("[values_to_polygon]:", v, analysis_data)
     analysis_fields = {
         "associated_frame_ids", "windplane", "transfer_target",
         "transfer_dist_type", "is_load_area", "uniform_to_frame_loads",

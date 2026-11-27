@@ -1,6 +1,6 @@
 # inspector/topbar.py
 from __future__ import annotations
-from app.commands import project_commands as PC
+import app.commands as cmd
 from imgui_bundle import imgui
 
 
@@ -79,37 +79,37 @@ class TopBar:
 
     def _on_delete(self):
         if self.app:
-            from app.commands import project_commands as PC
-            self.app.put_command(PC.DeleteSelected())
+            import app.commands as cmd
+            self.app.put_command(cmd.DeleteSelected())
 
     def _on_undo(self):
         if self.app:
-            from app.commands import project_commands as PC
-            self.app.put_command(PC.Undo())
+            import app.commands as cmd
+            self.app.put_command(cmd.Undo())
 
     def _on_redo(self):
         if self.app:
-            from app.commands import project_commands as PC
-            self.app.put_command(PC.Redo())
+            import app.commands as cmd
+            self.app.put_command(cmd.Redo())
 
     def _on_fit(self):
         if self.app:
-            from app.commands import project_commands as PC
-            self.app.put_command(PC.ZoomExtents())
+            import app.commands as cmd
+            self.app.put_command(cmd.ZoomExtents())
 
     def _on_draw_line(self):
         if self.app:
-            self.app.put_command(PC.StartDrawTool("line"))
+            self.app.put_command(cmd.StartDrawTool("line"))
 
     def _on_draw_poly(self):
         if self.app:
-            self.app.put_command(PC.StartDrawTool("poly"))
+            self.app.put_command(cmd.StartDrawTool("poly"))
 
     def _on_to_frame(self):
         pass
 
     def _on_to_link(self):
-        self.app.put_command(PC.ConvertFramesToLinks("DefaultLink"))
+        self.app.put_command(cmd.ConvertFramesToLinks("DefaultLink"))
 
     def _on_to_plane(self):
         pass

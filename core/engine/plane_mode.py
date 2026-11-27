@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.commands import project_commands as PC
+import app.commands as cmd
 
 if TYPE_CHECKING:
     from core.engine.camera_rig import CameraRig

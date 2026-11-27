@@ -30,6 +30,7 @@ from domain.definition import (
 from domain.element import Area, Frame, Link, Node
 from domain.project import Project
 from geometry.scenebuilder import SceneBuilder
+from tools.grid_tools import sync_grid_from_s2k_lines
 
 
 class ProjectBuilder:
@@ -247,7 +248,7 @@ class ProjectBuilder:
     # ==================================================================
     def set_grid_lines(self, grid_lines):
         self.grid_lines = grid_lines or []
-        self.project.sync_grid_from_s2k_lines(self.grid_lines)
+        sync_grid_from_s2k_lines(self.project, self.grid_lines)
 
     def set_joint_constraints(self, constraints: dict[str, str]):
         self.joint_constraints = dict(constraints)

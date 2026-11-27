@@ -1,3 +1,4 @@
+# render/mathmodelrenderer.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -68,10 +69,14 @@ class MathModelRenderer:
         self.lighting = LightingSystem()
         self.light_ubo = LightUBO()
 
-        self.show = {
-            "grid": True, "axes": True, "area": True,
-            "frame": True, "link": True, "node": True,
-            "polygon": True, "lines": True,
+        self.show: dict[str, bool] = {
+            "area": True,
+            "frame": True,
+            "link": True,
+            "node": True,
+            "restraint": True,
+            "polygon": True,
+            "lines": True,
         }
         self.assoc_preview = None
         self.use_lights = True
@@ -82,6 +87,9 @@ class MathModelRenderer:
 
         self.center = np.zeros(3)
         self.size = 1.0
+
+    def bind_show(self, show: dict[str, bool]) -> None:
+        self.show = show
 
     def set_cam(self, c):
         self.camera = c
@@ -330,13 +338,13 @@ class MathModelRenderer:
 
     def _render_shaded(self, mvp, cpos, v, p, visible_ids=None):
         self._render_polygon_lines(mvp, visible_ids)
-        if self.show["area"] and self.area_r:
+        if self.show.get("area", False) and self.area_r:
             self.area_r.render(mvp, self.model_mat, cpos, v, p, visible_ids=visible_ids)
-        if self.show["frame"] and self.frame_r:
+        if self.show.get("frame", False) and self.frame_r:
             self.frame_r.render(mvp, self.model_mat, cpos, v, p, visible_ids=visible_ids)
-        if self.show["link"] and self.link_r:
+        if self.show.get("link", False) and self.link_r:
             self.link_r.render(mvp, self.model_mat, cpos, v, p, visible_ids=visible_ids)
-        if self.show["node"] and self.node_r:
+        if self.show.get("node", False) and self.node_r:
             self.node_r.render(mvp, self.model_mat, cpos, v, p, visible_ids=visible_ids)
 
     def _render_simple(self, mvp, visible_ids=None):
@@ -349,31 +357,31 @@ class MathModelRenderer:
 
         self._render_polygon_lines(mvp, visible_ids)
 
-        if self.show["frame"] and self.frame_r:
+        if self.show.get("frame", False) and self.frame_r:
             self.frame_r.render_simple(mvp, self.simple_shader, alpha=1.0, visible_ids=visible_ids)
 
-        if self.show["area"] and self.area_r:
+        if self.show.get("area", False) and self.area_r:
             glDepthMask(GL_FALSE)
             self.area_r.render_simple(mvp, self.simple_shader, alpha=0.35, visible_ids=visible_ids)
             glDepthMask(GL_TRUE)
 
-        if self.show["link"] and self.link_r:
+        if self.show.get("link", False) and self.link_r:
             self.link_r.render_simple(mvp, self.simple_shader, alpha=1.0, visible_ids=visible_ids)
 
         glDisable(GL_DEPTH_TEST)
-        if self.show["node"] and self.node_r:
+        if self.show.get("node", False) and self.node_r:
             self.node_r.render_simple(mvp, self.node_shader, alpha=1.0, visible_ids=visible_ids)
-            if self.show.get("restraint", True):
+            if self.show.get("restraint", False):
                 self.node_r.render_simple_restraint_lines(mvp, self.simple_shader, alpha=1.0)
         glEnable(GL_DEPTH_TEST)
 
     def _render_polygon_lines(self, mvp, visible_ids=None):
         shader = self.simple_shader or self.standard_shader
-        if self.show["polygon"] and self.polygon_r:
+        if self.show.get("polygon", False) and self.polygon_r:
             glDepthMask(GL_FALSE)
             self.polygon_r.render_simple(mvp, shader, alpha=0.5, visible_ids=visible_ids)
             glDepthMask(GL_TRUE)
-        if self.show["lines"] and self.line_r:
+        if self.show.get("lines", False) and self.line_r:
             self.line_r.draw(mvp, visible_ids=visible_ids)
 
     def _render_id_pass(self, mvp, visible_ids=None):
@@ -396,17 +404,17 @@ class MathModelRenderer:
         if loc != -1:
             glUniformMatrix4fv(loc, 1, GL_FALSE, mat4_data(mvp))
 
-        if self.show["area"] and self.area_r:
+        if self.show.get("area", False) and self.area_r:
             self.area_r.render_simple(mvp, pick_s, alpha=1.0, visible_ids=visible_ids)
-        if self.show["frame"] and self.frame_r:
+        if self.show.get("frame", False) and self.frame_r:
             self.frame_r.render_simple(mvp, pick_s, alpha=1.0, visible_ids=visible_ids)
-        if self.show["link"] and self.link_r:
+        if self.show.get("link", False) and self.link_r:
             self.link_r.render_simple(mvp, pick_s, alpha=1.0, visible_ids=visible_ids)
-        if self.show["node"] and self.node_r:
+        if self.show.get("node", False) and self.node_r:
             self.node_r.render_simple(mvp, pick_s, alpha=1.0, point_size=10.0, visible_ids=visible_ids)
-        if self.show["polygon"] and self.polygon_r:
+        if self.show.get("polygon", False) and self.polygon_r:
             self.polygon_r.render_pick(mvp, pick_s, visible_ids=visible_ids)
-        if self.show["lines"] and self.line_r:
+        if self.show.get("lines", False) and self.line_r:
             self.line_r.render_pick(mvp, pick_s, visible_ids=visible_ids)
 
         glDepthMask(GL_TRUE if depth_mask else GL_FALSE)
@@ -470,8 +478,7 @@ class MathModelRenderer:
                 self.frame_r.update_simple_colors(frames, self._get_final_color)
 
     def set_show(self, key: str, value: bool):
-        if key in self.show:
-            self.show[key] = bool(value)
+        self.show[key] = bool(value)
 
     def get_show(self) -> dict:
         return dict(self.show)

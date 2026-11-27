@@ -169,15 +169,6 @@ class Polygon(Element):
         write: bool = True,
         excluded_override: set[int] | None = None,
     ) -> set[int]:
-        """
-        Uygun frame'leri tarar.
-
-        - `force=True`: `assoc_auto` bayrağını yok sayar.
-        - `write=True`: sonucu `self.associated`'a yazar, `association_revision` artar.
-        - `write=False`: sonucu sadece döndürür (panel draft modu).
-        - `excluded_override`: `self.excluded` yerine bu küme kullanılır
-          (draft modda panele ait geçici `excluded`).
-        """
         if not force and not self.assoc_auto:
             return self.associated
 
