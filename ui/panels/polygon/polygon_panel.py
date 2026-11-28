@@ -25,7 +25,7 @@ class PolygonPanel(InspectorPanel):
     width = 620
     height = 700
     pos_first_use = (900.0, 100.0)
-    preview_flags = {"zones": True}
+    preview_flags = {"zones": False, "polygon": True}
 
     def __init__(self, app=None, **overrides) -> None:
         super().__init__(app=app, **overrides)

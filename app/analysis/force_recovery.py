@@ -57,6 +57,49 @@ class FrameForceResult:
     stations: list[FrameStationForce] = field(default_factory=list)
 
 
+@dataclass
+class PersistedReportStaticResult:
+    sum_F: np.ndarray
+    sum_R: np.ndarray
+    node_displacements: dict[str, np.ndarray]
+
+
+@dataclass
+class PersistedReportModalResult:
+    frequencies: np.ndarray
+    periods: np.ndarray
+    modal_mass: np.ndarray
+    effective_mass_x: np.ndarray
+    effective_mass_y: np.ndarray
+    effective_mass_z: np.ndarray
+    total_mass_x: float
+    total_mass_y: float
+    total_mass_z: float
+
+    @property
+    def n_modes(self) -> int:
+        return len(self.periods)
+
+
+@dataclass
+class PersistedReportMeshNode:
+    z: float
+
+
+@dataclass
+class PersistedReportMesh:
+    nodes: dict[str, PersistedReportMeshNode]
+    internal_node_keys: set[str]
+
+
+@dataclass
+class PersistedReportAnalysisResults:
+    static_results: dict[str, PersistedReportStaticResult]
+    modal: PersistedReportModalResult | None
+    mesh: PersistedReportMesh | None
+    warnings: list[str] = field(default_factory=list)
+
+
 def _frame_local_equivalent_nodal_loads(
     project,
     frame: Frame,
@@ -400,6 +443,8 @@ def save_analysis_results(
         arrays[f"{prefix}__U"] = np.asarray(sres.displacements, dtype=np.float64)
         arrays[f"{prefix}__R"] = np.asarray(sres.reactions, dtype=np.float64)
         arrays[f"{prefix}__F"] = np.asarray(sres.applied_forces, dtype=np.float64)
+        arrays[f"{prefix}__sum_F"] = np.asarray(sres.sum_F, dtype=np.float64)
+        arrays[f"{prefix}__sum_R"] = np.asarray(sres.sum_R, dtype=np.float64)
         static_meta[cname] = {
             "node_keys": list(sres.node_displacements.keys()),
         }
@@ -416,7 +461,28 @@ def save_analysis_results(
         arrays["modal__frequencies"] = np.asarray(result.modal.frequencies, dtype=np.float64)
         arrays["modal__periods"] = np.asarray(result.modal.periods, dtype=np.float64)
         arrays["modal__mode_shapes"] = np.asarray(result.modal.mode_shapes, dtype=np.float64)
-        modal_meta = {"n_modes": int(result.modal.n_modes)}
+        arrays["modal__modal_mass"] = np.asarray(result.modal.modal_mass, dtype=np.float64)
+        arrays["modal__effective_mass_x"] = np.asarray(result.modal.effective_mass_x, dtype=np.float64)
+        arrays["modal__effective_mass_y"] = np.asarray(result.modal.effective_mass_y, dtype=np.float64)
+        arrays["modal__effective_mass_z"] = np.asarray(result.modal.effective_mass_z, dtype=np.float64)
+        modal_meta = {
+            "n_modes": int(result.modal.n_modes),
+            "total_mass_x": float(result.modal.total_mass_x),
+            "total_mass_y": float(result.modal.total_mass_y),
+            "total_mass_z": float(result.modal.total_mass_z),
+        }
+
+    mesh_meta = None
+    if result.mesh is not None:
+        mesh_node_keys = list(result.mesh.nodes)
+        arrays["mesh__node_z"] = np.asarray(
+            [result.mesh.nodes[key].z for key in mesh_node_keys],
+            dtype=np.float64,
+        )
+        mesh_meta = {
+            "node_keys": mesh_node_keys,
+            "internal_node_keys": sorted(result.mesh.internal_node_keys),
+        }
 
     forces_meta: dict[str, list[dict]] = {}
     if frame_forces:
@@ -457,6 +523,7 @@ def save_analysis_results(
         },
         "static_cases": static_meta,
         "modal": modal_meta,
+        "mesh": mesh_meta,
         "frame_forces": forces_meta,
         "warnings": list(result.warnings),
     }
@@ -483,10 +550,26 @@ def load_analysis_results(filepath: str | Path) -> dict:
         node_keys = smeta.get("node_keys", [])
         node_u_arr = arrays.get(f"{prefix}__node_U")
         node_r_arr = arrays.get(f"{prefix}__node_R")
+        applied_forces = arrays[f"{prefix}__F"]
+        reactions = arrays[f"{prefix}__R"]
         static_out[cname] = {
             "displacements": arrays[f"{prefix}__U"],
-            "reactions": arrays[f"{prefix}__R"],
-            "applied_forces": arrays[f"{prefix}__F"],
+            "reactions": reactions,
+            "applied_forces": applied_forces,
+            "sum_F": arrays.get(
+                f"{prefix}__sum_F",
+                np.asarray(
+                    [np.sum(applied_forces[i::6]) for i in range(6)],
+                    dtype=np.float64,
+                ),
+            ),
+            "sum_R": arrays.get(
+                f"{prefix}__sum_R",
+                np.asarray(
+                    [np.sum(reactions[i::6]) for i in range(6)],
+                    dtype=np.float64,
+                ),
+            ),
             "node_displacements": (
                 {k: node_u_arr[i] for i, k in enumerate(node_keys)}
                 if node_u_arr is not None else {}
@@ -531,11 +614,34 @@ def load_analysis_results(filepath: str | Path) -> dict:
 
     modal_out = None
     if manifest.get("modal") is not None:
+        modal_meta = manifest["modal"]
+        n_modes = int(modal_meta["n_modes"])
+        missing_modal_values = np.full(n_modes, np.nan, dtype=np.float64)
         modal_out = {
-            "n_modes": manifest["modal"]["n_modes"],
+            "n_modes": n_modes,
             "frequencies": arrays["modal__frequencies"],
             "periods": arrays["modal__periods"],
             "mode_shapes": arrays["modal__mode_shapes"],
+            "modal_mass": arrays.get("modal__modal_mass", missing_modal_values),
+            "effective_mass_x": arrays.get("modal__effective_mass_x", missing_modal_values),
+            "effective_mass_y": arrays.get("modal__effective_mass_y", missing_modal_values),
+            "effective_mass_z": arrays.get("modal__effective_mass_z", missing_modal_values),
+            "total_mass_x": float(modal_meta.get("total_mass_x", np.nan)),
+            "total_mass_y": float(modal_meta.get("total_mass_y", np.nan)),
+            "total_mass_z": float(modal_meta.get("total_mass_z", np.nan)),
+        }
+
+    mesh_out = None
+    mesh_meta = manifest.get("mesh")
+    if mesh_meta is not None:
+        node_z = arrays["mesh__node_z"]
+        node_keys = mesh_meta.get("node_keys", [])
+        mesh_out = {
+            "nodes": {
+                key: {"z": float(node_z[i])}
+                for i, key in enumerate(node_keys)
+            },
+            "internal_node_keys": mesh_meta.get("internal_node_keys", []),
         }
 
     return {
@@ -543,5 +649,52 @@ def load_analysis_results(filepath: str | Path) -> dict:
         "fixed_dofs": arrays["fixed_dofs"],
         "static_results": static_out,
         "modal": modal_out,
+        "mesh": mesh_out,
         "frame_forces": forces_out,
     }
+
+
+def load_report_analysis_results(filepath: str | Path) -> PersistedReportAnalysisResults:
+    saved = load_analysis_results(filepath)
+    static_results = {
+        case_name: PersistedReportStaticResult(
+            sum_F=case["sum_F"],
+            sum_R=case["sum_R"],
+            node_displacements=case["node_displacements"],
+        )
+        for case_name, case in saved["static_results"].items()
+    }
+
+    modal_data = saved["modal"]
+    modal = (
+        PersistedReportModalResult(
+            frequencies=modal_data["frequencies"],
+            periods=modal_data["periods"],
+            modal_mass=modal_data["modal_mass"],
+            effective_mass_x=modal_data["effective_mass_x"],
+            effective_mass_y=modal_data["effective_mass_y"],
+            effective_mass_z=modal_data["effective_mass_z"],
+            total_mass_x=modal_data["total_mass_x"],
+            total_mass_y=modal_data["total_mass_y"],
+            total_mass_z=modal_data["total_mass_z"],
+        )
+        if modal_data is not None else None
+    )
+
+    mesh_data = saved["mesh"]
+    mesh = (
+        PersistedReportMesh(
+            nodes={
+                key: PersistedReportMeshNode(z=node["z"])
+                for key, node in mesh_data["nodes"].items()
+            },
+            internal_node_keys=set(mesh_data["internal_node_keys"]),
+        )
+        if mesh_data is not None else None
+    )
+    return PersistedReportAnalysisResults(
+        static_results=static_results,
+        modal=modal,
+        mesh=mesh,
+        warnings=list(saved["manifest"].get("warnings", [])),
+    )

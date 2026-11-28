@@ -380,13 +380,6 @@ class SeismicConfig:
 
 
 @dataclass
-class ProjectConfig:
-    wind: WindConfig = field(default_factory=WindConfig)
-    snow: SnowConfig = field(default_factory=SnowConfig)
-    seismic: SeismicConfig = field(default_factory=SeismicConfig)
-
-
-@dataclass
 class GeneralProjectInfo:
     company_name: str = ""
     client_name: str = ""
@@ -1108,3 +1101,114 @@ class WindDirectionResult:
     e: float = 0.0
     geometry: dict[str, Any] = field(default_factory=dict)
     zones_data: list[dict[str, Any]] = field(default_factory=list)
+
+@dataclass
+class TimberConfig:
+    design_case_name: str = "ULS"
+    CN: float = 0.95
+    CY: float = 0.75
+    CB: float = 1.0
+    OMEGA: float = 1.3
+    c_buckling: float = 0.8
+    default_grade: str = "C24"
+    default_osb_grade: str = "OSB/3"
+
+
+@dataclass
+class TimberFloorSpec:
+    name: str = "Döşeme Kirişi 1"
+    wood_grade: str = "C24"
+    osb_grade: str = "OSB/3"
+    h_k: float = 180.0
+    b_k: float = 40.0
+    t_osb: float = 18.0
+    b_s: float = 360.0
+    span: float = 3450.0
+    dead_load_knm2: float = 0.10
+    live_load_knm2: float = 2.0
+    ULS_g: float = 1.35
+    ULS_q: float = 1.50
+    SLS_g: float = 1.00
+    SLS_q: float = 1.00
+    CN: float = 1.0
+    CY: float = 0.6
+    CB: float = 1.0
+    OMEGA: float = 1.3
+    damping_ratio: float = 0.01
+    fire_enabled: bool = True
+    t_fire_min: float = 30.0
+    beta_n_mm_per_min: float = 0.7
+    k0: float = 1.0
+    d0_mm: float = 7.0
+    exposure: str = "3-sides"
+    CY20: float = 1.25
+    gamma_M_fi: float | None = None
+
+    __unit_schema__ = {
+        "h_k": Dimension.LENGTH,
+        "b_k": Dimension.LENGTH,
+        "t_osb": Dimension.LENGTH,
+        "b_s": Dimension.LENGTH,
+        "span": Dimension.LENGTH,
+        "dead_load_knm2": Dimension.AREA_LOAD,
+        "live_load_knm2": Dimension.AREA_LOAD,
+    }
+
+@dataclass
+class SteelConfig:
+    design_method: str = "LRFD"
+    default_grade: str = "S235"
+    deflection_limit_ratio: float = 300.0
+    include_non_auto_combos: bool = False
+
+
+@dataclass
+class SteelMemberSpec:
+    frame_id: int
+    member_type: str = "Beam"
+    kx: float = 1.0
+    ky: float = 1.0
+    kz: float = 1.0
+    lbx: float = 0.0
+    lby: float = 0.0
+    cb: float = 1.0
+    cm_x: float = 0.85
+    cm_y: float = 0.85
+    deflection_limit_ratio: float = 300.0
+    net_area_ratio: float = 1.0
+    shear_lag_u: float = 1.0
+    unbraced_top: bool = True
+
+    __unit_schema__ = {
+        "lbx": Dimension.LENGTH,
+        "lby": Dimension.LENGTH,
+    }
+
+@dataclass
+class StoryDefinition:
+    name: str = ""
+    elevation: float = 0.0
+    height: float = 0.0
+    is_master: bool = False
+    similar_to: str = "None"
+    splice_story: bool = False
+    splice_height: float = 0.0
+    is_roof: bool = False
+    is_mezzanine: bool = False
+    is_basement: bool = False
+    section_cut_name: str = ""
+    diaphragm_name: str = ""
+
+    __unit_schema__ = {
+        "elevation": Dimension.LENGTH,
+        "height": Dimension.LENGTH,
+        "splice_height": Dimension.LENGTH,
+    }
+    
+@dataclass
+class ProjectConfig:
+    wind: WindConfig = field(default_factory=WindConfig)
+    snow: SnowConfig = field(default_factory=SnowConfig)
+    seismic: SeismicConfig = field(default_factory=SeismicConfig)
+    timber: TimberConfig = field(default_factory=TimberConfig)
+    steel: SteelConfig = field(default_factory=SteelConfig)

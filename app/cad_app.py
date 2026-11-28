@@ -211,7 +211,11 @@ class CadApp:
                 self._ui_host.log_command_result(result.message, level=result.level)
 
             if not result.handled:
-                logger.warning("[cmd] işlenemedi: %s", type(cmd).__name__)
+                logger.warning(
+                    "[cmd] işlenemedi: %s (%s)",
+                    type(cmd).__name__,
+                    result.message,
+                )
                 continue
 
             if result.followup is not None:

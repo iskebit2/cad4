@@ -18,10 +18,13 @@ from ui.panels.polygon.polygon_panel import PolygonPanel
 from ui.panels.report_panel import ReportPanel
 from ui.panels.s2k_panel import S2KPanel
 from ui.panels.selection_panel import SelectionPanel
+from ui.panels.steel_design_panel import SteelDesignPanel
 from ui.panels.view_filter_panel import ViewFilterPanel
 from ui.panels.visibility_panel import VisibilityPanel
 from ui.panels.wind_analysis_panel import WindAnalysisPanel
 from ui.panels.project_panels import ProjectConfigPanel, ProjectInfoPanel
+from ui.panels.slab_analysis_panel import SlabAnalysisPanel
+from ui.panels.timber_design_panel import TimberDesignPanel
 
 @dataclass
 class PanelSpec:
@@ -238,4 +241,28 @@ PANELS: list[PanelSpec] = [
                 icon="command_panel",
                 order = 220
             ),
+    PanelSpec(
+                    cls=SteelDesignPanel,
+                    name="steel_design_panel",
+                    title="Steel Design Panel",
+                    category=Category.MANAGEMENT,
+                    icon="command_panel",
+                    order = 230
+                ),
+    PanelSpec(
+                    cls=TimberDesignPanel,
+                    name="timber_design",
+                    title="Timber Design Panel",
+                    category=Category.MANAGEMENT,
+                    icon="command_panel",
+                    order = 240
+                ),
+    PanelSpec(
+                    cls=SlabAnalysisPanel,
+                    name="slab_analysis",
+                    title="Slab Analysis Panel",
+                    category=Category.MANAGEMENT,
+                    icon="command_panel",
+                    order = 250
+                ),
 ]

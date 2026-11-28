@@ -568,6 +568,48 @@ class RenameDefinition(Command):
         self._project = None
 
 
+@dataclass
+class UpdateDefinition(Command):
+    container_attr: str = ""
+    name: str = ""
+    changes: dict[str, Any] = field(default_factory=dict)
+    new_name: str | None = None
+
+    def execute(self) -> CommandResult:
+        if (error := self._resolve()) is not None:
+            return error
+
+        container = getattr(self._project, self.container_attr, None)
+        if container is None or self.name not in container:
+            return CommandResult(handled=False, message="Bulunamadı", level="warn")
+        if self.new_name is not None and self.new_name != self.name and self.new_name in container:
+            return CommandResult(handled=False, message=f"{self.new_name} zaten var", level="warn")
+
+        obj = container[self.name]
+        self._before = {key: getattr(obj, key) for key in self.changes}
+        for key, value in self.changes.items():
+            setattr(obj, key, value)
+
+        if self.new_name is not None and self.new_name != self.name:
+            container[self.new_name] = container.pop(self.name)
+
+        return CommandResult(project_dirty=True, message=f"{self.name} güncellendi")
+
+    def undo(self) -> None:
+        container = getattr(self._project, self.container_attr)
+        key = self.new_name if self.new_name is not None else self.name
+        obj = container[key]
+        for field_name, value in self._before.items():
+            setattr(obj, field_name, value)
+        if key != self.name:
+            container[self.name] = container.pop(key)
+
+    def __post_init__(self) -> None:
+        self._app = None
+        self._project = None
+        self._before: dict[str, Any] = {}
+
+
 # ---------------------------------------------------------------------------
 # Bulk update
 # ---------------------------------------------------------------------------

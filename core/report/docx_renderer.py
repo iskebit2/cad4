@@ -62,6 +62,21 @@ class DocxRenderer:
             self._render_section(doc, child, level=level + 1, is_first=True)
 
     def _render_dataframe(self, doc: MyDocument, df: ReportDataFrame, level: int) -> None:
+        from docx.enum.section import WD_ORIENT
+        from docx.shared import Cm
+
+        is_wide = len(df.columns) > 10
+        raw_doc = getattr(doc, "doc", doc)
+
+        if is_wide:
+            sec_land = raw_doc.add_section()
+            sec_land.orientation = WD_ORIENT.LANDSCAPE
+            sec_land.page_width, sec_land.page_height = sec_land.page_height, sec_land.page_width
+            sec_land.left_margin = Cm(1.0)
+            sec_land.right_margin = Cm(1.0)
+            sec_land.top_margin = Cm(1.2)
+            sec_land.bottom_margin = Cm(1.2)
+
         title = getattr(df, "custom_title", None)
         desc = getattr(df, "custom_desc", None)
 
@@ -100,3 +115,12 @@ class DocxRenderer:
                 if width_cm is None:
                     width_cm = self.layout.default_image_width_cm
                 doc.add_image(img_stream, width_cm=float(width_cm))
+
+        if is_wide:
+            sec_port = raw_doc.add_section()
+            sec_port.orientation = WD_ORIENT.PORTRAIT
+            sec_port.page_width, sec_port.page_height = sec_port.page_height, sec_port.page_width
+            sec_port.left_margin = Cm(2.0)
+            sec_port.right_margin = Cm(1.0)
+            sec_port.top_margin = Cm(2.0)
+            sec_port.bottom_margin = Cm(2.0)

@@ -34,7 +34,8 @@ class WindZonesTab:
         _, self._cpe_idx = imgui.combo("Cpe Türü##sp_wz_cpe", self._cpe_idx, ["Cpe10", "Cpe1"])
         _, self._cpi_pos = imgui.input_float("Cpi (+)##sp_wz_cpip", self._cpi_pos)
         _, self._cpi_neg = imgui.input_float("Cpi (-)##sp_wz_cpim", self._cpi_neg)
-
+        if imgui.button("Hide##sp_hide", imgui.ImVec2(80, 0)):
+            ctx.app.put_command(cmd.ToggleZones(enabled=None))
         project = ctx.project
         pressure_result = project.loads.wind_results.get(active_dir) if project else None
         q_p = float(getattr(pressure_result, "q_p", 0.0)) if pressure_result is not None else 100.0

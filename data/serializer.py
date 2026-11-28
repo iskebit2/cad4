@@ -22,7 +22,8 @@ from domain.definition import (
     QuadDefinition, ReportManager, ResponseSpectrumCase,
     ResponseSpectrumLoadAssignment, Restraint, Section, SectionCut,
     SeismicConfig, SiteInformation, SnowConfig, SpectrumFunction,
-    StaticLoadAssignment, WindConfig, WindDirectionResult, WindResult, ConstraintDefinition,
+    StaticLoadAssignment, SteelConfig, TimberConfig, WindConfig,
+    WindDirectionResult, WindResult, ConstraintDefinition,
     MassAssembly, MassContribution, SDPolygonPoint, SDShape, SDSection,
 )
 from domain.element import Area, Frame, Link, Node
@@ -44,7 +45,8 @@ DATACLASS_REGISTRY: dict[str, type] = {
         Grid, ObliqueAxis, Axis, Vertex, Line, Polygon, Light, LightingSettings,
         PolygonAnalysisData,
         ProjectInfo, GeneralProjectInfo, SiteInformation, ProjectConfig,
-        WindConfig, SnowConfig, SeismicConfig, LoadPattern,
+        WindConfig, SnowConfig, SeismicConfig, TimberConfig, SteelConfig,
+        LoadPattern,
         StaticLoadAssignment, LoadCase, ModalCase, ComboItem,
         LoadCombination, SpectrumFunction, ResponseSpectrumLoadAssignment,
         ResponseSpectrumCase, AutoSeismicTSC2018, PointLoad,
@@ -283,6 +285,7 @@ def save_project_file(project, path: Path) -> None:
         "loads": _encode(project.loads),
         "analysis": _encode(project.analysis),
         "report": _encode(project.report),
+        "analysis_results_path": project.analysis_results_path,
         "unit_system": u_sys.value if isinstance(u_sys, Enum) else u_sys,
         "materials": {k: _encode(v) for k, v in project.materials.items()},
         "sections": {k: _encode(v) for k, v in project.sections.items()},
@@ -323,6 +326,13 @@ def load_project_file(path: Path):
         payload = json.loads(zf.read("project.json").decode("utf-8"))
 
     proj = Project()
+    analysis_results_path = payload.get("analysis_results_path")
+    if isinstance(analysis_results_path, str) and analysis_results_path.strip():
+        result_path = Path(analysis_results_path).expanduser()
+        if not result_path.is_absolute():
+            result_path = Path(path).expanduser().resolve().parent / result_path
+        proj.analysis_results_path = str(result_path.resolve())
+
     proj.info = _decode(payload.get("info", {}))
     proj.general_info = _decode(payload.get("general_info", {}))
     proj.site_info = _decode(payload.get("site_info", {}))
@@ -477,4 +487,23 @@ def load_project_file(path: Path):
     proj.math_model.refresh_bounds()
     proj.scene.mark_dirty()
     proj.scene.refresh_bounds()
+
+    if proj.analysis_results_path:
+        result_path = Path(proj.analysis_results_path)
+        if not result_path.is_file():
+            proj.analysis_results_warning = (
+                f"Analiz sonuç dosyası bulunamadı: {result_path}"
+            )
+            logger.warning("[Serializer] %s", proj.analysis_results_warning)
+        else:
+            try:
+                from app.analysis.force_recovery import load_report_analysis_results
+
+                proj.analysis_results = load_report_analysis_results(result_path)
+            except (OSError, ValueError, KeyError, EOFError, zipfile.BadZipFile) as exc:
+                proj.analysis_results_warning = (
+                    f"Analiz sonuç dosyası okunamadı: {result_path} ({exc})"
+                )
+                logger.warning("[Serializer] %s", proj.analysis_results_warning)
+
     return proj

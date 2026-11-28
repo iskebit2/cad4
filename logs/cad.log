@@ -1,6 +1,89 @@
-2026-11-27 04:40:03 [INFO    ] cad.app.cad_window: [CadWindow] Hazır: 1280x800
-2026-11-27 04:40:03 [INFO    ] cad.core.engine.gl_context: GL_VERSION: b'3.3.0 NVIDIA 581.80'
-2026-11-27 04:40:03 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=1, u_mvp=0)
-2026-11-27 04:40:03 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
-2026-11-27 04:40:03 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
-2026-11-27 04:40:03 [INFO    ] cad.ui.ui_host: [UIHost] Hazır (21 panel)
+2026-11-28 04:45:57 [INFO    ] cad.app.cad_window: [CadWindow] Hazır: 1280x800
+2026-11-28 04:45:57 [INFO    ] cad.core.engine.gl_context: GL_VERSION: b'3.3.0 NVIDIA 581.80'
+2026-11-28 04:45:57 [INFO    ] cad.render.global_axis_renderer: [GlobalAxis] Hazır (vao=1, u_mvp=0)
+2026-11-28 04:45:57 [INFO    ] cad.render.axes_renderer: [LocalAxes] Hazır — 6 vertex, u_mvp_loc=0
+2026-11-28 04:45:57 [INFO    ] cad.app.cad_app: [CadApp] Kesit kataloğu: 406 kesit
+2026-11-28 04:45:57 [INFO    ] cad.ui.ui_host: [UIHost] Hazır (24 panel)
+2026-11-28 04:46:09 [INFO    ] cad.tools.s2k.loader: CurrUnits: N, mm, C
+2026-11-28 04:46:09 [INFO    ] cad.tools.s2k.loader: [Parser] 54 tablo parse edildi
+2026-11-28 04:46:10 [INFO    ] cad.tools.s2k.loader: [Loader] S2K CurrUnits = N, mm, C
+2026-11-28 04:46:10 [INFO    ] cad.tools.s2k.loader: [Scene] 24 düğüm, 39 çubuk, 6 alan, 0 bağ
+2026-11-28 04:46:10 [INFO    ] cad.tools.s2k.loader: [Loader] Bitti — unit_system = N, mm, C
+2026-11-28 04:46:51 [INFO    ] cad.ui.panels.definition_panel: [DefPanel 1] _emit_commands — renames={'KAT': 'KAT1'}
+2026-11-28 04:46:51 [INFO    ] cad.ui.panels.definition_panel: [DefPanel 2] rename: KAT → KAT1 (orig var: False, draft var: True)
+2026-11-28 04:46:51 [INFO    ] cad.ui.panels.definition_panel: [DefPanel 2] rename: KAT → KAT1 (orig var: False, draft var: False)
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] Proje birim sistemi tanımsız; varsayılan N-mm kullanılacak.
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 1: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 2: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=12).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 3: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 4: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 5: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 6: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 7: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=12).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 8: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 9: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=10).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 10: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 11: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 12: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=10).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 13: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 14: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 15: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=12).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 16: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 17: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 18: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 19: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 20: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=12).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 21: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 22: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=10).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 23: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 24: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 25: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=10).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 26: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 27: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 28: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=12).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 29: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 30: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 31: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 32: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 33: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=12).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 34: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 35: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=10).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 36: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 37: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'min_num_sta' fallback kullanılacak (n_segments=2).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 38: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=10).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] 39: auto_mesh açık fakat mesh_num_segments/mesh_max_length tanımsız; 'max_sta_spcg' fallback kullanılacak (n_segments=14).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] A1: kalınlık ≈0 → 'load transfer' alanı olarak yorumlanacak (K/M'ye katkısı yok).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] A2: kalınlık ≈0 → 'load transfer' alanı olarak yorumlanacak (K/M'ye katkısı yok).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] A3: kalınlık ≈0 → 'load transfer' alanı olarak yorumlanacak (K/M'ye katkısı yok).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] A4: kalınlık ≈0 → 'load transfer' alanı olarak yorumlanacak (K/M'ye katkısı yok).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] A5: kalınlık ≈0 → 'load transfer' alanı olarak yorumlanacak (K/M'ye katkısı yok).
+2026-11-28 04:47:19 [INFO    ] cad.app.analysis.validation: [Validation/WARN] A6: kalınlık ≈0 → 'load transfer' alanı olarak yorumlanacak (K/M'ye katkısı yok).
+2026-11-28 04:47:20 [INFO    ] cad.app.analysis.solve_static: [load_case] case='DEAD' patterns=4 dof_map=180 mesh_frames=195
+2026-11-28 04:47:20 [INFO    ] cad.app.analysis.solve_static: [load_case] assignments=1
+2026-11-28 04:47:20 [INFO    ] cad.app.analysis.solve_static: [load_case] item: ltype='load pattern' sf=1.000 name='DEAD' pat=True
+2026-11-28 04:47:20 [INFO    ] cad.app.analysis.solve_static: [load_case] after pattern: nonzero 0 -> 210, |F|=1.336e+05
+2026-11-28 04:47:20 [INFO    ] cad.app.analysis.solve_static: [solve_static_case] DEAD: |F|=1.335758e+05, nonzero=210, free_dofs=1044, num_dofs=1080
+2026-11-28 04:47:20 [INFO    ] cad.app.analysis.solve_static: [solve_static_case] DEAD: |U|=4.322554e+00, |R|=5.556415e+05
+2026-11-28 04:47:20 [INFO    ] cad.app.analysis.solve_static: [load_case] case='LIVE' patterns=4 dof_map=180 mesh_frames=195
+2026-11-28 04:47:20 [INFO    ] cad.app.analysis.solve_static: [load_case] item: ltype='load pattern' sf=1.000 name='LIVE' pat=True
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [load_case] after pattern: nonzero 0 -> 18, |F|=1.985e+05
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [solve_static_case] LIVE: |F|=1.984898e+05, nonzero=18, free_dofs=1044, num_dofs=1080
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [solve_static_case] LIVE: |U|=5.050076e+00, |R|=3.480543e+05
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [load_case] case='QUAKEX' patterns=4 dof_map=180 mesh_frames=195
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [load_case] item: ltype='load pattern' sf=1.000 name='QUAKEX' pat=True
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [load_case] after pattern: nonzero 0 -> 0, |F|=0.000e+00
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [solve_static_case] QUAKEX: |F|=0.000000e+00, nonzero=0, free_dofs=1044, num_dofs=1080
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [solve_static_case] QUAKEX: |U|=0.000000e+00, |R|=0.000000e+00
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [load_case] case='QUAKEY' patterns=4 dof_map=180 mesh_frames=195
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [load_case] item: ltype='load pattern' sf=1.000 name='QUAKEY' pat=True
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [solve_static_case] QUAKEY: |F|=0.000000e+00, nonzero=0, free_dofs=1044, num_dofs=1080
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.solve_static: [solve_static_case] QUAKEY: |U|=0.000000e+00, |R|=0.000000e+00
+2026-11-28 04:47:21 [INFO    ] cad.app.analysis.material_takeoff: [Takeoff] 39 eleman, toplam 7.171 kg (0.0072 ton)
+2026-11-28 04:47:37 [INFO    ] cad.ui.panels.report_panel: [ReportPanel] wind atlandı: düğüm veya poligon yok
+2026-11-28 04:48:36 [INFO    ] cad.ui.panels.report_panel: [ReportPanel] PDF kaydedildi: D:\Program\cad4\proje_raporu.pdf
+2026-11-28 04:58:16 [WARNING ] cad.app.cad_app: [cmd] işlenemedi: Redo (Yinelenecek işlem yok)
+2026-11-28 04:58:17 [WARNING ] cad.app.cad_app: [cmd] işlenemedi: Redo (Yinelenecek işlem yok)
+2026-11-28 04:59:17 [INFO    ] cad.ui.panels.report_panel: [ReportPanel] wind atlandı: düğüm veya poligon yok
+2026-11-28 04:59:17 [INFO    ] cad.ui.panels.report_panel: [ReportPanel] loads atlandı: Projede ölü veya hareketli yük paterni tanımlanmamış.
+2026-11-28 04:59:17 [INFO    ] cad.ui.panels.report_panel: [ReportPanel] irregularities atlandı: Analiz ağı (SolverMesh) bulunamadı
+2026-11-28 04:59:17 [INFO    ] cad.ui.panels.report_panel: [ReportPanel] irregularities.irregularity_b1 atlandı: Analiz ağı (SolverMesh) bulunamadı

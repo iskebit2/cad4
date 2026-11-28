@@ -37,6 +37,8 @@ class ReportPanel(PanelBase):
         self.project = None
         self.scene = None
         self._result: ReportBuildResult | None = None
+        self._built_project = None
+        self._built_analysis_results = None
         self._tree: ReportTree = ReportTree()
         self._sections: dict[str, ReportSection] = {}
         self._selected_section_id: str | None = None
@@ -63,6 +65,8 @@ class ReportPanel(PanelBase):
     def _rebuild(self, proj) -> None:
         proj.report.clear()
         self._result = build_project_report_tree(proj)
+        self._built_project = proj
+        self._built_analysis_results = getattr(proj, "analysis_results", None)
         self._tree = self._result.tree
         self._sections = {s.section_id: s for s in self._result.sections}
         for rep in self._result.produced:
@@ -83,6 +87,12 @@ class ReportPanel(PanelBase):
                 "Proje veya Rapor Yöneticisi bağlı değil.",
             )
             return
+
+        if (
+            self._built_project is not proj
+            or self._built_analysis_results is not getattr(proj, "analysis_results", None)
+        ):
+            self._rebuild(proj)
 
         self._draw_toolbar(proj)
         imgui.separator()
@@ -138,6 +148,24 @@ class ReportPanel(PanelBase):
             self._export_pdf(proj)
         imgui.end_disabled()
 
+    def _all_tree_nodes(self) -> list[ReportTreeNode]:
+        out: list[ReportTreeNode] = []
+        for node in self._tree.nodes:
+            out.append(node)
+            out.extend(node.children)
+        return out
+
+    def _find_section(self, section_id: str | None) -> ReportSection | None:
+        if not section_id:
+            return None
+        if section_id in self._sections:
+            return self._sections[section_id]
+        for sec in self._sections.values():
+            for child in sec.children:
+                if child.section_id == section_id:
+                    return child
+        return None
+
     def _draw_tree(self, nodes: list[ReportTreeNode]) -> None:
         imgui.begin_child("##report_tree", imgui.ImVec2(320, 0), True)
         imgui.text_colored(imgui.ImVec4(0.8, 0.9, 1.0, 1.0), "Rapor Ağacı")
@@ -156,6 +184,15 @@ class ReportPanel(PanelBase):
             if imgui.selectable(label, selected)[0]:
                 self._selected_section_id = node.section_id
                 self._detail_index = 0
+
+            for child in node.children:
+                imgui.indent(18.0)
+                c_selected = self._selected_section_id == child.section_id
+                c_label = f"{child.title} [{child.status.value}]##sel_{child.node_id}"
+                if imgui.selectable(c_label, c_selected)[0]:
+                    self._selected_section_id = child.section_id
+                    self._detail_index = 0
+                imgui.unindent(18.0)
         imgui.end_child()
 
     def _draw_section_preview(self, section: ReportSection | None) -> None:
@@ -171,7 +208,11 @@ class ReportPanel(PanelBase):
         for note in section.notes:
             imgui.text_wrapped(f"Not: {note}")
 
-        if not section.frames:
+        all_frames: list[ReportDataFrame] = list(section.frames)
+        for child in section.children:
+            all_frames.extend(child.frames)
+
+        if not all_frames:
             imgui.text_colored(
                 imgui.ImVec4(0.8, 0.6, 0.4, 1.0),
                 "Bu bölümde gösterilecek tablo verisi bulunmuyor.",
@@ -179,17 +220,17 @@ class ReportPanel(PanelBase):
             imgui.end_child()
             return
 
-        if len(section.frames) > 1:
+        if len(all_frames) > 1:
             imgui.text_disabled("Tablolar:")
-            for idx, frame in enumerate(section.frames):
+            for idx, frame in enumerate(all_frames):
                 ftitle = getattr(frame, "custom_title", None) or f"Tablo {idx + 1}"
                 if imgui.radio_button(f"{ftitle}##tab_{idx}", self._detail_index == idx):
                     self._detail_index = idx
             imgui.spacing()
 
-        if self._detail_index >= len(section.frames):
+        if self._detail_index >= len(all_frames):
             self._detail_index = 0
-        rep = section.frames[self._detail_index]
+        rep = all_frames[self._detail_index]
         self._draw_dataframe_preview(rep)
         imgui.end_child()
 
@@ -308,16 +349,27 @@ class ReportPanel(PanelBase):
         )
 
     def _export_pdf(self, proj) -> None:
-        selected = self._selected_reports(proj)
-        if not selected:
+        selected_ids = [n.section_id for n in self._tree.nodes if n.section_id in self._export_selected]
+        if not selected_ids:
             return
         ui = getattr(self.app, "ui", None)
         if ui is None:
             return
 
+        selected_sections = [self._sections[sid] for sid in selected_ids if sid in self._sections]
+        selected_tree = ReportTree(
+            nodes=[n for n in self._tree.nodes if n.section_id in self._export_selected]
+        )
+        selected_frames = self._selected_reports(proj)
+
         def _on_save(path: str) -> None:
             from tools.report_export import export_pdf
-            ok = export_pdf(selected, path)
+            ok = export_pdf(
+                selected_frames,
+                path,
+                tree=selected_tree,
+                sections=selected_sections,
+            )
             if ok:
                 logger.info("[ReportPanel] PDF kaydedildi: %s", path)
             else:

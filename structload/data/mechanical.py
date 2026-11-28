@@ -1,4 +1,4 @@
-
+# data/mechanical.py
 # Ahşap kereste verileri
 ahsap_data = {
     "C14": [14, 7.2, 0.4, 16, 2, 3, 7, 4.7, 0.23, 0.44, 290, 350],

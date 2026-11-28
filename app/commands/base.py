@@ -47,6 +47,7 @@ class Command(ABC):
         project = getattr(self._app, "current_project", None)
         if project is None:
             return CommandResult(handled=False, message="Proje yok.", level="warn")
+        self._project = project
         self._scene = project.math_model
         return None
 

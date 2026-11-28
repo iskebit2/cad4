@@ -3,15 +3,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from core.units import UnitSystem
+from data.enums import SectionCutDefinedBy, SectionCutResultType
 from data.serializer import load_project_file, save_project_file
 from domain.definition import (
     AnalysisManager, AreaSection, AutoSeismicTSC2018, ConstraintDefinition,
     GeneralProjectInfo, LinkProp, LoadCase, LoadCombination, LoadManager,
-    LoadPattern, Material, ModalCase, ProjectConfig, ProjectInfo,
+    LoadPattern, Material, ModalCase, ProjectConfig, ProjectInfo, QuadDefinition,
     ReportManager, ResponseSpectrumCase, Section, SectionCut,
-    SiteInformation, SpectrumFunction,
+    SiteInformation, SpectrumFunction, SteelMemberSpec, StoryDefinition, TimberFloorSpec,
 )
 from domain.grid import Grid
 from domain.line import Line
@@ -35,7 +37,8 @@ class Project:
     unit_system: UnitSystem = UnitSystem.N_MM
 
     custom_planes: dict[str, Plane] = field(default_factory=dict)
-
+    stories: dict[str, StoryDefinition] = field(default_factory=dict)
+    
     materials: dict[str, Material] = field(default_factory=dict)
     sections: dict[str, Section] = field(default_factory=dict)
     area_sections: dict[str, AreaSection] = field(default_factory=dict)
@@ -58,9 +61,20 @@ class Project:
     catalog_sections: dict[str, Section] = field(default_factory=dict)
     transfer_grid_step: float = 0.0
     transfer_grid_bins: int = 12
-
+    analysis_results: Any = None  # StructuralAnalysisResult
+    analysis_results_path: str | None = None
+    analysis_results_warning: str | None = field(
+        default=None, init=False, repr=False, compare=False,
+    )
+    frame_forces: dict[str, dict[int, Any]] = field(default_factory=dict)
     _active_plane_id: str | None = field(default=None, init=False, repr=False, compare=False)
     _grid_planes_cache: dict[str, Plane] = field(default_factory=dict, init=False, repr=False, compare=False)
+    timber_floors: list[TimberFloorSpec] = field(default_factory=list)
+    steel_specs: dict[int, SteelMemberSpec] = field(default_factory=dict)
+    steel_design_results: dict[int, Any] = field(default_factory=dict)
+    steel_design_path: str | None = None
+    steel_design_warning: str | None = None
+    steel_design_hash: str | None = None
 
     def __post_init__(self) -> None:
         self.scene.project = self
@@ -144,7 +158,59 @@ class Project:
 
     def _add(self, registry: dict, obj, key: str = "name") -> None:
         registry[getattr(obj, key)] = obj
+    def add_story(self, story: StoryDefinition) -> None:
+        self._add(self.stories, story)
 
+    def remove_story(self, name: str) -> bool:
+        return self.stories.pop(name, None) is not None
+
+    def get_story(self, name: str) -> StoryDefinition | None:
+        return self.stories.get(name)
+
+    def ordered_stories(self) -> list[StoryDefinition]:
+        return sorted(self.stories.values(), key=lambda s: float(s.elevation))
+
+    def sync_story_section_cuts(self, z_offset: float = 10.0) -> list[SectionCut]:
+        ordered = self.ordered_stories()
+        if not ordered:
+            return []
+        xs = sorted(set(self.grid.x_coords)) or [-1e6, 1e6]
+        ys = sorted(set(self.grid.y_coords)) or [-1e6, 1e6]
+        pad = max(abs(xs[-1] - xs[0]), abs(ys[-1] - ys[0]), 1000.0) * 0.1
+        x0, x1 = xs[0] - pad, xs[-1] + pad
+        y0, y1 = ys[0] - pad, ys[-1] + pad
+
+        created: list[SectionCut] = []
+        for idx, st in enumerate(ordered):
+            if st.is_mezzanine:
+                continue
+            prev_z = ordered[idx - 1].elevation if idx > 0 else (st.elevation - st.height)
+            z_cut = float(prev_z) + float(z_offset)
+            cut_name = st.section_cut_name or f"SCUT_{st.name}"
+            st.section_cut_name = cut_name
+            scut = SectionCut(
+                name=cut_name,
+                defined_by=SectionCutDefinedBy.QUAD,
+                group="All",
+                result_type=SectionCutResultType.ANALYSIS,
+                default_loc=False,
+                global_x=0.5 * (x0 + x1),
+                global_y=0.5 * (y0 + y1),
+                global_z=z_cut,
+                elem_side="Positive",
+                quad=QuadDefinition(
+                    points=[
+                        (x0, y0, z_cut),
+                        (x1, y0, z_cut),
+                        (x1, y1, z_cut),
+                        (x0, y1, z_cut),
+                    ]
+                ),
+            )
+            self.add_section_cut(scut)
+            created.append(scut)
+        return created
+    
     def add_material(self, m): self._add(self.materials, m)
     def add_section(self, s): self._add(self.sections, s)
     def add_area_section(self, s): self._add(self.area_sections, s)
@@ -164,6 +230,24 @@ class Project:
     def get_material_by_name(self, name): return self.materials.get(name)
     def get_link_prop_by_name(self, name): return self.link_props.get(name)
 
+    def add_timber_floor(self, spec: TimberFloorSpec) -> None:
+        self.timber_floors.append(spec)
+
+    def remove_timber_floor(self, index: int) -> bool:
+        if 0 <= index < len(self.timber_floors):
+            self.timber_floors.pop(index)
+            return True
+        return False
+
+    def get_or_create_steel_spec(self, frame_id: int) -> SteelMemberSpec:
+        spec = self.steel_specs.get(frame_id)
+        if spec is None:
+            frame = self.math_model.frames.get(frame_id)
+            length = frame.get_length() if frame is not None else 0.0
+            spec = SteelMemberSpec(frame_id=frame_id, lbx=length, lby=length)
+            self.steel_specs[frame_id] = spec
+        return spec
+    
     # ------------------------------------------------------------------
     # Plane yönetimi
     # ------------------------------------------------------------------

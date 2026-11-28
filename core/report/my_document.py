@@ -48,7 +48,7 @@ class MyDocument:
         full_heading = f'{".".join(numbers)}. {text}'
         return self.doc.add_heading(full_heading, level=level)
 
-    def add_paragraph(self, text: str, style: str | None = None) -> Any:
+    def add_paragraph(self, text: str="", style: str | None = None) -> Any:
         return self.doc.add_paragraph(text, style=style) if style else self.doc.add_paragraph(text)
 
     def add_page_break(self) -> None:

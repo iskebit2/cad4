@@ -10,6 +10,7 @@ from ui.base.inspector_panel import InspectorContext
 
 
 class FrameAssocTab:
+    
     def __init__(self) -> None:
         self.draft: AssocDraft | None = None
         self._show_all: bool = False
@@ -61,7 +62,9 @@ class FrameAssocTab:
         if imgui.button("Clear##sp_clear", imgui.ImVec2(80, 0)):
             service.clear_draft(draft)
             preview_dirty = True
-
+        imgui.same_line()
+        if imgui.button("Hide##sp_hide", imgui.ImVec2(80, 0)):
+            ctx.app.put_command(cmd.TogglePolygon(enabled=None))
         imgui.separator()
         _, self._show_all = imgui.checkbox("Tüm frame'leri göster##sp_all", self._show_all)
 

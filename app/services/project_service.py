@@ -11,6 +11,12 @@ from domain.project import Project
 from logging_config import CadLogger
 from tools.project_catalog import ProjectCatalog
 
+from core.design.steel_check import (
+    compute_model_geometry_hash,
+    load_steel_design_results,
+    save_steel_design_results,
+)
+
 if TYPE_CHECKING:
     from app.cad_app import CadApp
 
@@ -82,6 +88,7 @@ class ProjectService:
         if not os.path.isfile(path):
             raise FileNotFoundError(f"Proje dosyası bulunamadı: {path}")
         proj = Project.load(path)
+        self._restore_sidecar_results(proj, Path(path))
         self.replace(proj, path=path,
                      model_text=f"MODEL: {os.path.basename(path)}")
         eng = self.app.engine
@@ -95,9 +102,47 @@ class ProjectService:
         if target.suffix != ".cd4":
             target = target.with_suffix(".cd4")
         target_path = str(target)
+
+        if self.state.project.steel_design_results:
+            des_target = target.with_suffix(".cd4des")
+            current_hash = self.state.project.steel_design_hash or compute_model_geometry_hash(self.state.project)
+            saved_des = save_steel_design_results(
+                des_target,
+                self.state.project.steel_design_results,
+                geometry_hash=current_hash,
+                design_method=self.state.project.config.steel.design_method,
+            )
+            self.state.project.steel_design_path = saved_des.name
+            self.state.project.steel_design_hash = current_hash
+
         self.state.project.save(target_path)
         self.state.file_path = target_path
         self.state.model_text = f"MODEL: {os.path.basename(target_path)}"
+
+    def _restore_sidecar_results(self, proj: Project, project_path: Path) -> None:
+        base_dir = project_path.parent
+        des_candidate: Path | None = None
+        if proj.steel_design_path:
+            ref = Path(proj.steel_design_path)
+            des_candidate = ref if ref.is_absolute() else (base_dir / ref)
+        if des_candidate is None or not des_candidate.is_file():
+            fallback = project_path.with_suffix(".cd4des")
+            if fallback.is_file():
+                des_candidate = fallback
+
+        if des_candidate is not None and des_candidate.is_file():
+            results, manifest = load_steel_design_results(des_candidate)
+            proj.steel_design_results = results
+            proj.steel_design_path = des_candidate.name
+            saved_hash = manifest.get("geometry_hash")
+            proj.steel_design_hash = saved_hash
+            current_hash = compute_model_geometry_hash(proj)
+            if saved_hash and saved_hash != current_hash:
+                proj.steel_design_warning = "Geometri veya kombinasyonlar değişti; çelik tahkik sonuçları güncel değil."
+            else:
+                proj.steel_design_warning = None
+        elif proj.steel_design_path:
+            proj.steel_design_warning = f"Tahkik dosyası diskte bulunamadı: {proj.steel_design_path}"
 
     def save_current(self) -> bool:
         """True = kaydedildi, False = yol yok (UI dialog açmalı)."""

@@ -6,8 +6,8 @@ from typing import Any
 
 import numpy as np
 from imgui_bundle import imgui
-
-from app.commands.impl import RefreshGeometry, ToggleRenderFlag, UpdateElementFields
+import app.commands as cmd
+# from app.commands.impl import RefreshGeometry, ToggleRenderFlag, UpdateElementFields
 from core.units import Dimension, UnitSystem, convert_value
 from data.enums import PolygonType
 from domain.definition import WindDirectionResult
@@ -30,11 +30,11 @@ class WindAnalysisPanel(PanelBase):
     uses_draft = False
     show_apply_bar = True
     preview_flags = {
-        "polygon": True,
-        "zones": True,
-        "loads": False,
-        "grid": False,
-        "lines": False,
+        # "polygon": True,
+        # "zones": True,
+        # "loads": False,
+        # "grid": False,
+        # "lines": False,
     }
 
     width = 580
@@ -73,7 +73,7 @@ class WindAnalysisPanel(PanelBase):
         proj = self._project()
         if proj is not None and proj.math_model is not None:
             proj.math_model.mark_dirty()
-        self._enqueue(RefreshGeometry())
+        self.app.put_command(cmd.RefreshGeometry())
 
     def on_reset_action(self) -> None:
         self._reset_analysis()
@@ -86,13 +86,13 @@ class WindAnalysisPanel(PanelBase):
 
     def open(self, **kw) -> None:
         super().open(**kw)
-        self._apply_math_preview(True)
-        self._set_zones_visible(True)
+        # self._apply_math_preview(True)
+        # self._set_zones_visible(True)
         self._committed_snapshot = self._snapshot_wind_data()
 
     def close(self) -> None:
-        self._apply_math_preview(False)
-        self._set_zones_visible(False)
+        # self._apply_math_preview(False)
+        # self._set_zones_visible(False)
         super().close()
 
     def _project(self):
@@ -101,13 +101,15 @@ class WindAnalysisPanel(PanelBase):
     def _get_engine(self):
         return getattr(self.app, "engine", None) if self.app else None
 
-    def _enqueue(self, cmd) -> None:
-        queue = getattr(self.app, "command_queue", None) if self.app else None
-        if queue is not None:
-            queue.put(cmd)
+    # def _enqueue(self, cmd) -> None:
+    #     queue = getattr(self.app, "command_queue", None) if self.app else None
+    #     if queue is not None:
+    #         queue.put(cmd)
 
-    def _set_zones_visible(self, visible: bool) -> None:
-        self._enqueue(ToggleRenderFlag(flag="zones", value=bool(visible)))
+    # def _set_zones_visible(self, visible: bool) -> None:
+        
+    #     self.app.put_command(cmd.ToggleZones(enabled=None))
+    #     # self._enqueue(ToggleRenderFlag(flag="zones", value=bool(visible)))
 
     def _apply_math_preview(self, active: bool) -> None:
         eng = self._get_engine()
@@ -127,12 +129,11 @@ class WindAnalysisPanel(PanelBase):
             self._math_snapshot = None
 
     def _apply_polygon_direction(self, poly, dir_key: str | None) -> None:
-        self._enqueue(
-            UpdateElementFields(
-                element_uid=poly.unique_id,
-                changes={"show_zones_direction": dir_key},
-            )
-        )
+        self.app.put_command(cmd.UpdateElementFields(
+                        element_uid=poly.unique_id,
+                        changes={"show_zones_direction": dir_key},
+                    ))
+        
 
     def draw_content(self) -> None:
         if self.project is None:
@@ -158,7 +159,7 @@ class WindAnalysisPanel(PanelBase):
         wind["directions"] = {}
         self.selected_dir_key = None
         self._set_zones_visible(False)
-        self._enqueue(RefreshGeometry())
+        self.app.put_command(cmd.RefreshGeometry())
 
     def _draw_surface_selection(self) -> None:
         imgui.text_colored(
@@ -227,20 +228,22 @@ class WindAnalysisPanel(PanelBase):
 
         to_remove = None
         for key, rec in sorted(directions.items()):
+            if imgui.button(f"Remove##rem_{key}"):
+                to_remove = key
+            imgui.same_line()
             vec = getattr(rec, "w_dir", (1.0, 0.0, 0.0))
             is_selected = (self.selected_dir_key == key)
 
             label_btn = f"Yön {key} : ({vec[0]:.1f}, {vec[1]:.1f}, {vec[2]:.1f})##dir_{key}"
             if imgui.selectable(label_btn, is_selected)[0]:
                 self.selected_dir_key = key
-                self._set_zones_visible(True)
+                # self._set_zones_visible(True)
                 for p in self.project.polygons.values():
                     self._apply_polygon_direction(p, key)
-                self._enqueue(RefreshGeometry())
+                # self._enqueue(RefreshGeometry())
+                self.app.put_command(cmd.RefreshGeometry())
+                self.app.put_command(cmd.ToggleZones(enabled=True))
 
-            imgui.same_line()
-            if imgui.button(f"Remove##rem_{key}"):
-                to_remove = key
 
         if to_remove is not None:
             self._remove_direction(to_remove)
@@ -267,6 +270,9 @@ class WindAnalysisPanel(PanelBase):
             imgui.begin_disabled()
         if imgui.button("Analizi Temizle", imgui.ImVec2(140, 0)):
             self._reset_analysis()
+        imgui.same_line()
+        if imgui.button("Hide##sp_hide", imgui.ImVec2(80, 0)):
+            self.app.put_command(cmd.ToggleZones(enabled=None))
         if not directions:
             imgui.end_disabled()
 
@@ -284,7 +290,7 @@ class WindAnalysisPanel(PanelBase):
         if self.selected_dir_key == key:
             remaining = list(directions.keys())
             self.selected_dir_key = remaining[0] if remaining else None
-        self._enqueue(RefreshGeometry())
+        self.app.put_command(cmd.RefreshGeometry())
 
     def _wind_state(self) -> dict:
         analysis = self.project.analysis
@@ -349,7 +355,7 @@ class WindAnalysisPanel(PanelBase):
         self._set_zones_visible(True)
         for p in surfaces:
             self._apply_polygon_direction(p, self.selected_dir_key)
-        self._enqueue(RefreshGeometry())
+        self.app.put_command(cmd.RefreshGeometry())
 
     def _assign_zones_to_polygons(self, zones, surfaces, dir_key: str) -> None:
         unit_system = self.project.unit_system
@@ -488,32 +494,32 @@ class WindAnalysisPanel(PanelBase):
                     changed_min, new_c10_min = imgui.input_float(f"##c10min_{p.unique_id}_{idx}", c10_min, 0.0, 0.0, "%.3f")
                     if changed_min:
                         z["cpe10_override"] = (new_c10_min, c10_max)
-                        self._enqueue(RefreshGeometry())
+                        self.app.put_command(cmd.RefreshGeometry())
 
                     imgui.table_set_column_index(5)
                     changed_max, new_c10_max = imgui.input_float(f"##c10max_{p.unique_id}_{idx}", c10_max, 0.0, 0.0, "%.3f")
                     if changed_max:
                         z["cpe10_override"] = (c10_min, new_c10_max)
-                        self._enqueue(RefreshGeometry())
+                        self.app.put_command(cmd.RefreshGeometry())
 
                     imgui.table_set_column_index(6)
                     changed_c1min, new_c1_min = imgui.input_float(f"##c1min_{p.unique_id}_{idx}", c1_min, 0.0, 0.0, "%.3f")
                     if changed_c1min:
                         z["cpe1_override"] = (new_c1_min, c1_max)
-                        self._enqueue(RefreshGeometry())
+                        self.app.put_command(cmd.RefreshGeometry())
 
                     imgui.table_set_column_index(7)
                     changed_c1max, new_c1_max = imgui.input_float(f"##c1max_{p.unique_id}_{idx}", c1_max, 0.0, 0.0, "%.3f")
                     if changed_c1max:
                         z["cpe1_override"] = (c1_min, new_c1_max)
-                        self._enqueue(RefreshGeometry())
+                        self.app.put_command(cmd.RefreshGeometry())
 
                     imgui.table_set_column_index(8)
                     if z.get("cpe10_override") or z.get("cpe1_override"):
                         if imgui.button(f"Sıfırla##reset_{p.unique_id}_{idx}"):
                             z["cpe10_override"] = None
                             z["cpe1_override"] = None
-                            self._enqueue(RefreshGeometry())
+                            self.app.put_command(cmd.RefreshGeometry())
                     else:
                         imgui.text_colored(imgui.ImVec4(0.5, 0.5, 0.5, 1.0), "Orijinal")
 

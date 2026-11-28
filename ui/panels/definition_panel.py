@@ -13,10 +13,10 @@ from imgui_bundle import imgui
 import app.commands as cmd
 from data.enums import ConstraintType, LinkPropType, SectionType
 from domain.definition import (
-    AreaSection, AutoSeismicTSC2018, ConstraintDefinition,
+    AreaSection, AutoSeismicTSC2018, ComboItem, ConstraintDefinition,
     LinkProp, LinkPropLinear, LoadCase, LoadCombination, LoadPattern,
     Material, ModalCase, ResponseSpectrumCase, Section, SectionCut,
-    SpectrumFunction,
+    SpectrumFunction, StoryDefinition,
 )
 from logging_config import CadLogger
 from tools.section_checks import analytical_pipe_section, analytical_properties
@@ -68,6 +68,14 @@ def _name_attr(obj) -> str:
 
 
 DEFINITIONS: list[tuple] = [
+    (StoryDefinition, "stories", "STORY DEFINITIONS",
+        lambda p: StoryDefinition(
+            name=_unique_name(p.stories, "KAT"),
+            elevation=max((s.elevation for s in p.stories.values()), default=0.0) + 3000.0,
+            height=3000.0,
+        ),
+        dataclasses.replace),
+
     (Material, "materials", "MATERIAL PROPERTIES",
         lambda p: Material(name=_unique_name(p.materials, "MALZEME")),
         lambda m: dataclasses.replace(m, color=tuple(m.color))),
@@ -87,8 +95,8 @@ DEFINITIONS: list[tuple] = [
             rebar_beam=dict(s.rebar_beam or {}),
             time_dependent=dict(s.time_dependent or {}),
             sd_section=s.sd_section,
-            catalog_props=dict(getattr(s, "catalog_props", {})),  # Ekle
-            catalog_source=getattr(s, "catalog_source", ""),       # Ekle
+            catalog_props=dict(getattr(s, "catalog_props", {})),
+            catalog_source=getattr(s, "catalog_source", ""),
         )),
 
     (AreaSection, "area_sections", "AREA SECTION PROPERTIES",
@@ -211,6 +219,8 @@ class DefinitionPanel(PanelBase):
         self._selected_name = None
         self._is_new = False
         self._renames.clear()
+        self._multi_selected.clear()
+        self._confirm_delete_name = None
 
     def _get_hints(self, cls) -> dict[str, Any]:
         cached = self._hints_cache.get(cls)
@@ -263,6 +273,8 @@ class DefinitionPanel(PanelBase):
                     self._selected_name = None
                     self._draft_obj = None
                     self._is_new = False
+                    self._multi_selected.clear()
+                    self._confirm_delete_name = None
             imgui.end_combo()
 
     def _draw_toolbar(self, container, container_attr: str):
@@ -291,8 +303,14 @@ class DefinitionPanel(PanelBase):
         if self.action_button(f"Delete All ({len(self._multi_selected)})", 140, bool(self._multi_selected)):
             for name in list(self._multi_selected):
                 container.pop(name, None)
+            if self._selected_name in self._multi_selected:
+                self._selected_name = None
+                self._draft_obj = None
+                self._is_new = False
             self._multi_selected.clear()
             self.mark_dirty()
+            if callable(self.on_changed):
+                self.on_changed(container_attr)
 
         imgui.set_next_item_width(250)
         _, self._search = imgui.input_text("Search", self._search)
@@ -409,18 +427,23 @@ class DefinitionPanel(PanelBase):
             return False
 
     def _render_input(self, obj, name, tp, cur, project) -> bool:
+        if isinstance(obj, StoryDefinition):
+            return self._draw_story_field(obj, name, tp, cur, project)
+
         if isinstance(obj, Section):
             if name == "name":
-                return self._draw_section_catalog_popup(obj)
+                c, new_name = imgui.input_text("name", str(cur or ""))
+                if c:
+                    obj.name = new_name
+                return c
             if name == "profile_type":
-                # Katalogdan seç
                 if imgui.button(f"Katalog ▾##cat_{id(obj)}"):
                     imgui.open_popup(f"##sec_cat_popup_{id(obj)}")
-                self._draw_section_catalog_popup(obj)
-                return self._draw_section_type_editor(obj)
+                cat_changed = self._draw_section_catalog_popup(obj)
+                type_changed = self._draw_section_type_editor(obj)
+                return cat_changed or type_changed
             if name == "profile_params":
                 return self._draw_section_params(obj)
-            
             if name == "sd_section":
                 return self._draw_sd_section_summary(obj)
             if name == "rebar_column":
@@ -439,9 +462,7 @@ class DefinitionPanel(PanelBase):
         if isinstance(obj, ConstraintDefinition):
             if name == "constraint_type":
                 return self._draw_constraint_type_editor(obj)
-            if name in ("ux", "uy", "uz", "rx", "ry", "rz"):
-                return self._draw_bool_named(obj, name, name.upper())
-            if name in ("u1", "u2", "u3", "r1", "r2", "r3"):
+            if name in ("ux", "uy", "uz", "rx", "ry", "rz", "u1", "u2", "u3", "r1", "r2", "r3"):
                 return self._draw_bool_named(obj, name, name.upper())
 
         if isinstance(obj, LinkProp):
@@ -467,22 +488,26 @@ class DefinitionPanel(PanelBase):
         if tp is bool:
             c, v = imgui.checkbox(name, bool(cur))
             if c:
-                setattr(obj, name, v); return True
+                setattr(obj, name, v)
+                return True
             return False
         if tp is int:
             c, v = imgui.input_int(name, int(cur or 0))
             if c:
-                setattr(obj, name, v); return True
+                setattr(obj, name, v)
+                return True
             return False
         if tp is float:
             c, v = imgui.input_float(name, float(cur or 0.0))
             if c:
-                setattr(obj, name, v); return True
+                setattr(obj, name, v)
+                return True
             return False
         if tp is str:
             c, v = imgui.input_text(name, str(cur or ""))
             if c:
-                setattr(obj, name, v); return True
+                setattr(obj, name, v)
+                return True
             return False
 
         if isinstance(tp, type) and is_dataclass(tp):
@@ -952,7 +977,23 @@ class DefinitionPanel(PanelBase):
         if scn is None:
             return
         uids = []
-        if cls is Section:
+        if cls is StoryDefinition:
+            story = getattr(self.app.current_project, "stories", {}).get(name)
+            if story is not None:
+                z_top = float(story.elevation)
+                z_bot = z_top - float(story.height)
+                for n in scn.nodes.values():
+                    if abs(float(n.z) - z_top) <= 1.0:
+                        uids.append(n.unique_id)
+                for f in scn.frames.values():
+                    z1, z2 = float(f.node_i.z), float(f.node_j.z)
+                    if (z_bot - 1.0) <= min(z1, z2) and max(z1, z2) <= (z_top + 1.0):
+                        uids.append(f.unique_id)
+                for a in scn.areas.values():
+                    zs = [float(n.z) for n in a.nodes]
+                    if zs and (z_bot - 1.0) <= min(zs) and max(zs) <= (z_top + 1.0):
+                        uids.append(a.unique_id)
+        elif cls is Section:
             for f in scn.frames.values():
                 if f.section and getattr(f.section, "name", None) == name:
                     uids.append(f.unique_id)
@@ -1153,36 +1194,33 @@ class DefinitionPanel(PanelBase):
         to_delete = None
         for i, it in enumerate(items):
             imgui.push_id(f"combo_item_{i}")
-            try:
-                imgui.text(f"[{i}]")
-                imgui.same_line()
-                imgui.set_next_item_width(200)
-                cur = getattr(it, "case_or_pattern_name", "")
-                if imgui.begin_combo(f"##cp_{i}", cur or "<seç>"):
-                    for cand in available:
-                        if imgui.selectable(cand, cand == cur)[1]:
-                            it.case_or_pattern_name = cand
-                            changed = True
-                    imgui.end_combo()
-                imgui.same_line()
-                imgui.set_next_item_width(100)
-                c2, sf = imgui.input_float(
-                    "SF", float(getattr(it, "scale_factor", 1.0)), 0.1, 0.01)
-                if c2:
-                    it.scale_factor = sf
-                    changed = True
-                imgui.same_line()
-                if imgui.small_button("X"):
-                    to_delete = i
-            finally:
-                imgui.pop_id()
+            imgui.text(f"[{i}]")
+            imgui.same_line()
+            imgui.set_next_item_width(200)
+            cur = getattr(it, "case_or_pattern_name", "")
+            if imgui.begin_combo(f"##cp_{i}", cur or "<seç>"):
+                for cand in available:
+                    if imgui.selectable(cand, cand == cur)[0]:
+                        it.case_or_pattern_name = cand
+                        changed = True
+                imgui.end_combo()
+            imgui.same_line()
+            imgui.set_next_item_width(100)
+            c2, sf = imgui.input_float(
+                "SF", float(getattr(it, "scale_factor", 1.0)), 0.1, 0.01)
+            if c2:
+                it.scale_factor = sf
+                changed = True
+            imgui.same_line()
+            if imgui.small_button("X"):
+                to_delete = i
+            imgui.pop_id()
 
         if to_delete is not None:
             del items[to_delete]
             changed = True
 
         if imgui.button("+ Add Item"):
-            from domain.definition import ComboItem
             items.append(ComboItem(case_or_pattern_name="", scale_factor=1.0))
             changed = True
 
@@ -1319,3 +1357,72 @@ class DefinitionPanel(PanelBase):
                         changes[f.name] = bv
                 if changes:
                     queue.put(cmd.UpdateDefinition(container_attr, name, changes))
+
+    def _draw_story_field(self, story: StoryDefinition, name: str, tp, cur, project) -> bool:
+        if name == "similar_to":
+            cur_val = str(cur or "None")
+            options = ["None"] + sorted(
+                k for k in getattr(project, "stories", {}).keys() if k != story.name
+            )
+            changed = False
+            if imgui.begin_combo("similar_to", cur_val):
+                for opt in options:
+                    c, _ = imgui.selectable(opt, opt == cur_val)
+                    if c and opt != cur_val:
+                        story.similar_to = opt
+                        changed = True
+                imgui.end_combo()
+            return changed
+
+        if name == "diaphragm_name":
+            cur_val = str(cur or "")
+            diaphragms = sorted(
+                k for k, cd in getattr(project, "constraint_definitions", {}).items()
+                if getattr(cd, "constraint_type", None) == ConstraintType.DIAPHRAGM
+            )
+            changed = False
+            if imgui.begin_combo("diaphragm_name", cur_val or "<yok>"):
+                if imgui.selectable("<yok>", not cur_val)[0]:
+                    story.diaphragm_name = ""
+                    changed = True
+                for d_name in diaphragms:
+                    c, _ = imgui.selectable(d_name, d_name == cur_val)
+                    if c and d_name != cur_val:
+                        story.diaphragm_name = d_name
+                        changed = True
+                imgui.end_combo()
+            return changed
+
+        if name == "section_cut_name":
+            cur_val = str(cur or "")
+            cuts = sorted(getattr(project, "section_cuts", {}).keys())
+            changed = False
+            if imgui.begin_combo("section_cut_name", cur_val or "<otomatik>"):
+                if imgui.selectable("<otomatik>", not cur_val)[0]:
+                    story.section_cut_name = ""
+                    changed = True
+                for c_name in cuts:
+                    c, _ = imgui.selectable(c_name, c_name == cur_val)
+                    if c and c_name != cur_val:
+                        story.section_cut_name = c_name
+                        changed = True
+                imgui.end_combo()
+            return changed
+
+        if tp is bool:
+            c, v = imgui.checkbox(name, bool(cur))
+            if c:
+                setattr(story, name, v)
+                return True
+            return False
+        if tp is float:
+            c, v = imgui.input_float(name, float(cur or 0.0), 100.0, 1000.0)
+            if c:
+                setattr(story, name, v)
+                return True
+            return False
+        c, v = imgui.input_text(name, str(cur or ""))
+        if c:
+            setattr(story, name, v)
+            return True
+        return False

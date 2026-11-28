@@ -296,7 +296,7 @@ class CommandPanel(PanelBase):
                 f"Eksik/hatalı parametre -> Kullanım: {real_name} {usage}".strip()
             )
             return
-
+        print("command:", command)
         self.app.put_command(command)
 
     def _resolve_command_name(self, raw: str) -> str | None:

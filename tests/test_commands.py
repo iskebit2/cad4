@@ -446,6 +446,37 @@ def test_rename_definition_collision(app):
     assert app.current_project.sections["A"] == 1
 
 
+def test_update_definition_edit_rename_undo_redo(app):
+    from types import SimpleNamespace
+
+    from app.commands.impl import AddDefinition, UpdateDefinition
+
+    ctrl = app.edit_controller
+    definition = SimpleNamespace(name="A", value=1)
+    ctrl.commands.execute(AddDefinition(
+        container_attr="sections", name="A", obj=definition,
+    ))
+    command = UpdateDefinition(
+        container_attr="sections",
+        name="A",
+        changes={"name": "B", "value": 2},
+        new_name="B",
+    )
+
+    result = ctrl.commands.execute(command)
+    assert result.handled
+    assert app.current_project.sections == {"B": definition}
+    assert (definition.name, definition.value) == ("B", 2)
+
+    ctrl.commands.undo()
+    assert app.current_project.sections == {"A": definition}
+    assert (definition.name, definition.value) == ("A", 1)
+
+    ctrl.commands.redo()
+    assert app.current_project.sections == {"B": definition}
+    assert (definition.name, definition.value) == ("B", 2)
+
+
 def test_bulk_update(app):
     from app.commands.impl import AddNode
     ctrl = app.edit_controller
